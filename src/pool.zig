@@ -12,6 +12,9 @@
 
 const _doc_stub = void;
 
+///
+///
+
 /// A pool, viewed as a ItemHandle.
 ///
 /// Sendable, embeddable like any handle.
@@ -36,10 +39,10 @@ pub const GetError = error{ Closed, NotAvailable, NotCreated };
 /// - `on_get`: count after removal — items remaining with this tag.
 /// - `on_put`: count before addition — items already stored with this tag.
 ///
-/// Hooks run outside the pool's mutex.
-/// Multiple threads may call a hook at once — the pool does not serialize them.
-/// A hook that touches shared state must protect it itself: its own `Io.Mutex`,
-/// `lockUncancelable` (hooks return `void`, so a cancelable `lock` is not an option).
+/// Hooks run outside the pool's mutex.\
+/// Multiple threads may call a hook at once — the pool does not serialize them.\
+/// A hook that touches shared state must protect it itself.\
+/// A hook should not call pool APIs and blocked operations.
 pub const PoolHooks = struct {
     ctx: *anyopaque,
     tags: []const *const anyopaque,
@@ -78,7 +81,7 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !PoolHandle {
 
 /// Frees the pool.
 ///
-/// Must be closed first.
+/// Must be closed first.\
 /// Destroying an open pool is a programming error — panics.
 pub fn destroy(ph: PoolHandle, alloc: std.mem.Allocator) void {
     const p: *_Pool = PoolPolyHelper.mustIdentifyNodeAs(ph);
@@ -119,7 +122,7 @@ pub fn init(ph: PoolHandle, hooks: PoolHooks) !void {
 
 /// Acquires a handle, without blocking. Calls `on_get`.
 ///
-/// Sends a handle into the slot on success — `slot.*` becomes non-null.
+/// Sends a handle into the slot on success — `slot.*` becomes non-null.\
 /// The handle now lives with the caller.
 pub fn get(ph: PoolHandle, tag: *const anyopaque, mode: GetMode, slot: *polynode.Slot) GetError!void {
     const p: *_Pool = PoolPolyHelper.mustIdentifyNodeAs(ph);
@@ -136,11 +139,11 @@ pub fn get(ph: PoolHandle, tag: *const anyopaque, mode: GetMode, slot: *polynode
 
 /// Acquires a handle, blocking until one is available. Calls `on_get`.
 ///
-/// `timeout_ns == null`: waits forever.
+/// `timeout_ns == null`: waits forever.\
 /// `timeout_ns == 0`: returns `error.Timeout` immediately.
 ///
-/// Logically equivalent to `get(.available_only)` at that point, but returns
-/// `error.Timeout` instead of `error.NotAvailable` — intentional, `get_wait`
+/// Logically equivalent to `get(.available_only)` at that point, but returns\
+/// `error.Timeout` instead of `error.NotAvailable` — intentional, `get_wait`\
 /// always uses the timeout error set regardless of the timeout value.
 pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *polynode.Slot, timeout_ns: ?u64) (GetError || Io.Cancelable || error{Timeout})!void {
     const p: *_Pool = PoolPolyHelper.mustIdentifyNodeAs(ph);
@@ -191,11 +194,11 @@ pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *polynode.Slot, tim
 ///
 /// `slot.* == null`: no-op, no hook call.
 ///
-/// Open pool: calls `on_put`.
-/// Keep leaves `slot.*` non-null — the handle now lives in the pool.
+/// Open pool: calls `on_put`.\
+/// Keep leaves `slot.*` non-null — the handle now lives in the pool.\
 /// Destroy sets `slot.*` to null.
 ///
-/// Closed pool: no-op, no hook call — `slot.*` stays non-null, the handle
+/// Closed pool: no-op, no hook call — `slot.*` stays non-null, the handle\
 /// stays with the caller.
 pub fn put(ph: PoolHandle, slot: *polynode.Slot) void {
     if (slot.* == null) return;
@@ -242,9 +245,9 @@ pub fn put(ph: PoolHandle, slot: *polynode.Slot) void {
 
 /// Returns a batch of handles to the pool. Pops from the caller's list.
 ///
-/// Not atomic with `close()`.
-/// If the pool closes mid-batch: items already transferred go to `on_close`;
-/// items not yet transferred stay in the caller's list.
+/// Not atomic with `close()`.\
+/// If the pool closes mid-batch: items already transferred go to `on_close`;\
+/// items not yet transferred stay in the caller's list.\
 /// Restoration order after a mid-batch close may differ from the original order.
 pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void {
     if (list.first == null) return;
@@ -275,7 +278,7 @@ pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void {
     }
 }
 
-/// Collects all handles from every per-tag free-list, calls `on_close` once with
+/// Collects all handles from every per-tag free-list, calls `on_close` once with\
 /// the full list, then wakes any blocked `get_wait` callers.
 ///
 /// Safe to call more than once.
@@ -312,8 +315,8 @@ pub const ConcurrentError = error{ConcurrencyUnavailable};
 
 /// Outcome of a get_wait attempt, as a value instead of an error union.
 ///
-/// The handle sits inside the result, not behind a pointer — no `*Slot`
-/// shared across threads.
+/// The handle sits inside the result, not behind a pointer — no `*Slot`\
+/// shared across tasks.
 ///
 /// `.item` means the handle now lives with the caller.
 pub const PoolResult = union(enum) {
@@ -327,8 +330,8 @@ pub const PoolResult = union(enum) {
 /// Maps every `get_wait` outcome to a `PoolResult` variant. Blocking.
 ///
 /// No error union.
-/// Primary building block for `select.concurrent` and `io.concurrent`/`group.concurrent`.
-/// On cancellation, returns `.canceled`.
+/// Primary building block for `select.concurrent` and `io.concurrent`/`group.concurrent`.\
+/// On cancellation, returns `.canceled`.\
 /// The pool stays open — closing it is the caller's job.
 pub fn getWaitResult(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) PoolResult {
     var slot: polynode.Slot = null;
@@ -344,14 +347,13 @@ pub fn getWaitResult(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) Po
 
 /// Wraps `getWaitResult` in an `Io.Future` for direct await or `Io.Group` use.
 ///
-/// No heap allocation — args are copied by the runtime.
+/// No heap allocation — args are copied by the runtime.\
 /// `error.ConcurrencyUnavailable` on single-threaded backends.
 pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) ConcurrentError!Io.Future(PoolResult) {
     const p: *_Pool = PoolPolyHelper.mustIdentifyNodeAs(ph);
     return p.*.io.concurrent(getWaitResult, .{ ph, tag, timeout_ns });
 }
 
-// O(1) splice: move all nodes from src to end of dst, clear src.
 fn _concat(dst: *std.DoublyLinkedList, src: *std.DoublyLinkedList) void {
     if (src.first == null) return;
     if (dst.last) |last| {
@@ -364,7 +366,7 @@ fn _concat(dst: *std.DoublyLinkedList, src: *std.DoublyLinkedList) void {
     src.* = .{};
 }
 
-fn _get_available_or_new(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
+inline fn _get_available_or_new(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
     const io: Io = p.*.io;
     p.*.mutex.lockUncancelable(io);
 
@@ -394,7 +396,7 @@ fn _get_available_or_new(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot)
     return if (slot.* != null) {} else error.NotCreated;
 }
 
-fn _get_new_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
+inline fn _get_new_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
     const io: Io = p.*.io;
     p.*.mutex.lockUncancelable(io);
 
@@ -415,7 +417,7 @@ fn _get_new_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetErro
     return if (slot.* != null) {} else error.NotCreated;
 }
 
-fn _get_available_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
+inline fn _get_available_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
     const io: Io = p.*.io;
     p.*.mutex.lockUncancelable(io);
     defer p.*.mutex.unlock(io);

@@ -16,7 +16,7 @@ const _doc_stub = void;
 
 /// Runtime type marker.
 ///
-/// Each PolyNode-based type has one.
+/// Each PolyNode-based type has one.\
 /// Its address is the runtime type ID.
 pub const PolyTag = struct {
     _: u8 = 0,
@@ -24,7 +24,7 @@ pub const PolyTag = struct {
 
 /// Embedded in every managed item.
 ///
-/// Infrastructure works with PolyNode.
+/// Infrastructure works with PolyNode.\
 /// Applications work with the parent item.
 pub const PolyNode = struct {
     node: std.DoublyLinkedList.Node = .{},

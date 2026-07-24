@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-//! Building blocks for concurrent Zig systems.
+//! Toolkit for concurrent Zig systems.
 //!
 //! Components:
-//! - polynode: runtime type support
-//! - mailbox: message passing
-//! - pool: item lifecycle management
+//! - polynode: items runtime type identification, intrusion
+//! - mailbox: items passing
+//! - pool: items lifecycle management
 //!
 
 pub const polynode = @import("polynode.zig");
