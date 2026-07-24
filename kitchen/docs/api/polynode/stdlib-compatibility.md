@@ -1,4 +1,4 @@
-# API Reference — PolyNode — stdlib compatibility
+# Std compatibility
 
 New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md) first.
 
@@ -26,4 +26,3 @@ Walk results with `popFirst()` — standard Zig, nothing Matryoshka-specific.
 
 ---
 
-Next: [API Reference — PolyHelper](../polyhelper.md).

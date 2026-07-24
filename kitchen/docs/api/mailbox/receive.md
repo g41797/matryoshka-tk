@@ -1,4 +1,4 @@
-# API Reference — Mailbox — receive
+# Receive group
 
 New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
 
@@ -65,4 +65,3 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList
 
 ---
 
-Next: [wakeUpAll / close / destroy / is_it_you](control.md).

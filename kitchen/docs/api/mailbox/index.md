@@ -1,4 +1,4 @@
-# API Reference — Mailbox
+# Mailbox
 
 New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
 
@@ -43,4 +43,3 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !MailboxHandle
 
 ---
 
-Next: [send / send_oob](send.md).

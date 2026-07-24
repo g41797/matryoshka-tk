@@ -61,6 +61,4 @@ e.g. Worker
 
 ---
 
-Next: [Pool](pool.md) — how items get reused instead of allocated fresh each time.
-
 See also: [API Reference — Mailbox](../api/mailbox/index.md) for the actual Zig functions.

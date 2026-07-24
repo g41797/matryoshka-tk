@@ -424,4 +424,3 @@ Purpose.
 
 ---
 
-Next: [Examples Catalog](../examples/index.md).

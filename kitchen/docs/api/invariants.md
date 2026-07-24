@@ -102,5 +102,3 @@ Valid combinations:
 
 ---
 
-Go to: [Patterns & Cookbook](../patterns/index.md) for reusable code shapes built on  
-these contracts.

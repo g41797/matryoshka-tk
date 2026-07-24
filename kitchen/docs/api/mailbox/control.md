@@ -1,4 +1,4 @@
-# API Reference — Mailbox — control
+# Control group
 
 New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
 
@@ -60,4 +60,3 @@ pub fn is_it_you(tag: *const anyopaque) bool
 
 ---
 
-Next: [Error sets](errors.md).

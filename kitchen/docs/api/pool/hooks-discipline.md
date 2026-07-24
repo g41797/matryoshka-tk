@@ -1,4 +1,4 @@
-# API Reference — Pool — Hook discipline
+# Hooks discipline
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -28,4 +28,3 @@ New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md
 
 ---
 
-Next: [Starting point](next-steps.md).

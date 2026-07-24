@@ -1,4 +1,4 @@
-# API Reference — Mailbox — Error sets
+# Error sets
 
 New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
 
@@ -13,4 +13,3 @@ New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mail
 
 ---
 
-Next: [Event source helpers](events.md).

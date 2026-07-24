@@ -31,7 +31,7 @@ theme:
     - navigation.instant
     - toc.follow
     - content.code.copy
-
+    - navigation.footer
 nav:
   - Home: index.md
   - The laws of documentation: laws_of_docs.md
@@ -45,22 +45,22 @@ nav:
   - API Reference:
       - PolyNode & ItemHandle & Slot:
           - Overview: api/polynode/index.md
-          - reset / is_linked: api/polynode/functions.md
+          - Control group: api/polynode/functions.md
           - Defining user types — manual step by step: api/polynode/manual-definition.md
-          - stdlib compatibility: api/polynode/stdlib-compatibility.md
+          - Std compatibility: api/polynode/stdlib-compatibility.md
       - PolyHelper: api/polyhelper.md
       - Mailbox:
           - Overview: api/mailbox/index.md
-          - send / send_oob: api/mailbox/send.md
-          - receive / try_receive / receive_batch: api/mailbox/receive.md
-          - wakeUpAll / close / destroy / is_it_you: api/mailbox/control.md
+          - Send group: api/mailbox/send.md
+          - Receive group: api/mailbox/receive.md
+          - Control group: api/mailbox/control.md
           - Error sets: api/mailbox/errors.md
           - Event source helpers: api/mailbox/events.md
       - Pool:
           - Overview: api/pool/index.md
-          - get / get_wait: api/pool/get.md
-          - put / put_all: api/pool/put.md
-          - init / close / destroy / is_it_you: api/pool/control.md
+          - Get group: api/pool/get.md
+          - Put group: api/pool/put.md
+          - Control group: api/pool/control.md
           - Error sets: api/pool/errors.md
           - Event source helpers: api/pool/events.md
           - Hook discipline: api/pool/hooks-discipline.md
@@ -79,7 +79,7 @@ nav:
       - Slot & PolyNode Idioms: patterns/slot-and-polynode.md
       - Mailbox & Topology Patterns: patterns/mailbox-and-topology.md
       - Pool Patterns: patterns/pool.md
-      - Futures, Select, Group, Cancellation: patterns/async.md
+      - Io related: patterns/async.md
       - Shutdown & Master Patterns: patterns/master-and-shutdown.md
   - Examples Catalog:
       - Overview: examples/index.md

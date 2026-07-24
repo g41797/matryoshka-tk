@@ -1,4 +1,4 @@
-# API Reference — Pool — Starting point
+# Starting point
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -13,5 +13,3 @@ Next - [Limited capacity](../../examples/layer3/090-capped_pool.md)
 Be careful - you inject your code to the heart of Matryoshka.
 
 ---
-
-Next: [API Reference — Tag Identity and Slot Programming](../tags-and-slots/index.md).

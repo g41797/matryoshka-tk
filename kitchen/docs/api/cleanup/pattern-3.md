@@ -16,4 +16,3 @@ Cleanup covers both the error path (receive failed) and the normal path (item pr
 
 ---
 
-Next: [Pattern 4 — transfer clears the slot](pattern-4.md).

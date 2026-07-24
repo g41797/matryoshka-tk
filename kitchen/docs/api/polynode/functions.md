@@ -1,4 +1,4 @@
-# API Reference — PolyNode — functions
+# Control group
 
 New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md) first.
 
@@ -36,5 +36,3 @@ These operations never move a handle:
 Read-only inspections of an existing node.
 
 ---
-
-Next: [Defining user types — manual step by step](manual-definition.md).

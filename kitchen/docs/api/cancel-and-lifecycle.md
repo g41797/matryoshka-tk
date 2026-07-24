@@ -63,5 +63,3 @@ HELD       — with infrastructure (in mailbox queue or pool free-list)
 
 ---
 
-Go to: [Patterns & Cookbook](../patterns/index.md) for reusable code shapes built on  
-these contracts.

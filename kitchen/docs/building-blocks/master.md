@@ -96,6 +96,4 @@ There is no `Master` type to import.
 
 ---
 
-Next: [API Reference](../api/polynode/index.md) — the actual Zig types and functions behind  
-PolyNode, Mailbox, and Pool.
 

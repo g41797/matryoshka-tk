@@ -1,4 +1,4 @@
-# API Reference — Pool — Error sets
+# Error sets
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -13,5 +13,3 @@ New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md
 | `error.Canceled` | Waiting operation was canceled (`get_wait` only) |
 
 ---
-
-Next: [Event source helpers](events.md).

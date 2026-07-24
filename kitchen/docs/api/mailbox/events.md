@@ -1,4 +1,4 @@
-# API Reference — Mailbox — Event source helpers
+# Event source helpers
 
 New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
 
@@ -90,4 +90,3 @@ const result = try fut.await(io);
 
 ---
 
-Next: [API Reference — Pool](../pool/index.md).

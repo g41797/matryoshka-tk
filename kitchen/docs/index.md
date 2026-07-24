@@ -4,6 +4,7 @@ hide:
   - navigation
   - toc
   - path
+  - footer
 ---
 
 <style>  

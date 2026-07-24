@@ -20,4 +20,3 @@ Pattern 1 (pool item)            Pattern 2 (heap item)
 
 ---
 
-Next: [No raw allocator calls on PolyNode-based types](no-raw-allocator.md).

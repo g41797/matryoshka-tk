@@ -41,4 +41,3 @@ try EventPolyHelper.create(alloc, &slot);
 
 ---
 
-Next: [Patterns & Cookbook](../../patterns/index.md)

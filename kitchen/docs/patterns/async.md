@@ -377,4 +377,3 @@ Example: `stories/video_transcoder/video_transcoder.zig`, `examples/layer4/059-m
 
 ---
 
-Next: [Patterns — Shutdown and Master Patterns](master-and-shutdown.md).

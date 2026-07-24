@@ -65,4 +65,3 @@ The receiver dispatches on `WorkerInboxPolyHelper.TAG` and finds the embedded ha
 
 ---
 
-Next: [Slot-based programming](slot-programming.md).

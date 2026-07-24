@@ -118,4 +118,3 @@ Matryoshka plugs into the same pattern:
 ---
 
 
-Go to: [Patterns & Cookbook](../patterns/index.md) 

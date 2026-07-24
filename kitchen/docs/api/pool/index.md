@@ -1,4 +1,4 @@
-# API Reference — Pool
+# Pool
 
 ---
 
@@ -122,4 +122,3 @@ pub const PoolHooks = struct {
 
 ---
 
-Next: [get / get_wait](get.md).

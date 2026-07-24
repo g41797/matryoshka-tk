@@ -1,4 +1,4 @@
-# API Reference — Pool — control
+# Control group
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -58,4 +58,3 @@ pub fn is_it_you(tag: *const anyopaque) bool
 
 ---
 
-Next: [Error sets](errors.md).

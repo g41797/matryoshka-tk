@@ -326,4 +326,3 @@ Walk results with `popFirst()` — standard Zig, nothing Matryoshka-specific.
 
 ---
 
-Next: [API Reference — PolyHelper](polyhelper.md).

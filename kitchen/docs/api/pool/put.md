@@ -1,4 +1,4 @@
-# API Reference — Pool — put
+# Put group
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -52,4 +52,3 @@ pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void
 
 ---
 
-Next: [init / close / destroy / is_it_you](control.md).

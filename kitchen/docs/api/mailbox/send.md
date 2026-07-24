@@ -59,4 +59,3 @@ receive → O2:             [R1, R2, R3]            oob=0
 
 ---
 
-Next: [receive / try_receive / receive_batch](receive.md).

@@ -1,4 +1,4 @@
-# API Reference — PolyNode — Defining user types — manual step by step
+# Defining user types — manual step by step
 
 New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md) first.
 
@@ -258,4 +258,3 @@ This works. But every type needs the same boilerplate:
 
 ---
 
-Next: [stdlib compatibility](stdlib-compatibility.md).

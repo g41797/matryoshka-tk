@@ -1,4 +1,4 @@
-# API Reference — Pool — get
+# Get group
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -41,4 +41,3 @@ pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *Slot, timeout_ns: 
 
 ---
 
-Next: [put / put_all](put.md).

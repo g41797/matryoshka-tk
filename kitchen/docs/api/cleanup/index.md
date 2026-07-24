@@ -33,4 +33,3 @@ defer pool.put(ph, &slot);                   // primary: recycles to pool (clear
 
 ---
 
-Next: [Pattern 2 — defer-destroy-early](pattern-2.md).

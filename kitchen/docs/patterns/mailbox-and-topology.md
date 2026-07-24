@@ -196,4 +196,3 @@ Example: `examples/layer2/061-fan_out.zig`, `examples/layer4/054-pool_fan_out.zi
 
 ---
 
-Next: [Patterns — Pool Patterns](pool.md).

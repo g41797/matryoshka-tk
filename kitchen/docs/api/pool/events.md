@@ -1,4 +1,4 @@
-# API Reference — Pool — Event source helpers
+# Event source helpers
 
 New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
 
@@ -70,4 +70,3 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
 
 ---
 
-Next: [Hook discipline](hooks-discipline.md).

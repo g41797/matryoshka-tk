@@ -18,4 +18,3 @@ Transfer and cleanup are not in conflict — transfer pre-empts cleanup by clear
 
 ---
 
-Next: [Pattern summary](summary.md).

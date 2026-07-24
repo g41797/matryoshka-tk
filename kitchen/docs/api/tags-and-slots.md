@@ -148,4 +148,3 @@ Code order:                      Execution when acquire fails:
 
 ---
 
-Next: [API Reference — Cooperative Cleanup](cleanup.md).

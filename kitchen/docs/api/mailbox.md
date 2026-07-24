@@ -263,5 +263,3 @@ receive → O2:             [R1, R2, R3]            oob=0
 ```
 
 ---
-
-Next: [API Reference — Pool](pool.md).

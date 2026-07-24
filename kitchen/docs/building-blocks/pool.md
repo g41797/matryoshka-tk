@@ -71,6 +71,4 @@ That wait ends the moment some other `{ Job Processor }` calls `put()`.
 
 ---
 
-Next: [Master](master.md) — who coordinates all of this.
-
 See also: [API Reference — Pool](../api/pool/index.md) for the actual Zig functions.

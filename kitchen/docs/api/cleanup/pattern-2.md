@@ -17,4 +17,3 @@ Destroy before create — safe because PolyHelper.destroy is a no-op on null.
 
 ---
 
-Next: [Pattern 3 — defer for received mailbox item](pattern-3.md).

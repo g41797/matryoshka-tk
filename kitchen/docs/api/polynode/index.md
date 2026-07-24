@@ -1,4 +1,4 @@
-# API Reference — PolyNode, ItemHandle, Slot
+# Troika - PolyNode, ItemHandle, Slot
 
 New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md)  
 first.
@@ -37,4 +37,3 @@ pub const Slot = ?ItemHandle;
 
 ---
 
-Next: [reset / is_linked](functions.md).

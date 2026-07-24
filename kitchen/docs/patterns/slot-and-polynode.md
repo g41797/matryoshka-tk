@@ -412,5 +412,3 @@ Why.
 - PoolHandle is itself a PolyNode.
 
 ---
-
-Next: [Patterns — Mailbox and Topology Patterns](mailbox-and-topology.md).

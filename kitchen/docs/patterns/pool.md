@@ -170,5 +170,3 @@ Why.
 - Separate free lists per tag.
 
 ---
-
-Next: [Patterns — Futures, Select, Group, Cancellation](async.md).

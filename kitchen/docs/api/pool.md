@@ -336,5 +336,3 @@ Next - [Limited capacity](../examples/layer3/090-capped_pool.md)
 Be careful - you inject your code to the heart of Matryoshka.
 
 ---
-
-Next: [API Reference — Tag Identity and Slot Programming](tags-and-slots.md).
