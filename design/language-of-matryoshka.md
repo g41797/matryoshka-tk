@@ -212,9 +212,3 @@ Whenever possible, the documentation speaks about Items rather than pointers, no
 The architecture comes first.
 
 The implementation exists to support it.
-
-I think this changes the entire tone of the project.
-
-Instead of introducing Matryoshka as **"a library containing PolyNode, Mailbox and Pool,"** it introduces it as **"an architecture built from Masters that communicate Items."**
-
-`PolyNode` is no longer the hero of the story—it becomes the elegant implementation technique that makes the architecture possible. I believe that's a much more intuitive mental model for Zig developers approaching Matryoshka for the first time.
