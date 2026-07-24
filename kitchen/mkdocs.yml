@@ -49,6 +49,7 @@ nav:
           - Defining user types — manual step by step: api/polynode/manual-definition.md
           - Std compatibility: api/polynode/stdlib-compatibility.md
       - PolyHelper: api/polyhelper.md
+      - Handle-based API: api/handle-based-apis.md
       - Mailbox:
           - Overview: api/mailbox/index.md
           - Send group: api/mailbox/send.md
