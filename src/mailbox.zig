@@ -5,8 +5,8 @@
 //!
 //! A mailbox:
 //! - sends/receives ItemHandles
-//! - supports blocking and non-blocking receive
-//! - holds handles while they are queued
+//! - supports waiting and non-waiting receive
+//! - holds handles until they are received
 //! - is itself a PolyNode
 //!
 
@@ -23,8 +23,6 @@ pub const MailboxHandle = polynode.ItemHandle;
 pub const MailboxPolyHelper = polynode.PolyHelper(_Mailbox);
 
 /// Creates a mailbox.
-///
-/// Stores `io` for use by blocking operations.
 pub fn new(io: Io, alloc: std.mem.Allocator) !MailboxHandle {
     const mbx: *_Mailbox = try alloc.create(_Mailbox);
     errdefer alloc.destroy(mbx);
@@ -64,7 +62,7 @@ pub fn destroy(mbh: MailboxHandle, alloc: std.mem.Allocator) void {
 /// Appends the handle to the tail of the queue.
 ///
 /// Moves the handle out of the slot — `slot.*` becomes null.\
-/// The handle now lives in the mailbox.
+/// The handle now stored in the mailbox.
 pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -91,7 +89,7 @@ pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
 ///
 /// FIFO among OOBs, ahead of all regular handles.\
 /// Moves the handle out of the slot — `slot.*` becomes null.\
-/// The handle now lives in the mailbox.
+/// The handle now stored in the mailbox.
 pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -182,7 +180,7 @@ pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (erro
     slot.* = poly;
 }
 
-/// Attempts to receive a handle, without blocking.
+/// Attempts to receive a handle, without waiting.
 ///
 /// Sends the handle into the slot on success — `slot.*` becomes non-null.\
 /// The handle now is returned to the caller.
