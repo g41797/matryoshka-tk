@@ -48,7 +48,21 @@ pub const GetError = error{ Closed, NotAvailable, NotCreated };
 pub const PoolHooks = struct {
     ctx: *anyopaque,
     tags: []const *const anyopaque,
-    on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *polynode.Slot) void,
+
+    /// Called before an item is returned from the pool.
+    ///
+    /// `tag`: runtime type tag of the item to get.
+    ///
+    /// `in_pool_count`: number of available items with this tag before removal.
+    ///
+    /// `slot`: receives the selected item, or stays empty if no item is available.
+    on_get: *const fn (
+        ctx: *anyopaque,
+        tag: *const anyopaque,
+        in_pool_count: usize,
+        slot: *polynode.Slot,
+    ) void,
+
     /// `slot`: keep, accept, or clear the one carried item.
     ///
     /// Return value: list of another items (usually parts of former item)
@@ -56,8 +70,21 @@ pub const PoolHooks = struct {
     /// `null` or an empty list: nothing more to add.
     ///
     /// Non-empty list: each item is added the same way `slot`'s item is, same checks.
-    on_put: *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *polynode.Slot) ?std.DoublyLinkedList,
-    on_close: *const fn (ctx: *anyopaque, list: *std.DoublyLinkedList) void,
+    on_put: *const fn (
+        ctx: *anyopaque,
+        in_pool_count: usize,
+        slot: *polynode.Slot,
+    ) ?std.DoublyLinkedList,
+
+    /// Called when the pool is closed.
+    ///
+    /// `list`: all items still remaining in the pool.
+    ///
+    /// The hook is responsible for processing or destroying every item.
+    on_close: *const fn (
+        ctx: *anyopaque,
+        list: *std.DoublyLinkedList,
+    ) void,
 };
 
 /// Tag identity and lifecycle for the internal pool type.
