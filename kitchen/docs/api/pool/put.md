@@ -20,6 +20,11 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
     - **returned after reset** — hook resets the item's data before keeping it.
     - **deleted, a different item returned** — hook frees the original and puts a different item in `slot.*`.
   - `slot.*` stays non-null exactly when an item — original or replacement — is kept.
+  - `on_put` also returns `?std.DoublyLinkedList` — items to add alongside
+    `slot`. `null` or empty: nothing extra. Non-empty: each item is added  
+    the same way `slot`'s item is — same checks, same assert on foreign  
+    tag. See [Composite Items](#composite-items) below.
+
 - **Closed pool**:
   - Returns immediately, no hook call.
   - `slot.*` stays non-null — caller keeps the handle.
@@ -32,6 +37,22 @@ three times" carries no fixed count, identity, or ordering guarantee — it
 depends entirely on hook policy. This repo's own example hooks  
 (`examples/hooks/`) reset to default values on `put`, but that's our  
 examples' convention, not a matryoshka rule.
+
+---
+
+## Composite Items
+
+An item may hold other pooled items.
+
+Before the parent item enters the pool, `on_put` can return them as an  
+extra `std.DoublyLinkedList` alongside `slot`. The pool adds every item in  
+that list the same way it adds `slot`'s item.
+
+The hook is responsible for handing back only valid, unlinked,  
+correctly-tagged items — the pool does not validate that they form a  
+real composite.
+
+The pool does not distinguish between simple and composite items.
 
 ---
 

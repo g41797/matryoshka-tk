@@ -23,7 +23,7 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-025.md
+- API: matryoshka-api-reference-026.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-003.md
@@ -33,7 +33,7 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-043.md (slim, state-only)
+- Plan: matryoshka-tk-implementation-plan-044.md (slim, state-only)
 - Rules: rules-026.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-003.md
@@ -262,12 +262,43 @@ paths (outside the checklist itself and exempt STATUS-LOG.md history), no
 hardcoded repo-slug in .github/workflows/*.yml, no stray bare Io/io  
 mentions. DONE (doc-only, 167/167 tests unchanged). Deferred editorial/  
 conceptual prose pass (README intro, manifesto, landing candidates)  
-remains owner's call, not actioned. Plan version 043 created.
+remains owner's call, not actioned. Plan version 043 created.  
+API 5a — Composite Items: `PoolHooks.on_put` returns `?std.DoublyLinkedList`  
+(was `void`); `slot` behavior unchanged; new `_add_returned_item` helper  
+adds the slot item and every returned-list node the same way, one  
+broadcast per `put`; foreign tag now a hard assert. All existing `on_put`  
+hook implementations updated to the new signature, returning `null`. DONE  
+(167/167 tests unchanged). Plan version 044 created.  
+API 5b — new scenario 89 in `tests/layer3_pool.zig`: `on_put` keeps the  
+Event via `slot` and hands back a fresh Sensor via the returned list;  
+verified both land in the correct per-tag free-lists and are retrievable.  
+DONE (168/168 tests, +1 new).  
+API 5c — short doc update: `kitchen/docs/api/pool/put.md`,  
+`hooks-discipline.md`, and orphaned `kitchen/docs/api/pool.md` document  
+`on_put`'s `?std.DoublyLinkedList` return value, stressing hook-author  
+responsibility. `matryoshka-api-reference-025.md` → `-026.md`  
+(no-overwrite rule), cross-references updated in `context.md`,  
+`patterns-015.md`, `STATUS.md` Sources of Truth. DONE (168/168 tests  
+unchanged, `mkdocs build --strict` clean). API 5 complete.  
+API 5 follow-up — fixed a `put` returned-list bug: `popFirst` leaves the  
+popped node's own `prev`/`next` stale, so `_add_returned_item`'s  
+`is_linked` assert panicked for composite lists of 3+ items (invisible  
+with 1 item). Reproduced first (scenario 89 extended to 3 items, panic  
+confirmed), then fixed with `polynode.reset(poly)` after `popFirst`,  
+mirroring the pool's own internal free-list pops. DONE (168/168 tests  
+unchanged).  
+API 5d — trimmed `on_put`/`put`'s `src/pool.zig` doc comments to the  
+mechanical contract only; moved the composite-items rationale into a  
+dedicated "Composite Items" section in `kitchen/docs/api/pool/put.md`  
+(mirrored in orphaned `pool.md` and `matryoshka-api-reference-026.md`).  
+`on_put`'s `?std.DoublyLinkedList` return-value signature unchanged — an  
+out-param alternative was proposed and rejected. DONE (168/168 tests  
+unchanged, `mkdocs build --strict` clean).
 
-**Next stage**: CANDIDATES (composed README + landing docs from a repo-wide  
-`.md` audit, `design/candidates/`) — requirements-gathering done, execution  
-not started, blocked on owner confirming Pass 1 subagent-sweep approach. Then  
-MDFIX (markdown hard-break rule + `fix_md_hardbreaks.sh` tooling). Deferred:  
+**Next stage**: CANDIDATES (composed README + landing docs from a repo-wide `.md` audit,  
+`design/candidates/`) — requirements-gathering done, execution not started,  
+blocked on owner confirming Pass 1 subagent-sweep approach. Then MDFIX  
+(markdown hard-break rule + `fix_md_hardbreaks.sh` tooling). Deferred:  
 diagram-notation sweep, mailbox-focused pool-audit equivalent, showcase-post  
 variants (Ziggit/Discord/Reddit) — all owner's call on order.
 

@@ -19,9 +19,9 @@ get() [pool empty]                get() [pool has items]
   ↓ a fresh item is created          ↓ an item is reused
 with caller                        with caller
 
-put() [kept]              put() [destroyed]
-  ↓                          ↓
-back in the pool          caller frees it
+put() [kept]                       put() [destroyed]
+  ↓                                  ↓
+back in the pool                   caller frees it
 
 close()
   ↓ every stored item is handed back for the caller to free

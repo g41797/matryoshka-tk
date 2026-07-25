@@ -4,10 +4,9 @@
 //! Toolkit for concurrent Zig systems.
 //!
 //! Components:
-//! - polynode: items runtime type identification, intrusion
-//! - mailbox: items passing
-//! - pool: items lifecycle management
-//!
+//! - polynode: runtime type identification and intrusive links
+//! - mailbox: item passing
+//! - pool: item lifecycle management
 
 pub const polynode = @import("polynode.zig");
 pub const mailbox = @import("mailbox.zig");

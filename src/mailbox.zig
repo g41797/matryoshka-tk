@@ -14,10 +14,9 @@ const _doc_stub = void;
 
 ///
 ///
-
-
-/// A mailbox, viewed as a ItemHandle.\
-/// Sendable, storable, embeddable like any handle.
+/// A mailbox, represented as an ItemHandle.
+///
+/// Can be sent, stored, and embedded like any other handle.
 pub const MailboxHandle = polynode.ItemHandle;
 
 /// Tag identity and lifecycle for the internal mailbox type.
@@ -64,8 +63,8 @@ pub fn destroy(mbh: MailboxHandle, alloc: std.mem.Allocator) void {
 
 /// Appends the handle to the tail of the queue.
 ///
-/// Sends the handle out of the slot — `slot.*` becomes null.\
-/// The handle now lives in the mailbox, nowhere else.
+/// Moves the handle out of the slot — `slot.*` becomes null.\
+/// The handle now lives in the mailbox.
 pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -91,8 +90,8 @@ pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
 /// Inserts the handle after the last OOB handle.
 ///
 /// FIFO among OOBs, ahead of all regular handles.\
-/// Sends the handle out of the slot — `slot.*` becomes null.\
-/// The handle now lives in the mailbox, nowhere else.
+/// Moves the handle out of the slot — `slot.*` becomes null.\
+/// The handle now lives in the mailbox.
 pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -122,18 +121,17 @@ pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     mbx.*.cond.signal(io);
 }
 
-/// Blocks until a handle is available.
+/// Waits until a handle is available.
 ///
-/// Sends the handle into the slot — `slot.*` becomes non-null.\
-/// The handle now lives with the caller.
+/// Stores the handle into the slot — `slot.*` becomes non-null.\
+/// The handle now is returned to the caller.
 ///
-/// `timeout_ns == null`: waits forever.\
-/// `timeout_ns == 0`: returns `error.Timeout` immediately — same as `try_receive`.\
-/// OOB handles arrive first.\
-/// `wakeUpAll()` while blocked here returns `error.Wakeup`; `slot.*` stays null.
+/// - `timeout_ns == null`: waits forever.
+/// - `timeout_ns == 0`: returns `error.Timeout` immediately — same as `try_receive`.\
+/// OOB handles arrive first.
+/// - `wakeUpAll()` while blocked here returns `error.Wakeup`; `slot.*` stays null.
 ///
-/// Multiple concurrent receivers compete for each handle.\
-/// One wins. Order is not guaranteed FIFO.
+/// Multiple concurrent receivers compete for each handle.
 pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Io.Cancelable)!void {
     std.debug.assert(slot.* == null);
 
@@ -186,7 +184,10 @@ pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (erro
 
 /// Attempts to receive a handle, without blocking.
 ///
-/// True if a handle was received, false if the queue was empty.
+/// Sends the handle into the slot on success — `slot.*` becomes non-null.\
+/// The handle now is returned to the caller.
+///
+/// True if a handle was received, false if the mailbox was empty.
 pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool {
     std.debug.assert(slot.* == null);
 
@@ -215,9 +216,9 @@ pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool 
     return true;
 }
 
-/// Takes everything currently queued at once, without blocking.
+/// Removes every queued handle at once.
 ///
-/// Empty list if the queue was empty — not an error.
+/// Returns an empty list if the mailbox is empty.
 pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
     const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
 
@@ -237,10 +238,13 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
     return result;
 }
 
-/// Collects all handles still queued and returns them as a list.
+/// Closes the mailbox.
 ///
-/// Wakes any blocked receivers.\
-/// Safe to call more than once — second call returns an empty list.
+/// Returns all queued handles as a list.\
+/// Wakes blocked receivers.
+///
+/// Safe to call more than once.\
+/// Later calls return an empty list.
 pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
     const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
     const io: Io = mbx.*.io;
@@ -265,13 +269,14 @@ pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
     return result;
 }
 
-/// Wakes every receiver currently blocked in `receive()`.
+/// Wakes receivers currently waiting in `receive()`.
 ///
-/// No item is sent. Nothing is queued.\
-/// Woken receivers return `error.Wakeup`.\
-/// Receivers that call `receive()` after this returns are not affected.\
+/// No handle is queued.\
+/// Waiting receivers return `error.Wakeup`.
 ///
-/// Distinct from `close()` — the mailbox stays open, effect does not persist.
+/// Receivers that start waiting later are not affected.
+///
+/// Unlike `close()`, the mailbox remains open.
 pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void {
     const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
 
@@ -295,7 +300,7 @@ pub const ConcurrentError = error{ConcurrencyUnavailable};
 /// The handle sits inside the result, not behind a pointer — no `*Slot`\
 /// shared across threads.
 ///
-/// `.item` means the handle now lives with the caller.
+/// `.item` means the handle now is returned to the caller.
 pub const ReceiveResult = union(enum) {
     item: polynode.ItemHandle,
     closed: void,
@@ -309,7 +314,7 @@ pub const ReceiveResult = union(enum) {
 /// No error union.
 /// Primary building block for `select.concurrent` and `io.concurrent`/`group.concurrent`.\
 /// On cancellation, returns `.canceled`.\
-/// The mailbox stays open — closing it is the caller's job.\
+/// The mailbox stays open — closing it is the caller's job.
 pub fn receiveResult(mbh: MailboxHandle, timeout_ns: ?u64) ReceiveResult {
     var slot: polynode.Slot = null;
     receive(mbh, &slot, timeout_ns) catch |err| return switch (err) {

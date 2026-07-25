@@ -17,9 +17,10 @@ pub fn onGet(ptr: *anyopaque, tag: *const anyopaque, _: usize, slot: *polynode.S
     items.createByTag(tag, self.alloc, slot);
 }
 
-pub fn onPut(_: *anyopaque, _: usize, slot: *polynode.Slot) void {
-    if (slot.* == null) return;
+pub fn onPut(_: *anyopaque, _: usize, slot: *polynode.Slot) ?std.DoublyLinkedList {
+    if (slot.* == null) return null;
     items.resetOnPut(slot);
+    return null;
 }
 
 pub fn onClose(ptr: *anyopaque, list: *std.DoublyLinkedList) void {

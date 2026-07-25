@@ -29,8 +29,8 @@ pub fn onGet(ptr: *anyopaque, tag: *const anyopaque, _: usize, slot: *polynode.S
     items.createByTag(tag, self.alloc, slot);
 }
 
-pub fn onPut(ptr: *anyopaque, _: usize, slot: *polynode.Slot) void {
-    if (slot.* == null) return;
+pub fn onPut(ptr: *anyopaque, _: usize, slot: *polynode.Slot) ?std.DoublyLinkedList {
+    if (slot.* == null) return null;
     const self: *Self = @ptrCast(@alignCast(ptr));
     self.mutex.lockUncancelable(self.io);
     defer self.mutex.unlock(self.io);
@@ -42,6 +42,7 @@ pub fn onPut(ptr: *anyopaque, _: usize, slot: *polynode.Slot) void {
         items.resetOnPut(slot);
         self.count += 1;
     }
+    return null;
 }
 
 pub fn onClose(ptr: *anyopaque, list: *std.DoublyLinkedList) void {

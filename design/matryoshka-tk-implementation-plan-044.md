@@ -1,12 +1,12 @@
-# Matryoshka Zig — Implementation Plan (043)
+# Matryoshka Zig — Implementation Plan (044)
 
-Replaces [matryoshka-tk-implementation-plan-042.md](matryoshka-tk-implementation-plan-042.md).
+Replaces [matryoshka-tk-implementation-plan-043.md](matryoshka-tk-implementation-plan-043.md).
 
 ## Status
 
-Requirements-gathering only for the next two stages (CANDIDATES, MDFIX below).  
-No `design/candidates/` files created yet. Not ready for execution — open  
-question below needs an answer before Pass 1 starts.
+API 5 (Composite Items — pool `on_put` returns a list) complete: 5a code  
+change, 5b test coverage, 5c docs, 5d comment/doc restructure, all done.  
+Follow-up bugfix (popFirst stale-link) also done.
 
 ---
 
@@ -23,21 +23,39 @@ question below needs an answer before Pass 1 starts.
 - New Mindset (banned words, Phase A/B/C, code migration `Thread.spawn` →
   `io.concurrent()`, architecture-docs ownership-language pass): DONE.  
   167/167 tests unchanged throughout.
-- LANDING 1: src/ LOC counter (non-recursive, excludes empty/comment/import
-  lines; design/src-loc-counter-001.md) + badge next to API button on  
-  `kitchen/docs/index.md`; shared logic in `kitchen/tools/src_loc.py` used  
-  by both the mkdocs build-time hook (`kitchen/hooks/count_lines.py`) and a  
-  standalone script (`kitchen/tools/count_src_loc.sh`); API button hidden  
-  via CSS. DONE (doc/tooling-only, 167/167 tests unchanged).
-- REBRAND — repo rename to matryoshka-tk. Mechanical pass (file renames,
-  safe-regex text swap) done before clone; this session verified every  
-  deferred checklist item (`design/matryoshka-tk-rebrand-checklist-001.md`):  
-  no stray `matryoshka-io` paths outside the checklist itself and the  
-  exempt `STATUS-LOG.md` history, no hardcoded repo-slug in  
-  `.github/workflows/*.yml`, no stray bare `Io`/`io` mentions. DONE  
-  (doc-only, 167/167 tests unchanged). Deferred editorial/conceptual prose  
-  pass (README intro, manifesto, landing candidates) remains owner's call,  
-  not actioned.
+- LANDING 1: src/ LOC counter + badge next to API button on
+  `kitchen/docs/index.md`; shared logic in `kitchen/tools/src_loc.py`. DONE  
+  (doc/tooling-only, 167/167 tests unchanged).
+- REBRAND — repo rename to matryoshka-tk. Mechanical pass + deferred-item
+  verification. DONE (doc-only, 167/167 tests unchanged). Deferred  
+  editorial/conceptual prose pass remains owner's call, not actioned.
+- API 5a — Composite Items: `PoolHooks.on_put` returns
+  `?std.DoublyLinkedList` (was `void`); `slot` behavior unchanged; new  
+  `_add_returned_item` helper adds the slot item and every  
+  returned-list node the same way, one broadcast per `put`; foreign tag  
+  now a hard assert. All existing `on_put` hook implementations updated  
+  to the new signature, returning `null`. DONE (167/167 tests unchanged).
+- API 5b — new scenario 89 in `tests/layer3_pool.zig`: `on_put` keeps the
+  Event via `slot` and hands back a fresh Sensor via the returned list;  
+  verified both land in the correct per-tag free-lists and are  
+  retrievable. DONE (168/168 tests, +1 new).
+- API 5c — short doc update: `kitchen/docs/api/pool/put.md`,
+  `hooks-discipline.md`, and orphaned `kitchen/docs/api/pool.md` document  
+  `on_put`'s `?std.DoublyLinkedList` return value, stressing hook-author  
+  responsibility. `matryoshka-api-reference-025.md` → `-026.md`  
+  (no-overwrite rule), cross-references updated. DONE (168/168 tests  
+  unchanged, `mkdocs build --strict` clean).
+- API 5 follow-up — fixed a `put` returned-list bug: `popFirst` leaves the
+  popped node's own `prev`/`next` stale, so `_add_returned_item`'s  
+  `is_linked` assert panicked for composite lists of 3+ items. Reproduced  
+  first (scenario 89 extended to 3 items), then fixed with  
+  `polynode.reset(poly)` after `popFirst`. DONE (168/168 tests unchanged).
+- API 5d — trimmed `on_put`/`put`'s `src/pool.zig` doc comments to the
+  mechanical contract only; moved composite-items rationale into a  
+  dedicated "Composite Items" doc section (`kitchen/docs/api/pool/put.md`,  
+  orphaned `pool.md`, `matryoshka-api-reference-026.md`). Signature  
+  unchanged (`?std.DoublyLinkedList` return value kept, out-param  
+  alternative rejected). DONE (168/168 tests unchanged).
 
 See `design/STATUS.md` Session Log for full per-stage detail — this plan file  
 stays state-only per the slim-plan rule.

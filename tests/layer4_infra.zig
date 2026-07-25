@@ -73,8 +73,9 @@ fn poolTransportOnGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) vo
 
 fn resetOnPut(_: *Slot) void {} // PoolHandle items carry no resettable scalar state — kept for on_put-shape consistency
 
-fn poolTransportOnPut(_: *anyopaque, _: usize, slot: *Slot) void {
+fn poolTransportOnPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
     resetOnPut(slot);
+    return null;
 }
 
 fn poolTransportOnClose(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {

@@ -16,6 +16,10 @@ New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md
 - `on_put`:
   - Set `slot.*` to null = destroy (optionally after putting a different item there first — see the four `put` outcomes above).
   - Leave non-null = keep in pool, as-is or after resetting its data — your choice.
+  - Return value: `?std.DoublyLinkedList` of extra items. `null`/empty =
+    nothing extra. Non-empty = each item added like `slot`'s. See
+    [Composite Items](put.md#composite-items).
+
 - `on_close`:
   - Receives `*std.DoublyLinkedList`.
   - Walks via `popFirst()`, frees each handle.

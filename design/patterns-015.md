@@ -17,7 +17,7 @@ Change from patterns-011:
 One unified catalog. Every pattern and idiom appears once, in logical order.  
 Companion: [rules-024.md](rules-024.md) — what is mandatory.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [matryoshka-api-reference-025.md](matryoshka-api-reference-025.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-026.md](matryoshka-api-reference-026.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -44,7 +44,7 @@ Order of this catalog.
 
 ## Slot and ownership idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-025.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-026.md).
 
 ### Empty Slot initialization
 
@@ -212,7 +212,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-025.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-026.md).
 
 ---
 
@@ -342,7 +342,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-025.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-026.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -397,7 +397,7 @@ Pattern.
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, with ownership transfer.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-025.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-026.md).
 
 ### Pool-as-message
 

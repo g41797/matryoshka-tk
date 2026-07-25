@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-//! Runtime type support for intrusive items.
+//! Runtime type support for intrusive Matryoshka items.
 //!
 //! Every Matryoshka item embeds a PolyNode.
 //!
@@ -24,17 +24,17 @@ pub const PolyTag = struct {
 
 /// Embedded in every managed item.
 ///
-/// Infrastructure works with PolyNode.\
+/// Matryoshka works with PolyNode.\
 /// Applications work with the parent item.
 pub const PolyNode = struct {
     node: std.DoublyLinkedList.Node = .{},
     tag: *const anyopaque = undefined,
 };
 
-/// Type-erased access to Item.
+/// Type-erased pointer to a PolyNode.
 pub const ItemHandle = *PolyNode;
 
-/// "Container" for ItemHandle.
+/// Optional ItemHandle.
 pub const Slot = ?ItemHandle;
 
 /// Clears the intrusive list links.
@@ -45,7 +45,7 @@ pub inline fn reset(node: *PolyNode) void {
     node.node.next = null;
 }
 
-/// True if the node belongs to a list.
+/// True if the node is linked into a list.
 pub inline fn is_linked(node: *PolyNode) bool {
     return node.node.prev != null or node.node.next != null;
 }
@@ -68,7 +68,7 @@ pub inline fn is_linked(node: *PolyNode) bool {
 /// - create()
 /// - destroy()
 ///
-/// Disable allocation helpers with:
+/// Disable create() and destroy() generation with:
 ///
 /// ```zig
 /// const no_create_destroy = void{};
@@ -85,12 +85,12 @@ pub fn PolyHelper(comptime T: type) type {
             /// Runtime type ID.
             pub const TAG: *const anyopaque = &_tag;
 
-            /// True if the tag belongs to T.
+            /// True if the tag identifies T.
             pub inline fn isIt(tag: *const anyopaque) bool {
                 return tag == TAG;
             }
 
-            /// Casts a PolyNode to T.
+            /// Identifies a PolyNode as T.
             ///
             /// Returns null on type mismatch.
             pub inline fn identifyNodeAs(node: *PolyNode) ?*T {
@@ -107,7 +107,7 @@ pub fn PolyHelper(comptime T: type) type {
                 return identifyNodeAs(node) orelse unreachable;
             }
 
-            /// Casts a Slot to T.
+            /// Identifies the item stored in a Slot as T.
             ///
             /// Returns null if the Slot is empty or has another type.
             pub inline fn identifySlotAs(slot: *const Slot) ?*T {
@@ -175,12 +175,12 @@ pub fn PolyHelper(comptime T: type) type {
             /// Runtime type ID.
             pub const TAG: *const anyopaque = &_tag;
 
-            /// True if the tag belongs to T.
+            /// True if the tag identifies T.
             pub inline fn isIt(tag: *const anyopaque) bool {
                 return tag == TAG;
             }
 
-            /// Casts a PolyNode to T.
+            /// Identifies a PolyNode as T.
             ///
             /// Returns null on type mismatch.
             pub inline fn identifyNodeAs(node: *PolyNode) ?*T {
@@ -197,7 +197,7 @@ pub fn PolyHelper(comptime T: type) type {
                 return identifyNodeAs(node) orelse unreachable;
             }
 
-            /// Casts a Slot to T.
+            /// Identifies the item stored in a Slot as T.
             ///
             /// Returns null if the Slot is empty or has another type.
             pub inline fn identifySlotAs(slot: *const Slot) ?*T {

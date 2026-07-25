@@ -4,6 +4,126 @@ Full session history, newest entries at top. Append-only. Read only when explici
 
 ## Session Log
 
+### 2026-07-25 — API 5d: Composite Items — comment/doc restructure
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner reviewed API 5's `on_put`/`put` doc comments in `src/pool.zig` and  
+flagged the "composite item" explanation as an implementation detail that  
+didn't belong in the raw hook-contract comment. Trimmed both to state  
+only the mechanical contract (`slot` behavior, return-value semantics),  
+moved the composite-items rationale into a dedicated "Composite Items"  
+section in `kitchen/docs/api/pool/put.md` (mirrored in the orphaned  
+`kitchen/docs/api/pool.md` and `matryoshka-api-reference-026.md`), with  
+`hooks-discipline.md` cross-referencing it instead of repeating it.
+
+An earlier draft in this pass proposed changing `on_put`'s signature from  
+a `?std.DoublyLinkedList` return value to an out-parameter — owner  
+rejected that: `on_put` keeps returning `?std.DoublyLinkedList`, no  
+signature change. Doc/comment wording only.
+
+168/168 tests unchanged, `kitchen/build_and_test_debug.sh` and  
+`mkdocs build --strict` both clean.
+
+### 2026-07-25 — API 5 follow-up: popFirst stale-link bug
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner caught a latent bug in API 5a's `put` returned-list loop:  
+`std.DoublyLinkedList.remove` (called by `popFirst`) fixes up the  
+*neighbors'* `prev`/`next` but never clears the popped node's own —  
+`_add_returned_item`'s `std.debug.assert(!polynode.is_linked(item))`  
+reads exactly those fields, so a node pulled from a list of 3+ items  
+still looked "linked" and panicked. Invisible with the original 1-item  
+test (a lone node's links were already null).
+
+Reproduced first: scenario 89 in `tests/layer3_pool.zig` extended from a  
+1-item to a 3-item composite (Sensor, Timer, ShutdownCommand — 3 of the  
+project's existing item types), confirmed it panicked at `pool.zig`'s  
+`_add_returned_item` assert. Then fixed: added `polynode.reset(poly)`  
+right after `list.popFirst()` in the returned-list loop, mirroring what  
+the pool's own internal free-list pops (`get_wait`,  
+`_get_available_or_new`, `_get_new_only`, `_get_available_only`) already  
+do. `_add_returned_item`'s doc comment updated to state the reset  
+precondition.
+
+168/168 tests pass, `kitchen/build_and_test_debug.sh` clean.
+
+### 2026-07-25 — API 5c: Composite Items — docs
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Short, human-style addition documenting `on_put`'s new  
+`?std.DoublyLinkedList` return value: `kitchen/docs/api/pool/put.md`,  
+`kitchen/docs/api/pool/hooks-discipline.md`, and the orphaned  
+`kitchen/docs/api/pool.md` (kept in sync though unlinked from nav, per  
+owner's explicit call). Core point stressed: the pool does not validate  
+that returned items form a valid composite — the hook author is  
+responsible for handing back only valid, unlinked, correctly-tagged  
+items, same responsibility model as the existing `slot` contract.
+
+`matryoshka-api-reference-025.md` documented the old `on_put` signature,  
+so per the no-overwrite rule it was superseded by  
+`matryoshka-api-reference-026.md` (same three edits), with live  
+cross-references updated in `context.md`, `patterns-015.md`, and  
+`STATUS.md`'s Sources of Truth line. `STATUS-LOG.md`'s own historical  
+mentions of `-025` are left untouched (append-only history).
+
+168/168 tests unchanged, `kitchen/build_and_test_debug.sh` and  
+`mkdocs build --strict` both clean. API 5 (5a/5b/5c) complete.
+
+### 2026-07-25 — API 5b: Composite Items — test coverage
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+New scenario 89 in `tests/layer3_pool.zig`: `on_put` keeps the Event via  
+`slot` and hands back a freshly created Sensor via the returned  
+`std.DoublyLinkedList` (`onPutComposite` + `CompositeCtx`). Verifies both  
+items land in their correct per-tag free-lists and are retrievable via a  
+normal `pool.get`. No example changes, per owner's call.
+
+168/168 tests pass (was 167), `kitchen/build_and_test_debug.sh` clean.
+
+API 5c (short doc update) still pending.
+
+### 2026-07-25 — API 5a: Composite Items — Pool on_put returns a list
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+A pooled item may contain other pooled items ("Composite Items"). Added a  
+channel for `on_put` to hand back more than the one item carried by  
+`slot`: `PoolHooks.on_put` now returns `?std.DoublyLinkedList` (was  
+`void`). `slot` behavior is unchanged. New `put`-internal helper  
+`_add_returned_item` adds one item to its per-tag free-list — same  
+checks as the old slot-only path (not linked, tag registered), reused  
+for both the slot item and every node in the returned list; a foreign  
+tag is now a hard assert instead of a silent skip, since composite  
+sub-items may carry a different tag than the outer item. One  
+`cond.broadcast` covers both sources per `put` call. `null` or empty  
+list: no change from today's behavior.
+
+Every existing `on_put` hook implementation (examples, tests, stories)  
+updated to the new signature, all returning `null` — no behavior change,  
+no example added for the new functionality itself (deferred, owner's  
+call — composite-item demonstration is not needed in examples).
+
+167/167 tests pass, `kitchen/build_and_test_debug.sh` clean.
+
+Split into three sub-stages: **API 5a** (this entry, code change) done;  
+**API 5b** (new test exercising a non-empty returned list) and **API 5c**  
+(short doc update, stressing that the hook author is responsible for  
+only returning valid/unlinked/correctly-tagged items) still pending.
+
 ### 2026-07-23 — LANDING 1: src/ LOC counter + badge styling
 
 **Participants**: human (owner), Claude (agent).

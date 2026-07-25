@@ -72,7 +72,9 @@ const VideoBufCtx = struct {
     fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}
 
     // Keep all returned buffers.
-    fn onPut(_: *anyopaque, _: usize, _: *Slot) void {}
+    fn onPut(_: *anyopaque, _: usize, _: *Slot) ?std.DoublyLinkedList {
+        return null;
+    }
 
     fn onClose(ctx: *anyopaque, list: *std.DoublyLinkedList) void {
         const self: *VideoBufCtx = @ptrCast(@alignCast(ctx));

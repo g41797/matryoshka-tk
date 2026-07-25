@@ -303,9 +303,10 @@ const Ctx10 = struct {
         items.createByTag(tag, self.alloc, slot);
     }
 
-    fn onPut(_: *anyopaque, _: usize, slot: *Slot) void {
-        if (slot.* == null) return;
+    fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+        if (slot.* == null) return null;
         items.resetOnPut(slot);
+        return null;
     }
 
     fn onClose(ctx_ptr: *anyopaque, list: *std.DoublyLinkedList) void {

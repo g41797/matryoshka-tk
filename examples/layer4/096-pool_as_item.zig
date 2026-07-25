@@ -45,8 +45,9 @@ fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}
 
 fn resetOnPut(_: *Slot) void {} // PoolHandle items carry no resettable scalar state — kept for on_put-shape consistency
 
-fn onPut(_: *anyopaque, _: usize, slot: *Slot) void {
+fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
     resetOnPut(slot);
+    return null;
 }
 
 fn onClose(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {

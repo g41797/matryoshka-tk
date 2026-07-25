@@ -839,6 +839,59 @@ test "88 - double pool.put: is_linked detection (assert documented)" {
     try testing.expect(polynode.is_linked(raw));
 }
 
+// --- Scenario 89: on_put returns composite sub-items (3 existing item types), added like the slot item ---
+test "89 - on_put returns composite sub-items" {
+    const io: Io = testing.io;
+    const alloc: std.mem.Allocator = testing.allocator;
+
+    const ph: PoolHandle = try pool.new(io, alloc);
+    var ctx: CompositeCtx = .{ .alloc = alloc };
+    const tags = [_]*const anyopaque{ EventPolyHelper.TAG, SensorPolyHelper.TAG, TimerPolyHelper.TAG, ShutdownCommandPolyHelper.TAG };
+    try pool.init(ph, .{
+        .ctx = &ctx,
+        .tags = &tags,
+        .on_get = onGetAlways,
+        .on_put = onPutComposite,
+        .on_close = onCloseAdaptive,
+    });
+    defer {
+        pool.close(ph);
+        pool.destroy(ph, alloc);
+    }
+
+    var slot: Slot = null;
+    try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
+    try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
+
+    // on_put keeps the Event (slot path) and hands back a 3-item composite —
+    // Sensor, Timer, ShutdownCommand — via the returned-list path. All four
+    // must land in the pool.
+    pool.put(ph, &slot);
+    try testing.expectEqual(@as(Slot, null), slot);
+    try testing.expectEqual(@as(usize, 3), ctx.extra_created);
+
+    // All items are now available from the pool via the normal get path.
+    var ev_slot: Slot = null;
+    try pool.get(ph, EventPolyHelper.TAG, .available_only, &ev_slot);
+    try testing.expect(EventPolyHelper.identifySlotAs(&ev_slot) != null);
+    pool.put(ph, &ev_slot);
+
+    var sn_slot: Slot = null;
+    try pool.get(ph, SensorPolyHelper.TAG, .available_only, &sn_slot);
+    try testing.expect(SensorPolyHelper.identifySlotAs(&sn_slot) != null);
+    pool.put(ph, &sn_slot);
+
+    var tm_slot: Slot = null;
+    try pool.get(ph, TimerPolyHelper.TAG, .available_only, &tm_slot);
+    try testing.expect(TimerPolyHelper.identifySlotAs(&tm_slot) != null);
+    pool.put(ph, &tm_slot);
+
+    var sc_slot: Slot = null;
+    try pool.get(ph, ShutdownCommandPolyHelper.TAG, .available_only, &sc_slot);
+    try testing.expect(ShutdownCommandPolyHelper.identifySlotAs(&sc_slot) != null);
+    pool.put(ph, &sc_slot);
+}
+
 // --- Hook implementations ---
 
 const TestCtx = struct {
@@ -881,7 +934,7 @@ fn resetOnPut(slot: *Slot) void {
     if (SensorPolyHelper.identifySlotAs(slot)) |sn| sn.*.value = 0.0;
 }
 
-fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) void {
+fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) ?std.DoublyLinkedList {
     const ctx: *TestCtx = @ptrCast(@alignCast(ctx_opaque));
     ctx.put_call_count += 1;
     ctx.last_put_count = in_pool_count;
@@ -893,6 +946,41 @@ fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) void
     } else {
         resetOnPut(slot);
     }
+    return null;
+}
+
+const CompositeCtx = struct {
+    alloc: std.mem.Allocator,
+    extra_created: usize = 0,
+};
+
+// Keeps the Event via slot, hands back a freshly created 3-item composite —
+// Sensor, Timer, ShutdownCommand — via the returned list.
+fn onPutComposite(ctx_opaque: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+    const ctx: *CompositeCtx = @ptrCast(@alignCast(ctx_opaque));
+    resetOnPut(slot);
+
+    var list: std.DoublyLinkedList = .{};
+
+    const sn: *Sensor = ctx.alloc.create(Sensor) catch @panic("OOM in test");
+    sn.* = .{};
+    SensorPolyHelper.init(sn);
+    list.append(&sn.*.poly.node);
+    ctx.extra_created += 1;
+
+    const tm: *Timer = ctx.alloc.create(Timer) catch @panic("OOM in test");
+    tm.* = .{};
+    TimerPolyHelper.init(tm);
+    list.append(&tm.*.poly.node);
+    ctx.extra_created += 1;
+
+    const sc: *ShutdownCommand = ctx.alloc.create(ShutdownCommand) catch @panic("OOM in test");
+    sc.* = .{};
+    ShutdownCommandPolyHelper.init(sc);
+    list.append(&sc.*.poly.node);
+    ctx.extra_created += 1;
+
+    return list;
 }
 
 fn onCloseAdaptive(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {
@@ -916,8 +1004,12 @@ const PolyNode = polynode.PolyNode;
 
 const Event = items.Event;
 const Sensor = items.Sensor;
+const Timer = items.Timer;
+const ShutdownCommand = items.ShutdownCommand;
 const EventPolyHelper = items.Event.EventPolyHelper;
 const SensorPolyHelper = items.Sensor.SensorPolyHelper;
+const TimerPolyHelper = items.Timer.TimerPolyHelper;
+const ShutdownCommandPolyHelper = items.ShutdownCommand.ShutdownCommandPolyHelper;
 const std = @import("std");
 const testing = std.testing;
 const Io = std.Io;
