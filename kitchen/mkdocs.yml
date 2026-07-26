@@ -35,6 +35,7 @@ theme:
 nav:
   - Home: index.md
   - The laws of documentation: laws_of_docs.md
+  - In a hurry?:  addendums/api_reference.md
   - The Manifesto: manifesto.md
   - History:  history.md
   - Building Blocks:
@@ -178,7 +179,6 @@ nav:
       - Mailbox vs TypeErasedQueue: addendums/typeErasedQueue-vs-mailbox.md
       - Notation: addendums/matryoshka-tk-notation.md
       - Installation: addendums/installation.md
-      - API : addendums/api_reference.md
 
 hooks:
   - hooks/count_lines.py

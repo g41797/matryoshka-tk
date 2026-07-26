@@ -9,7 +9,11 @@
 //! - holds handles until they are received
 //! - is itself a PolyNode
 //!
-
+//!  Thread(task) safe
+//!  - Multi-Producer/Multi-Consumer (MPMC)
+//!  - Multi-Sender/Multi-Receiver
+//!  - Fan-In/Fan-Out
+//!
 const _doc_stub = void;
 
 ///
@@ -19,7 +23,7 @@ const _doc_stub = void;
 /// Can be sent, stored, and embedded like any other handle.
 pub const MailboxHandle = polynode.ItemHandle;
 
-/// Tag identity and lifecycle for the internal mailbox type.
+/// Tag identity and control functions for the internal mailbox type.
 pub const MailboxPolyHelper = polynode.PolyHelper(_Mailbox);
 
 /// Creates a mailbox.
@@ -42,14 +46,15 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !MailboxHandle {
     return &mbx.*.poly;
 }
 
-/// True if the tag identifies a MailboxHandle.
+/// True if the tag identifies a Mailbox.
 pub inline fn is_it_you(tag: *const anyopaque) bool {
     return MailboxPolyHelper.isIt(tag);
 }
 
 /// Frees the mailbox.
 ///
-/// Must be closed first.\
+/// Must be closed first.
+///
 /// Destroying an open mailbox is a programming error — panics.
 pub fn destroy(mbh: MailboxHandle, alloc: std.mem.Allocator) void {
     const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
@@ -59,10 +64,11 @@ pub fn destroy(mbh: MailboxHandle, alloc: std.mem.Allocator) void {
     alloc.destroy(mbx);
 }
 
-/// Appends the handle to the tail of the queue.
+/// If mailbox is closed - returns error.Closed
 ///
-/// Moves the handle out of the slot — `slot.*` becomes null.\
-/// The handle now stored in the mailbox.
+/// Otherwise:
+/// - appends the handle to the tail of the queue
+/// - 'slot.*` becomes null.
 pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -85,11 +91,12 @@ pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     mbx.*.cond.signal(io);
 }
 
-/// Inserts the handle after the last OOB handle.
+/// If mailbox is closed - returns error.Closed
 ///
-/// FIFO among OOBs, ahead of all regular handles.\
-/// Moves the handle out of the slot — `slot.*` becomes null.\
-/// The handle now stored in the mailbox.
+/// Otherwise:
+/// - inserts the handle after the last OOB handle
+/// - ahead of all regular handles
+/// - `slot.*` becomes null
 pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -119,17 +126,24 @@ pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     mbx.*.cond.signal(io);
 }
 
-/// Waits until a handle is available.
+/// If mailbox is closed - returns error.Closed
 ///
-/// Stores the handle into the slot — `slot.*` becomes non-null.\
-/// The handle now is returned to the caller.
+/// Otherwise:
+/// - waits until a handle is available
+/// - stories it to slot.*
+/// - OOB handles have priority
 ///
 /// - `timeout_ns == null`: waits forever.
-/// - `timeout_ns == 0`: returns `error.Timeout` immediately — same as `try_receive`.\
-/// OOB handles arrive first.
-/// - `wakeUpAll()` while blocked here returns `error.Wakeup`; `slot.*` stays null.
+/// - `timeout_ns == 0`: returns `error.Timeout` immediately for empty mailbox
 ///
-/// Multiple concurrent receivers compete for each handle.
+/// receive breaks on
+/// - timeout
+/// - cancel
+/// - `wakeUpAll()
+///
+/// For the break - `slot.*` stays null.
+///
+/// Cancel does not close mailbox.
 pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Io.Cancelable)!void {
     std.debug.assert(slot.* == null);
 
@@ -180,12 +194,15 @@ pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (erro
     slot.* = poly;
 }
 
-/// Attempts to receive a handle, without waiting.
+/// If mailbox is closed - returns error.Closed
 ///
-/// Sends the handle into the slot on success — `slot.*` becomes non-null.\
-/// The handle now is returned to the caller.
+/// Otherwise:
+/// - attempts to receive a handle, without waiting.
+/// - sends the handle into the slot on success — `slot.*` becomes non-null.
 ///
-/// True if a handle was received, false if the mailbox was empty.
+/// Returns
+/// - true if a handle was received
+/// - false if the mailbox was empty
 pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool {
     std.debug.assert(slot.* == null);
 
@@ -214,7 +231,11 @@ pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool 
     return true;
 }
 
-/// Removes every queued handle at once.
+/// If mailbox is closed - returns error.Closed
+///
+/// Otherwise:
+/// - returns all stored handles as list
+/// - empties mailbox
 ///
 /// Returns an empty list if the mailbox is empty.
 pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
@@ -238,8 +259,9 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
 
 /// Closes the mailbox.
 ///
-/// Returns all queued handles as a list.\
-/// Wakes blocked receivers.
+/// Returns all handles as a list.
+///
+/// Wakes waited receivers.
 ///
 /// Safe to call more than once.\
 /// Later calls return an empty list.
@@ -267,14 +289,17 @@ pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
     return result;
 }
 
-/// Wakes receivers currently waiting in `receive()`.
+/// If mailbox is closed - returns error.Closed
 ///
-/// No handle is queued.\
-/// Waiting receivers return `error.Wakeup`.
+/// Otherwise:
+/// - wakes receivers currently waiting in `receive()`
+/// - as result - waiting receivers return `error.Wakeup`.
 ///
 /// Receivers that start waiting later are not affected.
 ///
-/// Unlike `close()`, the mailbox remains open.
+/// The mailbox remains open.
+///
+/// Don't confuse with Cancel
 pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void {
     const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
 
@@ -293,12 +318,7 @@ pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void {
 /// Returned by `receive_future` when the Io backend has no concurrency.
 pub const ConcurrentError = error{ConcurrencyUnavailable};
 
-/// Outcome of a receive attempt, as a value instead of an error union.
-///
-/// The handle sits inside the result, not behind a pointer — no `*Slot`\
-/// shared across threads.
-///
-/// `.item` means the handle now is returned to the caller.
+/// 'Packed' result of receive attempt
 pub const ReceiveResult = union(enum) {
     item: polynode.ItemHandle,
     closed: void,
@@ -307,12 +327,28 @@ pub const ReceiveResult = union(enum) {
     wakeup: void,
 };
 
-/// Maps every `receive` outcome to a `ReceiveResult` variant. Blocking.
+/// Wraps `receiveResult`
+/// - in an `Io.Future`
+/// - for direct await
+/// - or `Io.Group` use.
+pub fn receive_future(mbh: MailboxHandle, timeout_ns: ?u64) ConcurrentError!Io.Future(ReceiveResult) {
+    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    return mbx.*.io.concurrent(receiveResult, .{ mbh, timeout_ns });
+}
+
+/// Packs 'receive()` results to union,
+/// returned via Io.Queue
 ///
-/// No error union.
-/// Primary building block for `select.concurrent` and `io.concurrent`/`group.concurrent`.\
-/// On cancellation, returns `.canceled`.\
-/// The mailbox stays open — closing it is the caller's job.
+///  Waiting.
+///
+///
+/// Primary building block for
+/// - `select.concurrent`
+/// - `io.concurrent`
+/// - `group.concurrent`.
+///
+///
+/// The mailbox does not change it's state.
 pub fn receiveResult(mbh: MailboxHandle, timeout_ns: ?u64) ReceiveResult {
     var slot: polynode.Slot = null;
     receive(mbh, &slot, timeout_ns) catch |err| return switch (err) {
@@ -322,15 +358,6 @@ pub fn receiveResult(mbh: MailboxHandle, timeout_ns: ?u64) ReceiveResult {
         error.Wakeup => .wakeup,
     };
     return .{ .item = slot.? };
-}
-
-/// Wraps `receiveResult` in an `Io.Future` for direct await or `Io.Group` use.
-///
-/// No heap allocation — args are copied by the runtime.\
-/// `error.ConcurrencyUnavailable` on single-threaded backends.
-pub fn receive_future(mbh: MailboxHandle, timeout_ns: ?u64) ConcurrentError!Io.Future(ReceiveResult) {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
-    return mbx.*.io.concurrent(receiveResult, .{ mbh, timeout_ns });
 }
 
 const _Mailbox = struct {

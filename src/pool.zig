@@ -14,7 +14,7 @@ const _doc_stub = void;
 
 ///
 ///
-/// A pool, viewed as a ItemHandle.
+/// A pool, viewed as an ItemHandle.
 ///
 /// Sendable, embeddable like any handle.
 pub const PoolHandle = polynode.ItemHandle;
@@ -32,7 +32,11 @@ pub const GetMode = enum {
 /// Errors from `get` / `get_wait`.
 pub const GetError = error{ Closed, NotAvailable, NotCreated };
 
-/// User-supplied hooks that give a pool its policy.
+/// User-supplied hooks that
+/// - give a pool its policy
+/// - move responsibility to user
+///
+/// Be careful - your code will run in the heart of Matryoshka!!!
 ///
 /// `in_pool_count` is a hint, read under lock before the hook runs without lock:
 /// - `on_get`: count after removal — items remaining with this tag.
@@ -40,11 +44,11 @@ pub const GetError = error{ Closed, NotAvailable, NotCreated };
 ///
 /// Hooks run outside the pool's mutex.
 ///
-/// Multiple threads(tasks) may call a hook at once — the pool does not serialize them.
+/// Multiple threads (tasks) may call a hook at once — the pool does not serialize them.
 ///
 /// A hook that touches shared state must protect it itself.
 ///
-/// A hook should not call pool APIs and blocked operations.
+/// A hook must not call pool APIs or blocking operations.
 pub const PoolHooks = struct {
     ctx: *anyopaque,
     tags: []const *const anyopaque,
@@ -65,7 +69,7 @@ pub const PoolHooks = struct {
 
     /// `slot`: keep, accept, or clear the one carried item.
     ///
-    /// Return value: list of another items (usually parts of former item)
+    /// Return value: list of other items (usually parts of the former item)
     ///
     /// `null` or an empty list: nothing more to add.
     ///
@@ -231,9 +235,9 @@ pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *polynode.Slot, tim
 ///
 /// Open pool:
 /// - Calls `on_put`.
-/// - `Keep` leaves `slot.*` unchanged.
-/// - `Destroy` sets `slot.*` to null.
-/// - Any items returned by the hook are added to the pool.
+/// - `slot.*` left non-null: the item is added to the pool.
+/// - `slot.*` cleared to null by the hook: the item is not added.
+/// - Any items in the list returned by the hook are added to the pool.
 ///
 /// Closed pool:
 /// - No-op.

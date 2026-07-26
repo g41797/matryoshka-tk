@@ -11,7 +11,11 @@
 //!
 //! PolyHelper(T) generates the helper functions for T.
 //!
-
+//! You don't need to have deal with @fieldParentPtr.
+//!
+//! Several types/functona are shown twice, becuase 2 variants of the helper.
+//!
+//! No clue how to get rid of them. Be patient
 const _doc_stub = void;
 
 /// Runtime type marker.
@@ -22,24 +26,31 @@ pub const PolyTag = struct {
     _: u8 = 0,
 };
 
+/// Type-erased pointer to a PolyNode.
+pub const ItemHandle = *PolyNode;
+
 /// Embedded in every managed item.
 ///
-/// Matryoshka works with PolyNode.\
+/// Matryoshka
+/// - works with PolyNode
+/// - via ItemHandle (alias of *PolyNode)
+///
 /// Applications work with the parent item.
 pub const PolyNode = struct {
     node: std.DoublyLinkedList.Node = .{},
     tag: *const anyopaque = undefined,
 };
 
-/// Type-erased pointer to a PolyNode.
-pub const ItemHandle = *PolyNode;
-
 /// Optional ItemHandle.
+///
+/// Think about it as ItemHandle' 'container'.
 pub const Slot = ?ItemHandle;
 
 /// Clears the intrusive list links.
 ///
 /// Call after removing a node from a list.
+///
+/// Fix laziness of std.DoubleLinkedList
 pub inline fn reset(node: *PolyNode) void {
     node.node.prev = null;
     node.node.next = null;
