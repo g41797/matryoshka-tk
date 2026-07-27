@@ -18,8 +18,8 @@ test "27 - send and receive single item" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -45,8 +45,8 @@ test "28 - fifo ordering" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -79,8 +79,7 @@ test "29 - send to closed mailbox" {
     const alloc: std.mem.Allocator = testing.allocator;
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
-    helpers.clearList(&remaining);
+    _ = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var ev: Event = .{ .code = 29 };
@@ -96,8 +95,7 @@ test "30 - receive from closed mailbox" {
     const alloc: std.mem.Allocator = testing.allocator;
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
-    helpers.clearList(&remaining);
+    _ = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var slot: Slot = null;
@@ -111,8 +109,8 @@ test "31 - receive timeout" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -138,8 +136,8 @@ test "32 - receive wait forever (null timeout), item from thread" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -222,8 +220,8 @@ test "35 - send_oob delivers to front" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -278,8 +276,8 @@ test "36 - send_oob wakes blocked receiver" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -308,8 +306,8 @@ test "37 - multiple send_oob items are FIFO among OOBs" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -350,8 +348,7 @@ test "38 - send_oob to closed mailbox" {
     const alloc: std.mem.Allocator = testing.allocator;
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
-    helpers.clearList(&remaining);
+    _ = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var ev: Event = .{ .code = 38 };
@@ -393,8 +390,8 @@ test "40 - receive_batch gets all items" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -424,8 +421,8 @@ test "41 - receive_batch on empty returns empty list" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -440,8 +437,8 @@ test "42 - batch items walkable via popFirst" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -472,8 +469,8 @@ test "43 - send transfers ownership (slot is null)" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -493,8 +490,8 @@ test "44 - receive transfers ownership (slot is non-null)" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -514,8 +511,8 @@ test "45 - try_receive on empty returns false" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -532,8 +529,8 @@ test "46 - try_receive gets item" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -554,8 +551,8 @@ test "47 - send: IN_FLIGHT to HELD, slot is null" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -583,8 +580,8 @@ test "48 - receive: HELD to IN_FLIGHT, slot is non-null" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -860,8 +857,8 @@ test "oob last resets after last oob received, next send_oob goes to front" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -916,8 +913,8 @@ test "wakeUpAll wakes blocked receiver" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -953,8 +950,8 @@ test "wakeUpAll does not affect future receiver" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -978,8 +975,8 @@ test "wakeUpAll wakes all blocked receivers" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 
@@ -1023,8 +1020,7 @@ test "wakeUpAll on closed mailbox returns error.Closed" {
     const alloc: std.mem.Allocator = testing.allocator;
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
-    helpers.clearList(&rem);
+    _ = mailbox.close(mbh);
 
     try testing.expectError(error.Closed, mailbox.wakeUpAll(mbh));
     mailbox.destroy(mbh, alloc);
@@ -1037,8 +1033,8 @@ test "wakeUpAll with no waiters does not affect next receive" {
 
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
-        helpers.clearList(&rem);
+        _ = mailbox.close(mbh);
+
         mailbox.destroy(mbh, alloc);
     }
 

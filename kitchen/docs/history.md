@@ -23,7 +23,7 @@ The term *Master* was inspired by the horror movie [The Doll Master](https://www
 ---
 
 
-## Other influences
+## Other influencers
 
 ---
 

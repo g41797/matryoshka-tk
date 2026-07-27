@@ -35,9 +35,9 @@ theme:
 nav:
   - Home: index.md
   - The laws of documentation: laws_of_docs.md
-  - In a hurry?:  addendums/api_reference.md
   - The Manifesto: manifesto.md
   - History:  history.md
+  - In a hurry?:  addendums/api_reference.md
   - Building Blocks:
       - Item: building-blocks/polynode.md
       - Mailbox: building-blocks/mailbox.md
