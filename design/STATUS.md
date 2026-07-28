@@ -28,16 +28,17 @@
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-003.md
 - Tests: task1-tests-001.md (73 scenarios, Layers 1-3), task2-tests-001.md (16 scenarios, Layer 4)
-- Examples: task1-examples-003.md, task2-examples-003.md (index only; full description lives in each source file's `///` doc comment)
+- Examples: task1-examples-003.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
 - Scenarios (historical): task1-scenarios-001.md (92), task2-scenarios-001.md (61)
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-044.md (slim, state-only)
+- Plan: matryoshka-tk-implementation-plan-045.md (slim, state-only)
 - Rules: rules-026.md
+- Receive router design note: receive-router-001.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-003.md
-- Patterns: patterns-015.md
+- Patterns: patterns-016.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
@@ -295,12 +296,34 @@ dedicated "Composite Items" section in `kitchen/docs/api/pool/put.md`
 out-param alternative was proposed and rejected. DONE (168/168 tests  
 unchanged, `mkdocs build --strict` clean).
 
+EXMPL 5a — `design/receive-router-001.md`: receive-router use case and chosen  
+solution. Working document the example and pattern pages are written from.  
+Not an example, not a pattern page. DONE (doc-only).  
+EXMPL 5b — `examples/layer4/062-receive_router.zig`: a router receives from a  
+mailbox in a loop and puts each `ReceiveResult` in the Select queue. One  
+registration covers every item. The Master never re-registers the router; it  
+does re-register the timer, in the same `switch`. Pre-filled pool bounds items  
+in flight, so the `N >= P + T` buffer precondition is countable in the source.  
+Barrel entry + test wrapper in `tests/layer4_select.zig`. DONE (169/169 tests,  
++1 new).  
+EXMPL 5c — pattern docs: "Receive router — one registration, many events"  
+added to `kitchen/docs/patterns/async.md` and `patterns-015.md` → `-016.md`;  
+`kitchen/docs/addendums/io-101.md` gains the `std.Io` fact that a task's  
+return value is discarded silently when the queue is already closed. DONE.  
+EXMPL 5d — `gen_examples_docs.sh` regenerated, `kitchen/docs/examples/io.md`  
+group page and `kitchen/mkdocs.yml` nav updated per the nav-sync rule. DONE  
+(`mkdocs build --strict` clean).  
+EXMPL 5e — cancelDiscard audit, 15 live call sites. No defects. Three sites  
+are safe because a mailbox is provably empty rather than by structure —  
+recorded as observations in plan-045, no code changed. DONE.
+
 **Next stage**: CANDIDATES (composed README + landing docs from a repo-wide `.md` audit,  
 `design/candidates/`) — requirements-gathering done, execution not started,  
-blocked on owner confirming Pass 1 subagent-sweep approach. Then MDFIX  
-(markdown hard-break rule + `fix_md_hardbreaks.sh` tooling). Deferred:  
-diagram-notation sweep, mailbox-focused pool-audit equivalent, showcase-post  
-variants (Ziggit/Discord/Reddit) — all owner's call on order.
+blocked on owner confirming Pass 1 subagent-sweep approach. MDFIX is already  
+done (rule in rules-026, `fix_md_hardbreaks.sh` in place) — plan-044 listed it  
+as pending, which was stale. Deferred: diagram-notation sweep, mailbox-focused  
+pool-audit equivalent, showcase-post variants (Ziggit/Discord/Reddit),  
+REBRAND's editorial prose pass — all owner's call on order.
 
 
 ## Session Log

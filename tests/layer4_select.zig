@@ -243,6 +243,17 @@ test "56 - job pool circular flow" {
     };
 }
 
+test "62 - receive router one registration many events" {
+    std.testing.log_level = .debug;
+    var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
+    defer threaded.deinit();
+    const tio: Io = threaded.io();
+    layer4.receive_router.receive_router_one_registration(testing.allocator, tio) catch |err| {
+        std.log.err("example failed: {s}", .{@errorName(err)});
+        return err;
+    };
+}
+
 // test "STRESS - pool fan-in race repro (temporary)" {
 //     std.testing.log_level = .warn;
 //     var i: usize = 0;

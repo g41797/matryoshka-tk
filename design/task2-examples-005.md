@@ -1,7 +1,14 @@
-# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (003)
+# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (005)
+
+Versioned doc. Replaces [task2-examples-004.md](task2-examples-004.md).
+
+Change from 004: added scenarios 95 and 96. Both existed in `examples/layer4/`,  
+in the barrel and in the site nav, but had never been listed in this catalog.
+
+Change from 003: EXMPL 5 — added scenario 62, the receive router.
 
 Index only. Full staccato description lives in each source file's `///` doc comment,  
-per "Description as code" in [rules-009.md](rules-009.md).
+per "Description as code" in [rules-026.md](rules-026.md).
 
 Pool items are empty containers on acquisition. Work input comes from outside the pool item:  
 a mailbox, a timer, a network source, spawn-time arguments, or the worker's own accumulated state.  
@@ -69,6 +76,7 @@ Master is a concept, not a type. Each example may structure its coordination bou
 43. **Select direct queue push** → [examples/layer4/043-select_direct_push.zig](../examples/layer4/043-select_direct_push.zig)
 44. **Select mailbox close propagation** → [examples/layer4/044-select_mailbox_close.zig](../examples/layer4/044-select_mailbox_close.zig)
 45. **Select cancel propagation** → [examples/layer4/045-select_mailbox_cancel.zig](../examples/layer4/045-select_mailbox_cancel.zig)
+62. **Receive router — one registration, many events** → [examples/layer4/062-receive_router.zig](../examples/layer4/062-receive_router.zig)
 
 ---
 
@@ -95,6 +103,8 @@ Master is a concept, not a type. Each example may structure its coordination bou
 54. **Pool fan-out: many workers acquire** → [examples/layer4/054-pool_fan_out.zig](../examples/layer4/054-pool_fan_out.zig)
 55. **Producer → consumer with recycling** → [examples/layer4/055-producer_consumer_recycle.zig](../examples/layer4/055-producer_consumer_recycle.zig)
 56. **Job pool circular flow** → [examples/layer4/056-job_pool_circular.zig](../examples/layer4/056-job_pool_circular.zig)
+95. **Worker finish signal via mailbox return** → [examples/layer4/095-mailbox_as_item.zig](../examples/layer4/095-mailbox_as_item.zig)
+96. **Pool holds pools at teardown** → [examples/layer4/096-pool_as_item.zig](../examples/layer4/096-pool_as_item.zig)
 
 ---
 

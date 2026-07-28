@@ -178,6 +178,82 @@ select.queue.putOneUncancelable(select.io, .{ .field = value }) catch {};
 
 Example: `examples/layer4/043-select_direct_push.zig`.
 
+### Receive router — one registration, many events
+
+When to use.
+
+- A Master should stop re-registering its mailbox source after every item.
+
+Code shape.  
+```zig
+fn receive_router(
+    mbh: MailboxHandle,
+    timeout_ns: ?u64,
+    sel: *std.Io.Select(MasterEvent),
+    ph: PoolHandle,
+    alloc: std.mem.Allocator,
+) mailbox.ReceiveResult {
+    while (true) {
+        const result: mailbox.ReceiveResult = mailbox.receiveResult(mbh, timeout_ns);
+
+        var held: Slot = switch (result) {
+            .item => |handle| handle,
+            else => null,
+        };
+        defer {
+            pool.put(ph, &held);            // back to the pool
+            items.freeSlot(&held, alloc);   // pool closed — nowhere to put it back
+        }
+
+        switch (result) {
+            .closed, .canceled => return result,
+            .item, .timeout, .wakeup => {},
+        }
+
+        sel.queue.putOneUncancelable(sel.io, .{ .inbox = result }) catch return .canceled;
+
+        held = null;   // the queue has it now
+    }
+}
+
+try sel.concurrent(.inbox, receive_router, .{ mbh, null, &sel, ph, alloc });
+```
+
+Why.
+
+- `select.concurrent` produces one completion per registration.
+- The router loops. One registration covers every item.
+- The Master's `switch` is unchanged. It simply never re-registers.
+
+The return type is pinned.
+
+- `Select.concurrent` requires the function's return type to equal the field type.
+- The router returns `mailbox.ReceiveResult`, so `.inbox` is `mailbox.ReceiveResult`.
+- In-loop puts and the final return land in the same field. `U` gains nothing.
+
+The router is application code, not toolkit code.
+
+- `U` is the application's union. Matryoshka cannot name it.
+- The router disposes of the one item it holds.
+- It does not close the mailbox. It does not clear what is still inside.
+
+Two rules.
+
+- The router never returns an item. Select puts the return value in the queue
+  with `putOneUncancelable(...) catch error.Closed => {}` and throws it away if  
+  the queue is closed by then. Only the reason for stopping rides out.
+
+- Shutdown walks, never discards. `U` carries items, so use `sel.cancel()`.
+  `sel.cancelDiscard()` throws the buffer away.
+
+Buffer size is a precondition.
+
+- `N >= P + T` — buffer length, items in flight, registered tasks.
+- Pre-fill a pool with `P` items and acquire with `pool.get_wait` to fix `P`.
+- `pool.get_wait` never creates, so the population stays put.
+
+Example: `examples/layer4/062-receive_router.zig`.
+
 ### Graceful cancel walk — recover in-flight items
 
 When to use.

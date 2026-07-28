@@ -174,14 +174,15 @@ pub fn get(ph: PoolHandle, tag: *const anyopaque, mode: GetMode, slot: *polynode
     };
 }
 
-/// Acquires a handle, waiting until one is available.\
-/// Calls `on_get`.
+/// Acquires a handle, waiting until one is available.
 ///
 /// `timeout_ns == null`: waits forever.\
 /// `timeout_ns == 0`: returns `error.Timeout` immediately.
 ///
 /// Logically equivalent to `get(.available_only)` at that point, but returns\
-/// `error.Timeout` instead of `error.NotAvailable` — intentional,
+/// `error.Timeout` instead of `error.NotAvailable` — intentional
+///
+/// does not call on_get hook
 ///
 /// `get_wait` always uses the timeout error set regardless of the timeout value.
 pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *polynode.Slot, timeout_ns: ?u64) (GetError || Io.Cancelable || error{Timeout})!void {
