@@ -173,13 +173,13 @@ nav:
           - "Master batch collect: receive_batch → put_all": examples/layer4/040-master_batch_collect_receive_to_pool.md
           - Master pre-shutdown collect: examples/layer4/041-master_multi_mailbox_collect.md
   - Addendums:
-      - Why Boring: addendums/why-boring.md
       - Io 101: addendums/io-101.md
+      - Installation: addendums/installation.md
       - Slot vs Ref-Counting: addendums/slot-vs-ref-counting.md
       - Tag vs Tagged Union: addendums/tag-vs-tagged-union.md
       - Mailbox vs TypeErasedQueue: addendums/typeErasedQueue-vs-mailbox.md
+      - Why Boring: addendums/why-boring.md
       - Notation: addendums/matryoshka-tk-notation.md
-      - Installation: addendums/installation.md
 
 hooks:
   - hooks/count_lines.py

@@ -18,7 +18,7 @@ ev.* = .{};
 EventPolyHelper.init(ev);
 slot.* = &ev.poly;
 // ... later ...
-alloc.destroy(EventPolyHelper.mustIdentifySlotAs(&slot));
+alloc.destroy(EventPolyHelper.mustFromSlot(&slot));
 slot.* = null;
 ```
 

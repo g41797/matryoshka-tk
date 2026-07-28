@@ -274,7 +274,7 @@ test "9 - mailbox.close returns remaining items" {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i);
+        EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
         try mailbox.send(mbh, &slot);
     }
 
@@ -561,7 +561,7 @@ test "14 - mailbox.close uses lockUncancelable" {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i);
+        EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
         try mailbox.send(mbh_data, &slot);
     }
 

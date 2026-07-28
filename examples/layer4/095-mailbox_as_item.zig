@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) void {
         mailbox.receive(ctx.worker_mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(poly) != null) {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly) != null) {
             items.freeSlot(&slot, ctx.alloc);
             slot = ctx.worker_mbh;
             mailbox.send(ctx.master_inbox, &slot) catch {};
@@ -68,7 +68,7 @@ fn workerFn(ctx: *WorkerCtx) void {
             return;
         }
 
-        if (items.Event.EventPolyHelper.identifyNodeAs(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
             ctx.processed += 1;
             std.log.info("worker processed Event code={d}", .{ev.code});
             items.freeSlot(&slot, ctx.alloc);
@@ -82,7 +82,7 @@ fn sendJobsAndShutdown(worker_mbh: MailboxHandle, alloc: std.mem.Allocator) !voi
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @as(i32, @intCast(i + 1));
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @as(i32, @intCast(i + 1));
         try mailbox.send(worker_mbh, &slot);
     }
 

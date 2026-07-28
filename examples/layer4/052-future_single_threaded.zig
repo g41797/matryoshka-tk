@@ -41,13 +41,13 @@ fn testSynchronousReceive(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(alloc, &slot);
     try items.Event.EventPolyHelper.create(alloc, &slot);
-    items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 1;
+    items.Event.EventPolyHelper.mustFromSlot(&slot).code = 1;
     try mailbox.send(mbh, &slot);
 
     var received: Slot = null;
     defer items.freeSlot(&received, alloc);
     try mailbox.receive(mbh, &received, null);
-    std.log.info("synchronous receive still works: code={d}", .{items.Event.EventPolyHelper.mustIdentifySlotAs(&received).code});
+    std.log.info("synchronous receive still works: code={d}", .{items.Event.EventPolyHelper.mustFromSlot(&received).code});
 }
 
 const items = @import("../items/items.zig");

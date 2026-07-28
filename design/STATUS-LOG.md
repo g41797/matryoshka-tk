@@ -4,6 +4,67 @@ Full session history, newest entries at top. Append-only. Read only when explici
 
 ## Session Log
 
+### 2026-07-28 — API 6: PolyHelper accessor naming
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+- Renamed `identifyNodeAs`/`identifySlotAs` (+ `must` variants) to
+  `fromNode`/`fromSlot`/`mustFromNode`/`mustFromSlot`. Hard rename, no  
+  deprecated aliases, ~222 call sites across `src/`, `tests/`, `examples/`,  
+  `stories/`, and all live docs.
+- Added `moveFromSlot(slot: *Slot) ?*T`: checks the tag, returns the item,
+  clears the Slot on success, leaves it unchanged on failure, asserts the item  
+  is not linked. No `must` variant — it mutates its argument.
+- Both `PolyHelper` struct bodies (with and without `no_create_destroy`)
+  carry every change.
+
+**Why it is not a plain rename**
+
+- The owner's first proposal replaced `identifySlotAs` with a consuming
+  `moveFromSlotAs`. A call-site audit disproved the premise: of 127 Slot  
+  sites, ~82 are `create → set a field → send`, and none consumed the Slot.
+- Inspection is the dominant operation. Extraction is additive. Both exist.
+- Owner dropped the `As` suffix for one convention across all three names.
+
+**Caller**
+
+- `examples/layer1/022-ownership_transfer.zig` hand-rolled
+  `list.append(&slot.?.node); slot = null;` — untyped, no tag check. Now one  
+  `moveFromSlot` call. The file's existing post-transfer assertion verifies  
+  the new contract.
+- Scenario 98 in `tests/layer1_polynode.zig` pins all three outcomes: success,
+  tag mismatch (Slot unchanged), empty Slot.
+
+**Docs**
+
+- New versions: `matryoshka-api-reference-027.md`, `patterns-017.md`,
+  `rules-027.md` ("Accessor naming (API 6)"),  
+  `matryoshka-tk-implementation-plan-046.md`.
+- `slot-programming.md` had zero `identify*` hits but taught the hand-rolled
+  `slot.* = null`. Found by reading, not by grep. Lifecycle diagram gained an  
+  extract edge.
+- Three live site pages (`api/cleanup.md`, `api/cleanup/no-raw-allocator.md`,
+  `patterns/master-and-shutdown.md`) were missed by the plan's file list and  
+  caught by a repo-wide sweep.
+- A blind sed rewrote historical Change-manifest row 016, which recorded the
+  *previous* rename (`cast`→`identifyNodeAs`). Reverted — history keeps the  
+  names that were true at the time.
+- Retitled "Slot identification — accessing owned items" → "… accessing
+  items" (owner's instruction). Other pre-existing `ownership` headings left  
+  alone, reported not actioned.
+
+**Post-stage cleanup**
+
+- Repo swept for stale `identify*`: zero hits outside `STATUS-LOG.md` and
+  superseded doc versions.
+- Example doc mirrors regenerated with `gen_examples_docs.sh`.
+- All three kitchen scripts re-run after cleanup.
+
+**Result**: 170/170 tests (169 + scenario 98). `mkdocs build --strict` clean,  
+`zig build docs` clean.
+
 ### 2026-07-27 — EXMPL 5: receive router (example + pattern docs)
 
 **Participants**: human (owner), Claude (agent).

@@ -4,7 +4,7 @@
 //! Toolkit for concurrent Zig systems.
 //!
 //! Components:
-//! - polynode: runtime type identification and intrusive links
+//! - polynode: runtime type identification and intrusion
 //! - mailbox: item passing
 //! - pool: item lifecycle management
 

@@ -101,36 +101,54 @@ pub fn PolyHelper(comptime T: type) type {
                 return tag == TAG;
             }
 
-            /// Identifies a PolyNode as T.
+            /// Cast to T through its embedded PolyNode.
             ///
-            /// Returns null on type mismatch.
-            pub inline fn identifyNodeAs(node: *PolyNode) ?*T {
+            /// Returns null on type mismatch.\
+            /// Never modifies the node.
+            pub inline fn fromNode(node: *PolyNode) ?*T {
                 if (node.tag != TAG)
                     return null;
 
                 return @fieldParentPtr("poly", node);
             }
 
-            /// Same as identifyNodeAs().
+            /// Same as fromNode().
             ///
             /// Panics on type mismatch.
-            pub inline fn mustIdentifyNodeAs(node: *PolyNode) *T {
-                return identifyNodeAs(node) orelse unreachable;
+            pub inline fn mustFromNode(node: *PolyNode) *T {
+                return fromNode(node) orelse unreachable;
             }
 
-            /// Identifies the item stored in a Slot as T.
+            /// Cast to T through the Slot holding it.
             ///
-            /// Returns null if the Slot is empty or has another type.
-            pub inline fn identifySlotAs(slot: *const Slot) ?*T {
+            /// Returns null if the Slot is empty or holds another type.\
+            /// Does not empty the Slot.
+            pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
-                return identifyNodeAs(node);
+                return fromNode(node);
             }
 
-            /// Same as identifySlotAs().
+            /// Same as fromSlot().
             ///
             /// Panics on failure.
-            pub inline fn mustIdentifySlotAs(slot: *const Slot) *T {
-                return identifySlotAs(slot) orelse unreachable;
+            pub inline fn mustFromSlot(slot: *const Slot) *T {
+                return fromSlot(slot) orelse unreachable;
+            }
+
+            /// Takes T out of the Slot.
+            ///
+            /// Returns null if the Slot is empty or holds another type.\
+            /// On success the Slot is left empty.\
+            /// On failure the Slot is unchanged.
+            pub inline fn moveFromSlot(slot: *Slot) ?*T {
+                const node = slot.* orelse return null;
+                const item = fromNode(node) orelse return null;
+
+                std.debug.assert(!is_linked(node));
+
+                slot.* = null;
+
+                return item;
             }
 
             /// Initializes the embedded PolyNode.
@@ -168,7 +186,7 @@ pub fn PolyHelper(comptime T: type) type {
 
                 std.debug.assert(!is_linked(poly));
 
-                const item = Self.identifyNodeAs(poly);
+                const item = Self.fromNode(poly);
                 std.debug.assert(item != null);
 
                 // Clear the Slot before releasing the item.
@@ -191,36 +209,54 @@ pub fn PolyHelper(comptime T: type) type {
                 return tag == TAG;
             }
 
-            /// Identifies a PolyNode as T.
+            /// Cast to T through its embedded PolyNode.
             ///
-            /// Returns null on type mismatch.
-            pub inline fn identifyNodeAs(node: *PolyNode) ?*T {
+            /// Returns null on type mismatch.\
+            /// Never modifies the node.
+            pub inline fn fromNode(node: *PolyNode) ?*T {
                 if (node.tag != TAG)
                     return null;
 
                 return @fieldParentPtr("poly", node);
             }
 
-            /// Same as identifyNodeAs().
+            /// Same as fromNode().
             ///
             /// Panics on type mismatch.
-            pub inline fn mustIdentifyNodeAs(node: *PolyNode) *T {
-                return identifyNodeAs(node) orelse unreachable;
+            pub inline fn mustFromNode(node: *PolyNode) *T {
+                return fromNode(node) orelse unreachable;
             }
 
-            /// Identifies the item stored in a Slot as T.
+            /// Cast to T through the Slot holding it.
             ///
-            /// Returns null if the Slot is empty or has another type.
-            pub inline fn identifySlotAs(slot: *const Slot) ?*T {
+            /// Returns null if the Slot is empty or holds another type.\
+            /// Does not empty the Slot.
+            pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
-                return identifyNodeAs(node);
+                return fromNode(node);
             }
 
-            /// Same as identifySlotAs().
+            /// Same as fromSlot().
             ///
             /// Panics on failure.
-            pub inline fn mustIdentifySlotAs(slot: *const Slot) *T {
-                return identifySlotAs(slot) orelse unreachable;
+            pub inline fn mustFromSlot(slot: *const Slot) *T {
+                return fromSlot(slot) orelse unreachable;
+            }
+
+            /// Takes T out of the Slot.
+            ///
+            /// Returns null if the Slot is empty or holds another type.\
+            /// On success the Slot is left empty.\
+            /// On failure the Slot is unchanged.
+            pub inline fn moveFromSlot(slot: *Slot) ?*T {
+                const node = slot.* orelse return null;
+                const item = fromNode(node) orelse return null;
+
+                std.debug.assert(!is_linked(node));
+
+                slot.* = null;
+
+                return item;
             }
 
             /// Initializes the embedded PolyNode.

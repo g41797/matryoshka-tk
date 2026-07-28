@@ -49,7 +49,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try items.Event.EventPolyHelper.create(self.alloc, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
             try mailbox.send(self.mbh_a, &slot);
         }
     }
@@ -59,7 +59,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Sensor.SensorPolyHelper.destroy(self.alloc, &slot);
             try items.Sensor.SensorPolyHelper.create(self.alloc, &slot);
-            items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = @floatFromInt(i + 10);
+            items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @floatFromInt(i + 10);
             try mailbox.send(self.mbh_b, &slot);
         }
     }

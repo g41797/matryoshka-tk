@@ -35,7 +35,7 @@ test "1 - single worker spawn and join" {
     var slot: Slot = null;
     defer EventPolyHelper.destroy(testing.allocator, &slot);
     try EventPolyHelper.create(testing.allocator, &slot);
-    EventPolyHelper.mustIdentifySlotAs(&slot).code = 42;
+    EventPolyHelper.mustFromSlot(&slot).code = 42;
     try mailbox.send(mbh, &slot);
     try testing.expect(slot == null);
 
@@ -71,7 +71,7 @@ test "2 - worker group spawn and join" {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i);
+        EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
         try mailbox.send(mbh, &slot);
     }
 

@@ -37,7 +37,7 @@ pub fn get_wait_future_awaited_directly(allocator: std.mem.Allocator, io: std.Io
 fn seedPool(ph: PoolHandle) !void {
     var slot: Slot = null;
     try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-    items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 7;
+    items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
     pool.put(ph, &slot); // on_put resets code back to 0 — set value doesn't survive
 }
 
@@ -49,7 +49,7 @@ fn receiveViaFuture(ph: PoolHandle, io: std.Io) !void {
         .item => |handle| {
             var slot: Slot = handle;
             defer pool.put(ph, &slot);
-            const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+            const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
             try helpers.expect(error.GetWaitFutureDirectFailed, ev.code == 0, "expected reset default, not the pre-put value");
             std.log.info("get_wait_future direct: got Event code={d} (reset by on_put)", .{ev.code});
         },

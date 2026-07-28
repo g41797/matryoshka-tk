@@ -51,7 +51,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     var slot: Slot = null;
     mailbox.receive(ctx.mbh, &slot, null) catch return;
     defer pool.put(ctx.ph, &slot); // return container to pool — on_put resets it, doesn't carry the result
-    const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+    const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
     ev.code *= 2; // process: double the job value
     ctx.result.* = ev.code; // capture the result before the container is reset
     std.log.info("worker: processed job, result code={d}", .{ev.code});
@@ -79,7 +79,7 @@ const PoolFanInMaster = struct {
         for (0..N) |i| {
             var slot: Slot = null;
             try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .available_only, &slot);
-            const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+            const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
             ev.code = jobs[i];
             std.log.info("master: filled container with job code={d}, sending to worker {d}", .{ ev.code, i });
             try mailbox.send(self.mbhs[i], &slot);

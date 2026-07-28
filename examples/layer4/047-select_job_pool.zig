@@ -53,7 +53,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
         var slot: Slot = null;
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         defer pool.put(ctx.ph, &slot); // return container to pool — triggers next pool_ev
-        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         ev.code *= 2; // process: double the job value
         std.log.info("worker {d}: processed job, result code={d}", .{ ctx.id, ev.code });
     }
@@ -94,7 +94,7 @@ const JobPoolMaster = struct {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+                        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         ev.code = jobs[job_idx];
                         std.log.info("master: dispatching job {d} (code={d}) to worker {d}", .{ job_idx, ev.code, worker_i });
                         try mailbox.send(self.mbhs[worker_i], &slot);

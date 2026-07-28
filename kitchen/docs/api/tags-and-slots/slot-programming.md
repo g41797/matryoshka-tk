@@ -13,6 +13,9 @@ The slot rule:
 - All acquisition APIs assert `slot.* == null` on entry. Writing to a non-null slot panics.
 - Transfer clears the slot: sender sets `slot.* = null`. After transfer, slot is null.
 - Applies universally: pool get/put, mailbox receive, heap allocation — every combination.
+- Looking inside a slot never clears it. `PolyHelper.fromSlot` takes `*const Slot`.
+- Taking the item out yourself is `PolyHelper.moveFromSlot`. It checks the tag
+  and clears the slot in one step, instead of hand-written `slot.?` + `slot = null`.
 
 **Exception — event-source helpers**: `receiveResult` and `getWaitResult` do not take a `*Slot`  
 parameter. They move the handle via the returned union value (`ReceiveResult.item`,  
@@ -52,12 +55,17 @@ This makes defer-before-acquisition safe.
 Slot lifecycle
 
   null ──── acquire ────► non-null
-    ▲                        │
-    │                        │
-    ├──── transfer ──────────┘   (sender clears: slot.* = null)
-    │
+    ▲                        │  ▲
+    │                        │  │
+    ├──── transfer ──────────┤  └── inspect (fromSlot: slot unchanged)
+    │                        │      (mailbox.send, pool.put: slot.* = null)
+    ├──── extract ───────────┘
+    │                            (moveFromSlot: caller takes the item)
     └──── cleanup (no-op) ──────  (pool.put, PolyHelper.destroy: null → return)
 ```
+
+Transfer and extract both leave the slot null. The difference is who ends up  
+holding the item: a mailbox or pool on transfer, the caller on extract.
 
 ---
 
@@ -75,6 +83,15 @@ Before transfer                  After transfer
                                            │
                      Mailbox ◄─────────────┘
                      now holds ItemHandle
+```
+
+`moveFromSlot` is the caller-driven counterpart. The slot ends up null the same  
+way, but the item lands in a local variable instead of a mailbox or a pool.
+
+```zig
+const ev: *Event = EventPolyHelper.moveFromSlot(&slot) orelse return error.WrongTag;
+// slot == null, the caller holds ev
+list.append(&ev.*.poly.node);
 ```
 
 ---

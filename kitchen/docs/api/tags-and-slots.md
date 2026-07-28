@@ -7,7 +7,7 @@ Two rules run through the whole API. Tag identity: what a handle is. Slot rule: 
 `PolyHelper(T)` generates one static `_tag: PolyTag` per type `T` at comptime.  
 `TAG` is a pointer to that static — the same address for every instance of `T`.
 
-Tag dispatch (`is_it_you`, `isIt`, `identifyNodeAs`) answers one question: **"is this a T?"**  
+Tag dispatch (`is_it_you`, `isIt`, `fromNode`) answers one question: **"is this a T?"**  
 It does not answer: "which T?" or "what role does this T play?"
 
 For user-defined types (Event, Sensor, etc.):

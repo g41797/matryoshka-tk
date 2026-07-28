@@ -5,7 +5,7 @@
 //!
 //! - Push one Event and one Sensor into a mixed-type list.
 //! - Pop each node, check its tag.
-//! - Recover the typed pointer with identifyNodeAs, process it.
+//! - Recover the typed pointer with fromNode, process it.
 //! - Free every item; count events and sensors separately.
 //!
 //!
@@ -14,7 +14,7 @@
 //!  alloc.create (Sensor) ──► list
 //!       │ list.popFirst
 //!       ▼
-//!  tag check ──► EventPolyHelper.identifyNodeAs or SensorPolyHelper.identifyNodeAs
+//!  tag check ──► EventPolyHelper.fromNode or SensorPolyHelper.fromNode
 //!       │ freeItem per node
 //! ```
 //!
@@ -28,7 +28,7 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
     {
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 7;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
         list.append(&slot.?.*.node);
         slot = null;
     }
@@ -36,7 +36,7 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
     {
         var slot: Slot = null;
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = 2.71;
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 2.71;
         list.append(&slot.?.*.node);
         slot = null;
     }
@@ -47,11 +47,11 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
     while (list.popFirst()) |node| {
         const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
 
-        if (items.Event.EventPolyHelper.identifyNodeAs(poly)) |recovered_ev| {
+        if (items.Event.EventPolyHelper.fromNode(poly)) |recovered_ev| {
             try helpers.expect(error.TagDispatchFailed, recovered_ev.*.code == 7, "wrong event code");
             processed_events += 1;
             items.freeItem(poly, allocator);
-        } else if (items.Sensor.SensorPolyHelper.identifyNodeAs(poly)) |recovered_sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |recovered_sn| {
             try helpers.expect(error.TagDispatchFailed, recovered_sn.*.value == 2.71, "wrong sensor value");
             processed_sensors += 1;
             items.freeItem(poly, allocator);

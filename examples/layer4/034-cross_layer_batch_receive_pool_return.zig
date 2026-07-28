@@ -56,7 +56,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
             try mailbox.send(self.mbh, &slot);
         }
         std.log.info("sent {d} items to mailbox", .{N_ITEMS});

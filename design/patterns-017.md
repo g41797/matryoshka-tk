@@ -1,6 +1,8 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (016)
+# Matryoshka Zig — Pattern and Idiom Catalog (017)
 
-Versioned doc. Replaces [patterns-015.md](patterns-015.md).
+Versioned doc. Replaces [patterns-016.md](patterns-016.md).
+
+Change from patterns-016: API 6 — PolyHelper accessors renamed to `fromNode`/`fromSlot` (+ `must` variants). New `moveFromSlot` added to the transfer idiom. "Slot identification" gained the inspection-vs-extraction split and dropped "owned" from its title. Companion cross-references updated to rules-027.md and api-reference-027.md.
 
 Change from patterns-015: EXMPL 5 — added "Receive router — one registration, many events" under Io.Select patterns. Companion cross-reference corrected from rules-024.md to rules-026.md.
 
@@ -17,9 +19,9 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-026.md](rules-026.md) — what is mandatory.  
+Companion: [rules-027.md](rules-027.md) — what is mandatory.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [matryoshka-api-reference-026.md](matryoshka-api-reference-026.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-027.md](matryoshka-api-reference-027.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -46,7 +48,7 @@ Order of this catalog.
 
 ## Slot and ownership idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-026.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-027.md).
 
 ### Empty Slot initialization
 
@@ -93,6 +95,13 @@ or
 ```zig
 pool.put(ph, &slot);
 // slot == null if accepted by pool
+```
+
+or, when the caller takes the item itself:
+
+```zig
+const ev: *Event = EventPolyHelper.moveFromSlot(&slot) orelse return error.WrongTag;
+// slot == null, the caller holds ev
 ```
 
 Why.
@@ -214,7 +223,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-026.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-027.md).
 
 ---
 
@@ -265,7 +274,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.identifyNodeAs(handle)) |ev| {
+if (EventPolyHelper.fromNode(handle)) |ev| {
     ...
 }
 ```
@@ -274,7 +283,7 @@ Why.
 - Tag check and recovery are combined.
 - Wrong types return null.
 
-### Slot identification — accessing owned items
+### Slot identification — accessing items
 
 When to use.
 - After `create` or `get`, to access fields of the item in a Slot before sending or returning it.
@@ -284,21 +293,23 @@ Code shape (assert non-null, known type).
 var slot: Slot = null;
 defer EventPolyHelper.destroy(allocator, &slot);
 try EventPolyHelper.create(allocator, &slot);
-EventPolyHelper.mustIdentifySlotAs(&slot).code = 42;
+EventPolyHelper.mustFromSlot(&slot).code = 42;
 try mailbox.send(mbh, &slot);
 ```
 
 Code shape (optional — type may vary).  
 ```zig
-if (EventPolyHelper.identifySlotAs(&slot)) |ev| {
+if (EventPolyHelper.fromSlot(&slot)) |ev| {
     ev.code = 42;
 }
 ```
 
 Why.
 - Unwraps the optional internally — no `.?` in application code.
-- `mustIdentifySlotAs` panics if the Slot is empty or the tag does not match.
-- Use `identifySlotAs` (nullable) when the type is not guaranteed.
+- `mustFromSlot` panics if the Slot is empty or the tag does not match.
+- Use `fromSlot` (nullable) when the type is not guaranteed.
+- Inspection leaves the Slot full. The item is still there for `send` or `put`.
+- To take the item out instead, use `moveFromSlot` — see "Transfer clears ownership".
 
 ### Polymorphic dispatch
 
@@ -307,16 +318,16 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.identifyNodeAs(handle)) |ev| {
+if (EventPolyHelper.fromNode(handle)) |ev| {
     // handle Event
-} else if (ShutdownCommandPolyHelper.identifyNodeAs(handle)) |_| {
+} else if (ShutdownCommandPolyHelper.fromNode(handle)) |_| {
     // handle ShutdownCommand
 } else {
     // unknown — free and move on
 }
 ```
 
-- `identifyNodeAs` returns null on a tag mismatch. Chain calls for each known type.
+- `fromNode` returns null on a tag mismatch. Chain calls for each known type.
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
 
@@ -344,7 +355,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-026.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-027.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -399,7 +410,7 @@ Pattern.
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, with ownership transfer.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-026.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-027.md).
 
 ### Pool-as-message
 
@@ -1269,7 +1280,7 @@ fn seedResources(self: *Master) !void {
         var slot: Slot = null;
         defer types.EventPolyHelper.destroy(self.allocator, &slot);
         try types.EventPolyHelper.create(self.allocator, &slot);
-        types.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        types.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         try mailbox.send(self.mbh, &slot);
     }
 }

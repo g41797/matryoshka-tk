@@ -119,7 +119,7 @@ fn producerFn(ctx: *ProducerCtx) void {
         sleepFn(.{ .duration = .{ .raw = .{ .nanoseconds = PRODUCE_NS }, .clock = .real } }, ctx.io);
         var slot: Slot = null;
         pool.get_wait(ctx.ph, items.Event.EventPolyHelper.TAG, &slot, null) catch return;
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         mailbox.send(ctx.mbh, &slot) catch {
             pool.put(ctx.ph, &slot);
             return;
@@ -196,7 +196,7 @@ const RouterMaster = struct {
     fn acceptItem(self: *RouterMaster, handle: ItemHandle) void {
         var slot: Slot = handle;
         defer pool.put(self.ph, &slot);
-        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         self.inbox_count += 1;
         std.log.info("master: item {d} of {d}, code={d}", .{ self.inbox_count, M, ev.code });
     }

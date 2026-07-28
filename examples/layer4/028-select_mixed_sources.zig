@@ -74,7 +74,7 @@ fn seedMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator, count: usize) !void
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         try mailbox.send(mbh, &slot);
     }
 }
@@ -83,7 +83,7 @@ fn seedPool(ph: PoolHandle, count: usize) !void {
     for (0..count) |i| {
         var slot: Slot = null;
         try pool.get(ph, items.Sensor.SensorPolyHelper.TAG, .new_only, &slot);
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = @floatFromInt(i + 10);
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @floatFromInt(i + 10);
         pool.put(ph, &slot);
     }
 }
@@ -116,7 +116,7 @@ const Ctx = struct {
                         defer items.freeSlot(&slot, self.alloc);
                         self.inbox_count += 1;
                         std.log.info("inbox: Event code={d} ({d}/{d})", .{
-                            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code,
+                            items.Event.EventPolyHelper.mustFromSlot(&slot).code,
                             self.inbox_count,
                             INBOX_TARGET,
                         });
@@ -132,7 +132,7 @@ const Ctx = struct {
                         defer pool.put(self.ph, &slot);
                         self.pool_count += 1;
                         std.log.info("pool_ev: Sensor value={d} ({d}/{d})", .{
-                            items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value,
+                            items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value,
                             self.pool_count,
                             POOL_TARGET,
                         });

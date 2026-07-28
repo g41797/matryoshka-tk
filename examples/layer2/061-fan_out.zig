@@ -37,7 +37,7 @@ pub fn fan_out(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
         try mailbox.send(mbh, &slot);
     }
 
@@ -46,7 +46,7 @@ pub fn fan_out(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = @as(f64, @floatFromInt(i));
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i));
         try mailbox.send(mbh, &slot);
     }
 

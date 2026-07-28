@@ -4,9 +4,9 @@
 //! Define a PolyNode type.
 //!
 //! - Message struct embeds a poly: PolyNode field.
-//! - PolyHelper(Message) gives tag identity and identifyNodeAs.
+//! - PolyHelper(Message) gives tag identity and fromNode.
 //! - init sets the tag on a stack value, no heap.
-//! - isIt checks the tag; identifyNodeAs recovers the typed pointer.
+//! - isIt checks the tag; fromNode recovers the typed pointer.
 //!
 //!
 //! ```
@@ -14,7 +14,7 @@
 //!       │
 //!  PolyHelper.init ──► msg.poly.tag set (no alloc)
 //!       │
-//!  MessagePolyHelper.identifyNodeAs ──► field access (no transfer)
+//!  MessagePolyHelper.fromNode ──► field access (no transfer)
 //!  (stack-allocated — no free needed)
 //! ```
 //!
@@ -29,7 +29,7 @@ pub fn define_a_polynode_type(allocator: std.mem.Allocator, io: std.Io) !void {
     try helpers.expect(error.DefineTypeFailed, !items.Event.EventPolyHelper.isIt(msg.poly.tag), "unexpected Event tag");
 
     const poly: *polynode.PolyNode = &msg.poly;
-    const recovered: *Message = MessagePolyHelper.identifyNodeAs(poly) orelse return error.CastFailed;
+    const recovered: *Message = MessagePolyHelper.fromNode(poly) orelse return error.CastFailed;
     try helpers.expect(error.DefineTypeFailed, std.mem.eql(u8, "hello", recovered.*.text), "wrong text");
     try helpers.expect(error.DefineTypeFailed, recovered.*.priority == 1, "wrong priority");
 }

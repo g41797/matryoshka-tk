@@ -22,23 +22,23 @@ test "3 - tag identity check" {
     try testing.expect(!SensorPolyHelper.isIt(ev.poly.tag));
 }
 
-// --- Scenario 4: identifyNodeAs success ---
-test "4 - identifyNodeAs success" {
+// --- Scenario 4: fromNode success ---
+test "4 - fromNode success" {
     var ev: Event = .{ .code = 42 };
     EventPolyHelper.init(&ev);
 
     const poly: *PolyNode = &ev.poly;
-    const recovered: *Event = EventPolyHelper.mustIdentifyNodeAs(poly);
+    const recovered: *Event = EventPolyHelper.mustFromNode(poly);
     try testing.expectEqual(@as(i32, 42), recovered.*.code);
 }
 
-// --- Scenario 5: identifyNodeAs wrong tag ---
-test "5 - identifyNodeAs wrong tag" {
+// --- Scenario 5: fromNode wrong tag ---
+test "5 - fromNode wrong tag" {
     var ev: Event = .{ .code = 42 };
     EventPolyHelper.init(&ev);
 
     const poly: *PolyNode = &ev.poly;
-    const result: ?*Sensor = SensorPolyHelper.identifyNodeAs(poly);
+    const result: ?*Sensor = SensorPolyHelper.fromNode(poly);
     try testing.expectEqual(@as(?*Sensor, null), result);
 }
 
@@ -49,7 +49,7 @@ test "6 - two-level fieldParentPtr chain" {
 
     const dll_node: *std.DoublyLinkedList.Node = &ev.poly.node;
     const poly: *PolyNode = @fieldParentPtr("node", dll_node);
-    const recovered: *Event = EventPolyHelper.mustIdentifyNodeAs(poly);
+    const recovered: *Event = EventPolyHelper.mustFromNode(poly);
     try testing.expectEqual(@as(i32, 99), recovered.*.code);
 }
 
@@ -109,10 +109,10 @@ test "10 - multiple types in one list" {
 
     while (list.popFirst()) |node| {
         const poly: *PolyNode = @fieldParentPtr("node", node);
-        if (EventPolyHelper.identifyNodeAs(poly)) |recovered_ev| {
+        if (EventPolyHelper.fromNode(poly)) |recovered_ev| {
             try testing.expectEqual(@as(i32, 10), recovered_ev.*.code);
             count_event += 1;
-        } else if (SensorPolyHelper.identifyNodeAs(poly)) |recovered_sn| {
+        } else if (SensorPolyHelper.fromNode(poly)) |recovered_sn| {
             try testing.expectEqual(@as(f64, 3.14), recovered_sn.*.value);
             count_sensor += 1;
         } else {
@@ -175,7 +175,7 @@ test "14 - IN_FLIGHT to FREE" {
     try testing.expect(slot != null);
 
     const poly: *PolyNode = slot.?;
-    _ = EventPolyHelper.mustIdentifyNodeAs(poly);
+    _ = EventPolyHelper.mustFromNode(poly);
     EventPolyHelper.destroy(alloc, &slot);
 
     try testing.expectEqual(@as(Slot, null), slot);
@@ -188,6 +188,29 @@ test "17 - slot is null after nil-out" {
 
     var slot: Slot = &ev.poly;
     slot = null;
+    try testing.expectEqual(@as(Slot, null), slot);
+}
+
+// --- Scenario 98: moveFromSlot contract ---
+test "98 - moveFromSlot takes the item and empties the slot" {
+    var ev: Event = .{ .code = 98 };
+    EventPolyHelper.init(&ev);
+
+    // Empty slot — nothing to take.
+    var empty: Slot = null;
+    try testing.expect(EventPolyHelper.moveFromSlot(&empty) == null);
+    try testing.expectEqual(@as(Slot, null), empty);
+
+    // Wrong tag — slot is left unchanged.
+    var slot: Slot = &ev.poly;
+    try testing.expect(SensorPolyHelper.moveFromSlot(&slot) == null);
+    try testing.expect(slot != null);
+    try testing.expectEqual(@as(*PolyNode, &ev.poly), slot.?);
+
+    // Right tag — item comes back, slot is empty.
+    const taken: *Event = EventPolyHelper.moveFromSlot(&slot) orelse unreachable;
+    try testing.expectEqual(@as(*Event, &ev), taken);
+    try testing.expectEqual(@as(i32, 98), taken.*.code);
     try testing.expectEqual(@as(Slot, null), slot);
 }
 

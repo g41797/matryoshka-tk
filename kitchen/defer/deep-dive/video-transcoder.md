@@ -282,7 +282,7 @@ fn workerFn(ctx: *WorkerCtx) error{Canceled}!void {
             error.Canceled => return error.Canceled,
             error.Closed, error.Timeout, error.Wakeup => return,
         };
-        const sc: *StreamContext = StreamContextPolyHelper.mustIdentifySlotAs(&slot);
+        const sc: *StreamContext = StreamContextPolyHelper.mustFromSlot(&slot);
         sc.frames_processed += 1;
 
         // Return buffer to pool — wakes Network Master if it is waiting.

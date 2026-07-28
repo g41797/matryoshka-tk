@@ -5,13 +5,13 @@ pub const ShutdownCommand = @import("ShutdownCommand.zig");
 pub const Timer = @import("Timer.zig");
 
 pub fn freeItem(poly: *polynode.PolyNode, alloc: std.mem.Allocator) void {
-    if (Event.EventPolyHelper.identifyNodeAs(poly)) |ev| {
+    if (Event.EventPolyHelper.fromNode(poly)) |ev| {
         alloc.destroy(ev);
-    } else if (Sensor.SensorPolyHelper.identifyNodeAs(poly)) |sn| {
+    } else if (Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
         alloc.destroy(sn);
-    } else if (Timer.TimerPolyHelper.identifyNodeAs(poly)) |tm| {
+    } else if (Timer.TimerPolyHelper.fromNode(poly)) |tm| {
         alloc.destroy(tm);
-    } else if (ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(poly)) |sc| {
+    } else if (ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |sc| {
         alloc.destroy(sc);
     }
 }
@@ -38,9 +38,9 @@ pub fn createByTag(tag: *const anyopaque, alloc: std.mem.Allocator, slot: *polyn
 }
 
 pub fn resetOnPut(slot: *polynode.Slot) void {
-    if (Event.EventPolyHelper.identifySlotAs(slot)) |ev| {
+    if (Event.EventPolyHelper.fromSlot(slot)) |ev| {
         ev.*.code = 0;
-    } else if (Sensor.SensorPolyHelper.identifySlotAs(slot)) |sn| {
+    } else if (Sensor.SensorPolyHelper.fromSlot(slot)) |sn| {
         sn.*.value = 0.0;
     }
 }

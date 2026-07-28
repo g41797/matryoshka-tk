@@ -63,7 +63,7 @@ fn seedPool(ph: PoolHandle) !void {
     for (0..3) |i| {
         var slot: Slot = null;
         try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         pool.put(ph, &slot);
     }
 }
@@ -84,7 +84,7 @@ fn eventLoop(ph: PoolHandle, sel: *std.Io.Select(MasterEvent), processed: *usize
                 .item => |handle| {
                     var slot: Slot = handle;
                     defer pool.put(ph, &slot);
-                    const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+                    const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                     processed.* += 1;
                     std.log.info("pool_ev: processed code={d} → put back to pool", .{ev.code});
                     try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, items.Event.EventPolyHelper.TAG, null });

@@ -35,7 +35,7 @@ fn sendItem(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(alloc, &slot);
     try items.Event.EventPolyHelper.create(alloc, &slot);
-    items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 42;
+    items.Event.EventPolyHelper.mustFromSlot(&slot).code = 42;
     try mailbox.send(mbh, &slot);
 }
 
@@ -47,7 +47,7 @@ fn receiveAndVerify(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io) !v
         .item => |handle| {
             var received: Slot = handle;
             defer items.freeSlot(&received, alloc);
-            const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&received);
+            const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&received);
             try helpers.expect(error.ReceiveFutureDirectFailed, ev.code == 42, "wrong code");
             std.log.info("receive_future direct: got Event code={d}", .{ev.code});
         },

@@ -35,7 +35,7 @@ pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
         try mailbox.send(mbh, &slot);
     }
 
@@ -68,7 +68,7 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(poly)) |_| {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
             items.freeSlot(&slot, ctx.alloc);
             return;
         }
@@ -79,7 +79,7 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
         var batch: std.DoublyLinkedList = mailbox.receive_batch(ctx.mbh) catch return;
         while (batch.popFirst()) |node| {
             const bpoly: *PolyNode = @fieldParentPtr("node", node);
-            if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(bpoly)) |_| {
+            if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(bpoly)) |_| {
                 items.freeItem(bpoly, ctx.alloc);
                 return;
             }

@@ -58,7 +58,7 @@ fn producerFn(ctx: *ProducerCtx) void {
     while (i < 5) : (i += 1) {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = i;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
         mailbox.send(ctx.outbox, &slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
@@ -67,7 +67,7 @@ fn producerFn(ctx: *ProducerCtx) void {
     {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = -1;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = -1;
         mailbox.send(ctx.outbox, &slot) catch items.freeSlot(&slot, ctx.alloc);
     }
 }
@@ -82,7 +82,7 @@ fn transformerFn(ctx: *StageCtx) void {
     while (true) {
         var slot: Slot = null;
         mailbox.receive(ctx.inbox, &slot, null) catch return;
-        const ev: *items.Event = items.Event.EventPolyHelper.identifySlotAs(&slot) orelse {
+        const ev: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse {
             items.freeSlot(&slot, ctx.alloc);
             continue;
         };
@@ -106,7 +106,7 @@ fn consumerFn(ctx: *ConsumerCtx) void {
     while (true) {
         var slot: Slot = null;
         mailbox.receive(ctx.mbh, &slot, null) catch return;
-        const ev: *items.Event = items.Event.EventPolyHelper.identifySlotAs(&slot) orelse {
+        const ev: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse {
             items.freeSlot(&slot, ctx.alloc);
             continue;
         };

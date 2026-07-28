@@ -59,6 +59,13 @@ pool.put(ph, &slot);
 // slot == null if accepted by pool
 ```
 
+or, when the caller takes the item itself:
+
+```zig
+const ev: *Event = EventPolyHelper.moveFromSlot(&slot) orelse return error.WrongTag;
+// slot == null, the caller holds ev
+```
+
 Why.
 
 - Sender no longer owns the item.
@@ -245,7 +252,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.identifyNodeAs(handle)) |ev| {
+if (EventPolyHelper.fromNode(handle)) |ev| {
     ...
 }
 ```
@@ -255,7 +262,7 @@ Why.
 - Tag check and recovery are combined.
 - Wrong types return null.
 
-### Slot identification — accessing owned items
+### Slot identification — accessing items
 
 When to use.
 
@@ -266,13 +273,13 @@ Code shape (assert non-null, known type).
 var slot: Slot = null;
 defer EventPolyHelper.destroy(allocator, &slot);
 try EventPolyHelper.create(allocator, &slot);
-EventPolyHelper.mustIdentifySlotAs(&slot).code = 42;
+EventPolyHelper.mustFromSlot(&slot).code = 42;
 try mailbox.send(mbh, &slot);
 ```
 
 Code shape (optional — type may vary).  
 ```zig
-if (EventPolyHelper.identifySlotAs(&slot)) |ev| {
+if (EventPolyHelper.fromSlot(&slot)) |ev| {
     ev.code = 42;
 }
 ```
@@ -280,8 +287,10 @@ if (EventPolyHelper.identifySlotAs(&slot)) |ev| {
 Why.
 
 - Unwraps the optional internally — no `.?` in application code.
-- `mustIdentifySlotAs` panics if the Slot is empty or the tag does not match.
-- Use `identifySlotAs` (nullable) when the type is not guaranteed.
+- `mustFromSlot` panics if the Slot is empty or the tag does not match.
+- Use `fromSlot` (nullable) when the type is not guaranteed.
+- Inspection leaves the Slot full. The item is still there for `send` or `put`.
+- To take the item out instead, use `moveFromSlot` — see "Transfer clears the slot".
 
 ### Polymorphic dispatch
 
@@ -291,16 +300,16 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.identifyNodeAs(handle)) |ev| {
+if (EventPolyHelper.fromNode(handle)) |ev| {
     // handle Event
-} else if (ShutdownCommandPolyHelper.identifyNodeAs(handle)) |_| {
+} else if (ShutdownCommandPolyHelper.fromNode(handle)) |_| {
     // handle ShutdownCommand
 } else {
     // unknown — free and move on
 }
 ```
 
-- `identifyNodeAs` returns null on a tag mismatch. Chain calls for each known type.
+- `fromNode` returns null on a tag mismatch. Chain calls for each known type.
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
 

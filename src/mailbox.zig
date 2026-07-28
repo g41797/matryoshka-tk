@@ -57,7 +57,7 @@ pub inline fn is_it_you(tag: *const anyopaque) bool {
 ///
 /// Destroying an open mailbox is a programming error — panics.
 pub fn destroy(mbh: MailboxHandle, alloc: std.mem.Allocator) void {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
     if (!mbx.*.closed.load(.acquire)) {
         @panic("mailbox.destroy: mailbox must be closed first");
     }
@@ -73,7 +73,7 @@ pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
 
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -101,7 +101,7 @@ pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     std.debug.assert(slot.* != null);
     std.debug.assert(!polynode.is_linked(slot.*.?));
 
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -147,7 +147,7 @@ pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
 pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Io.Cancelable)!void {
     std.debug.assert(slot.* == null);
 
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -206,7 +206,7 @@ pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (erro
 pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool {
     std.debug.assert(slot.* == null);
 
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -239,7 +239,7 @@ pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool 
 ///
 /// Returns an empty list if the mailbox is empty.
 pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -266,7 +266,7 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
 /// Safe to call more than once.\
 /// Later calls return an empty list.
 pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
     const io: Io = mbx.*.io;
     mbx.*.mutex.lockUncancelable(io);
 
@@ -301,7 +301,7 @@ pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
 ///
 /// Don't confuse with Cancel
 pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
     const io: Io = mbx.*.io;
@@ -332,7 +332,7 @@ pub const ReceiveResult = union(enum) {
 /// - for direct await
 /// - or `Io.Group` use.
 pub fn receive_future(mbh: MailboxHandle, timeout_ns: ?u64) ConcurrentError!Io.Future(ReceiveResult) {
-    const mbx: *_Mailbox = MailboxPolyHelper.mustIdentifyNodeAs(mbh);
+    const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
     return mbx.*.io.concurrent(receiveResult, .{ mbh, timeout_ns });
 }
 

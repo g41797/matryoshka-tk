@@ -40,41 +40,73 @@ pub fn isIt(tag: *const anyopaque) bool
 ---
 
 
+Two kinds of access, and the names say which is which.
+
+- Inspection — `fromNode`, `fromSlot`. Leaves the Slot full.
+- Extraction — `moveFromSlot`. Leaves the Slot empty.
+
+---
+
+
 ```zig
-pub fn identifyNodeAs(node: *PolyNode) ?*T
+pub fn fromNode(node: *PolyNode) ?*T
 ```
 
 - Returns `null` if the runtime tag does not match.
 - Returns `@fieldParentPtr("poly", node)` if it does.
+- Never modifies the node.
 - For infrastructure code that works with `*PolyNode` directly (mailbox, pool, list walks).
 
 ---
 
 
 ```zig
-pub fn mustIdentifyNodeAs(node: *PolyNode) *T
+pub fn mustFromNode(node: *PolyNode) *T
 ```
 
-- Same as `identifyNodeAs`, but panics (`orelse unreachable`) if the tag does not match.
+- Same as `fromNode`, but panics (`orelse unreachable`) if the tag does not match.
 
 ---
 
 
 ```zig
-pub fn identifySlotAs(slot: *const Slot) ?*T
+pub fn fromSlot(slot: *const Slot) ?*T
 ```
 
 - Returns `null` if the Slot is empty or the tag does not match.
+- Does not empty the Slot.
+- Takes `*const Slot` — it cannot clear the Slot even by mistake.
+- Returns a mutable `*T`. Most callers set or read a field through it.
 - For application code that works with Slots (examples, tests, stories).
 
 ---
 
 
 ```zig
-pub fn mustIdentifySlotAs(slot: *const Slot) *T
+pub fn mustFromSlot(slot: *const Slot) *T
 ```
 
-- Same as `identifySlotAs`, but panics if the Slot is empty or the tag does not match.
+- Same as `fromSlot`, but panics if the Slot is empty or the tag does not match.
+
+---
+
+
+```zig
+pub fn moveFromSlot(slot: *Slot) ?*T
+```
+
+- Takes the item out of the Slot.
+- Returns `null` if the Slot is empty or the tag does not match.
+- On success the Slot is left empty.
+- On failure the Slot is unchanged.
+- Asserts the item is not linked into a list, like every other consuming
+  operation (`mailbox.send`, `mailbox.receive`, `pool.put`, `destroy`).
+
+- No `must` variant. It mutates its argument, and hiding failure behind
+  `unreachable` would make the state change less obvious.
+
+- Use it instead of hand-written `slot.?` + `slot = null`. That form skips the
+  tag check.
 
 ---
 
@@ -122,7 +154,7 @@ EventPolyHelper.init(&ev);
 const poly: *PolyNode = &ev.poly;
 
 // Identify and recover (Steps 5+6 combined, returns null on wrong tag)
-const recovered: *Event = EventPolyHelper.mustIdentifyNodeAs(poly);
+const recovered: *Event = EventPolyHelper.mustFromNode(poly);
 // recovered.code == 42
 ```
 
@@ -137,10 +169,10 @@ const EVENT_TAG = &_event_tag;      EventPolyHelper.TAG
 
 poly.tag == EVENT_TAG               EventPolyHelper.isIt(poly.tag)
 
-if (poly.tag == EVENT_TAG)          EventPolyHelper.identifyNodeAs(poly)
+if (poly.tag == EVENT_TAG)          EventPolyHelper.fromNode(poly)
   @fieldParentPtr("poly", poly)       → ?*Event (null if wrong tag)
 
-// slot: ?*PolyNode                 EventPolyHelper.identifySlotAs(&slot)
+// slot: ?*PolyNode                 EventPolyHelper.fromSlot(&slot)
                                        → ?*Event (null if slot empty or wrong tag)
 
 ev.poly = .{.node=.{},.tag=TAG};    EventPolyHelper.init(&ev)
@@ -210,7 +242,7 @@ Old (manual):                        New (PolyHelper.create):
 Old (manual):                        New (PolyHelper.destroy):
 
   alloc.destroy(                       EventPolyHelper.destroy(alloc, &slot);
-    EventPolyHelper.mustIdentifySlotAs(&slot));  // null-safe, clears slot
+    EventPolyHelper.mustFromSlot(&slot));  // null-safe, clears slot
   slot.* = null;
 ```
 
@@ -228,7 +260,7 @@ Some types must not expose `create`/`destroy`.
 const no_create_destroy = void{};
 ```
 
-If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `identifyNodeAs`, `mustIdentifyNodeAs`, `identifySlotAs`, `mustIdentifySlotAs`, `init`.
+If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
 They manage their own lifecycle.  
@@ -241,10 +273,10 @@ Generating `create`/`destroy` for them would be wrong.
 PolyHelper(T)
   │
   ├── @hasDecl(T, "no_create_destroy") == false
-  │     → TAG, isIt, identifyNodeAs, mustIdentifyNodeAs, identifySlotAs, mustIdentifySlotAs, init, create, destroy
+  │     → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
   │
   └── @hasDecl(T, "no_create_destroy") == true
-        → TAG, isIt, identifyNodeAs, mustIdentifyNodeAs, identifySlotAs, mustIdentifySlotAs, init
+        → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
 ```
 
 ---

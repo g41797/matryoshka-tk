@@ -32,7 +32,7 @@ pub fn shutdown_via_shutdowncommand(allocator: std.mem.Allocator, io: std.Io) !v
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = code;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = code;
         try mailbox.send(mbh, &slot);
     }
 
@@ -62,13 +62,13 @@ fn workerFn(ctx: *WorkerCtx) void {
         defer items.freeSlot(&slot, ctx.alloc);
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(poly)) |_| {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
             std.log.info("worker: ShutdownCommand received, exiting cleanly", .{});
             return;
-        } else if (items.Event.EventPolyHelper.identifyNodeAs(poly)) |ev| {
+        } else if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
             std.log.debug("worker: Event code={d}", .{ev.*.code});
             ctx.processed += 1;
-        } else if (items.Sensor.SensorPolyHelper.identifyNodeAs(poly)) |sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
             std.log.debug("worker: Sensor value={d:.1}", .{sn.*.value});
             ctx.processed += 1;
         }

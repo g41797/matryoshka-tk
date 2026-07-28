@@ -1,9 +1,9 @@
-# Matryoshka Zig — Rules (026)
+# Matryoshka Zig — Rules (027)
 
-Versioned doc. Replaces [rules-025.md](rules-025.md).  
+Versioned doc. Replaces [rules-026.md](rules-026.md).  
 All coding, doc, and process rules for the project.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [patterns-012.md](patterns-012.md) — reusable coding patterns.
+Companion: [patterns-017.md](patterns-017.md) — reusable coding patterns.
 
 ---
 
@@ -330,6 +330,20 @@ Handle naming (API 4).
   reference.
 - `MailboxHandle` / `PoolHandle` are unaffected — they already name the role,
   not the implementation.
+
+Accessor naming (API 6).
+- A name says what the caller does, not how the helper works. `identifyNodeAs`
+  and `identifySlotAs` described the implementation and are gone.
+- Inspection is `fromNode` / `fromSlot`. It never empties a Slot and never
+  modifies a Node. `fromSlot` takes `*const Slot` so it cannot.
+- Extraction is `moveFromSlot`. It always empties the Slot on success, and
+  leaves it unchanged on failure.
+- No `As` suffix. The type is already the namespace:
+  `EventPolyHelper.fromSlot(&slot)`.
+- A helper that mutates its argument gets no `must` variant. Hiding failure
+  behind `unreachable` would make the state change less obvious. This is why  
+  `moveFromSlot` has none while `fromNode` and `fromSlot` do.
+- Every consuming operation asserts the item is not linked into a list.
 
 General Zig style.
 - Explicit typing: `const x: T = ...` where the type is known.

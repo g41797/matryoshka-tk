@@ -26,7 +26,7 @@ pub fn produce_consume_with_defer_cleanup(allocator: std.mem.Allocator, io: std.
     while (i < 5) : (i += 1) {
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = i;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
         list.append(&slot.?.*.node);
         slot = null;
     }
@@ -34,7 +34,7 @@ pub fn produce_consume_with_defer_cleanup(allocator: std.mem.Allocator, io: std.
     var sum: i32 = 0;
     while (list.popFirst()) |node| {
         const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        const ev: *items.Event = items.Event.EventPolyHelper.identifyNodeAs(poly) orelse return error.CastFailed;
+        const ev: *items.Event = items.Event.EventPolyHelper.fromNode(poly) orelse return error.CastFailed;
         sum += ev.*.code;
         items.freeItem(poly, allocator);
     }

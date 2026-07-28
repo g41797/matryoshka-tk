@@ -44,9 +44,9 @@ pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
 
     while (batch.popFirst()) |node| {
         const poly: *PolyNode = @fieldParentPtr("node", node);
-        if (items.Event.EventPolyHelper.identifyNodeAs(poly)) |_| {
+        if (items.Event.EventPolyHelper.fromNode(poly)) |_| {
             events_received += 1;
-        } else if (items.Sensor.SensorPolyHelper.identifyNodeAs(poly)) |_| {
+        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |_| {
             sensors_received += 1;
         }
         items.freeItem(poly, allocator);
@@ -67,7 +67,7 @@ fn eventSenderFn(ctx: *SenderCtx) void {
     while (i < 5) : (i += 1) {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = i;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
         mailbox.send(ctx.mbh, &slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
@@ -81,7 +81,7 @@ fn sensorSenderFn(ctx: *SenderCtx) void {
     while (i < 5) : (i += 1) {
         var slot: Slot = null;
         items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch return;
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = @as(f64, @floatFromInt(i)) * 0.1;
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i)) * 0.1;
         mailbox.send(ctx.mbh, &slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
@@ -96,10 +96,10 @@ fn altSenderFn(ctx: *SenderCtx) void {
         var slot: Slot = null;
         if (@rem(i, 2) == 0) {
             items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 100 + i;
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = 100 + i;
         } else {
             items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch return;
-            items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = @as(f64, @floatFromInt(i));
+            items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i));
         }
         mailbox.send(ctx.mbh, &slot) catch {
             items.freeSlot(&slot, ctx.alloc);

@@ -53,7 +53,7 @@ fn fillMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator, count: usize) !void
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         try mailbox.send(mbh, &slot);
     }
 }

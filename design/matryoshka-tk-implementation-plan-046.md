@@ -1,12 +1,10 @@
-# Matryoshka Zig — Implementation Plan (045)
+# Matryoshka Zig — Implementation Plan (046)
 
-Replaces [matryoshka-tk-implementation-plan-044.md](matryoshka-tk-implementation-plan-044.md).
+Replaces [matryoshka-tk-implementation-plan-045.md](matryoshka-tk-implementation-plan-045.md).
 
 ## Status
 
-EXMPL 5 (receive router — example + pattern docs) complete: 5a design note,  
-5b example + test, 5c pattern docs, 5d catalog and nav, 5e cancelDiscard  
-audit. 169/169 tests.
+API 6 (PolyHelper accessor naming) complete. 170/170 tests.
 
 ---
 
@@ -31,22 +29,38 @@ audit. 169/169 tests.
 - MDFIX: markdown hard-break rule + `kitchen/tools/fix_md_hardbreaks.sh`.
   DONE — rule lives in rules-026, script connected to `build_site.sh` and  
   `preview_site.sh`. Listed as "not started" in plan-044; that was stale.
-- EXMPL 5a — `design/receive-router-001.md`: use case, outcome table, the two
-  rules, the `N >= P + T` precondition, why it is not `src/` API. DONE.
-- EXMPL 5b — `examples/layer4/062-receive_router.zig` + barrel entry + test
-  wrapper in `tests/layer4_select.zig`. DONE (169/169 tests, +1 new).
-- EXMPL 5c — pattern docs: new "Receive router" entry in
-  `kitchen/docs/patterns/async.md` and `design/patterns-016.md`;  
-  silent-discard behaviour added to `kitchen/docs/addendums/io-101.md`.  
-  DONE.
-- EXMPL 5d — `gen_examples_docs.sh` regeneration, `kitchen/docs/examples/io.md`
-  group page, `kitchen/mkdocs.yml` nav entry. DONE  
-  (`mkdocs build --strict` clean).
-- EXMPL 5e — cancelDiscard audit across 15 live call sites. No defects. Three
-  observations recorded, no code changed. DONE.
+- EXMPL 5a–5e: receive router — design note, example + test, pattern docs,
+  catalog and nav, cancelDiscard audit (15 sites, no defects). DONE  
+  (169/169 tests).
+- API 6 — PolyHelper accessor naming. `identifyNodeAs`/`identifySlotAs` →
+  `fromNode`/`fromSlot` (+ `must` variants), hard rename, no aliases. New  
+  `moveFromSlot` takes the item out and empties the Slot. Docs to  
+  api-reference-027, patterns-017, rules-027. DONE (170/170 tests, +1 new).
 
 See `design/STATUS.md` Session Log for full per-stage detail — this plan file  
 stays state-only per the slim-plan rule.
+
+---
+
+## API 6 — settled design
+
+Three names, two kinds of access.
+
+- `fromNode` / `mustFromNode` — reach T through its embedded PolyNode. Never
+  modifies the node.
+- `fromSlot` / `mustFromSlot` — reach T through the Slot holding it. Takes
+  `*const Slot`, so it cannot empty the Slot.
+- `moveFromSlot` — take T out. Empties the Slot on success, leaves it
+  unchanged on failure, asserts the item is not linked. No `must` variant.
+
+Why it is not a plain rename of `identifySlotAs`: a call-site audit found ~82  
+of 127 Slot sites are `create → set a field → send`, and none consumed the  
+Slot. Inspection is the dominant operation. Extraction is additive.
+
+Caller: `examples/layer1/022-ownership_transfer.zig` hand-rolled  
+`list.append(&slot.?.node); slot = null;` — no tag check. Now one call.
+
+Rule: rules-027, "Accessor naming (API 6)".
 
 ---
 
@@ -135,6 +149,12 @@ subagent sweep, given corpus size.
   `design/collected-context-005.md` (3, historical),  
   `kitchen/docs/patterns/pool.md` (2), `kitchen/docs/api/pool.md` (1).  
   These reference already-superseded doc versions.
-- Pre-existing banned-word hits in `design/patterns-016.md` inherited from
-  `-015` (section title "Slot and ownership idioms", and body uses).  
-  Reported per the scan rule, not fixed without approval.
+- Pre-existing banned-word hits carried into `design/patterns-017.md` from
+  `-016`/`-015`: section titles "Slot and ownership idioms" and "Transfer  
+  clears ownership", plus body uses. API 6 retitled only "Slot  
+  identification — accessing owned items" → "… accessing items", on owner's  
+  instruction. The rest reported per the scan rule, not fixed without  
+  approval.
+- `examples/layer1/022-ownership_transfer.zig` keeps `ownership` in its
+  filename, `//!` title, and entry-point name. Renaming trips the  
+  examples-catalog nav-sync rule — separate stage, owner's call.

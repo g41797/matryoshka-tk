@@ -34,7 +34,7 @@ test "27 - send and receive single item" {
     try testing.expect(slot != null);
 
     const poly: *PolyNode = slot.?;
-    const recovered: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+    const recovered: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
     try testing.expectEqual(@as(i32, 27), recovered.*.code);
 }
 
@@ -68,7 +68,7 @@ test "28 - fifo ordering" {
         var slot: Slot = null;
         try mailbox.receive(mbh, &slot, 1_000_000_000);
         const poly: *PolyNode = slot.?;
-        const ev: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+        const ev: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
         try testing.expectEqual(expected, ev.*.code);
     }
 }
@@ -155,7 +155,7 @@ test "32 - receive wait forever (null timeout), item from thread" {
     try testing.expect(slot != null);
 
     const poly: *PolyNode = slot.?;
-    const ev: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
     try testing.expectEqual(@as(i32, 32), ev.*.code);
 }
 
@@ -254,7 +254,7 @@ test "35 - send_oob delivers to front" {
     var slot: Slot = null;
     try mailbox.receive(mbh, &slot, 1_000_000_000);
     const poly: *PolyNode = slot.?;
-    const first_ev: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+    const first_ev: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
     try testing.expectEqual(@as(i32, 99), first_ev.*.code);
 }
 
@@ -295,7 +295,7 @@ test "36 - send_oob wakes blocked receiver" {
     try testing.expect(slot != null);
 
     const poly: *PolyNode = slot.?;
-    const ev: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
     try testing.expectEqual(@as(i32, 36), ev.*.code);
 }
 
@@ -337,7 +337,7 @@ test "37 - multiple send_oob items are FIFO among OOBs" {
         var slot: Slot = null;
         try mailbox.receive(mbh, &slot, 1_000_000_000);
         const poly: *PolyNode = slot.?;
-        const ev: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+        const ev: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
         try testing.expectEqual(code, ev.*.code);
     }
 }
@@ -377,7 +377,7 @@ test "39 - data priority over closed" {
     while (remaining.popFirst()) |node| {
         count += 1;
         const poly: *PolyNode = @fieldParentPtr("node", node);
-        const recovered: *Event = EventPolyHelper.identifyNodeAs(poly) orelse return error.WrongTag;
+        const recovered: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
         try testing.expectEqual(@as(i32, 39), recovered.*.code);
     }
     try testing.expectEqual(@as(usize, 1), count);
@@ -878,7 +878,7 @@ test "oob last resets after last oob received, next send_oob goes to front" {
     {
         var slot: Slot = null;
         try mailbox.receive(mbh, &slot, 1_000_000_000);
-        const a_ev: *Event = EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+        const a_ev: *Event = EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         try testing.expectEqual(@as(i32, 1), a_ev.*.code); // received A
     }
 
@@ -894,14 +894,14 @@ test "oob last resets after last oob received, next send_oob goes to front" {
     {
         var slot: Slot = null;
         try mailbox.receive(mbh, &slot, 1_000_000_000);
-        const c_ev: *Event = EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+        const c_ev: *Event = EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         try testing.expectEqual(@as(i32, 3), c_ev.*.code); // C must be first
     }
 
     {
         var slot: Slot = null;
         try mailbox.receive(mbh, &slot, 1_000_000_000);
-        const b_ev: *Event = EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+        const b_ev: *Event = EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         try testing.expectEqual(@as(i32, 2), b_ev.*.code); // B must be second
     }
 }
@@ -964,7 +964,7 @@ test "wakeUpAll does not affect future receiver" {
 
     var slot: Slot = null;
     try mailbox.receive(mbh, &slot, 1_000_000_000);
-    const recovered: *Event = EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+    const recovered: *Event = EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
     try testing.expectEqual(@as(i32, 64), recovered.*.code);
 }
 

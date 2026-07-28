@@ -44,7 +44,7 @@ test "64 - pool.get creates new item via on_get" {
     var slot: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
     try testing.expect(slot != null);
-    try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
+    try testing.expect(EventPolyHelper.fromSlot(&slot) != null);
     try testing.expectEqual(@as(usize, 1), ctx.get_call_count);
 
     // Return item so on_close can free it.
@@ -107,13 +107,13 @@ test "66 - on_get reinitializes recycled item" {
 
     var slot: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
-    const ev: *Event = EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
     ev.*.code = 66; // mark with dirty data
     pool.put(ph, &slot);
 
     var m2: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &m2);
-    const ev2: *Event = EventPolyHelper.identifySlotAs(&m2) orelse return error.WrongTag;
+    const ev2: *Event = EventPolyHelper.fromSlot(&m2) orelse return error.WrongTag;
     // on_get reinitializes recycled items (code reset to 0).
     try testing.expectEqual(@as(i32, 0), ev2.*.code);
 
@@ -306,7 +306,7 @@ test "72 - GetMode.available_only returns stored item" {
     var slot: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_only, &slot);
     try testing.expect(slot != null);
-    try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
+    try testing.expect(EventPolyHelper.fromSlot(&slot) != null);
     pool.put(ph, &slot);
 }
 
@@ -345,8 +345,8 @@ test "73 - per-tag free lists: Event and Sensor stored separately" {
     {
         var slot: Slot = null;
         try pool.get(ph, EventPolyHelper.TAG, .available_only, &slot);
-        try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
-        try testing.expect(SensorPolyHelper.identifySlotAs(&slot) == null);
+        try testing.expect(EventPolyHelper.fromSlot(&slot) != null);
+        try testing.expect(SensorPolyHelper.fromSlot(&slot) == null);
         pool.put(ph, &slot);
     }
 
@@ -354,8 +354,8 @@ test "73 - per-tag free lists: Event and Sensor stored separately" {
     {
         var slot: Slot = null;
         try pool.get(ph, SensorPolyHelper.TAG, .available_only, &slot);
-        try testing.expect(SensorPolyHelper.identifySlotAs(&slot) != null);
-        try testing.expect(EventPolyHelper.identifySlotAs(&slot) == null);
+        try testing.expect(SensorPolyHelper.fromSlot(&slot) != null);
+        try testing.expect(EventPolyHelper.fromSlot(&slot) == null);
         pool.put(ph, &slot);
     }
 }
@@ -705,7 +705,7 @@ test "84 - pool.get_wait forever: item put from another thread" {
     fut.await(io);
 
     try testing.expect(slot != null);
-    try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
+    try testing.expect(EventPolyHelper.fromSlot(&slot) != null);
     pool.put(ph, &slot);
 }
 
@@ -861,7 +861,7 @@ test "89 - on_put returns composite sub-items" {
 
     var slot: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
-    try testing.expect(EventPolyHelper.identifySlotAs(&slot) != null);
+    try testing.expect(EventPolyHelper.fromSlot(&slot) != null);
 
     // on_put keeps the Event (slot path) and hands back a 3-item composite —
     // Sensor, Timer, ShutdownCommand — via the returned-list path. All four
@@ -873,22 +873,22 @@ test "89 - on_put returns composite sub-items" {
     // All items are now available from the pool via the normal get path.
     var ev_slot: Slot = null;
     try pool.get(ph, EventPolyHelper.TAG, .available_only, &ev_slot);
-    try testing.expect(EventPolyHelper.identifySlotAs(&ev_slot) != null);
+    try testing.expect(EventPolyHelper.fromSlot(&ev_slot) != null);
     pool.put(ph, &ev_slot);
 
     var sn_slot: Slot = null;
     try pool.get(ph, SensorPolyHelper.TAG, .available_only, &sn_slot);
-    try testing.expect(SensorPolyHelper.identifySlotAs(&sn_slot) != null);
+    try testing.expect(SensorPolyHelper.fromSlot(&sn_slot) != null);
     pool.put(ph, &sn_slot);
 
     var tm_slot: Slot = null;
     try pool.get(ph, TimerPolyHelper.TAG, .available_only, &tm_slot);
-    try testing.expect(TimerPolyHelper.identifySlotAs(&tm_slot) != null);
+    try testing.expect(TimerPolyHelper.fromSlot(&tm_slot) != null);
     pool.put(ph, &tm_slot);
 
     var sc_slot: Slot = null;
     try pool.get(ph, ShutdownCommandPolyHelper.TAG, .available_only, &sc_slot);
-    try testing.expect(ShutdownCommandPolyHelper.identifySlotAs(&sc_slot) != null);
+    try testing.expect(ShutdownCommandPolyHelper.fromSlot(&sc_slot) != null);
     pool.put(ph, &sc_slot);
 }
 
@@ -911,8 +911,8 @@ fn onGetAlways(ctx_opaque: *anyopaque, tag: *const anyopaque, in_pool_count: usi
     ctx.last_get_count = in_pool_count;
     if (slot.* != null) {
         // Reinitialize recycled item.
-        if (EventPolyHelper.identifySlotAs(slot)) |ev| ev.*.code = 0;
-        if (SensorPolyHelper.identifySlotAs(slot)) |sn| sn.*.value = 0.0;
+        if (EventPolyHelper.fromSlot(slot)) |ev| ev.*.code = 0;
+        if (SensorPolyHelper.fromSlot(slot)) |sn| sn.*.value = 0.0;
         return;
     }
     // Create new item based on tag.
@@ -930,8 +930,8 @@ fn onGetAlways(ctx_opaque: *anyopaque, tag: *const anyopaque, in_pool_count: usi
 }
 
 fn resetOnPut(slot: *Slot) void {
-    if (EventPolyHelper.identifySlotAs(slot)) |ev| ev.*.code = 0;
-    if (SensorPolyHelper.identifySlotAs(slot)) |sn| sn.*.value = 0.0;
+    if (EventPolyHelper.fromSlot(slot)) |ev| ev.*.code = 0;
+    if (SensorPolyHelper.fromSlot(slot)) |sn| sn.*.value = 0.0;
 }
 
 fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) ?std.DoublyLinkedList {

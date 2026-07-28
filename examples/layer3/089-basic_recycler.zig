@@ -32,7 +32,7 @@ pub fn basic_recycler(allocator: std.mem.Allocator, io: std.Io) !void {
     defer pool.put(ph, &slot);
 
     try pool.get(ph, items.Event.EventPolyHelper.TAG, .available_or_new, &slot);
-    const ev = items.Event.EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+    const ev = items.Event.EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
     ev.code = 89;
     std.log.info("got fresh Event, set code={d}", .{ev.code});
 
@@ -40,7 +40,7 @@ pub fn basic_recycler(allocator: std.mem.Allocator, io: std.Io) !void {
     std.log.info("returned Event to pool", .{});
 
     try pool.get(ph, items.Event.EventPolyHelper.TAG, .available_or_new, &slot);
-    const ev2 = items.Event.EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+    const ev2 = items.Event.EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
     std.log.info("recycled Event code={d}", .{ev2.code});
     try helpers.expect(error.BasicRecyclerFailed, ev2.code == 0, "recycled item was not reset by the hook");
 

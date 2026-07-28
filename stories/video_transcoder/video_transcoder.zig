@@ -102,7 +102,7 @@ fn storageFn(ctx: *StorageCtx) error{Canceled}!void {
             error.Canceled => return error.Canceled,
             error.Closed, error.Timeout, error.Wakeup => return,
         };
-        const seg: *EncodedSegment = EncodedSegmentPolyHelper.mustIdentifySlotAs(&slot);
+        const seg: *EncodedSegment = EncodedSegmentPolyHelper.mustFromSlot(&slot);
         std.log.info("storage: camera={d} segment={d}", .{ seg.camera_id, seg.segment_id });
     }
 }
@@ -125,7 +125,7 @@ fn workerFn(ctx: *WorkerCtx) error{Canceled}!void {
             error.Canceled => return error.Canceled,
             error.Closed, error.Timeout, error.Wakeup => return,
         };
-        const sc: *StreamContext = StreamContextPolyHelper.mustIdentifySlotAs(&slot);
+        const sc: *StreamContext = StreamContextPolyHelper.mustFromSlot(&slot);
         sc.frames_processed += 1;
         std.log.info("worker {d}: encoding camera={d} frame={d} (total={d})", .{
             ctx.id, sc.camera_id, sc.frame_id, sc.frames_processed,
@@ -142,7 +142,7 @@ fn workerFn(ctx: *WorkerCtx) error{Canceled}!void {
         var seg_slot: Slot = null;
         defer EncodedSegmentPolyHelper.destroy(ctx.alloc, &seg_slot);
         EncodedSegmentPolyHelper.create(ctx.alloc, &seg_slot) catch continue;
-        const seg: *EncodedSegment = EncodedSegmentPolyHelper.mustIdentifySlotAs(&seg_slot);
+        const seg: *EncodedSegment = EncodedSegmentPolyHelper.mustFromSlot(&seg_slot);
         seg.camera_id = sc.camera_id;
         seg.segment_id = sc.frames_processed;
         mailbox.send(ctx.storage_mbh, &seg_slot) catch {};
@@ -196,7 +196,7 @@ const NetworkMaster = struct {
     fn onBuffer(self: *NetworkMaster, sel: *std.Io.Select(NetworkEvent), handle: ItemHandle) !void {
         var buf_slot: Slot = handle;
 
-        const vb: *VideoBuffer = VideoBufferPolyHelper.mustIdentifySlotAs(&buf_slot);
+        const vb: *VideoBuffer = VideoBufferPolyHelper.mustFromSlot(&buf_slot);
         vb.camera_id = @intCast(self.camera_idx);
         vb.frame_id = self.camera_frames[self.camera_idx];
         self.camera_frames[self.camera_idx] += 1;
@@ -205,7 +205,7 @@ const NetworkMaster = struct {
         var ctx_slot: Slot = null;
         defer StreamContextPolyHelper.destroy(self.alloc, &ctx_slot);
         try StreamContextPolyHelper.create(self.alloc, &ctx_slot);
-        const sc: *StreamContext = StreamContextPolyHelper.mustIdentifySlotAs(&ctx_slot);
+        const sc: *StreamContext = StreamContextPolyHelper.mustFromSlot(&ctx_slot);
         sc.camera_id = vb.camera_id;
         sc.frame_id = vb.frame_id;
         sc.buffer_slot = buf_slot;
@@ -228,7 +228,7 @@ const NetworkMaster = struct {
         while (rem.popFirst()) |node| {
             const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
             polynode.reset(poly);
-            const sc: *StreamContext = StreamContextPolyHelper.mustIdentifyNodeAs(poly);
+            const sc: *StreamContext = StreamContextPolyHelper.mustFromNode(poly);
             pool.put(self.buf_ph, &sc.buffer_slot);
             if (sc.buffer_slot != null) {
                 VideoBufferPolyHelper.destroy(self.alloc, &sc.buffer_slot);

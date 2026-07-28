@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) error{Canceled}!void {
     var slot: Slot = null;
     defer pool.put(ctx.ph, &slot);
     pool.get(ctx.ph, items.Event.EventPolyHelper.TAG, .available_or_new, &slot) catch return;
-    const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+    const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
     ev.code = @intCast(ctx.id);
     std.log.info("worker {d}: wrote task index into empty container (code={d})", .{ ctx.id, ev.code });
 }

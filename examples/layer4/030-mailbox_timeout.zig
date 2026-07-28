@@ -70,13 +70,13 @@ const Ctx = struct {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
         try items.Event.EventPolyHelper.create(self.alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 9;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = 9;
         try mailbox.send(self.mbh, &slot);
 
         var received: Slot = null;
         defer items.freeSlot(&received, self.alloc);
         try mailbox.receive(self.mbh, &received, TIMEOUT_NS);
-        std.log.info("receive after send: code={d}", .{items.Event.EventPolyHelper.mustIdentifySlotAs(&received).code});
+        std.log.info("receive after send: code={d}", .{items.Event.EventPolyHelper.mustFromSlot(&received).code});
     }
 };
 

@@ -81,7 +81,7 @@ fn clientFn(ctx: *ClientCtx, io: std.Io) anyerror!void {
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(ctx.alloc, &slot);
     try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
-    items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(ctx.id);
+    items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(ctx.id);
     std.log.info("client {d}: sending to mailbox", .{ctx.id});
     mailbox.send(ctx.mbh, &slot) catch {};
 }
@@ -127,7 +127,7 @@ const Ctx = struct {
                     .item => |handle| {
                         var slot: Slot = handle;
                         defer pool.put(ph, &slot);
-                        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+                        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         ev.code += 1;
                         self.pool_done += 1;
                         std.log.info("pool_ev: processed code={d} ({d}/{d})", .{ ev.code, self.pool_done, N_POOL_ITEMS });
@@ -141,7 +141,7 @@ const Ctx = struct {
                     .item => |handle| {
                         var slot: Slot = handle;
                         defer items.freeSlot(&slot, self.alloc);
-                        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+                        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         self.inbox_done += 1;
                         std.log.info("inbox: client item code={d} ({d}/{d})", .{ ev.code, self.inbox_done, N_CLIENTS });
                         if (self.inbox_done < N_CLIENTS) {
@@ -160,7 +160,7 @@ fn seedPool(ph: PoolHandle) !void {
     for (0..N_POOL_ITEMS) |i| {
         var slot: Slot = null;
         try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(100 + i);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(100 + i);
         pool.put(ph, &slot);
     }
 }

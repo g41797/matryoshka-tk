@@ -61,7 +61,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 1;
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = 1;
             std.log.info("on_get: created Event code=1", .{});
             try mailbox.send(self.mbh, &slot);
         }
@@ -69,7 +69,7 @@ const Ctx = struct {
             var slot: Slot = null;
             try mailbox.receive(self.mbh, &slot, null);
             defer pool.put(self.ph, &slot);
-            std.log.info("on_put: count<cap → keeping Event code={d}", .{items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code});
+            std.log.info("on_put: count<cap → keeping Event code={d}", .{items.Event.EventPolyHelper.mustFromSlot(&slot).code});
         }
     }
 
@@ -78,7 +78,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 2;
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = 2;
             std.log.info("on_get: created fresh Event code=2", .{});
             try mailbox.send(self.mbh, &slot);
         }
@@ -86,7 +86,7 @@ const Ctx = struct {
             var slot: Slot = null;
             try mailbox.receive(self.mbh, &slot, null);
             defer items.freeSlot(&slot, self.alloc);
-            std.log.info("on_put: count>=cap → destroying Event code={d}", .{items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code});
+            std.log.info("on_put: count>=cap → destroying Event code={d}", .{items.Event.EventPolyHelper.mustFromSlot(&slot).code});
             pool.put(self.ph, &slot);
             // on_put set slot.* = null — item was freed; freeSlot sees null → no-op.
         }
@@ -96,7 +96,7 @@ const Ctx = struct {
         var slot: Slot = null;
         defer pool.put(self.ph, &slot);
         try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .available_only, &slot);
-        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         try helpers.expect(error.CrossLayerHooksFailed, ev.code == 0, "expected reset default, not round1's value");
         std.log.info("recycled item: code={d} (reset by on_put) — hooks decided keep/destroy correctly", .{ev.code});
     }

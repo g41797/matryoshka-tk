@@ -49,7 +49,7 @@ fn seedMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator, count: usize) !void
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         try mailbox.send(mbh, &slot);
     }
 }
@@ -58,7 +58,7 @@ fn seedPool(ph: PoolHandle, count: usize) !void {
     for (0..count) |i| {
         var slot: Slot = null;
         try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(100 + i);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(100 + i);
         pool.put(ph, &slot);
     }
 }

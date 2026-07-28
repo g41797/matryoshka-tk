@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
         var slot: Slot = null;
         try pool.get_wait(ctx.ph, ctx.tag, &slot, null);
         defer pool.put(ctx.ph, &slot);
-        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         ev.code = @intCast(ctx.counter); // write counter into empty container
         ctx.counter += 1;
         std.log.info("worker: cycle {d} — wrote counter into empty container (code={d})", .{ ctx.counter, ev.code });

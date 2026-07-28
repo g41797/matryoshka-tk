@@ -67,7 +67,7 @@ fn eventSenderFn(ctx: *SenderCtx) anyerror!void {
     for (0..N_EVENTS) |i| {
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         mailbox.send(ctx.mbh, &slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
@@ -95,13 +95,13 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
         defer items.freeSlot(&slot, ctx.alloc);
         mailbox.receive(ctx.mbh, &slot, null) catch return;
 
-        if (items.Timer.TimerPolyHelper.identifySlotAs(&slot)) |_| {
+        if (items.Timer.TimerPolyHelper.fromSlot(&slot)) |_| {
             ctx.timer_count += 1;
             std.log.info("worker: timer tick {d}", .{ctx.timer_count});
-        } else if (items.Event.EventPolyHelper.identifySlotAs(&slot)) |ev| {
+        } else if (items.Event.EventPolyHelper.fromSlot(&slot)) |ev| {
             ctx.event_count += 1;
             std.log.info("worker: Event code={d}", .{ev.code});
-        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifySlotAs(&slot)) |_| {
+        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromSlot(&slot)) |_| {
             ctx.signal_count += 1;
             std.log.info("worker: ShutdownCommand signal", .{});
         }

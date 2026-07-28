@@ -1,6 +1,6 @@
 # Matryoshka API Reference — Zig 0.16
 
-Replaces [matryoshka-api-reference-025.md](matryoshka-api-reference-025.md).
+Replaces [matryoshka-api-reference-026.md](matryoshka-api-reference-026.md).
 
 > Function descriptions in this reference serve as the source for `///` Zig doc comments in the implementation.
 
@@ -410,28 +410,51 @@ pub fn isIt(tag: *const anyopaque) bool
 - Returns `tag == TAG`.
 - Same as the manual `poly.tag == EVENT_TAG` check.
 
+Two kinds of access, and the names say which is which.
+
+- Inspection — `fromNode`, `fromSlot`. Leaves the Slot full.
+- Extraction — `moveFromSlot`. Leaves the Slot empty.
+
 ```zig
-pub fn identifyNodeAs(node: *PolyNode) ?*T
+pub fn fromNode(node: *PolyNode) ?*T
 ```
 - Returns `null` if the runtime tag does not match.
 - Returns `@fieldParentPtr("poly", node)` if it does.
+- Never modifies the node.
 - For infrastructure code that works with `*PolyNode` directly (mailbox, pool, list walks).
 
 ```zig
-pub fn mustIdentifyNodeAs(node: *PolyNode) *T
+pub fn mustFromNode(node: *PolyNode) *T
 ```
-- Same as `identifyNodeAs`, but panics (`orelse unreachable`) if the tag does not match.
+- Same as `fromNode`, but panics (`orelse unreachable`) if the tag does not match.
 
 ```zig
-pub fn identifySlotAs(slot: *const Slot) ?*T
+pub fn fromSlot(slot: *const Slot) ?*T
 ```
 - Returns `null` if the Slot is empty or the tag does not match.
+- Does not empty the Slot.
+- Takes `*const Slot` — it cannot clear the Slot even by mistake.
+- Returns a mutable `*T`. Most callers set or read a field through it.
 - For application code that works with Slots (examples, tests, stories).
 
 ```zig
-pub fn mustIdentifySlotAs(slot: *const Slot) *T
+pub fn mustFromSlot(slot: *const Slot) *T
 ```
-- Same as `identifySlotAs`, but panics if the Slot is empty or the tag does not match.
+- Same as `fromSlot`, but panics if the Slot is empty or the tag does not match.
+
+```zig
+pub fn moveFromSlot(slot: *Slot) ?*T
+```
+- Takes the item out of the Slot.
+- Returns `null` if the Slot is empty or the tag does not match.
+- On success the Slot is left empty.
+- On failure the Slot is unchanged.
+- Asserts the item is not linked into a list, like every other consuming
+  operation (`mailbox.send`, `mailbox.receive`, `pool.put`, `destroy`).
+- No `must` variant. It mutates its argument, and hiding failure behind
+  `unreachable` would make the state change less obvious.
+- Use it instead of hand-written `slot.?` + `slot = null`. That form skips the
+  tag check.
 
 ```zig
 pub fn init(self: *T) void
@@ -463,7 +486,7 @@ EventPolyHelper.init(&ev);
 const poly: *PolyNode = &ev.poly;
 
 // Identify and recover (Steps 5+6 combined, returns null on wrong tag)
-const recovered: *Event = EventPolyHelper.mustIdentifyNodeAs(poly);
+const recovered: *Event = EventPolyHelper.mustFromNode(poly);
 // recovered.code == 42
 ```
 
@@ -475,10 +498,10 @@ const EVENT_TAG = &_event_tag;      EventPolyHelper.TAG
 
 poly.tag == EVENT_TAG               EventPolyHelper.isIt(poly.tag)
 
-if (poly.tag == EVENT_TAG)          EventPolyHelper.identifyNodeAs(poly)
+if (poly.tag == EVENT_TAG)          EventPolyHelper.fromNode(poly)
   @fieldParentPtr("poly", poly)       → ?*Event (null if wrong tag)
 
-// slot: ?*PolyNode                 EventPolyHelper.identifySlotAs(&slot)
+// slot: ?*PolyNode                 EventPolyHelper.fromSlot(&slot)
                                        → ?*Event (null if slot empty or wrong tag)
 
 ev.poly = .{.node=.{},.tag=TAG};    EventPolyHelper.init(&ev)
@@ -525,7 +548,7 @@ Old (manual):                        New (PolyHelper.create):
 Old (manual):                        New (PolyHelper.destroy):
 
   alloc.destroy(                       EventPolyHelper.destroy(alloc, &slot);
-    EventPolyHelper.mustIdentifySlotAs(&slot));  // null-safe, clears slot
+    EventPolyHelper.mustFromSlot(&slot));  // null-safe, clears slot
   slot.* = null;
 ```
 
@@ -537,7 +560,7 @@ Some types must not expose `create`/`destroy`.
 const no_create_destroy = void{};
 ```
 
-If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `identifyNodeAs`, `mustIdentifyNodeAs`, `identifySlotAs`, `mustIdentifySlotAs`, `init`.
+If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
 They manage their own lifecycle.  
@@ -547,10 +570,10 @@ Generating `create`/`destroy` for them would be wrong.
 PolyHelper(T)
   │
   ├── @hasDecl(T, "no_create_destroy") == false
-  │     → TAG, isIt, identifyNodeAs, mustIdentifyNodeAs, identifySlotAs, mustIdentifySlotAs, init, create, destroy
+  │     → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
   │
   └── @hasDecl(T, "no_create_destroy") == true
-        → TAG, isIt, identifyNodeAs, mustIdentifyNodeAs, identifySlotAs, mustIdentifySlotAs, init
+        → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
 ```
 
 ### stdlib compatibility
@@ -1148,7 +1171,7 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
 `PolyHelper(T)` generates one static `_tag: PolyTag` per type `T` at comptime.  
 `TAG` is a pointer to that static — the same address for every instance of `T`.
 
-Tag dispatch (`is_it_you`, `isIt`, `identifyNodeAs`) answers one question: **"is this a T?"**  
+Tag dispatch (`is_it_you`, `isIt`, `fromNode`) answers one question: **"is this a T?"**  
 It does not answer: "which T?" or "what role does this T play?"
 
 For user-defined types (Event, Sensor, etc.):
@@ -1385,7 +1408,7 @@ ev.* = .{};
 EventPolyHelper.init(ev);
 slot.* = &ev.poly;
 // ... later ...
-alloc.destroy(EventPolyHelper.mustIdentifySlotAs(&slot));
+alloc.destroy(EventPolyHelper.mustFromSlot(&slot));
 slot.* = null;
 ```
 
@@ -1694,6 +1717,7 @@ Valid combinations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 027 | 2026-07-28 | API 6. Renamed `identifyNodeAs`→`fromNode`, `mustIdentifyNodeAs`→`mustFromNode`, `identifySlotAs`→`fromSlot`, `mustIdentifySlotAs`→`mustFromSlot` — the old names described the implementation, not the caller's action. Hard rename, no aliases. Added `moveFromSlot(slot: *Slot) ?*T`: checks the tag, returns the item, clears the Slot on success, leaves it unchanged on failure, asserts the item is not linked. No `must` variant — it mutates its argument. PolyHelper section gains the inspection-vs-extraction split; `no_create_destroy` lists and diagram updated. |
 | 023 | 2026-07-09 | INTR 7. `pool` section: "Pool is not storage" stated up front; `put`'s four hook-driven outcomes documented (deleted/no-return, returned as-is, returned after reset, deleted-and-replaced); added the no-fixed-sequence-guarantee caveat for put/get call patterns. |
 | 022 | 2026-07-09 | New Mindset. Master connected to `io.concurrent()` up front — "Master is an architectural role" replaced with "Master is an Io task that follows the Matryoshka rules." No other content change. |
 | 021 | 2026-07-07 | API 4. Renamed `NodeHandle` → `ItemHandle` throughout — the old name leaked the intrusive-node implementation detail. `MailboxHandle`/`PoolHandle` aliases unchanged in meaning. `### What is a NodeHandle?` renamed to `### What is an ItemHandle?`, with a naming-rationale note and the `handle`/`ih` shorthand convention. Historical Change-log rows referencing `NodeHandle` left as-is. |

@@ -23,7 +23,7 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-026.md
+- API: matryoshka-api-reference-027.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-003.md
@@ -33,17 +33,17 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-045.md (slim, state-only)
-- Rules: rules-026.md
+- Plan: matryoshka-tk-implementation-plan-046.md (slim, state-only)
+- Rules: rules-027.md
 - Receive router design note: receive-router-001.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-003.md
-- Patterns: patterns-016.md
+- Patterns: patterns-017.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
 - CANDIDATES (composed docs, pending owner review before promotion): design/candidates/readme-004.md, design/candidates/landing-short-002.md, design/candidates/landing-long-003.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-026.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-027.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
@@ -316,6 +316,17 @@ group page and `kitchen/mkdocs.yml` nav updated per the nav-sync rule. DONE
 EXMPL 5e — cancelDiscard audit, 15 live call sites. No defects. Three sites  
 are safe because a mailbox is provably empty rather than by structure —  
 recorded as observations in plan-045, no code changed. DONE.
+
+API 6 — PolyHelper accessor naming. `identifyNodeAs`/`identifySlotAs` →  
+`fromNode`/`fromSlot` (+ `must` variants), hard rename, no aliases, ~222 call  
+sites. New `moveFromSlot` takes the item out of a Slot: clears on success,  
+leaves the Slot unchanged on failure, asserts the item is not linked. A  
+call-site audit drove the shape — ~82 of 127 Slot sites are `create → set a  
+field → send`, none consumed the Slot, so inspection stays and extraction is  
+additive. Caller: `examples/layer1/022-ownership_transfer.zig`, which  
+hand-rolled `list.append(&slot.?.node); slot = null;` with no tag check.  
+Scenario 98 pins the contract. Docs: api-reference-027, patterns-017,  
+rules-027 ("Accessor naming"), plan-046. DONE (170/170 tests, +1 new).
 
 **Next stage**: CANDIDATES (composed README + landing docs from a repo-wide `.md` audit,  
 `design/candidates/`) — requirements-gathering done, execution not started,  

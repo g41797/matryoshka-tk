@@ -35,7 +35,7 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = code;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = code;
         try mailbox.send(mbh, &slot);
     }
 
@@ -44,7 +44,7 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = value;
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = value;
         try mailbox.send(mbh, &slot);
     }
 
@@ -76,11 +76,11 @@ fn workerFn(ctx: *WorkerCtx) void {
         defer items.freeSlot(&slot, ctx.alloc);
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
-        if (items.Event.EventPolyHelper.identifyNodeAs(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
             std.log.debug("worker: Event code={d}", .{ev.*.code});
             ctx.event_sum += ev.*.code;
             ctx.count += 1;
-        } else if (items.Sensor.SensorPolyHelper.identifyNodeAs(poly)) |sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
             std.log.debug("worker: Sensor value={d:.1}", .{sn.*.value});
             ctx.sensor_sum += sn.*.value;
             ctx.count += 1;

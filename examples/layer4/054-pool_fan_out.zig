@@ -45,7 +45,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     var slot: Slot = null;
     defer pool.put(ctx.ph, &slot);
     try pool.get(ctx.ph, items.Event.EventPolyHelper.TAG, .available_only, &slot);
-    const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+    const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
     std.log.info("worker: got Event code={d}", .{ev.code});
     ctx.got = true;
 }
@@ -54,7 +54,7 @@ fn seedPool(ph: PoolHandle) !void {
     for (0..3) |i| {
         var slot: Slot = null;
         try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 10);
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 10);
         pool.put(ph, &slot);
     }
 }

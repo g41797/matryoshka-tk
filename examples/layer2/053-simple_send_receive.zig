@@ -28,7 +28,7 @@ pub fn simple_send_receive(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
         try items.Event.EventPolyHelper.create(allocator, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 53;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = 53;
         try mailbox.send(mbh, &slot);
     }
 
@@ -36,7 +36,7 @@ pub fn simple_send_receive(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
-        items.Sensor.SensorPolyHelper.mustIdentifySlotAs(&slot).value = 5.3;
+        items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 5.3;
         try mailbox.send(mbh, &slot);
     }
 
@@ -44,7 +44,7 @@ pub fn simple_send_receive(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
         try mailbox.receive(mbh, &slot, 1_000_000_000);
-        const ev_recv: *items.Event = items.Event.EventPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+        const ev_recv: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         try helpers.expect(error.SimpleSendReceiveFailed, ev_recv.*.code == 53, "wrong event code");
         std.log.info("received Event code={d}", .{ev_recv.*.code});
     }
@@ -53,7 +53,7 @@ pub fn simple_send_receive(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
         try mailbox.receive(mbh, &slot, 1_000_000_000);
-        const sn_recv: *items.Sensor = items.Sensor.SensorPolyHelper.identifySlotAs(&slot) orelse return error.WrongTag;
+        const sn_recv: *items.Sensor = items.Sensor.SensorPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         try helpers.expect(error.SimpleSendReceiveFailed, sn_recv.*.value == 5.3, "wrong sensor value");
         std.log.info("received Sensor value={d:.1}", .{sn_recv.*.value});
     }

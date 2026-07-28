@@ -50,7 +50,7 @@ const Ctx = struct {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
         try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-        items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 7;
+        items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
         std.log.info("pool.get: code={d}", .{7});
         try mailbox.send(self.mbh, &slot);
     }
@@ -59,7 +59,7 @@ const Ctx = struct {
         var slot: Slot = null;
         try mailbox.receive(self.mbh, &slot, null);
         defer pool.put(self.ph, &slot);
-        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         try helpers.expect(error.CrossLayerFlowFailed, ev.code == 7, "wrong code after receive");
         std.log.info("mailbox.receive: code={d} — pool→mailbox→pool flow complete", .{ev.code});
     }

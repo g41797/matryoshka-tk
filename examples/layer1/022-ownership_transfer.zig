@@ -3,20 +3,23 @@
 
 //! Ownership transfer via Slot.
 //!
-//! - Create an Event, wrap it in a Slot.
-//! - Transfer the Slot into a list, clear the Slot.
+//! - Create an Event, place it in a Slot.
+//! - Take it out with moveFromSlot, append it to a list.
 //! - Pop the item back out of the list, assign it to a Slot.
 //! - Verify the recovered data, then free it.
+//!
+//! moveFromSlot checks the tag and empties the Slot in one step.\
+//! fromSlot would leave the Slot full — that is the difference.
 //!
 //!
 //! ```
 //!  alloc.create ──► slot (non-null)
-//!       │ list.append + slot=null
+//!       │ moveFromSlot + list.append
 //!       ▼
-//!  list (owns item)
+//!  list (holds item)
 //!       │ list.popFirst + slot=item
 //!       ▼
-//!  slot (owns item again)
+//!  slot (holds item again)
 //!       │ freeSlot
 //!       ▼
 //!  freed
@@ -29,14 +32,14 @@ pub fn ownership_transfer_via_slot(allocator: std.mem.Allocator, io: std.Io) !vo
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(allocator, &slot);
     try items.Event.EventPolyHelper.create(allocator, &slot);
-    const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+    const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
     ev.*.code = 42;
     try helpers.expect(error.OwnershipTransferFailed, slot != null, "slot should be non-null after create");
 
-    // Transfer to list — clear slot to signal transfer.
+    // Transfer to list — moveFromSlot checks the tag and empties the slot.
     var list: std.DoublyLinkedList = .{};
-    list.append(&slot.?.node);
-    slot = null;
+    const moved: *items.Event = items.Event.EventPolyHelper.moveFromSlot(&slot) orelse return error.WrongTag;
+    list.append(&moved.*.poly.node);
     try helpers.expect(error.OwnershipTransferFailed, slot == null, "slot should be null after transfer");
 
     // Recover from list — assign back to slot.
@@ -44,7 +47,7 @@ pub fn ownership_transfer_via_slot(allocator: std.mem.Allocator, io: std.Io) !vo
     slot = @fieldParentPtr("node", node);
     try helpers.expect(error.OwnershipTransferFailed, slot != null, "slot should be non-null after recovery");
 
-    const recovered: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+    const recovered: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
     try helpers.expect(error.OwnershipTransferFailed, recovered.*.code == 42, "wrong event code");
 
     items.freeSlot(&slot, allocator);

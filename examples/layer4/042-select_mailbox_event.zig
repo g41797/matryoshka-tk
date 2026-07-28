@@ -67,7 +67,7 @@ const Ctx = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try items.Event.EventPolyHelper.create(self.alloc, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
             try mailbox.send(self.mbh, &slot);
         }
     }
@@ -88,7 +88,7 @@ const Ctx = struct {
                     .item => |handle| {
                         var slot: Slot = handle;
                         defer items.freeSlot(&slot, self.alloc);
-                        const ev: *items.Event = items.Event.EventPolyHelper.mustIdentifySlotAs(&slot);
+                        const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         self.received += 1;
                         std.log.info("inbox: Event code={d} ({d}/{d})", .{ ev.code, self.received, N_ITEMS });
                         if (self.received < N_ITEMS) {

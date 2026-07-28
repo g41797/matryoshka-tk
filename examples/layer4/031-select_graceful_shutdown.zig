@@ -60,7 +60,7 @@ const GracefulShutdownMaster = struct {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.allocator, &slot);
             try items.Event.EventPolyHelper.create(self.allocator, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
             try mailbox.send(self.mbh, &slot);
         }
         {
@@ -72,7 +72,7 @@ const GracefulShutdownMaster = struct {
         {
             var slot: Slot = null;
             try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            items.Event.EventPolyHelper.mustIdentifySlotAs(&slot).code = 99;
+            items.Event.EventPolyHelper.mustFromSlot(&slot).code = 99;
             pool.put(self.ph, &slot);
         }
     }
@@ -90,13 +90,13 @@ const GracefulShutdownMaster = struct {
             switch (event) {
                 .inbox => |r| switch (r) {
                     .item => |handle| {
-                        if (items.Event.EventPolyHelper.identifyNodeAs(handle)) |ev| {
+                        if (items.Event.EventPolyHelper.fromNode(handle)) |ev| {
                             var slot: Slot = handle;
                             defer items.freeSlot(&slot, self.allocator);
                             self.events_processed += 1;
                             std.log.info("inbox: Event code={d}", .{ev.code});
                             try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
-                        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.identifyNodeAs(handle)) |_| {
+                        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(handle)) |_| {
                             var slot: Slot = handle;
                             items.freeSlot(&slot, self.allocator);
                             std.log.info("inbox: ShutdownCommand — initiating graceful shutdown", .{});

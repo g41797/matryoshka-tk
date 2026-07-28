@@ -65,7 +65,7 @@ fn seedResources(self: *Master) !void {
         var slot: Slot = null;
         defer types.EventPolyHelper.destroy(self.allocator, &slot);
         try types.EventPolyHelper.create(self.allocator, &slot);
-        types.EventPolyHelper.mustIdentifySlotAs(&slot).code = @intCast(i + 1);
+        types.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
         try mailbox.send(self.mbh, &slot);
     }
 }
