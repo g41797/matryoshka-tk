@@ -4,6 +4,157 @@ Full session history, newest entries at top. Append-only. Read only when explici
 
 ## Session Log
 
+### 2026-07-29 — API 7d: doc comments in `src/polynode.zig`
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Doc-only stage. 171/171 tests, unchanged. No code, no signatures, no API  
+surface.
+
+Two things were fixed in `src/polynode.zig`.
+
+- Three typos in the `//!` header. That header renders into `zig build docs`
+  autodocs and the published API page, so the typos shipped:  
+  `have deal with` → `deal with`, `functona` → `functions`,  
+  `becuase` → `because`, plus a missing final period.
+- The `PolyNode` doc comment. It stated the handle rule unconditionally —
+  "Matryoshka works with PolyNode via ItemHandle" — which made the  
+  `PolyHelper` signatures look like a violation. It now names both  
+  vocabularies as nested bullets per the rules-027 comment rules:  
+  Mailbox and Pool carry `ItemHandle` and do not look inside; `PolyHelper`  
+  takes `*PolyNode` and is where the node is opened.
+
+**Rejected during review, owner's decision**
+
+- `fromNode`/`toNode` taking `ItemHandle`. The alias is type-identical, so the
+  change would have cost nothing at call sites, but `node: ItemHandle` reads  
+  badly and no parameter name makes function name, parameter, and type agree.  
+  `ItemHandle` means opaque; layer 1 is the one place the node is opened on  
+  purpose. `*PolyNode` is the honest type there.
+- `isIt` taking `ItemHandle`, with the 4 `X.poly.tag` call sites migrated to
+  `Helper.toNode(&X).*.tag`. Audit of all 13 `isIt` callers: 6 have no item  
+  at all, including `items.createByTag`, which uses the tag to decide what to  
+  create. Tags are user-facing currency — `pool.get` and `pool.init` take  
+  bare tags at ~40 example sites. Owner judged `X.poly.tag` the better read,  
+  so those 4 sites stay.
+
+A third option, adding `isItNode(node: ItemHandle) bool`, was considered and  
+not proposed: `fromNode(node) != null` already answers the same question and  
+returns the cast every real dispatch site wants.
+
+**Renumber**
+
+The former API 7d — the `toListNode` decision gate for `&x.poly.node` — is now  
+API 7e. Content unchanged, still awaiting the owner.
+
+**Post-stage cleanup**
+
+Ran after all three kitchen scripts passed.
+
+- Banned-word and AI-sh scan on `src/polynode.zig`: clean.
+- Checked `kitchen/docs/` and `design/` for mirrors of the corrected
+  sentences: none exist, so nothing to propagate.
+- The first draft of the `PolyNode` comment used flat bullets carrying
+  multiple facts each, against the rules-027 nested-bullet rule. Rewritten  
+  to one fact per line before the final run.
+- `design/context.md` was stale and was missed on the first pass — caught
+  only when the owner asked whether the required `.md` files had been  
+  updated. Two fixes: line 28 still listed API 7 as "Next" with a "7d  
+  decision gate", now recording 7a–7d DONE and 7e as the open gate; line 8  
+  called `toNode` "the inbound accessor", which is backwards — it is the  
+  outbound one, and `fromNode` is inbound. That error was introduced in  
+  API 7c and survived a full stage.
+
+**Plan versioning**
+
+7d was first recorded by editing plan-047 in place, which the approved stage  
+plan called for but the `STATUS.md` plan-versioning rule does not allow — that  
+rule says a completed stage gets a new plan version, with no doc-only  
+exemption. Owner called it. plan-048 created: API 7 collapsed to a one-line  
+summary per the slim-plan rule, the two rejected API 7d proposals kept so they  
+are not re-raised, 7e left expanded as the only open gate. `STATUS.md` Sources  
+of Truth and `context.md` repointed; no live reference to plan-047 remains  
+outside plan-048's own "Replaces" line and this log's history.
+
+**Verification**
+
+- `build_and_test_debug.sh`, `build_and_test_all.sh`, `build_cross_debug.sh` —
+  all exit 0. 171/171 across Debug, ReleaseFast, ReleaseSafe, ReleaseSmall.
+- `zig build docs` clean; corrected text confirmed present in the generated
+  `polynode` autodoc sources.
+- `build_site.sh` regenerated the site; `mkdocs build --strict` clean.
+
+---
+
+### 2026-07-29 — API 7: PolyHelper outbound accessor (`toNode`)
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Review feedback flagged `const poly: *polynode.PolyNode = &msg.poly;` in  
+`examples/layer1/021-define_type.zig:31` as a ceremonial temporary, and  
+suggested the round-trip cast around it was an artifact of demonstrating the  
+API. Investigation agreed with the second point for that one file and rejected  
+the generalization: 49 of 52 `fromNode` call sites bind `poly` from  
+`@fieldParentPtr` after a list pop, a receive, or a `Select` handle, where the  
+variable names a real value.
+
+The temporary turned out to be a symptom. `PolyHelper` had five inbound  
+accessors and none outbound, so `src/` hand-rolled the missing one three times  
+(`polynode.zig:175`, `pool.zig:117`, `mailbox.zig:46`) and every stack item  
+reached into `.poly` by hand.
+
+**Stages**
+
+- Step 0 — plan-047 created, replacing -046. CANDIDATES dropped per owner.
+- API 7a — `toNode` added to both `PolyHelper` branches. Three internal
+  hand-rolls self-hosted. Scenario 99 pins the contract. 55 test call sites  
+  migrated. 171/171 tests, +1 new.
+- API 7b — `021-define_type.zig` rewritten: `init` + `isIt` + `toNode`, no
+  round trip, with a pointer to `023-tag_dispatch` for `fromNode`.
+- API 7c — api-reference-027 → -028, patterns-017 → -018 (new "Stack item into
+  the toolkit" idiom), `kitchen/docs/api/polyhelper.md`, examples catalog  
+  regenerated, cross-references repointed.
+- API 7d — decision gate. Recommends `toListNode`. Not implemented: it adds
+  public API surface, so it needs owner approval.
+
+**Post-stage cleanup**
+
+- Fixed a stale `helpers/types.zig` path in `kitchen/docs/api/polyhelper.md`
+  (INTR 6 moved it to `examples/items/items.zig`).
+- Fixed a stale "namespace with four members" count in both the api-reference
+  and the site page. `PolyHelper` generates nine or eleven declarations.
+- Re-ran all three kitchen scripts after the cleanup.
+
+**Corrections made during the stage**
+
+- The first call-site count (39) was an undercount. The counting regex used
+  `[a-zA-Z_]*`, which excludes digits, so `ev1`/`ev2`-style names were missed.  
+  True single-level count was ~61. Recounted and migrated.
+- A scripted swap briefly made scenario 99's central assertion tautological
+  (`toNode(&ev)` compared against `toNode(&ev)`). Restored to compare against  
+  the raw `&ev.poly`, or the test proves nothing.
+
+**Verification**
+
+- `build_and_test_debug.sh`, `build_and_test_all.sh`, `build_cross_debug.sh` —
+  all green. 171/171 in Debug, ReleaseFast, ReleaseSafe, ReleaseSmall.  
+  Cross-compile to x86_64-windows clean.
+- `zig build docs` clean. `mkdocs build --strict` clean.
+- AI-sh scan on all touched `*.md` and `*.zig`: no new hits. Remaining matches
+  are pre-existing — historical change-log lines, `mutex.unlock()` as an API  
+  call, and "New Mindset" as a document name.
+
+**Not actioned**
+
+- `022-ownership_transfer.zig:42` stays `&moved.*.poly.node`. It is a
+  two-level site, so it belongs to the 7d decision.
+- `design/candidates/` is still absent from disk. CANDIDATES was dropped, so
+  this is now closed rather than outstanding.
+
 ### 2026-07-28 — API 6: PolyHelper accessor naming
 
 **Participants**: human (owner), Claude (agent).

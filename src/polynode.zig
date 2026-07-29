@@ -11,11 +11,11 @@
 //!
 //! PolyHelper(T) generates the helper functions for T.
 //!
-//! You don't need to have deal with @fieldParentPtr.
+//! You don't need to deal with @fieldParentPtr.
 //!
-//! Several types/functona are shown twice, becuase 2 variants of the helper.
+//! Several types/functions are shown twice, because the helper has 2 variants.
 //!
-//! No clue how to get rid of them. Be patient
+//! No clue how to get rid of them. Be patient.
 const _doc_stub = void;
 
 /// Runtime type marker.
@@ -26,16 +26,24 @@ pub const PolyTag = struct {
     _: u8 = 0,
 };
 
-/// Type-erased pointer to a PolyNode.
+/// Alias of *PolyNode.
 pub const ItemHandle = *PolyNode;
 
 /// Embedded in every managed item.
 ///
-/// Matryoshka
-/// - works with PolyNode
-/// - via ItemHandle (alias of *PolyNode)
-///
 /// Applications work with the parent item.
+///
+/// Two ways to name the same pointer:
+/// - ItemHandle
+///   - Mailbox and Pool carry items this way.
+///   - Hold it. Send it. Put it in a Slot.
+///   - Do not look inside.
+/// - *PolyNode
+///   - PolyHelper takes this.
+///   - Where the node is opened.
+///   - Read the tag. Reach the parent item.
+///
+/// Same type. Different intent.
 pub const PolyNode = struct {
     node: std.DoublyLinkedList.Node = .{},
     tag: *const anyopaque = undefined,
@@ -119,6 +127,15 @@ pub fn PolyHelper(comptime T: type) type {
                 return fromNode(node) orelse unreachable;
             }
 
+            /// Reach the PolyNode embedded in T.
+            ///
+            /// The inverse of fromNode().\
+            /// Cannot fail — T is known at compile time.\
+            /// Never modifies the item.
+            pub inline fn toNode(self: *T) *PolyNode {
+                return &self.poly;
+            }
+
             /// Cast to T through the Slot holding it.
             ///
             /// Returns null if the Slot is empty or holds another type.\
@@ -172,7 +189,7 @@ pub fn PolyHelper(comptime T: type) type {
                 item.* = .{};
                 Self.init(item);
 
-                slot.* = &item.poly;
+                slot.* = Self.toNode(item);
             }
 
             /// Destroys the item stored in the Slot.
@@ -225,6 +242,15 @@ pub fn PolyHelper(comptime T: type) type {
             /// Panics on type mismatch.
             pub inline fn mustFromNode(node: *PolyNode) *T {
                 return fromNode(node) orelse unreachable;
+            }
+
+            /// Reach the PolyNode embedded in T.
+            ///
+            /// The inverse of fromNode().\
+            /// Cannot fail — T is known at compile time.\
+            /// Never modifies the item.
+            pub inline fn toNode(self: *T) *PolyNode {
+                return &self.poly;
             }
 
             /// Cast to T through the Slot holding it.

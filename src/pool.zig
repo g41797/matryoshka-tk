@@ -60,12 +60,7 @@ pub const PoolHooks = struct {
     /// `in_pool_count`: number of available items with this tag before removal.
     ///
     /// `slot`: receives the selected item, or stays empty if no item is available.
-    on_get: *const fn (
-        ctx: *anyopaque,
-        tag: *const anyopaque,
-        in_pool_count: usize,
-        slot: *polynode.Slot,
-    ) void,
+    on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *polynode.Slot) void,
 
     /// `slot`: keep, accept, or clear the one carried item.
     ///
@@ -74,11 +69,7 @@ pub const PoolHooks = struct {
     /// `null` or an empty list: nothing more to add.
     ///
     /// Non-empty list: each item is added the same way `slot`'s item is, same checks.
-    on_put: *const fn (
-        ctx: *anyopaque,
-        in_pool_count: usize,
-        slot: *polynode.Slot,
-    ) ?std.DoublyLinkedList,
+    on_put: *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *polynode.Slot) ?std.DoublyLinkedList,
 
     /// Called when the pool is closed.
     ///
@@ -114,7 +105,7 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !PoolHandle {
         .io = io,
         .alloc = alloc,
     };
-    return &p.*.poly;
+    return PoolPolyHelper.toNode(p);
 }
 
 /// Frees the pool.

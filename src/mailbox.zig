@@ -43,7 +43,7 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !MailboxHandle {
         .io = io,
         .alloc = alloc,
     };
-    return &mbx.*.poly;
+    return MailboxPolyHelper.toNode(mbx);
 }
 
 /// True if the tag identifies a Mailbox.

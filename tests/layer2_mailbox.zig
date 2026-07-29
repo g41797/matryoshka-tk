@@ -25,7 +25,7 @@ test "27 - send and receive single item" {
 
     var ev: Event = .{ .code = 27 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
 
     try mailbox.send(mbh, &slot);
     try testing.expectEqual(@as(Slot, null), slot);
@@ -57,9 +57,9 @@ test "28 - fifo ordering" {
     EventPolyHelper.init(&ev2);
     EventPolyHelper.init(&ev3);
 
-    var s1: Slot = &ev1.poly;
-    var s2: Slot = &ev2.poly;
-    var s3: Slot = &ev3.poly;
+    var s1: Slot = EventPolyHelper.toNode(&ev1);
+    var s2: Slot = EventPolyHelper.toNode(&ev2);
+    var s3: Slot = EventPolyHelper.toNode(&ev3);
     try mailbox.send(mbh, &s1);
     try mailbox.send(mbh, &s2);
     try mailbox.send(mbh, &s3);
@@ -84,7 +84,7 @@ test "29 - send to closed mailbox" {
 
     var ev: Event = .{ .code = 29 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
 
     try testing.expectError(error.Closed, mailbox.send(mbh, &slot));
 }
@@ -173,9 +173,9 @@ test "33 - close returns remaining items" {
     EventPolyHelper.init(&ev2);
     EventPolyHelper.init(&ev3);
 
-    var s1: Slot = &ev1.poly;
-    var s2: Slot = &ev2.poly;
-    var s3: Slot = &ev3.poly;
+    var s1: Slot = EventPolyHelper.toNode(&ev1);
+    var s2: Slot = EventPolyHelper.toNode(&ev2);
+    var s3: Slot = EventPolyHelper.toNode(&ev3);
     try mailbox.send(mbh, &s1);
     try mailbox.send(mbh, &s2);
     try mailbox.send(mbh, &s3);
@@ -199,7 +199,7 @@ test "34 - second close returns empty list" {
 
     var ev: Event = .{ .code = 34 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
     var first: std.DoublyLinkedList = mailbox.close(mbh);
@@ -235,19 +235,19 @@ test "35 - send_oob delivers to front" {
     EventPolyHelper.init(&oob);
 
     {
-        var slot: Slot = &ev1.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev1);
         try mailbox.send(mbh, &slot);
     }
     {
-        var slot: Slot = &ev2.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev2);
         try mailbox.send(mbh, &slot);
     }
     {
-        var slot: Slot = &ev3.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev3);
         try mailbox.send(mbh, &slot);
     }
     {
-        var slot: Slot = &oob.poly;
+        var slot: Slot = EventPolyHelper.toNode(&oob);
         try mailbox.send_oob(mbh, &slot);
     }
 
@@ -319,15 +319,15 @@ test "37 - multiple send_oob items are FIFO among OOBs" {
     EventPolyHelper.init(&regular);
 
     {
-        var slot: Slot = &regular.poly;
+        var slot: Slot = EventPolyHelper.toNode(&regular);
         try mailbox.send(mbh, &slot);
     }
     {
-        var slot: Slot = &oob_a.poly;
+        var slot: Slot = EventPolyHelper.toNode(&oob_a);
         try mailbox.send_oob(mbh, &slot);
     }
     {
-        var slot: Slot = &oob_b.poly;
+        var slot: Slot = EventPolyHelper.toNode(&oob_b);
         try mailbox.send_oob(mbh, &slot);
     }
 
@@ -353,7 +353,7 @@ test "38 - send_oob to closed mailbox" {
 
     var ev: Event = .{ .code = 38 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
 
     try testing.expectError(error.Closed, mailbox.send_oob(mbh, &slot));
 }
@@ -367,7 +367,7 @@ test "39 - data priority over closed" {
 
     var ev: Event = .{ .code = 39 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
     var remaining: std.DoublyLinkedList = mailbox.close(mbh);
@@ -447,8 +447,8 @@ test "42 - batch items walkable via popFirst" {
     EventPolyHelper.init(&ev1);
     EventPolyHelper.init(&ev2);
 
-    var s1: Slot = &ev1.poly;
-    var s2: Slot = &ev2.poly;
+    var s1: Slot = EventPolyHelper.toNode(&ev1);
+    var s2: Slot = EventPolyHelper.toNode(&ev2);
     try mailbox.send(mbh, &s1);
     try mailbox.send(mbh, &s2);
 
@@ -476,7 +476,7 @@ test "43 - send transfers ownership (slot is null)" {
 
     var ev: Event = .{ .code = 43 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
 
     try testing.expect(slot != null);
     try mailbox.send(mbh, &slot);
@@ -497,7 +497,7 @@ test "44 - receive transfers ownership (slot is non-null)" {
 
     var ev: Event = .{ .code = 44 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
     try mailbox.receive(mbh, &slot, 1_000_000_000);
@@ -536,7 +536,7 @@ test "46 - try_receive gets item" {
 
     var ev: Event = .{ .code = 46 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
     const got: bool = try mailbox.try_receive(mbh, &slot);
@@ -560,17 +560,17 @@ test "47 - send: IN_FLIGHT to HELD, slot is null" {
     var ev2: Event = .{ .code = 48 };
     EventPolyHelper.init(&ev1);
     EventPolyHelper.init(&ev2);
-    var slot1: Slot = &ev1.poly;
-    var slot2: Slot = &ev2.poly;
+    var slot1: Slot = EventPolyHelper.toNode(&ev1);
+    var slot2: Slot = EventPolyHelper.toNode(&ev2);
 
     try testing.expect(slot1 != null);
-    try testing.expect(!polynode.is_linked(&ev1.poly));
+    try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev1)));
 
     try mailbox.send(mbh, &slot1);
     try mailbox.send(mbh, &slot2);
 
     try testing.expectEqual(@as(Slot, null), slot1);
-    try testing.expect(polynode.is_linked(&ev1.poly));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev1)));
 }
 
 // --- Scenario 48: HELD → IN_FLIGHT (mailbox.receive) ---
@@ -587,7 +587,7 @@ test "48 - receive: HELD to IN_FLIGHT, slot is non-null" {
 
     var ev: Event = .{ .code = 48 };
     EventPolyHelper.init(&ev);
-    var slot: Slot = &ev.poly;
+    var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
     try mailbox.receive(mbh, &slot, 1_000_000_000);
@@ -609,12 +609,12 @@ test "49 - send linked item: is_linked detection (assert documented)" {
     list.append(&ev2.poly.node);
 
     // mailbox.send would assert(!is_linked) here (Open Item 11)
-    try testing.expect(polynode.is_linked(&ev1.poly));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev1)));
 
     _ = list.popFirst();
     // DoublyLinkedList does not clear links — caller must reset
-    polynode.reset(&ev1.poly);
-    try testing.expect(!polynode.is_linked(&ev1.poly));
+    polynode.reset(EventPolyHelper.toNode(&ev1));
+    try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev1)));
     _ = list.popFirst();
 }
 
@@ -867,11 +867,11 @@ test "oob last resets after last oob received, next send_oob goes to front" {
     EventPolyHelper.init(&ev_b);
     EventPolyHelper.init(&ev_a);
     {
-        var slot: Slot = &ev_b.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev_b);
         try mailbox.send(mbh, &slot);
     } // queue=[B], oob_count=0
     {
-        var slot: Slot = &ev_a.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev_a);
         try mailbox.send_oob(mbh, &slot);
     } // queue=[A,B], oob_count=1, oob_last=&A
 
@@ -887,7 +887,7 @@ test "oob last resets after last oob received, next send_oob goes to front" {
     var ev_c: Event = .{ .code = 3 };
     EventPolyHelper.init(&ev_c);
     {
-        var slot: Slot = &ev_c.poly;
+        var slot: Slot = EventPolyHelper.toNode(&ev_c);
         try mailbox.send_oob(mbh, &slot);
     } // queue=[C,B], oob_count=1
 
@@ -959,7 +959,7 @@ test "wakeUpAll does not affect future receiver" {
 
     var ev: Event = .{ .code = 64 };
     EventPolyHelper.init(&ev);
-    var send_slot: Slot = &ev.poly;
+    var send_slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &send_slot);
 
     var slot: Slot = null;

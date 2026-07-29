@@ -1,6 +1,8 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (017)
+# Matryoshka Zig — Pattern and Idiom Catalog (018)
 
-Versioned doc. Replaces [patterns-016.md](patterns-016.md).
+Versioned doc. Replaces [patterns-017.md](patterns-017.md).
+
+Change from patterns-017: API 7 — new `toNode` accessor. Added the "Stack item into the toolkit" idiom. "Slot identification" gained the in-and-out framing. Companion cross-reference updated to api-reference-028.md.
 
 Change from patterns-016: API 6 — PolyHelper accessors renamed to `fromNode`/`fromSlot` (+ `must` variants). New `moveFromSlot` added to the transfer idiom. "Slot identification" gained the inspection-vs-extraction split and dropped "owned" from its title. Companion cross-references updated to rules-027.md and api-reference-027.md.
 
@@ -21,7 +23,7 @@ Change from patterns-011:
 One unified catalog. Every pattern and idiom appears once, in logical order.  
 Companion: [rules-027.md](rules-027.md) — what is mandatory.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [matryoshka-api-reference-027.md](matryoshka-api-reference-027.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-028.md](matryoshka-api-reference-028.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -48,7 +50,7 @@ Order of this catalog.
 
 ## Slot and ownership idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-027.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-028.md).
 
 ### Empty Slot initialization
 
@@ -223,7 +225,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-027.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-028.md).
 
 ---
 
@@ -283,6 +285,36 @@ Why.
 - Tag check and recovery are combined.
 - Wrong types return null.
 
+### Stack item into the toolkit
+
+When to use.
+- An item lives on the stack, so there is no `create` and no Slot to start from.
+- Something needs an `ItemHandle`: `mailbox.send`, `pool.put`, a list, a Slot.
+
+Code shape.  
+```zig
+var ev: Event = .{ .code = 42 };
+EventPolyHelper.init(&ev);
+
+const handle: polynode.ItemHandle = EventPolyHelper.toNode(&ev);
+```
+
+Straight into a Slot, no separate accessor.  
+```zig
+var slot: Slot = EventPolyHelper.toNode(&ev);
+```
+
+Why.
+- `toNode` cannot fail. The type is known at compile time, so there is no tag to check.
+- The field name stays inside `PolyHelper`. Application code never writes `&ev.poly`.
+- `Slot` is `?ItemHandle`, so the result coerces with no conversion step.
+- The heap path does not need this idiom. `create` fills a Slot already.
+
+Do not.
+- Do not call `fromNode` on an item whose static type you already have. That is
+  a round trip that proves nothing. `fromNode` is for the way back, where the  
+  static type is gone — see "Polymorphic dispatch".
+
 ### Slot identification — accessing items
 
 When to use.
@@ -310,6 +342,8 @@ Why.
 - Use `fromSlot` (nullable) when the type is not guaranteed.
 - Inspection leaves the Slot full. The item is still there for `send` or `put`.
 - To take the item out instead, use `moveFromSlot` — see "Transfer clears ownership".
+- To go the other way, from a typed item to a handle, use `toNode` — see
+  "Stack item into the toolkit".
 
 ### Polymorphic dispatch
 
@@ -355,7 +389,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-027.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-028.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -410,7 +444,7 @@ Pattern.
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, with ownership transfer.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-027.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-028.md).
 
 ### Pool-as-message
 

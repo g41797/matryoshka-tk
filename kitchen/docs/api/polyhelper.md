@@ -10,7 +10,7 @@ pub fn PolyHelper(comptime T: type) type
 ```
 
 - `T` must have a field `poly: PolyNode`. Compile error otherwise.
-- Returns a namespace with four members.
+- Returns a namespace of generated declarations.
 
 ---
 
@@ -40,10 +40,32 @@ pub fn isIt(tag: *const anyopaque) bool
 ---
 
 
-Two kinds of access, and the names say which is which.
+Two directions, and two kinds of access.
+
+- In — `toNode`. Your type to the toolkit. Cannot fail.
+- Out — `fromNode`, `fromSlot`, `moveFromSlot`. The toolkit to your type.
+  Each checks the tag.
+
+Within the outbound direction the names say what happens to the Slot.
 
 - Inspection — `fromNode`, `fromSlot`. Leaves the Slot full.
 - Extraction — `moveFromSlot`. Leaves the Slot empty.
+
+---
+
+
+```zig
+pub fn toNode(self: *T) *PolyNode
+```
+
+- Returns `&self.poly`.
+- The inverse of `fromNode`.
+- Cannot fail. `T` is known at compile time, so there is no tag to check.
+- No `must` variant and no optional return, for the same reason.
+- Never modifies the item.
+- Use it wherever the toolkit wants an `ItemHandle`: `mailbox.send`, `pool.put`, a Slot assignment.
+- `Slot` is `?ItemHandle`, so the result coerces into a Slot with no separate accessor.
+- Prefer it to a hand-written `&x.poly`. The field name stays inside `PolyHelper`.
 
 ---
 
@@ -56,6 +78,7 @@ pub fn fromNode(node: *PolyNode) ?*T
 - Returns `@fieldParentPtr("poly", node)` if it does.
 - Never modifies the node.
 - For infrastructure code that works with `*PolyNode` directly (mailbox, pool, list walks).
+- Needs a node whose type is not known statically. If the static type is already `*T`, there is nothing to recover.
 
 ---
 
@@ -150,8 +173,8 @@ Naming convention: `XxxPolyHelper = polynode.PolyHelper(Xxx)`.
 var ev: Event = .{ .code = 42 };
 EventPolyHelper.init(&ev);
 
-// Get PolyNode pointer (same as before)
-const poly: *PolyNode = &ev.poly;
+// Get PolyNode pointer (Step 4, no hand-written field access)
+const poly: *PolyNode = EventPolyHelper.toNode(&ev);
 
 // Identify and recover (Steps 5+6 combined, returns null on wrong tag)
 const recovered: *Event = EventPolyHelper.mustFromNode(poly);
@@ -169,6 +192,9 @@ const EVENT_TAG = &_event_tag;      EventPolyHelper.TAG
 
 poly.tag == EVENT_TAG               EventPolyHelper.isIt(poly.tag)
 
+&ev.poly                            EventPolyHelper.toNode(&ev)
+                                       → *PolyNode (cannot fail)
+
 if (poly.tag == EVENT_TAG)          EventPolyHelper.fromNode(poly)
   @fieldParentPtr("poly", poly)       → ?*Event (null if wrong tag)
 
@@ -183,7 +209,7 @@ ev.poly = .{.node=.{},.tag=TAG};    EventPolyHelper.init(&ev)
 
 Same operations. Same runtime cost. Less boilerplate. Compile-time validation.
 
-See `helpers/types.zig` for the pattern.
+See `examples/items/items.zig` for the pattern.
 
 ---
 
@@ -260,7 +286,7 @@ Some types must not expose `create`/`destroy`.
 const no_create_destroy = void{};
 ```
 
-If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
+If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toNode`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
 They manage their own lifecycle.  
@@ -273,10 +299,10 @@ Generating `create`/`destroy` for them would be wrong.
 PolyHelper(T)
   │
   ├── @hasDecl(T, "no_create_destroy") == false
-  │     → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
+  │     → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
   │
   └── @hasDecl(T, "no_create_destroy") == true
-        → TAG, isIt, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
+        → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
 ```
 
 ---

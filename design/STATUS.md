@@ -23,7 +23,7 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-027.md
+- API: matryoshka-api-reference-028.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-003.md
@@ -33,16 +33,15 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-046.md (slim, state-only)
+- Plan: matryoshka-tk-implementation-plan-048.md (slim, state-only)
 - Rules: rules-027.md
 - Receive router design note: receive-router-001.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-003.md
-- Patterns: patterns-017.md
+- Patterns: patterns-018.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- CANDIDATES (composed docs, pending owner review before promotion): design/candidates/readme-004.md, design/candidates/landing-short-002.md, design/candidates/landing-long-003.md
 - Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-027.md
 
 ## Participants
@@ -328,13 +327,44 @@ hand-rolled `list.append(&slot.?.node); slot = null;` with no tag check.
 Scenario 98 pins the contract. Docs: api-reference-027, patterns-017,  
 rules-027 ("Accessor naming"), plan-046. DONE (170/170 tests, +1 new).
 
-**Next stage**: CANDIDATES (composed README + landing docs from a repo-wide `.md` audit,  
-`design/candidates/`) — requirements-gathering done, execution not started,  
-blocked on owner confirming Pass 1 subagent-sweep approach. MDFIX is already  
-done (rule in rules-026, `fix_md_hardbreaks.sh` in place) — plan-044 listed it  
-as pending, which was stale. Deferred: diagram-notation sweep, mailbox-focused  
-pool-audit equivalent, showcase-post variants (Ziggit/Discord/Reddit),  
-REBRAND's editorial prose pass — all owner's call on order.
+API 7 — PolyHelper outbound accessor. Plan version 047 created.  
+`PolyHelper` had five inbound accessors and none outbound, so every stack item  
+reached into `.poly` by hand, and `src/` hand-rolled the missing accessor three  
+times (`polynode.zig:175`, `pool.zig:117`, `mailbox.zig:46`). New  
+`toNode(self: *T) *PolyNode`: pure inspection, cannot fail, no `must` variant.  
+Origin: review feedback on a ceremonial temporary in `021-define_type.zig`.  
+The temporary was a symptom; the missing accessor was the cause.  
+API 7a — DONE (171/171 tests, +1 new). `toNode` in both PolyHelper branches;  
+three internal hand-rolls self-hosted; scenario 99 pins the contract; 55 test  
+call sites migrated. Note: the first call-site count (39) was an undercount —  
+the counting regex excluded digits, so `ev1`/`ev2`-style names were missed.  
+API 7b — DONE. `021-define_type.zig` no longer round-trips a statically-typed  
+item; it shows `init` + `isIt` + `toNode` and points at `023-tag_dispatch` for  
+`fromNode`. `022-ownership_transfer.zig:42` left alone — it is a two-level  
+`.poly.node` site, so it belongs to 7d, and forcing `toNode` there reads worse.  
+API 7c — DONE. api-reference-027 → -028, patterns-017 → -018 (new "Stack item  
+into the toolkit" idiom), `kitchen/docs/api/polyhelper.md`, examples catalog  
+regenerated, cross-references repointed. `mkdocs build --strict` and  
+`zig build docs` clean. Post-stage cleanup: fixed a stale `helpers/types.zig`  
+path and a stale "namespace with four members" count in the touched pages.  
+API 7d — DONE (171/171 tests unchanged, doc comments only). Three typos fixed in  
+`src/polynode.zig`'s `//!` header, which renders into autodocs. The `PolyNode`  
+doc comment now says which layer holds `ItemHandle` and which opens `*PolyNode`,  
+so the `PolyHelper` signatures stop reading as a violation of the handle rule.  
+Two review items rejected, owner's decision: `fromNode`/`toNode` keep `*PolyNode`  
+(`node: ItemHandle` reads badly, and `*PolyNode` is honest where the node is  
+opened); `isIt` keeps its tag parameter (`items.createByTag` has no item yet, and  
+`X.poly.tag` reads better than `Helper.toNode(&X).*.tag`).  
+API 7e — GATE, NOT IMPLEMENTED. Was 7d before the renumber. Recommends  
+`toListNode` for the 5 genuine `list.append` sites, keeping the 6 deliberate  
+raw-link sites untouched. Adds public API surface, so it needs owner approval.  
+Detail in plan-048.
+
+**Next stage**: API 7e decision — owner's call. CANDIDATES is dropped (owner's  
+decision) — it carried from plan-043 through plan-046 without starting, and  
+`design/candidates/` does not exist on disk. Deferred: diagram-notation sweep,  
+mailbox-focused pool-audit equivalent, showcase-post variants  
+(Ziggit/Discord/Reddit), REBRAND's editorial prose pass — all owner's call.
 
 
 ## Session Log

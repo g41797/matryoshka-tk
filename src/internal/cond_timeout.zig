@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
-// SPDX-License-Identifier: MIT
-
 // https://codeberg.org/ziglang/zig/issues/31278
 
 const Condition = Io.Condition;

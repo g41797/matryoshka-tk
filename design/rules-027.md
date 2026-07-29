@@ -3,7 +3,7 @@
 Versioned doc. Replaces [rules-026.md](rules-026.md).  
 All coding, doc, and process rules for the project.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [patterns-017.md](patterns-017.md) — reusable coding patterns.
+Companion: [patterns-018.md](patterns-018.md) — reusable coding patterns.
 
 ---
 
