@@ -2,7 +2,7 @@
 
 ---
 
-# Matryoshka-Tk — a practical way to build great software systems
+# Matryoshka-Tk — Toolkit for Building Multitasking Systems in Zig
 
 ---  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,41 +11,6 @@
 [![macOS](https://github.com/g41797/matryoshka-tk/actions/workflows/mac.yml/badge.svg)](https://github.com/g41797/matryoshka-tk/actions/workflows/mac.yml)
 [![Deploy Documentation](https://github.com/g41797/matryoshka-tk/actions/workflows/docs.yml/badge.svg)](https://github.com/g41797/matryoshka-tk/actions/workflows/docs.yml)
 
-
----
-
-
-## First rule
-
-> If you want to build a great software system,
-> start by building a software system.
-
-We know how to write Zig libraries.
-
-We are still learning how to build Zig systems.
-
-Especially after the introduction of `std.Io`.
-
----
-
-## Promise
-
-*They say,*
-
-> "Give someone a fish, and you feed them for a day.    
-> Teach them to fish, and you feed them for a lifetime."
-
-I can't teach you to fish.
-
-But I can give you a fishing rod.
-
-Matryoshka-Tk is that *fishing rod* for *building software systems*.
-
-- It does not think for you.
-- You still design the system.
-- You still solve the hard problems.
-
-It simply brings a *little more order* to your thinking.
 
 ---
 
@@ -68,7 +33,7 @@ Matryoshka-Tk takes a different approach.
 
 It _removes choices_:
 
-- a small subset of Threaded Io functionality
+- a small subset of **Threaded** Io functionality
 - restricted cancellation points
 - a few building blocks
 - a few rules
@@ -118,12 +83,14 @@ You start talking on Matryoshka-Tk language:
 
 A **Master** is
 
+- 100% YOUR CODE
 - an _Threaded_ Io _task_
 - created by _concurrent()_
-- follows the Matryoshka-Tk rules
-- holds its own state
-- works with Items
-- communicate with another Masters and/or application
+- usually long running
+- process oriented
+- works with **Items**
+- communicate via **Mailboxes** with another Masters and/or application
+- reuses Items via **Pools**
 
 
 ---
@@ -133,27 +100,14 @@ A **Master** is
 
 An **Item** is
 
+- YOUR DATA/CODE with embedded Matryoshka struct 
 - movable application object
-  - Request
-  - Connection
-  - Session
-  - Buffer
-  - Job
-  - ...
+    - PDL Page
+    - Image
+    - PrintTicket
+    - ...
 - **allocated** (as all building blocks)
-- outlive the function that created them
-
-The one rule that matters:
-
-> An Item is in exactly one place at any moment.
-
-**ONE PLACE**:
-
-- or Master uses it
-- or a Mailbox holds it
-- or a Pool holds it
-
-> **Never several at once**.
+- usually outlive the function that created them
 
 ---
 
@@ -181,9 +135,9 @@ The same is for Matryoshka-Tk API
 
 ### Mailbox
 
-A **Mailbox** moves an Item from one Master to another:
+A **Mailbox** transfers an Item from one Master to another:
 
-- One Master places an Item in
+- One Master sends an Item to
   - Mailbox ensures that it's only owner of Item
 - Another Master later receives it
   - Mailbox ensures that receiver is only owner of Item
@@ -195,7 +149,7 @@ A **Mailbox** moves an Item from one Master to another:
 
 A **Pool**
 
-- create new Items
+- creates new Items
 - holds reusable Items
 
 Usually Master
@@ -216,7 +170,7 @@ Matryoshka-Tk supports backpressure 'naturally'
 
 ---
 
-## You can’t win the lottery if you don’t buy a ticket.
+## Take it easy
 
 Start with Items.
 
@@ -225,10 +179,6 @@ Add a Pool when reuse becomes useful.
 Add a Mailbox when communication becomes useful.
 
 Organize long-running tasks as Masters.
-
-Each step is useful right away.
-
-Each step stays useful after the next one.
 
 Can you describe your application using only
 
@@ -242,23 +192,3 @@ If
 - no - [you still have the chance](https://github.com/g41797/matryoshka-tk)
 
 ---
-
-## Master is King
-
-Master is YOUR CODE.  
-
-Only Master
-
-- makes decisions
-- owns application state
-- talks to building blocks
-
-Another building blocks are "slaves":
-
-- Mailbox - communication
-- Pool - storage/reuse
-- Item - "data"
-
----
-
-Be Master **of your** systems.

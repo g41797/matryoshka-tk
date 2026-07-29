@@ -1,72 +1,91 @@
 
 ---
 
+## Two Different Worlds
 
-## First rule
+Most software systems have two very different parts.
 
-> If you want to build a great software system,
-> start by building a software system.
+### The I/O part
 
-We know how to write Zig libraries.
+This part deals with the outside world.
 
-We are still learning how to build Zig systems.
+* Sockets.
+* Files.
+* Timers.
+* Event loops.
+* Synchronization.
+* Operating system APIs.
 
-Especially after the introduction of `std.Io`.
+The I/O part
 
----
+* requires low-level programming
+* requires understanding how the platform works
+* has its own specialists and its own way of thinking
 
-## Promise
+### The Process part
 
-*They say,*
+This is where the application does its real work.
 
-> "Give someone a fish, and you feed them for a day.    
-> Teach them to fish, and you feed them for a lifetime."
+For example:
 
-I can't teach you to fish.
+* Image processing.
+* Video transcoding.
+* Financial calculations.
+* Business workflows.
+* Data analysis.
 
-But I can give you a fishing rod.
+Most developers specialize in this layer.
 
-Matryoshka-Tk is that *fishing rod* for *building software systems*.
+They
 
-- It does not think for you.
-- You still design the system.
-- You still solve the hard problems.
+* understand their domain
+* want to solve domain problems
+* usually do not want to spend time learning unrelated
 
-It simply brings a *little more order* to your thinking.
+  * APIs
+  * frameworks
+  * infrastructure
 
----
+I/O developers and Process developers often speak *different languages*.
 
-## The problem
+## What Matryoshka-Tk Is For
 
-Zig Io gives you excellent tools:
+Matryoshka-Tk
 
-- Tasks.
-- Groups.
-- Futures.
-- Synchronization.
-- Cancellation.
-- Concurrency.
-- Async...
-- And much more.
+* is designed for the Process part
+* does **not** replace an I/O library
+* does **not** solve
 
-There are many ways to combine them.
+  * networking
+  * polling
+  * file handling
+  * operating system integration
 
-Matryoshka-Tk takes a different approach.
+Instead, it provides
 
-It _removes choices_:
+* building blocks for the code that runs
 
-- a small subset of Threaded Io functionality
-- restricted cancellation points
-- a few building blocks
-- a few rules
-- clear communication
-- manageable resource reuse
+  * **after** data enters the system
+  * **before** data leaves the system
 
-The hard problems do not disappear.
+Its goal is
 
-But they become easier to discuss.
+* to let developers think in terms of
 
-Because the system becomes **_visible_**.
+  * processing
+  * messages
+  * pools
+  * workflows
+* instead of low-level I/O details
+
+The funny part is that Matryoshka-Tk was created by an I/O developer.
+
+Me.
+
+## Remember
+
+* I/O moves data.
+* Matryoshka-Tk organizes work.
 
 ---
 
@@ -97,9 +116,7 @@ You start talking on Matryoshka-Tk language:
 - Mailboxes
 - Pools
 
-
 ---
-
 
 ### Master
 
@@ -203,7 +220,7 @@ Matryoshka-Tk supports backpressure 'naturally'
 
 ---
 
-## You can’t win the lottery if you don’t buy a ticket.
+##  Take it easy
 
 Start with Items.
 
