@@ -24,7 +24,7 @@ test "1 - single worker spawn and join" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -51,7 +51,7 @@ test "2 - worker group spawn and join" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -81,7 +81,6 @@ test "2 - worker group spawn and join" {
 const matryoshka = @import("matryoshka");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;
 

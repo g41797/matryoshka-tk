@@ -21,7 +21,7 @@
 pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -76,9 +76,8 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
         items.freeSlot(&slot, ctx.alloc);
         ctx.first_count += 1;
 
-        var batch: std.DoublyLinkedList = mailbox.receive_batch(ctx.mbh) catch return;
-        while (batch.popFirst()) |node| {
-            const bpoly: *PolyNode = @fieldParentPtr("node", node);
+        var batch: polynode.ItemList = mailbox.receive_batch(ctx.mbh) catch return;
+        while (batch.popFirst()) |bpoly| {
             if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(bpoly)) |_| {
                 items.freeItem(bpoly, ctx.alloc);
                 return;

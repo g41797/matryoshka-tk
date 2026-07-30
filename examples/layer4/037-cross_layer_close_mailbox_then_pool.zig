@@ -12,7 +12,7 @@
 //! ```
 //!  pool (1 item in free-list)    mailbox (1 item in queue)
 //!  │
-//!  mailbox.close ──► std.DoublyLinkedList (1 item)
+//!  mailbox.close ──► ItemList (1 item)
 //!  walk list: popFirst ──► fromNode ──► pool.put (pool still open)
 //!  │                                        └──► pool free-list (now 2 items)
 //!  pool.close ──► on_close ──► freeList (both items freed)
@@ -37,7 +37,7 @@ pub fn close_ordering_mailbox_then_pool(allocator: std.mem.Allocator, io: std.Io
     try seedMailbox(mbh, allocator);
     std.log.info("before close: 1 item in pool, 1 item in mailbox", .{});
 
-    var rem: std.DoublyLinkedList = closeMailbox(mbh, allocator);
+    var rem: polynode.ItemList = closeMailbox(mbh, allocator);
     const returned = returnCloseListToPool(ph, &rem);
 
     try helpers.expect(error.CrossLayerCloseOrderFailed, returned == 1, "expected 1 item from mailbox close");
@@ -60,17 +60,15 @@ fn seedMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
     try mailbox.send(mbh, &slot);
 }
 
-fn closeMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator) std.DoublyLinkedList {
-    const rem: std.DoublyLinkedList = mailbox.close(mbh);
+fn closeMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator) polynode.ItemList {
+    const rem: polynode.ItemList = mailbox.close(mbh);
     mailbox.destroy(mbh, alloc);
     return rem;
 }
 
-fn returnCloseListToPool(ph: PoolHandle, rem: *std.DoublyLinkedList) usize {
+fn returnCloseListToPool(ph: PoolHandle, rem: *polynode.ItemList) usize {
     var returned: usize = 0;
-    while (rem.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+    while (rem.popFirst()) |poly| {
         var slot: Slot = poly;
         pool.put(ph, &slot);
         returned += 1;

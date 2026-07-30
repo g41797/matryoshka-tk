@@ -12,7 +12,7 @@
 //!  alloc.create × (n_events + n_sensors) ──► mailbox
 //!       │ mailbox.close (no receive — all items returned)
 //!       ▼
-//!  DoublyLinkedList ──► freeItem × N
+//!  ItemList ──► freeItem × N
 //! ```
 //!
 
@@ -42,10 +42,10 @@ pub fn shutdown_with_remaining_item_cleanup(allocator: std.mem.Allocator, io: st
     }
 
     // Close without receiving — all items come back in the returned list.
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
+    var remaining: polynode.ItemList = mailbox.close(mbh);
     var freed: usize = 0;
-    while (remaining.popFirst()) |node| {
-        items.freeItem(@fieldParentPtr("node", node), allocator);
+    while (remaining.popFirst()) |ih| {
+        items.freeItem(ih, allocator);
         freed += 1;
     }
 

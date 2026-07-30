@@ -65,4 +65,4 @@ while IFS= read -r -d '' f; do
     fix_one "$f"
 done < <(find "$repo_root" -name '*.md' -print0)
 
-echo "Hard-break sweep done."
+echo "Hard-break scan done."

@@ -69,7 +69,7 @@ pub const PoolHooks = struct {
     /// `null` or an empty list: nothing more to add.
     ///
     /// Non-empty list: each item is added the same way `slot`'s item is, same checks.
-    on_put: *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *polynode.Slot) ?std.DoublyLinkedList,
+    on_put: *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *polynode.Slot) ?polynode.ItemList,
 
     /// Called when the pool is closed.
     ///
@@ -78,7 +78,7 @@ pub const PoolHooks = struct {
     /// The hook is responsible for processing or destroying every item.
     on_close: *const fn (
         ctx: *anyopaque,
-        list: *std.DoublyLinkedList,
+        list: *polynode.ItemList,
     ) void,
 };
 
@@ -199,22 +199,20 @@ pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *polynode.Slot, tim
         if (p.*.closed.load(.monotonic)) return error.Closed;
 
         if (p.*.lists.getPtr(tag)) |list| {
-            if (list.popFirst()) |node| {
+            if (list.popFirst()) |ih| {
                 p.*.counts.getPtr(tag).?.* -= 1;
-                const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-                polynode.reset(poly);
-                slot.* = poly;
+                slot.* = ih;
                 return;
             }
         }
 
         cond_timeout.condition_waitTimeout(&p.*.cond, io, &p.*.mutex, deadline) catch |err| switch (err) {
             error.Timeout => {
-                if (p.*.lists.getPtr(tag)) |l| if (l.first != null) p.*.cond.broadcast(io);
+                if (p.*.lists.getPtr(tag)) |l| if (!l.isEmpty()) p.*.cond.broadcast(io);
                 return error.Timeout;
             },
             error.Canceled => {
-                if (p.*.lists.getPtr(tag)) |l| if (l.first != null) p.*.cond.broadcast(io);
+                if (p.*.lists.getPtr(tag)) |l| if (!l.isEmpty()) p.*.cond.broadcast(io);
                 return err;
             },
         };
@@ -259,7 +257,7 @@ pub fn put(ph: PoolHandle, slot: *polynode.Slot) void {
     const count: usize = p.*.counts.get(tag) orelse 0;
 
     p.*.mutex.unlock(io);
-    var returned: ?std.DoublyLinkedList = hooks.on_put(hooks.ctx, count, slot);
+    var returned: ?polynode.ItemList = hooks.on_put(hooks.ctx, count, slot);
     p.*.mutex.lockUncancelable(io);
 
     if (!p.*.closed.load(.monotonic)) {
@@ -272,10 +270,8 @@ pub fn put(ph: PoolHandle, slot: *polynode.Slot) void {
         }
 
         if (returned) |*list| {
-            while (list.popFirst()) |node| {
-                const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-                polynode.reset(poly);
-                _add_returned_item(p, poly);
+            while (list.popFirst()) |ih| {
+                _add_returned_item(p, ih);
                 added = true;
             }
         }
@@ -292,7 +288,7 @@ inline fn _add_returned_item(p: *_Pool, item: polynode.ItemHandle) void {
     const tag: *const anyopaque = item.*.tag;
     std.debug.assert(p.*.lists.contains(tag));
     const list = p.*.lists.getPtr(tag).?;
-    list.prepend(&item.*.node);
+    list.prepend(item);
     p.*.counts.getPtr(tag).?.* += 1;
 }
 
@@ -303,30 +299,27 @@ inline fn _add_returned_item(p: *_Pool, item: polynode.ItemHandle) void {
 /// If the pool closes mid-batch:
 /// - items already transferred go to `on_close`;\
 /// - items not yet transferred stay in the caller's list.
-pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void {
-    if (list.first == null) return;
+pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void {
+    if (list.isEmpty()) return;
 
     const p: *_Pool = PoolPolyHelper.mustFromNode(ph);
     const io: Io = p.*.io;
 
     // Validate all tags under one lock — no partial transfer on bad input.
     p.*.mutex.lockUncancelable(io);
-    var node: ?*std.DoublyLinkedList.Node = list.first;
-    while (node) |n| : (node = n.next) {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", n);
-        std.debug.assert(p.*.lists.contains(poly.*.tag));
+    var it = list.iterate();
+    while (it.next()) |ih| {
+        std.debug.assert(p.*.lists.contains(ih.*.tag));
     }
     p.*.mutex.unlock(io);
 
     // Put each item individually.
-    while (list.popFirst()) |n| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", n);
-        polynode.reset(poly);
-        var slot: polynode.Slot = poly;
+    while (list.popFirst()) |ih| {
+        var slot: polynode.Slot = ih;
         put(ph, &slot);
         if (slot != null) {
             // Pool closed — item returned to caller — restore and stop.
-            list.prepend(&slot.?.*.node);
+            list.prepend(slot.?);
             break;
         }
     }
@@ -349,10 +342,10 @@ pub fn close(ph: PoolHandle) void {
     }
     p.*.closed.store(true, .release);
 
-    var collected: std.DoublyLinkedList = .{};
+    var collected: polynode.ItemList = .{};
     var it = p.*.lists.valueIterator();
     while (it.next()) |list| {
-        _concat(&collected, list);
+        collected.concat(list);
     }
     p.*.lists.clearRetainingCapacity();
     p.*.counts.clearRetainingCapacity();
@@ -412,18 +405,6 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
     return p.*.io.concurrent(getWaitResult, .{ ph, tag, timeout_ns });
 }
 
-fn _concat(dst: *std.DoublyLinkedList, src: *std.DoublyLinkedList) void {
-    if (src.first == null) return;
-    if (dst.last) |last| {
-        last.next = src.first;
-        src.first.?.prev = last;
-    } else {
-        dst.first = src.first;
-    }
-    dst.last = src.last;
-    src.* = .{};
-}
-
 inline fn _get_available_or_new(p: *_Pool, tag: *const anyopaque, slot: *polynode.Slot) GetError!void {
     const io: Io = p.*.io;
     p.*.mutex.lockUncancelable(io);
@@ -436,11 +417,9 @@ inline fn _get_available_or_new(p: *_Pool, tag: *const anyopaque, slot: *polynod
     std.debug.assert(p.*.lists.contains(tag));
 
     if (p.*.lists.getPtr(tag)) |list| {
-        if (list.popFirst()) |node| {
+        if (list.popFirst()) |ih| {
             p.*.counts.getPtr(tag).?.* -= 1;
-            const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-            polynode.reset(poly);
-            slot.* = poly;
+            slot.* = ih;
         }
     }
 
@@ -485,11 +464,9 @@ inline fn _get_available_only(p: *_Pool, tag: *const anyopaque, slot: *polynode.
     std.debug.assert(p.*.lists.contains(tag));
 
     if (p.*.lists.getPtr(tag)) |list| {
-        if (list.popFirst()) |node| {
+        if (list.popFirst()) |ih| {
             p.*.counts.getPtr(tag).?.* -= 1;
-            const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-            polynode.reset(poly);
-            slot.* = poly;
+            slot.* = ih;
             return;
         }
     }
@@ -503,7 +480,7 @@ const _Pool = struct {
     poly: polynode.PolyNode,
     mutex: Io.Mutex,
     cond: Io.Condition,
-    lists: std.AutoHashMapUnmanaged(*const anyopaque, std.DoublyLinkedList),
+    lists: std.AutoHashMapUnmanaged(*const anyopaque, polynode.ItemList),
     counts: std.AutoHashMapUnmanaged(*const anyopaque, usize),
     hooks: ?PoolHooks,
     closed: std.atomic.Value(bool),

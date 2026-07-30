@@ -8,7 +8,7 @@
 //! - Timer just logs progress from Master state; pool gates the processing rate.
 //! - No mailbox anywhere in this example.
 //!
-//! Ownership (mailbox-less):
+//! Transfers (mailbox-less):
 //!
 //! ```
 //!  pool (N_ITEMS empty containers seeded — code=0)

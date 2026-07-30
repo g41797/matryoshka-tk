@@ -1,9 +1,9 @@
-# Matryoshka Zig — Rules (027)
+# Matryoshka Zig — Rules (032)
 
-Versioned doc. Replaces [rules-026.md](rules-026.md).  
+Versioned doc. Replaces [rules-031.md](rules-031.md).  
 All coding, doc, and process rules for the project.  
-Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [patterns-018.md](patterns-018.md) — reusable coding patterns.
+Companion: [matryoshka-model-004.md](matryoshka-model-004.md) — the thinking model.  
+Companion: [patterns-020.md](patterns-020.md) — reusable coding patterns.
 
 ---
 
@@ -85,7 +85,7 @@ Staccato rhythm applies.
 - No prose paragraphs.
 
 Placement — `//!` file-level doc comment, not `//`.
-- The description + ASCII ownership diagram is a `//!` doc comment, placed at the
+- The description + ASCII transfer diagram is a `//!` doc comment, placed at the
   very top of the file, directly after the SPDX header, before any declaration.
 - `//!` is autodoc-extractable and renders on the file's own container page. Plain
   `//` is not extracted at all.
@@ -100,7 +100,7 @@ Placement — `//!` file-level doc comment, not `//`.
   doc block needed.
 
 ASCII diagrams — fenced code block.
-- Any ASCII diagram inside a `//!` block (Ownership diagrams, flow diagrams) is
+- Any ASCII diagram inside a `//!` block (transfer diagrams, flow diagrams) is
   wrapped in a ` ``` ` fenced code block: ` ``` ` on its own `//!` line, the  
   diagram lines, then ` ``` ` on its own `//!` line to close.
 - Reason: the autodoc viewer renders doc comments as CommonMark markdown, which
@@ -197,7 +197,7 @@ Scope and shape.
   the first line of the file's `//!` doc comment.
 - Master's own `run` method (private, inside the Master struct) is unaffected — this
   rule targets only the example's public entry point.
-- `//!` doc comment at the top of the file: staccato description + ASCII ownership
+- `//!` doc comment at the top of the file: staccato description + ASCII transfer
   circuit diagram, diagram wrapped in a ` ``` ` fenced code block. No doc comment =  
   not done. See Description as code above.
 - The entry point (and Master `run` method, if any) placed at the top of the file, right
@@ -212,7 +212,7 @@ Completeness.
 - Show where results go after processing.
 - A lifecycle-only example (get → put, no input source, no output destination) is not complete.
 - Pool items are empty containers on acquisition. Work intent must come from outside the pool item.
-- See "Pool items are empty containers" in [matryoshka-model-003.md](matryoshka-model-003.md).
+- See "Pool items are empty containers" in [matryoshka-model-004.md](matryoshka-model-004.md).
 
 Master pattern.
 - Small examples: flat function. All state fits in local variables. No Master needed.
@@ -257,10 +257,10 @@ Canonical reference: `examples/layer4/018-master_with_pool.zig`.
 
 - Signature: `pub fn run(allocator: std.mem.Allocator, io: std.Io) !void`.
 - Must show multiple layers composing into a real flow.
-- `///` doc comment at the top of the file: staccato description + ASCII ownership
+- `///` doc comment at the top of the file: staccato description + ASCII transfer
   circuit diagram (see Description as code above).
 - Test wrapper in single `tests/stories_test.zig`, using `std.Io.Threaded.init`.
-- SPDX header required if placed under `src/`-style ownership; owner adds SPDX headers.
+- SPDX header required if the file sits under `src/`; owner adds SPDX headers.
 - Stories always use the Master pattern. A story is never a flat function.
 
 ### Story structure — Master composition rule
@@ -360,13 +360,39 @@ The Slot Rule.
 - Cleanup ops (`pool.put`, `PolyHelper.destroy`, `helpers.freeSlot`) are no-ops on null slots.
 - Use defer-before-acquisition — safe because cleanup is null-safe.
 - Never use `allocator.create` / `allocator.destroy` directly on PolyNode-based user types in examples or tests. Use `PolyHelper.create`, `PolyHelper.destroy`, or `helpers.freeSlot`.
-- Exception: `receiveResult` and `getWaitResult` transfer ownership via the returned union value, not a `*Slot`. The caller extracts the handle and owns it from that point.
+- Exception: `receiveResult` and `getWaitResult` hand the item over through the returned union value, not a `*Slot`. The caller extracts the handle and holds it from that point.
 
 Banned words.
 - `drain` — use `clear`, `reset`, `empty`, or a domain verb. Example: `clearList` not `drainList`.
 - `dll` / `DLL` — clashes with Windows DLL. Use `List.Node`, `list_node_ptr`, or spell out `DoublyLinkedList`.
 - "commit" when meaning save/update/write — implies git, which is owner-only. Say "save", "update", or "write".
 - AI-sh word list: robust, seamlessly, comprehensive, leverage, efficient, powerful, facilitate, utilize, ensure, performant, ergonomic, idiomatic, streamline, orchestrate, sophisticated, intuitive, scalable, unlock, empower, harness, deliver, fed, arm, leg, idempotent, fires, faces, pitch, object model, execution context, execution model, programming model, paradigm, mindset, ownership, gained, wire, wired, wires, wiring (added in rules-026 — use "connect"/"add to nav"/"hook up" or the concrete action instead).
+- Banned (rules-028): `seam`, `seamless` — `seamlessly` was already listed. Use "boundary", or name the two things that meet.
+- Banned (rules-028): `sweep` — say what the work is. "Search and replace across the repo", "re-read every call site", "scan `.md` files".
+- Banned (rules-028): `settle`, `settled` — use "agreed", "decided", or "the owner accepted it".
+- Banned (rules-030): `underneath` — name the thing. "The plain std list", "the std list this holds", or the field name.
+- Banned (rules-030): `on purpose` — as a defence of a design choice it explains nothing. Give the reason, or state who does it: "Tests use this field", "the layout is what these tests check".
+- Banned (rules-032): `hatch` — covers "escape hatch". A metaphor where a plain
+  description belongs, same family as `seam` and `underneath`. Name the field:  
+  "the `_list` field", "the raw field", "reaching through `_list`".
+- Replacements for `ownership` (rules-031). The word was banned in `src/` from
+  rules-012 and repo-wide in the AI-sh list, but no replacement was written down,  
+  so each pass invented its own. Name the action instead:
+
+  | instead of | write |
+  |---|---|
+  | transfers ownership | transfers the item / the item moves |
+  | caller retains ownership | the caller keeps the item |
+  | ASCII ownership diagram | ASCII transfer diagram |
+  | exclusive ownership | exclusive access |
+  | ownership circuit | transfer circuit |
+  | ownership path | transfer path |
+
+- Scan the rules file against its own ban (rules-031). rules-030 used
+  `ownership` five times while banning it — in the two doc-comment rules, the  
+  story rule, the SPDX rule, and the `receiveResult` exception. A banned-word  
+  scan that skips `rules-0NN.md` misses the document most likely to repeat the  
+  word, because the rule text has to talk about it.
 - Scoped ban (rules-026): "object" when referring to an Item/ItemHandle — the application/user data an ItemHandle wraps. Use "item" or "ItemHandle" instead. Does not ban "object" elsewhere in prose or code.
 - Scan `.zig` and `.md` after any stage that changes them. Report hits to owner. Do not fix without approval.
 
@@ -415,13 +441,13 @@ Banned words.
     than one distinct fact into unbulleted lines is still dense prose.
   - Applies to any doc comment (not just headers) naming more than one
     distinct fact.
-- Verification rule (added in rules-013): a sweep or scan (banned words,
+- Verification rule (added in rules-013): a scan (banned words,
   terminology bans, `.md`-reference check, line-length/staccato check)  
   is only "done" when re-run live against current file contents at the  
   moment of the claim.
   - A prior pass's claim of completion is not sufficient — re-run the
-    grep/check yourself before reporting a sweep as complete.
-  - Reason: a DOC 16 pass claimed the ownership-terminology sweep was
+    grep/check yourself before reporting a scan as complete.
+  - Reason: a DOC 16 pass claimed the ownership-terminology pass was
     complete across `src/*.zig`; a live re-check found 6 remaining hits  
     the earlier pass had missed in `polynode.zig`, `mailbox.zig`, and  
     `pool.zig`.
@@ -487,7 +513,7 @@ Banned words.
 
 * Link to:
 
-   * `matryoshka-model-003.md`
+   * `matryoshka-model-004.md`
    * `rules-009.md`
    * `patterns-008.md`
 
@@ -644,18 +670,25 @@ Implementation invariants.
 
 ## Implementation invariants
 
-`std.DoublyLinkedList` and `polynode.reset`.
+`ItemList` and `polynode.reset`. (API 8)
 - `std.DoublyLinkedList` does nothing for node safety. Any removal (`remove`, `pop`, `popFirst`, or any variant) does NOT zero `prev`/`next` on the removed node.
-- After any list removal, the node's `prev`/`next` still point into the old list. `polynode.is_linked` returns true. `polynode.destroy` will assert-fail.
-- Rule: call `polynode.reset(poly)` immediately after any list removal, before any `PolyHelper.destroy` call.
-- This applies everywhere: `on_close` hooks, mailbox close walks, pool close walks, any custom list traversal.
-- The list provides no safety net. The developer is solely responsible.
+- `ItemList.popFirst` does. It calls `polynode.reset` before returning, so a popped `ItemHandle` is never linked.
+- This is a property of the type, not a rule the developer carries. It replaces the former "call `reset` after every removal" rule, which was obeyed at 13 of 34 sites and cost a real bug (`_add_returned_item`, composite lists of 3+ items).
+- `polynode.reset` stays public. It is needed by hand in exactly one case: items taken out through `ItemList._list`.
+- `ItemList._list` is the raw field. While a caller uses it, the `ItemList` promises are suspended. Tests that manipulate raw links use it; application code does not.
+
+`*std.DoublyLinkedList.Node` is not `*PolyNode`. (API 8)
+- From the langref, `struct` section: "Zig gives no guarantees about the order of fields and the size of the struct but the fields are guaranteed to be ABI-aligned." And: "Struct field order is determined by the compiler, however, a base pointer can be computed from a field pointer."
+- `PolyNode` is a plain struct. `node` written first says nothing about its offset.
+- `@ptrCast` between the two pointer types is unsound, even where it compiles and appears to work.
+- `@fieldParentPtr` is the only defined conversion.
+- Rule: `@fieldParentPtr` appears in `src/polynode.zig` and in the raw-link tests of `tests/layer1_polynode.zig`. Nowhere else. The closing gate is `grep -rn "fieldParentPtr" src/ tests/ examples/ stories/`.
 
 ---
 
 ## Matryoshka Coding Patterns
 
-The pattern catalog lives in [patterns-008.md](patterns-008.md).
+The pattern catalog lives in [patterns-020.md](patterns-020.md).
 
 - Observable function shapes: coordinator / step / init / destroy / Select event loop / spawn-await.
 - Description as code: example/story doc comments follow the same coordinator/step shape.
@@ -695,7 +728,7 @@ Rules:
   lines (badges, shields, footnote-style refs), and fenced code content  
   are exempt — a following non-blank line after these is normal Markdown  
   syntax, not a soft-break hazard.
-- Enforced by `kitchen/tools/fix_md_hardbreaks.sh`, wired into
+- Enforced by `kitchen/tools/fix_md_hardbreaks.sh`, connected to
   `build_site.sh` and `preview_site.sh` the same way  
   `kitchen/tools/fix_md_lists.sh` enforces the blank-line-before-list rule.  
   It runs automatically as part of the build/preview pipeline, not  

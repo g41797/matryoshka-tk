@@ -1,6 +1,8 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (018)
+# Matryoshka Zig — Pattern and Idiom Catalog (019)
 
-Versioned doc. Replaces [patterns-017.md](patterns-017.md).
+Versioned doc. Replaces [patterns-018.md](patterns-018.md).
+
+Change from patterns-018: API 8 — `ItemList` closes the `std.DoublyLinkedList` boundary. New "Walk a batch — ItemList" entry. "Stack item into the toolkit" gained its list half. Hook and close examples now take `*polynode.ItemList`. Companion cross-references updated to rules-029.md and api-reference-029.md.
 
 Change from patterns-017: API 7 — new `toNode` accessor. Added the "Stack item into the toolkit" idiom. "Slot identification" gained the in-and-out framing. Companion cross-reference updated to api-reference-028.md.
 
@@ -10,7 +12,7 @@ Change from patterns-015: EXMPL 5 — added "Receive router — one registration
 
 Change from patterns-014: "thread" audit — worker-finish-signal pattern's stale "spawns a worker thread"/"joins the thread" language corrected to `io.concurrent`/future-await; stale api-reference-022.md cross-references updated to -025.md. No pattern content changed, wording only.
 
-Change from patterns-013: staccato-style sweep, prose paragraphs converted to bullets. No pattern content changed, wording only.
+Change from patterns-013: staccato-style scan, prose paragraphs converted to bullets. No pattern content changed, wording only.
 
 Change from patterns-012:
 - `Thread.spawn` removed as an accepted task-creation option.
@@ -21,9 +23,9 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-027.md](rules-027.md) — what is mandatory.  
+Companion: [rules-030.md](rules-030.md) — what is mandatory.  
 Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [matryoshka-api-reference-028.md](matryoshka-api-reference-028.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-030.md](matryoshka-api-reference-030.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -50,7 +52,7 @@ Order of this catalog.
 
 ## Slot and ownership idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-028.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-030.md).
 
 ### Empty Slot initialization
 
@@ -225,7 +227,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-028.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-030.md).
 
 ---
 
@@ -315,6 +317,50 @@ Do not.
   a round trip that proves nothing. `fromNode` is for the way back, where the  
   static type is gone — see "Polymorphic dispatch".
 
+Straight into a list, same shape.  
+```zig
+var list: polynode.ItemList = .{};
+list.append(EventPolyHelper.toNode(&ev));
+```
+
+### Walk a batch — ItemList
+
+When to use.
+- Anything hands back many items: `mailbox.receive_batch`, `mailbox.close`,
+  `pool.close`'s `on_close` hook, `on_put`'s returned list.
+
+Code shape.  
+```zig
+var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+while (batch.popFirst()) |ih| {
+    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+    // ...
+}
+```
+
+Why.
+- `popFirst` yields an `ItemHandle`, not a list node. One step, no
+  `@fieldParentPtr`.
+- `popFirst` calls `polynode.reset` before returning. A popped handle is never
+  linked, so it drops straight into a `Slot` or into `mailbox.send`.
+- Mixed types in one batch: `fromNode` returns null on a tag mismatch, so the
+  same loop dispatches — see "Polymorphic dispatch".
+
+Walk without consuming.  
+```zig
+var it = list.iterate();
+while (it.next()) |ih| {
+    // items stay linked, nothing is removed
+}
+```
+
+Do not.
+- Do not reach through `list._list` in application code. It is the escape hatch
+  for tests that manipulate raw links. Items taken out that way keep stale  
+  `prev`/`next`, and `polynode.reset` becomes yours to call.
+- Do not use `len()` under a lock in a hot path. It walks the list, O(n). The
+  mailbox and pool keep their own counters for that reason.
+
 ### Slot identification — accessing items
 
 When to use.
@@ -389,7 +435,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-028.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-030.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -444,7 +490,7 @@ Pattern.
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, with ownership transfer.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-028.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-030.md).
 
 ### Pool-as-message
 
@@ -764,7 +810,7 @@ When to use.
 
 Code shape.  
 ```zig
-fn onClose(ctx: *anyopaque, list: *std.DoublyLinkedList) void {
+fn onClose(ctx: *anyopaque, list: *polynode.ItemList) void {
     const self: *VideoBufCtx = @ptrCast(@alignCast(ctx));
     while (list.popFirst()) |node| {
         const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
@@ -1121,7 +1167,7 @@ When to use.
 Code shape.  
 ```zig
 // workers exit when receive returns error.Closed
-var rem: std.DoublyLinkedList = mailbox.close(ready_queue);
+var rem: polynode.ItemList = mailbox.close(ready_queue);
 // walk rem, recover any unreceived items
 try group.await(io);
 ```
@@ -1363,7 +1409,7 @@ When to use.
 Code shape.  
 ```zig
 fn destroy(self: *Master) void {
-    var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+    var rem: polynode.ItemList = mailbox.close(self.mbh);
     helpers.freeList(&rem, self.allocator);
     mailbox.destroy(self.mbh, self.allocator);
     pool.close(self.ph);

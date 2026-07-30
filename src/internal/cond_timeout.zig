@@ -14,7 +14,7 @@ pub const WaitTimeoutError = Io.Cancelable || Io.Timeout.Error;
 pub fn condition_waitTimeout(cond: *Condition, io: Io, mutex: *Mutex, timeout: Io.Timeout) WaitTimeoutError!void {
     const deadline = timeout.toDeadline(io);
 
-    var epoch = cond.epoch.load(.acquire); // `.acquire` to ensure ordered before state load
+    var epoch = cond.epoch.load(.acquire); // `.acquire` orders this before the state load
 
     {
         const prev_state = cond.state.fetchAdd(.{ .waiters = 1, .signals = 0 }, .monotonic);
@@ -27,7 +27,7 @@ pub fn condition_waitTimeout(cond: *Condition, io: Io, mutex: *Mutex, timeout: I
     while (true) {
         const result = io.futexWaitTimeout(u32, &cond.epoch.raw, epoch, deadline);
 
-        epoch = cond.epoch.load(.acquire); // `.acquire` to ensure ordered before `state` laod
+        epoch = cond.epoch.load(.acquire); // `.acquire` orders this before the `state` load
 
         // Even on error, try to consume a pending signal first. Otherwise a race might
         // cause a signal to get stuck in the state with no corresponding waiter.

@@ -114,7 +114,7 @@ const JobPoolMaster = struct {
 
     fn shutdown(self: *JobPoolMaster) !void {
         for (0..N) |i| {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbhs[i]);
+            var rem: polynode.ItemList = mailbox.close(self.mbhs[i]);
             items.freeList(&rem, self.allocator);
         }
         for (0..N) |i| try self.futs[i].await(self.io);
@@ -144,7 +144,7 @@ const JobPoolMaster = struct {
         try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
         var created: usize = 0;
         errdefer for (0..created) |i| {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbhs[i]);
+            var rem: polynode.ItemList = mailbox.close(self.mbhs[i]);
             items.freeList(&rem, allocator);
             mailbox.destroy(self.mbhs[i], allocator);
         };

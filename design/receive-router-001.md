@@ -8,7 +8,7 @@ Written before the example. The example is built from this document.
 
 ---
 
-## Settled design
+## Agreed design
 
 Every row is decided. Sections below give the reasoning.
 

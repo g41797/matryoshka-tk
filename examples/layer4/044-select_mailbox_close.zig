@@ -27,7 +27,7 @@ pub fn select_mailbox_close_propagation(allocator: std.mem.Allocator, io: std.Io
     var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
     defer {
         if (!ctx.mbh_closed) {
-            var rem: std.DoublyLinkedList = mailbox.close(ctx.mbh);
+            var rem: polynode.ItemList = mailbox.close(ctx.mbh);
             items.freeList(&rem, ctx.alloc);
         }
         mailbox.destroy(ctx.mbh, ctx.alloc);
@@ -74,7 +74,7 @@ const Ctx = struct {
             switch (event) {
                 .timer => {
                     std.log.info("timer: closing mailbox while receiveResult is running", .{});
-                    var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+                    var rem: polynode.ItemList = mailbox.close(self.mbh);
                     items.freeList(&rem, self.alloc);
                     self.mbh_closed = true;
                 },

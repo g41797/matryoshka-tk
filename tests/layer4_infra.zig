@@ -73,15 +73,14 @@ fn poolTransportOnGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) vo
 
 fn resetOnPut(_: *Slot) void {} // PoolHandle items carry no resettable scalar state — kept for on_put-shape consistency
 
-fn poolTransportOnPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+fn poolTransportOnPut(_: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
     resetOnPut(slot);
     return null;
 }
 
-fn poolTransportOnClose(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {
+fn poolTransportOnClose(ctx_opaque: *anyopaque, list: *polynode.ItemList) void {
     const ctx: *PoolTransportCtx = @ptrCast(@alignCast(ctx_opaque));
-    while (list.popFirst()) |node| {
-        const poly: *PolyNode = @fieldParentPtr("node", node);
+    while (list.popFirst()) |poly| {
         const ph: PoolHandle = poly;
         pool.close(ph);
         pool.destroy(ph, ctx.alloc);

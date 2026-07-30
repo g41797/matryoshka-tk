@@ -185,15 +185,27 @@ Runtime cost: one pointer subtraction.
 Inside a mailbox or pool, items are linked via `std.DoublyLinkedList`.  
 The list operates on `*DoublyLinkedList.Node`, not `*PolyNode`.
 
-Recovery is two steps:
+Recovery is two steps — and the toolkit performs the first one for you:
 
 ```zig
-// Step 1: List.Node → PolyNode (done inside mailbox/pool)
+// Step 1: List.Node → PolyNode (done inside ItemList.popFirst)
 const poly: *PolyNode = @fieldParentPtr("node", list_node_ptr);
 
 // Step 2: PolyNode → user type (done in user code, after tag check)
 const ev: *Event = @fieldParentPtr("poly", poly);
 ```
+
+You write neither line. `ItemList.popFirst` does step 1 and hands back an  
+`ItemHandle`; `PolyHelper.fromNode` does step 2 with the tag check:
+
+```zig
+while (batch.popFirst()) |ih| {
+    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+}
+```
+
+The layout below is what makes step 1 possible. It is worth understanding once,  
+and then not writing.
 
 ```text
 list_node_ptr: *List.Node

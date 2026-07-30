@@ -43,11 +43,11 @@ pub fn request_response(allocator: std.mem.Allocator, io: std.Io) !void {
         try helpers.expect(error.RequestResponseFailed, resp.*.code == 1042, "wrong response code");
     }
 
-    var rem_req: std.DoublyLinkedList = mailbox.close(req_mbh);
+    var rem_req: polynode.ItemList = mailbox.close(req_mbh);
     items.freeList(&rem_req, allocator);
     fut.await(io);
 
-    var rem_resp: std.DoublyLinkedList = mailbox.close(resp_mbh);
+    var rem_resp: polynode.ItemList = mailbox.close(resp_mbh);
     items.freeList(&rem_resp, allocator);
 }
 

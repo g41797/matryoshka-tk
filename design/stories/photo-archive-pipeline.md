@@ -315,7 +315,7 @@ Here is the end-to-end breakdown of the **Photo Archive Pipeline** flow, mapped 
 
 ## 1. Customer Point of View
 
-From a user's perspective, the process is seamless, fast, and high-quality:
+From a user's perspective, the process is fast, quiet, and high-quality:
 
 1. **Upload Phase:** 
    * You upload a full-resolution photo (PNG) to the system. 

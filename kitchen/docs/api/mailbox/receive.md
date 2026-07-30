@@ -53,12 +53,12 @@ pub fn try_receive(mbh: MailboxHandle, slot: *Slot) error{Closed}!bool
 ## receive_batch
 
 ```zig
-pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList
+pub fn receive_batch(mbh: MailboxHandle) error{Closed}!polynode.ItemList
 ```
 
 - Non-blocking.
 - Takes everything from the queue at once.
-- Returns empty `std.DoublyLinkedList` if queue is currently empty.
+- Returns an empty `ItemList` if queue is currently empty.
 - Does not wait. Does not return error for empty.
 - Assert:
   - `mailbox.is_it_you(mbh.*.tag)`

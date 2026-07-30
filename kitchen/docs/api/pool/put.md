@@ -20,7 +20,7 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
     - **returned after reset** — hook resets the item's data before keeping it.
     - **deleted, a different item returned** — hook frees the original and puts a different item in `slot.*`.
   - `slot.*` stays non-null exactly when an item — original or replacement — is kept.
-  - `on_put` also returns `?std.DoublyLinkedList` — items to add alongside
+  - `on_put` also returns `?ItemList` — items to add alongside
     `slot`. `null` or empty: nothing extra. Non-empty: each item is added  
     the same way `slot`'s item is — same checks, same assert on foreign  
     tag. See [Composite Items](#composite-items) below.
@@ -45,7 +45,7 @@ examples' convention, not a matryoshka rule.
 An item may hold other pooled items.
 
 Before the parent item enters the pool, `on_put` can return them as an  
-extra `std.DoublyLinkedList` alongside `slot`. The pool adds every item in  
+extra `ItemList` alongside `slot`. The pool adds every item in  
 that list the same way it adds `slot`'s item.
 
 The hook is responsible for handing back only valid, unlinked,  
@@ -59,7 +59,7 @@ The pool does not distinguish between simple and composite items.
 ## put_all
 
 ```zig
-pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void
+pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void
 ```
 
 - Returns batch of handles to pool.

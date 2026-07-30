@@ -8,7 +8,7 @@
 //! - group.cancel stops any workers still running, then pool.close frees the rest.
 //! - No mailbox — each worker's own container is the coordination surface.
 //!
-//! Ownership (mailbox-less):
+//! Transfers (mailbox-less):
 //!
 //! ```
 //!  pool (N_WORKERS empty containers seeded — code=0)

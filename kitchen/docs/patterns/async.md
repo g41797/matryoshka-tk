@@ -349,7 +349,7 @@ When to use.
 Code shape.  
 ```zig
 // workers exit when receive returns error.Closed
-var rem: std.DoublyLinkedList = mailbox.close(ready_queue);
+var rem: polynode.ItemList = mailbox.close(ready_queue);
 // walk rem, recover any unreceived items
 try group.await(io);
 ```

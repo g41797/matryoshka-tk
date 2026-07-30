@@ -20,7 +20,7 @@
 pub fn multiple_event_sources_one_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -134,7 +134,7 @@ const Ctx = struct {
         futs.events.await(self.io) catch {};
         futs.signal.await(self.io) catch {};
 
-        var remaining: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var remaining: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&remaining, self.alloc);
 
         futs.worker.await(self.io) catch {};

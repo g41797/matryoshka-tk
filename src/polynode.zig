@@ -69,6 +69,117 @@ pub inline fn is_linked(node: *PolyNode) bool {
     return node.node.prev != null or node.node.next != null;
 }
 
+/// Many items.
+///
+/// Completes the trio:
+/// - ItemHandle — one item.
+/// - Slot — zero or one item.
+/// - ItemList — many items.
+///
+/// Speaks ItemHandle throughout. A std list node never reaches you.
+///
+/// popFirst() clears the links of the item it returns.
+pub const ItemList = struct {
+    /// The plain std list this ItemList holds.
+    ///
+    /// Use the methods below instead. Tests use this field — the raw links
+    /// are what those tests check.
+    ///
+    /// Take an item out through this field, and:
+    /// - its prev and next still point at the list it left.
+    /// - popFirst() did not run, so reset() did not run either.
+    /// - call reset() on the item yourself.
+    ///
+    /// Skip that call, and the next code to follow those links reads a list
+    /// the item is no longer in.
+    _list: std.DoublyLinkedList = .{},
+
+    /// Adds the item at the end.
+    pub inline fn append(self: *ItemList, ih: ItemHandle) void {
+        self._list.append(&ih.node);
+    }
+
+    /// Adds the item at the front.
+    pub inline fn prepend(self: *ItemList, ih: ItemHandle) void {
+        self._list.prepend(&ih.node);
+    }
+
+    /// Adds the item right after one already in the list.
+    pub inline fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void {
+        self._list.insertAfter(&existing.node, &ih.node);
+    }
+
+    /// Takes the first item out.
+    ///
+    /// Returns null if the list is empty.\
+    /// The returned item is never linked — reset() is called for you.
+    pub inline fn popFirst(self: *ItemList) ?ItemHandle {
+        const node = self._list.popFirst() orelse return null;
+        const ih: ItemHandle = @fieldParentPtr("node", node);
+        reset(ih);
+        return ih;
+    }
+
+    /// True if the list holds no items.
+    pub inline fn isEmpty(self: *const ItemList) bool {
+        return self._list.first == null;
+    }
+
+    /// Number of items in the list.
+    pub inline fn len(self: *const ItemList) usize {
+        return self._list.len();
+    }
+
+    /// Walks the list without changing it.
+    ///
+    /// Items stay linked. reset() is not called.
+    pub inline fn iterate(self: *const ItemList) Iterator {
+        return .{ ._next = self._list.first };
+    }
+
+    /// Moves every item of `other` to the end of this list.
+    ///
+    /// `other` is left empty.
+    pub inline fn concat(self: *ItemList, other: *ItemList) void {
+        self._list.concatByMoving(&other._list);
+    }
+
+    /// Takes the contents of a std list.
+    ///
+    /// The source is left empty.\
+    /// O(1) — the items are not walked.
+    pub fn moveFromList(list: *std.DoublyLinkedList) ItemList {
+        const moved: ItemList = .{ ._list = list.* };
+        list.* = .{};
+        return moved;
+    }
+
+    /// Hands the contents to a std list.
+    ///
+    /// This list is left empty.\
+    /// O(1) — the items are not walked.
+    pub fn moveToList(self: *ItemList) std.DoublyLinkedList {
+        const moved = self._list;
+        self._list = .{};
+        return moved;
+    }
+
+    /// Non-destructive walk over an ItemList.
+    ///
+    /// Yields ItemHandle. Does not remove anything.
+    pub const Iterator = struct {
+        _next: ?*std.DoublyLinkedList.Node,
+
+        /// Next item, or null at the end.
+        pub inline fn next(self: *Iterator) ?ItemHandle {
+            const node = self._next orelse return null;
+            self._next = node.next;
+            const ih: ItemHandle = @fieldParentPtr("node", node);
+            return ih;
+        }
+    };
+};
+
 /// Generates runtime type support for `T`.
 ///
 /// `T` must contain:

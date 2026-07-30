@@ -15,7 +15,7 @@ A small but real system: a TCP request service.
 
 Three pains. You have hit all three before.
 
-* **Pain 1 — ownership.**
+* **Pain 1 — who frees it.**
     * Acceptor builds a Request.
     * Session handles it.
     * Journal writes it.
@@ -43,7 +43,7 @@ The three pains now have names.
   No interface. No virtual dispatch.
 
 * [**Mailbox**](building-blocks/mailbox.md) moves the Request across
-  roles. Ownership travels with it.
+  roles. The right to free it travels with it.
 
 * [**Pool**](building-blocks/pool.md) leases the Request. Takes it
   back. Reuse, not allocate-and-discard.

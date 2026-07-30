@@ -6,8 +6,8 @@ test "26 - mailbox new and destroy" {
     const mbh: MailboxHandle = try mailbox.new(io, alloc);
     try testing.expect(mailbox.is_it_you(mbh.*.tag));
 
-    const remaining: std.DoublyLinkedList = mailbox.close(mbh);
-    try testing.expect(remaining.first == null);
+    const remaining: polynode.ItemList = mailbox.close(mbh);
+    try testing.expect(remaining.isEmpty());
     mailbox.destroy(mbh, alloc);
 }
 
@@ -180,7 +180,7 @@ test "33 - close returns remaining items" {
     try mailbox.send(mbh, &s2);
     try mailbox.send(mbh, &s3);
 
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
+    var remaining: polynode.ItemList = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var count: usize = 0;
@@ -202,15 +202,15 @@ test "34 - second close returns empty list" {
     var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
-    var first: std.DoublyLinkedList = mailbox.close(mbh);
-    const second: std.DoublyLinkedList = mailbox.close(mbh);
+    var first: polynode.ItemList = mailbox.close(mbh);
+    const second: polynode.ItemList = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var count_first: usize = 0;
     while (first.popFirst()) |_| count_first += 1;
     try testing.expectEqual(@as(usize, 1), count_first);
 
-    try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), second.first);
+    try testing.expect(second.isEmpty());
 }
 
 // --- Scenario 35: send_oob delivers to front of queue ---
@@ -370,14 +370,13 @@ test "39 - data priority over closed" {
     var slot: Slot = EventPolyHelper.toNode(&ev);
     try mailbox.send(mbh, &slot);
 
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
+    var remaining: polynode.ItemList = mailbox.close(mbh);
     defer mailbox.destroy(mbh, alloc);
 
     var count: usize = 0;
-    while (remaining.popFirst()) |node| {
+    while (remaining.popFirst()) |ih| {
         count += 1;
-        const poly: *PolyNode = @fieldParentPtr("node", node);
-        const recovered: *Event = EventPolyHelper.fromNode(poly) orelse return error.WrongTag;
+        const recovered: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
         try testing.expectEqual(@as(i32, 39), recovered.*.code);
     }
     try testing.expectEqual(@as(usize, 1), count);
@@ -403,7 +402,7 @@ test "40 - receive_batch gets all items" {
         try mailbox.send(mbh, &slot);
     }
 
-    var batch: std.DoublyLinkedList = try mailbox.receive_batch(mbh);
+    var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
 
     var count: usize = 0;
     while (batch.popFirst()) |_| count += 1;
@@ -426,8 +425,8 @@ test "41 - receive_batch on empty returns empty list" {
         mailbox.destroy(mbh, alloc);
     }
 
-    const batch: std.DoublyLinkedList = try mailbox.receive_batch(mbh);
-    try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), batch.first);
+    const batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+    try testing.expect(batch.isEmpty());
 }
 
 // --- Scenario 42: Batch items walkable via popFirst ---
@@ -452,18 +451,16 @@ test "42 - batch items walkable via popFirst" {
     try mailbox.send(mbh, &s1);
     try mailbox.send(mbh, &s2);
 
-    var batch: std.DoublyLinkedList = try mailbox.receive_batch(mbh);
+    var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
 
-    while (batch.popFirst()) |node| {
-        const poly: *PolyNode = @fieldParentPtr("node", node);
-        // DoublyLinkedList does not clear links — caller must reset
-        polynode.reset(poly);
+    while (batch.popFirst()) |poly| {
+        // ItemList.popFirst clears the links — no caller-side reset
         try testing.expect(!polynode.is_linked(poly));
     }
 }
 
-// --- Scenario 43: Send transfers ownership ---
-test "43 - send transfers ownership (slot is null)" {
+// --- Scenario 43: Send transfers the item ---
+test "43 - send transfers the item (slot is null)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -483,8 +480,8 @@ test "43 - send transfers ownership (slot is null)" {
     try testing.expectEqual(@as(Slot, null), slot);
 }
 
-// --- Scenario 44: Receive transfers ownership ---
-test "44 - receive transfers ownership (slot is non-null)" {
+// --- Scenario 44: Receive transfers the item ---
+test "44 - receive transfers the item (slot is non-null)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -604,16 +601,15 @@ test "49 - send linked item: is_linked detection (assert documented)" {
     EventPolyHelper.init(&ev1);
     EventPolyHelper.init(&ev2);
 
-    var list: std.DoublyLinkedList = .{};
-    list.append(&ev1.poly.node);
-    list.append(&ev2.poly.node);
+    var list: polynode.ItemList = .{};
+    list.append(&ev1.poly);
+    list.append(&ev2.poly);
 
     // mailbox.send would assert(!is_linked) here (Open Item 11)
     try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev1)));
 
+    // ItemList.popFirst clears the links on the way out
     _ = list.popFirst();
-    // DoublyLinkedList does not clear links — caller must reset
-    polynode.reset(EventPolyHelper.toNode(&ev1));
     try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev1)));
     _ = list.popFirst();
 }
@@ -665,9 +661,9 @@ test "50 - fan-in (3+1): 3 sender threads, main receives all" {
     fb.await(io);
     fc.await(io);
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
-    while (rem.popFirst()) |node| {
-        freeItem(@fieldParentPtr("node", node), alloc);
+    var rem: polynode.ItemList = mailbox.close(mbh);
+    while (rem.popFirst()) |ih| {
+        freeItem(ih, alloc);
     }
     mailbox.destroy(mbh, alloc);
 
@@ -715,14 +711,14 @@ test "51 - fan-slot (1+2): main sends, 2 receiver threads" {
     var fa = try io.concurrent(receiver51, .{&ctx_a});
     var fb = try io.concurrent(receiver51, .{&ctx_b});
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
 
     fa.await(io);
     fb.await(io);
 
     var remaining_count: usize = 0;
-    while (rem.popFirst()) |node| {
-        freeItem(@fieldParentPtr("node", node), alloc);
+    while (rem.popFirst()) |ih| {
+        freeItem(ih, alloc);
         remaining_count += 1;
     }
     mailbox.destroy(mbh, alloc);
@@ -830,7 +826,7 @@ test "52 - combined (3+2+main): fan-in + fan-slot, close after 100ms" {
     };
     Io.Timeout.sleep(sleep_t, io) catch {};
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
 
     f_se.await(io);
     f_ss.await(io);
@@ -839,8 +835,8 @@ test "52 - combined (3+2+main): fan-in + fan-slot, close after 100ms" {
     f_rb.await(io);
 
     var remaining_count: usize = 0;
-    while (rem.popFirst()) |node| {
-        freeItem(@fieldParentPtr("node", node), alloc);
+    while (rem.popFirst()) |ih| {
+        freeItem(ih, alloc);
         remaining_count += 1;
     }
     mailbox.destroy(mbh, alloc);

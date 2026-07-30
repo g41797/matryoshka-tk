@@ -13,7 +13,7 @@
 //!  pool (2 items in free-list)    mailbox (1 item in queue)
 //!  │
 //!  pool.close ──► on_close ──► freeList (2 pool items freed)
-//!  mailbox.close ──► std.DoublyLinkedList (1 item)
+//!  mailbox.close ──► ItemList (1 item)
 //!  walk list: popFirst ──► freeItem
 //!  │
 //!  All 3 items accounted for, no leaks.
@@ -71,11 +71,9 @@ fn closePool(ph: PoolHandle, alloc: std.mem.Allocator) void {
 }
 
 fn closeMailboxAndFree(mbh: MailboxHandle, alloc: std.mem.Allocator) usize {
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     var freed: usize = 0;
-    while (rem.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+    while (rem.popFirst()) |poly| {
         items.freeItem(poly, alloc);
         freed += 1;
     }

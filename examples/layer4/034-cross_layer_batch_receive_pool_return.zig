@@ -4,7 +4,7 @@
 //! Batch receive + pool return.
 //!
 //! - fillMailbox sends 10 pool-sourced items into the mailbox.
-//! - batchCollectToPool: mailbox.receive_batch returns a std.DoublyLinkedList,
+//! - batchCollectToPool: mailbox.receive_batch returns an ItemList,
 //!   passed straight into pool.put_all — no per-item walk needed.
 //! - verifyPool confirms the pool has items again after the bulk return.
 //!
@@ -12,7 +12,7 @@
 //! ```
 //!  pool.get (×10, new_only) ──► mailbox.send (×10) ──► mailbox (10 items)
 //!  │
-//!  mailbox.receive_batch ──► std.DoublyLinkedList (10 items)
+//!  mailbox.receive_batch ──► ItemList (10 items)
 //!  pool.put_all ──► pool free-list (10 items recycled)
 //!  │
 //!  pool.get (.available_only) ×10 ──► verify count==10
@@ -32,7 +32,7 @@ pub fn batch_receive_pool_return(allocator: std.mem.Allocator, io: std.Io) !void
 
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -63,7 +63,7 @@ const Ctx = struct {
     }
 
     fn batchCollectToPool(self: *Ctx) !void {
-        var batch: std.DoublyLinkedList = try mailbox.receive_batch(self.mbh);
+        var batch: polynode.ItemList = try mailbox.receive_batch(self.mbh);
         pool.put_all(self.ph, &batch);
         std.log.info("receive_batch → put_all: {d} items returned to pool", .{N_ITEMS});
     }

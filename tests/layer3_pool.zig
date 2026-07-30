@@ -434,7 +434,7 @@ test "76 - pool.get on closed pool returns error.Closed" {
 }
 
 // --- Scenario 77: pool.put on closed pool returns item to caller ---
-test "77 - pool.put on closed pool: caller retains ownership" {
+test "77 - pool.put on closed pool: caller keeps the item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -455,7 +455,7 @@ test "77 - pool.put on closed pool: caller retains ownership" {
 
     pool.close(ph);
 
-    // put after close: caller retains ownership (slot stays non-null).
+    // put after close: the caller keeps the item (slot stays non-null).
     pool.put(ph, &slot);
 
     // Caller must still own the item.
@@ -600,7 +600,7 @@ test "81 - hooks run outside lock: no deadlock on put+get cycle" {
 }
 
 // --- Scenario 82: pool.put_all ---
-test "82 - pool.put_all returns batch from std.DoublyLinkedList" {
+test "82 - pool.put_all returns batch from ItemList" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -620,17 +620,17 @@ test "82 - pool.put_all returns batch from std.DoublyLinkedList" {
     }
 
     // Collect 3 items into a raw list.
-    var batch: std.DoublyLinkedList = .{};
+    var batch: polynode.ItemList = .{};
     for (0..3) |_| {
         var slot: Slot = null;
         try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
-        batch.append(&slot.?.*.node);
-        slot = null; // ownership transferred to batch
+        batch.append(slot.?);
+        slot = null; // the batch holds the item now
     }
 
     pool.put_all(ph, &batch);
     // All items transferred to pool; batch must be empty.
-    try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), batch.first);
+    try testing.expect(batch.isEmpty());
     try testing.expectEqual(@as(usize, 3), ctx.put_call_count);
 }
 
@@ -710,7 +710,7 @@ test "84 - pool.get_wait forever: item put from another thread" {
 }
 
 // --- Scenario 85: HELD → IN_FLIGHT (pool.get) ---
-test "85 - ownership: HELD->IN_FLIGHT via pool.get" {
+test "85 - transfer: HELD->IN_FLIGHT via pool.get" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -747,7 +747,7 @@ test "85 - ownership: HELD->IN_FLIGHT via pool.get" {
 }
 
 // --- Scenario 86: IN_FLIGHT → HELD (pool.put, keep policy) ---
-test "86 - ownership: IN_FLIGHT->HELD via pool.put with keep" {
+test "86 - transfer: IN_FLIGHT->HELD via pool.put with keep" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -776,7 +776,7 @@ test "86 - ownership: IN_FLIGHT->HELD via pool.put with keep" {
 }
 
 // --- Scenario 87: IN_FLIGHT → FREE (pool.put, destroy policy) ---
-test "87 - ownership: IN_FLIGHT->FREE via pool.put with destroy" {
+test "87 - transfer: IN_FLIGHT->FREE via pool.put with destroy" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
@@ -934,7 +934,7 @@ fn resetOnPut(slot: *Slot) void {
     if (SensorPolyHelper.fromSlot(slot)) |sn| sn.*.value = 0.0;
 }
 
-fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) ?std.DoublyLinkedList {
+fn onPutAdaptive(ctx_opaque: *anyopaque, in_pool_count: usize, slot: *Slot) ?polynode.ItemList {
     const ctx: *TestCtx = @ptrCast(@alignCast(ctx_opaque));
     ctx.put_call_count += 1;
     ctx.last_put_count = in_pool_count;
@@ -956,37 +956,36 @@ const CompositeCtx = struct {
 
 // Keeps the Event via slot, hands back a freshly created 3-item composite —
 // Sensor, Timer, ShutdownCommand — via the returned list.
-fn onPutComposite(ctx_opaque: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+fn onPutComposite(ctx_opaque: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
     const ctx: *CompositeCtx = @ptrCast(@alignCast(ctx_opaque));
     resetOnPut(slot);
 
-    var list: std.DoublyLinkedList = .{};
+    var list: polynode.ItemList = .{};
 
     const sn: *Sensor = ctx.alloc.create(Sensor) catch @panic("OOM in test");
     sn.* = .{};
     SensorPolyHelper.init(sn);
-    list.append(&sn.*.poly.node);
+    list.append(&sn.*.poly);
     ctx.extra_created += 1;
 
     const tm: *Timer = ctx.alloc.create(Timer) catch @panic("OOM in test");
     tm.* = .{};
     TimerPolyHelper.init(tm);
-    list.append(&tm.*.poly.node);
+    list.append(&tm.*.poly);
     ctx.extra_created += 1;
 
     const sc: *ShutdownCommand = ctx.alloc.create(ShutdownCommand) catch @panic("OOM in test");
     sc.* = .{};
     ShutdownCommandPolyHelper.init(sc);
-    list.append(&sc.*.poly.node);
+    list.append(&sc.*.poly);
     ctx.extra_created += 1;
 
     return list;
 }
 
-fn onCloseAdaptive(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {
+fn onCloseAdaptive(ctx_opaque: *anyopaque, list: *polynode.ItemList) void {
     const ctx: *TestCtx = @ptrCast(@alignCast(ctx_opaque));
-    while (list.popFirst()) |node| {
-        const poly: *PolyNode = @fieldParentPtr("node", node);
+    while (list.popFirst()) |poly| {
         ctx.close_item_count += 1;
         items.freeItem(poly, ctx.alloc);
     }

@@ -229,12 +229,13 @@ Runtime cost: one pointer subtraction.
 ### Step 7 — Two-level recovery (from list node)
 
 Inside a mailbox or pool, items are linked via `std.DoublyLinkedList`.  
-The list operates on `*DoublyLinkedList.Node`, not `*PolyNode`.
+The list operates on `*DoublyLinkedList.Node`, not `*PolyNode`.  
+`ItemList` performs this step for you — see Std compatibility.
 
 Recovery is two steps:
 
 ```zig
-// Step 1: List.Node → PolyNode (done inside mailbox/pool)
+// Step 1: List.Node → PolyNode (done inside ItemList.popFirst)
 const poly: *PolyNode = @fieldParentPtr("node", list_node_ptr);
 
 // Step 2: PolyNode → user type (done in user code, after tag check)
@@ -308,21 +309,21 @@ PolyNode embeds `std.DoublyLinkedList.Node`.
 
 - No custom list type.
 - No adapter.
-- Every PolyNode-based item participates in standard `std.DoublyLinkedList` operations.
+- Every PolyNode-based item carries the standard intrusive links.
 
-Batch operations use plain `std.DoublyLinkedList`:
+Batch operations use `polynode.ItemList`:
 
 - `mailbox.close()`
 - `mailbox.receive_batch()`
 - `pool.put_all()`
 
-Walk results with `popFirst()` — standard Zig, nothing Matryoshka-specific.
+Walk results with `popFirst()`. It yields `ItemHandle`, so `@fieldParentPtr` stays out of your code.
 
 **Warning**:
 
 - `std.DoublyLinkedList.popFirst()` does NOT clear the node's `prev`/`next` links.
-- Call `polynode.reset(poly)` after popping, before re-sending the item or checking `polynode.is_linked`.
-- Skipping reset causes false positives from `is_linked` and assert failures in pool/mailbox assert guards.
+- `ItemList.popFirst()` does — it calls `polynode.reset` before returning.
+- You need `polynode.reset` by hand only when you take items out through `ItemList._list`.
 
 ---
 

@@ -5,7 +5,7 @@
 //!
 //! - Seed the pool with 4 Events via pool.get(new_only) + pool.put.
 //! - Close the pool.
-//! - on_close receives all pooled items via *std.DoublyLinkedList, frees them.
+//! - on_close receives all pooled items via *ItemList, frees them.
 //!
 //!
 //! ```

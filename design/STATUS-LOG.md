@@ -4,6 +4,495 @@ Full session history, newest entries at top. Append-only. Read only when explici
 
 ## Session Log
 
+### 2026-07-30 — Rules: "hatch" added to banned words
+
+**Participants**: human (owner), Claude (agent).
+
+Owner spotted "escape hatch" in the docs during the banned-word pass and added  
+it to the list. It is the same family as `seam` and `underneath` — a metaphor  
+standing where a plain description belongs.
+
+`rules-031.md` → `rules-032.md`. The ban is on **`hatch`**, which covers "escape  
+hatch" and anything else of the shape. Replacement: name the field — "the  
+`_list` field", "the raw field", "reaching through `_list`".
+
+**Fixed, 5 live sites**
+
+- `design/rules-032.md` — its own `ItemList._list` rule used the phrase, the
+  same self-violation rules-030 had with `ownership`.
+- `design/patterns-020.md` — "It is the escape hatch for tests" → "It is the raw
+  field, there for tests".
+- `design/item-list-005.md` — 4 hits: the §2.2 heading → "The `_list` field",
+  the failure-this-prevents line, the `_concat` paragraph, and misuse case 6 in  
+  the coverage table.
+- `kitchen/docs/api/polynode/stdlib-compatibility.md` — the section heading.
+
+**Left alone**: `item-list-004.md` (5), `rules-030.md`, `patterns-019.md` —  
+superseded versions. `STATUS-LOG.md` (4) — history.
+
+**Note on versioning**: rules-031 was created minutes earlier in the same  
+banned-word pass and is uncommitted, so rules-032 could arguably have been  
+folded into it. The no-overwrite rule says otherwise and was followed.
+
+**Verification**: doc-only apart from one `kitchen/docs` page. Markdown fixers  
+and `mkdocs build --strict` clean. `hatch` now returns only the rule text and  
+one change note.
+
+### 2026-07-30 — full banned-word pass
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+The AI-sh scan had been run partially — only the rules-030 additions  
+(`underneath`, `on purpose`), not the full word list. Running the full list  
+found two hits the agent had introduced in `item-list-005.md` (`fires`,  
+`deliver`) and a large pre-existing backlog: ~830 hits repo-wide, dominated by  
+`ownership` (359) and `mindset` (76).
+
+Owner: "run full fix of banned words." Three decisions taken up front —  
+replacement wording names the action; reach is prose and test names but **not**  
+filenames; `kitchen/defer/**` left alone.
+
+**Replacement table** (now recorded in rules-031 so the next pass does not  
+reinvent it):
+
+| instead of | write |
+|---|---|
+| transfers ownership | transfers the item |
+| caller retains ownership | the caller keeps the item |
+| ASCII ownership diagram | ASCII transfer diagram |
+| exclusive ownership | exclusive access |
+| ownership circuit | transfer circuit |
+
+**Tier 1 — code and shipped docs.** 65 hits, all fixed.
+
+- 9 layer-4 examples: `//! Ownership (...)` → `//! Transfers (...)`,
+  "ownership circuit" → "transfer circuit", "ownership path" → "transfer path".
+- `examples/layer1/022-ownership_transfer.zig` — `//!` title → "Item transfer
+  via Slot", entry point `ownership_transfer_via_slot` → `item_transfer_via_slot`  
+  (the EXMPL 4b rule ties the two), `error.OwnershipTransferFailed` →  
+  `error.ItemTransferFailed`. **Filename unchanged, owner's decision.**
+- 7 test names reworded: `layer2_mailbox.zig` 43, 44; `layer3_pool.zig` 77, 85,
+  86, 87; `layer4_cancel.zig` scenario 8 header.
+- `src/internal/cond_timeout.zig` — two `ensure` comments reworded. `src/`
+  otherwise clean.
+- `stories/video_transcoder.zig` — "Ownership flow" → "Transfer flow",
+  "exclusive ownership" → "exclusive access".
+- `kitchen/docs/`: `the-shape.md`, `why-boring.md` (including its H1),
+  `matryoshka-tk-notation.md`, `matryoshka-and-rethinking.md` (14 uses — the  
+  word is that document's central noun), `examples/polynode.md`.
+- `kitchen/docs/examples/**` regenerated with `gen_examples_docs.sh` — those
+  pages are generated from the `//!` comments and are never hand-edited.
+
+**Tier 2 — live design docs.** Seven new versions, per the no-overwrite rule:
+
+| new | why |
+|---|---|
+| `rules-031.md` | **rules-030 broke its own ban five times** — two doc-comment rules, the story rule, the SPDX rule, the `receiveResult` exception |
+| `patterns-020.md` | three section titles + body |
+| `matryoshka-model-004.md` | the word was this doc's core vocabulary, 14 uses |
+| `task1-tests-003.md` | section titles, and scenarios 34, 43, 44, 75, 77, 85-87 resynced with the renamed tests |
+| `task2-tests-002.md` | three `fires` |
+| `task1-examples-004.md` | Layer 1 heading + scenario 22 title |
+| `matryoshka-architecture-004.md` | "ad-hoc wiring" |
+
+Two rules added to rules-031: the replacement table above, and *scan the rules  
+file against its own ban* — a scan that skips `rules-0NN.md` misses the document  
+most likely to repeat a banned word, because the rule text has to name it.
+
+Also fixed in `matryoshka-model-004.md`: two dead companion links,  
+`rules-003.md` and `patterns-002.md`, which have not existed for many versions.
+
+**Cross-references** updated in `context.md`, `STATUS.md` (Sources of Truth and  
+the project line — "Ownership-transfer toolkit" → "Item-transfer toolkit"),  
+`plan-049.md`, `item-list-005.md`, `task2-examples-005.md`. Two entries in  
+plan-049's "reported not actioned" list are now closed by this pass.
+
+**Not fixed, by rule or by decision**
+
+- `design/STATUS-LOG.md` — 227 hits. Append-only history; rewriting past entries
+  falsifies the record.
+- Superseded doc versions — `item-list-001..004`, `rules-030`, `patterns-019`,
+  `docs-plan-015`, `cookbook-structure`, `collected-context-005`,  
+  `architecture-foundation-4-004`, `guide-001`, the `design/stories/*` set.
+- `kitchen/defer/**` — ~30 hits in parked documents. Owner's decision.
+- `mutex.unlock()` and the `Lock…Unlock` prose pair — the API call, exempt as in
+  the 2026-07-19 "wire" pass.
+- Change-log rows and document names ("New Mindset") that quote the banned word
+  as history.
+
+**Verification**: `build_and_test_all.sh` — 175/175 in all four modes plus  
+cross-compile. `gen_examples_docs.sh`, both markdown fixers, `mkdocs build  
+--strict` clean. Full word list re-run over Tiers 1 and 2 returns only the  
+exempt and intentional cases listed above.
+
+### 2026-07-30 — item-list-005.md: the design document, re-composed by subject
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner: *"i need whole design document with open issues, logs/stages and so on  
+does not matter - design - all decisions/apis and so on"*. 004 was ordered by  
+round, not by subject — the link-mark argument was told in four places, each  
+re-deriving the mutex reasoning, and the misuse-case numbering was defined 400  
+lines after its first citation.
+
+`item-list-004.md` → `item-list-005.md`. Composed as a design document, not a  
+transcript. 2048 lines → 947.
+
+**Structure**
+
+1. What `ItemList` is — the trio, why it exists, what it is not.
+2. The API — every signature with its guarantees, the escape hatch, what is
+   omitted, internal adoption.
+3. Invariants — of a list, and of item access (the happens-before invariant).
+4. Decisions — twelve, each as decision / failure prevented / alternative
+   rejected / what it does not promise. Q1-Q24 and the old Reasoning section  
+   converted from Q&A into statements.
+5. The defect — `is_linked` unsound, the seven assert lines, whose problem it is.
+6. The eight misuse cases — the map, now before anything that cites it.
+7. Where a check can live — item / container / slot. The mutex argument stated
+   **once**, at "asking the item".
+8. Open issues — Q25-Q34.
+9. What the document owes elsewhere. 10. History.
+
+**What was dropped**: round narrative, change log, "new in 002/003/004" labels,  
+the reversal narratives, `Next round`, the test-plan and stage bookkeeping. All  
+of it survives in 001-004, which the no-overwrite rule keeps readable.
+
+**What was kept deliberately**: question IDs Q25-Q34 unchanged, because they are  
+cited by number in this log, `plan-049.md` and `context.md`. Renumbering would  
+break three files silently. Q26 option C is marked superseded rather than  
+deleted.
+
+**Merged**: Q33's third option (apply the walk to `pool.put` and `mailbox.send`)  
+folded into Q34, so one question owns container-local detection. Q33 narrows to  
+keep-or-remove.
+
+**Corrected**: one place still read "six asserts" where the count is six APIs /  
+seven lines.
+
+**Cross-references**: `context.md`, `STATUS.md`,  
+`matryoshka-tk-implementation-plan-049.md` → 005. Historical "withdrawn in  
+item-list-003.md" mentions left as written.
+
+**Verification**: doc-only, `src/` untouched. Banned-word scan clean, markdown  
+fixers clean, `mkdocs build --strict` clean. No build or test run — 175/175  
+stands.
+
+**Open**: Q25 (postponed), Q26, Q27, Q28, Q31, Q32, Q33, Q34 in item-list-005.md.  
+No code until API 9 is separately approved.
+
+### 2026-07-30 — the walk: item-list-004.md
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner, on the coverage table appended to 003: *"insert an item already in this  
+list - may be fixed walking before insert"*. Correct, and it recovers part of  
+what 003's withdrawal gave up.
+
+New version `item-list-003.md` → `item-list-004.md` (no-overwrite rule). The  
+agent had planned an in-place edit; the owner stopped it. In-place was wrong —  
+the change reverses two rows of a published coverage table, and the reversal has  
+to be visible the way Q26's A → D reversal is.
+
+**Why the walk survives the argument that killed the field**
+
+- writes nothing, so there is no field to race.
+- reads `self._list` and the *address* `&ih.node`. Taking a field address does
+  not dereference the item, so the concurrent holder is never touched.
+- needs exclusive access only to the list the caller already holds.
+
+That forces 003's conclusion to be narrowed. Not "detection is not  
+implementable", but: detection requiring a fact about an **item** is not  
+implementable; detection answerable from a **container's own contents** is.
+
+**Coverage table corrected, old values kept visible**
+
+- case 2 (insert into *this* list): partial → **fixed**. No longer depends on
+  `is_linked` at all.
+- case 4 (`insertAfter` with a foreign `existing`): no → **fixed**. 003 said
+  "needs which-list, not whether", which was the error — a list can answer that  
+  about itself. The only other proposal that ever covered case 4 was the pointer  
+  field, rejected in 002 for making three move operations O(n); the walk covers  
+  it for O(n) on one insert.
+- case 5 stays partial and matters most: `PolyHelper.destroy` is handed a `Slot`
+  and holds no list to interrogate, so neither the walk nor Q33 = B reaches the  
+  use-after-free.
+
+**New Q34 — how far the walk goes.** A none / B `append`+`prepend` / C all four  
+inserts plus `_holds(existing)` / D C behind a length cap. Recommended C, D as  
+the fallback. The argument against C is placement, not complexity: every  
+internal insert holds a mutex (`mailbox.zig:87`, `:117`, `:119`,  
+`pool.zig:291`, `:322`), so under Debug C walks the whole queue with the mailbox  
+locked — and Debug is where the concurrency tests run.
+
+**Also in 004**
+
+- Q26 option C marked superseded: it is the walk truncated to the list head, so
+  it is a weaker Q34 = B, not an interim. Q26's answer stays D — the walk is not  
+  in-item state.
+- Q33's "B as a separate question later" discharged as Q34, with the asymmetry
+  written down: Q34 always has a list in hand; `destroy` and `moveFromSlot` never  
+  do.
+- Group G goes from four subjects to five.
+- **Correction**: 003's Q33 table cited the three `polynode.zig` sites by
+  function-declaration line (`:271`, `:311`, `:388`) instead of assert line. Now  
+  `:275`, `:315`, `:392`, matching the coverage section. Count unchanged — six  
+  APIs, seven lines.
+
+**Cross-references**: `context.md`, `STATUS.md`,  
+`matryoshka-tk-implementation-plan-049.md`. Historical mentions of  
+"withdrawn in item-list-003.md" left as written.
+
+**Verification**: doc-only, `src/` untouched. Markdown fixers clean,  
+`mkdocs build --strict` clean. No build or test run — 175/175 stands from the  
+previous stage.
+
+**Open**: Q25 (postponed), Q26, Q27, Q28, Q31, Q32, Q33, Q34 in  
+item-list-004.md. No code until API 9 is separately approved.
+
+### 2026-07-30 — Rules: "underneath" and "on purpose" added to banned words
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner rewrote the `ItemList._list` doc comment to staccato bullets, then banned  
+the two words the rewrite had kept.
+
+`rules-029.md` → `rules-030.md` (banned word list plus the one self-hit at the  
+`ItemList._list` escape-hatch rule). `matryoshka-api-reference-029.md` →  
+`matryoshka-api-reference-030.md`, because its `ItemList._list` entry quoted the  
+old doc comment and would otherwise contradict `src/`.
+
+Live hits fixed, 6 files:
+
+- `src/polynode.zig` — the field comment, twice this session. First to staccato
+  bullets on the owner's instruction, then reworded off the two banned words.
+- `kitchen/docs/api/polynode/stdlib-compatibility.md` — the escape-hatch
+  section, same rewording.
+- `kitchen/docs/building-blocks/polynode.md` — "the same kind of pointer
+  underneath" → "the same kind of pointer". The word carried nothing.
+- `kitchen/defer/deep-dive/video-transcoder.md` — "the pool runs dry on purpose"
+  → "the pool runs dry". The sentence already said "deliberately smaller".
+- `design/item-list-003.md` — four hits, including the Q6 draft comment, now
+  updated to the shipped text.
+- `design/rules-030.md` — the rule that used the word it now bans.
+
+Pre-existing hits left alone, reported not fixed, per the scan rule:  
+`design/matryoshka-new-mindset-001.md:107`,  
+`design/matryoshka-architecture-foundation-4-004.md:2547`,  
+`design/matryoshka-tk-implementation-plan-049.md:76`, and the superseded  
+`item-list-001.md` / `item-list-002.md`.
+
+Cross-references updated for both new versions: `context.md`, `STATUS.md`,  
+`patterns-019.md`. Historical attributions like "(rules-029)" left as written —  
+they record when a rule arrived, they are not pointers.
+
+**Verification**: 175/175 in all four modes, cross-compile step passed,  
+`mkdocs build --strict` clean.
+
+### 2026-07-30 — the link mark withdrawn: item-list-003.md
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Doc-only. No code touched. 175/175 unchanged.
+
+Two rounds on `design/item-list-002.md`, then a new version.
+
+Round one, an external review of 002. Four points acted on: a "What `ItemList`  
+is not" section (intrusive forever, never allocates, never copies, gains no  
+method because `std` has one), an "Invariants" section (including the two  
+`concat` order guarantees the doc had never stated), Q26 reframed as a `PolyNode`  
+question rather than an `ItemList` one, and a new Q32 on what API 9 is called and  
+in what order it ships. Two points declined with reasons recorded.
+
+Round two ended the proposal. The owner's argument: a debug-only `_linked` bool  
+is written under whichever mutex the item's current list sits behind, and those  
+mutexes do not synchronize with each other, so in the buggy case the field  
+exists to catch — two Masters touching one item — the field itself races. Sound  
+exactly when unnecessary, undefined exactly when it would fire. Atomics protect  
+the flag, not the list topology; two concurrent `append`s corrupt the list  
+whatever the flag says.
+
+One step added to the owner's argument: it applies unchanged to `prev` and  
+`next`, which `is_linked` already reads under the same absent synchronization.  
+The bool inherits a race rather than adding one. That generalizes the conclusion  
+past the field — no state stored in an item can validate this class of mistake,  
+which retires the owner-pointer variant and any future generation counter along  
+with the bool.
+
+The invariant this forced into the open: legal transfers do establish  
+happens-before, but not through the mutexes. Through the address. A thread  
+cannot touch an item until it learns the pointer, and pointers travel only  
+through mailboxes and pools, which are synchronized. `rules-029.md:405` has the  
+one-place-one-state half and `matryoshka-model-003.md:30` has the  
+exclusive-access half. The happens-before consequence is written down nowhere,  
+and six existing asserts already rest on it. Owed regardless of Q26.
+
+Corrected a count 002 got wrong: the asserts on `is_linked` are six APIs and  
+seven lines, not four. `mailbox.send_oob` and `pool.put` were never counted, and  
+`PolyHelper.moveFromSlot` is generated twice. Found by grepping `src/` instead of  
+trusting the earlier figure.
+
+`item-list-002.md` → `item-list-003.md` (no-overwrite rule). Q26 reversed A → D  
+with the reversal shown rather than edited away — 002 had recommended A twice.  
+"The debug-only link mark" kept in place, marked withdrawn, as the record of  
+what was rejected. Q27 rewritten: with no mark, `is_linked` cannot be made  
+exact, so the question is what it should say. New Q33 on the six asserts, which  
+records the one mechanism this round turned up that survives the argument — a  
+container asking about its *own* contents under its *own* lock, O(n) under  
+safety builds, closing same-container misuse only.
+
+Q28 and Q31 survive untouched, both being local to data the caller already  
+holds. Q31 `appendFromSlot` is now the whole of API 9's user-facing value, and  
+the prevention-before-detection order proposed in Q32 turns out not to be a  
+preference about risk — it is the only half that is implementable.
+
+Cross-references updated: plan-049, STATUS.md, context.md.
+
+**Open**: Q25 (postponed), Q26, Q27, Q28, Q31, Q32, Q33 in item-list-003.md.  
+Nothing gates anything else now. Nothing implemented; API 9 needs its own  
+approval.
+
+### 2026-07-29 — `ItemList` argument validation: item-list-002.md
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+The owner raised it after API 8 shipped: `std.DoublyLinkedList` almost never  
+checks its arguments, by design. `ItemList` forwards to it, so what does it  
+inherit?
+
+Verified against the shipped `std`, each case run rather than reasoned about:
+
+- `concat(&self)` — the list silently empties. `first=null`, `last=null`, every
+  item leaked.
+- `append` a node already in another list — both lists claim it, `prev` reset
+  to null.
+- `insertAfter` with an `existing` from a different list — splices across lists.
+- `append` a node already in this list — cycle.
+
+None detected. `pop` and `remove` are already closed, since Q13 omitted both.
+
+**The larger finding — `polynode.is_linked` is unsound.**
+
+A node that is a list's sole member has `prev=null, next=null`, because `std`  
+never sets them. `is_linked` reads exactly those two fields and returns false.
+
+Four existing asserts rest on it: `PolyHelper.destroy`,  
+`PolyHelper.moveFromSlot`, `pool.zig` `_add_returned_item`, and `mailbox.send`  
+(Open Item 11). The `destroy` case is the worst — a use-after-free guard that  
+does not guard in exactly the single-item case.
+
+This predates API 8 and is not caused by `ItemList`. `ItemList` is the first  
+place that can fix it.
+
+**Outcome**
+
+`item-list-001.md` → `item-list-002.md` (no-overwrite rule). New section "What  
+forwarding inherits", new Group G with Q26-Q30. Q26 gates the rest: a  
+debug-only owner field on `PolyNode` (recommended), a cheap partial assert, or  
+nothing. Cross-references updated in plan-049, STATUS.md, context.md.
+
+Recommended as a new stage API 9, not a reopening of API 8 — API 8 shipped, its  
+gate holds, and this is a different problem.
+
+**Not implemented.** No code changed. 175/175 tests unchanged. Advice given that  
+tests alone cannot decide this: if `ItemList` keeps forwarding blindly, a misuse  
+test can only assert that corruption happens, which writes the bug into the  
+suite as expected behaviour. Validation first, then the dedicated  
+`tests/layer1_itemlist.zig` (Q29).
+
+---
+
+### 2026-07-29 — API 8: `ItemList` closes the `std.DoublyLinkedList` boundary
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+The owner found `@fieldParentPtr` in ordinary application code:
+
+```zig
+const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
+const ev: *items.Event = items.Event.EventPolyHelper.fromNode(poly) orelse return error.CastFailed;
+```
+
+`src/polynode.zig:14` promises "You don't need to deal with @fieldParentPtr."  
+The promise did not hold. Five public signatures spoke `std.DoublyLinkedList`,  
+whose element type is `*std.DoublyLinkedList.Node`, not `ItemHandle`, so every  
+caller converted back by hand.
+
+**8a — design document** (`item-list-001.md`, doc-only, iterative).
+
+25 questions, answered by the owner over three rounds. Notable answers that went  
+against the recommendation:
+
+- Q5 — the field is `_list`, not `list`. Reasoning: a test and an application are
+  not the same reader. The name speaks to the application, and the answer is no.
+- Q9 — `len` forwards, but its doc comment carries no O(n) note.
+- Q25 — postponed. The migration ran with the three proposed protections applied
+  as written.
+
+Q6 asked for the escape-hatch rule in "human text", so the field's doc comment was  
+drafted in plain language and carried into the code unchanged.
+
+Verifying Q24's strong gate turned up a fact not visible when the question was  
+written: `@fieldParentPtr` was in five test files, not one. That did not change  
+the answer, it changed the size of 8c.
+
+**8b — type + tests.** `ItemList` in `src/polynode.zig`, beside `ItemHandle`,  
+`Slot`, `reset`, `is_linked`. Scenarios 100-103 pin the contract: handle  
+round-trip, `popFirst` returns unlinked handles, both moves empty their source,  
+`iterate` removes nothing, `concat` empties the other list.
+
+**8c — migration, one atomic stage.** Five signatures and ~80 call sites in the  
+same compile. `_Mailbox.list` and `_Pool.lists` went internal on `ItemList`;  
+`_Mailbox.oob_last` became `?ItemHandle`. Seven of the eight `@fieldParentPtr`  
+sites in `src/` were the same pop-cast-reset triple and collapsed into  
+`ItemList.popFirst`. `_concat` deleted — `ItemList.concat` forwards to `std`'s  
+`concatByMoving`, removing ten lines of hand-written link surgery.
+
+Two comments in `tests/layer2_mailbox.zig` said "DoublyLinkedList does not clear  
+links — caller must reset". They now state the opposite of what the code does,  
+and were corrected. Eight `const PolyNode` aliases orphaned by the migration were  
+removed.
+
+**8d — docs.** api-reference-028 → -029 (new `ItemList` section), patterns-018 →  
+-019 ("Walk a batch — ItemList" added, "Stack item into the toolkit" gained its  
+list half), rules-028 → -029 (the reset invariant is now a property of the type,  
+and the `*Node` != `*PolyNode` language fact recorded with the langref citation),  
+task1-tests-001 → -002 (scenarios 100-103). 70+ generated example pages  
+regenerated. `kitchen/docs/api/polynode/stdlib-compatibility.md` rewritten — the  
+page described a relationship that no longer exists.
+
+**Verification**
+
+- `build_and_test_debug.sh`, `build_and_test_all.sh` (4 modes),
+  `build_cross_debug.sh` — all clean. 175/175 tests (171 + 4 new).
+- Closing gate holds: `grep -rn "fieldParentPtr" src/ tests/ examples/ stories/`
+  returns only `src/polynode.zig` and `tests/layer1_polynode.zig` scenarios 6, 7,  
+  8.
+- `mkdocs build --strict` clean.
+- No git operations — the owner was out of office with git disabled.
+
+**Open**
+
+- Q25's protection list was postponed by the owner and never formally answered.
+  The migration applied the three proposed protections as written.
+- API 7e closed as superseded, per Q22.
+
+---
+
 ### 2026-07-29 — API 7d: doc comments in `src/polynode.zig`
 
 **Participants**: human (owner), Claude (agent).
@@ -198,7 +687,7 @@ reached into `.poly` by hand.
   extract edge.
 - Three live site pages (`api/cleanup.md`, `api/cleanup/no-raw-allocator.md`,
   `patterns/master-and-shutdown.md`) were missed by the plan's file list and  
-  caught by a repo-wide sweep.
+  caught by a repo-wide scan.
 - A blind sed rewrote historical Change-manifest row 016, which recorded the
   *previous* rename (`cast`→`identifyNodeAs`). Reverted — history keeps the  
   names that were true at the time.
@@ -208,7 +697,7 @@ reached into `.poly` by hand.
 
 **Post-stage cleanup**
 
-- Repo swept for stale `identify*`: zero hits outside `STATUS-LOG.md` and
+- Repo scanned for stale `identify*`: zero hits outside `STATUS-LOG.md` and
   superseded doc versions.
 - Example doc mirrors regenerated with `gen_examples_docs.sh`.
 - All three kitchen scripts re-run after cleanup.
@@ -223,7 +712,7 @@ reached into `.poly` by hand.
 **Summary**
 
 Long design conversation, then unattended execution of all sub-stages. Owner  
-went OOF after the design was settled and instructed the agent to continue in  
+went OOF after the design was agreed and instructed the agent to continue in  
 auto mode.
 
 **Rule waiver — recorded deliberately**
@@ -253,7 +742,7 @@ and puts each `ReceiveResult` in the Select queue. One registration covers
 every item, so the Master stops re-registering. It is not Matryoshka API: `U`  
 is the application's event union, and the toolkit cannot name it.
 
-Settled design is recorded in receive-router-001.md — a summary table at the  
+Agreed design is recorded in receive-router-001.md — a summary table at the  
 top, reasoning in the sections below. plan-045 points at it and does not  
 repeat it, per the slim-plan rule. The table lived briefly in plan-045; owner  
 had it moved.
@@ -481,7 +970,7 @@ Files touched: `design/src-loc-counter-001.md` (new),
 `kitchen/docs/index.md` (badge markup), `kitchen/docs/stylesheets/extra.css`  
 (badge styling + API-button hide rule).
 
-### 2026-07-19 — DOCS-HUMANIZE correction: manual micro-audit + final addendums sweep
+### 2026-07-19 — DOCS-HUMANIZE correction: manual micro-audit + final addendums scan
 
 **Participants**: human (owner), Claude (agent).
 
@@ -508,7 +997,7 @@ stale "## What is exchanged?" heading) plus the same stale phrase in
 banned-word violations in `api/cancel-and-lifecycle.md` and  
 `api/invariants.md` (not in `nav:`, but live on disk — fixed anyway).
 
-Final pass: swept the remaining untouched nav sections. Examples Catalog  
+Final pass: scanned the remaining untouched nav sections. Examples Catalog  
 confirmed out of scope (every file under `kitchen/docs/examples/**`,  
 including `items/items.md`, `helpers/helpers.md`, `hooks/*.md`, is generated  
 by `kitchen/tools/gen_examples_docs.sh` — same exclusion class as the  
@@ -820,7 +1309,7 @@ still just scoped, not written into the rules doc). Both stages are
 plan-only.
 
 **Next**: owner confirmed Pass 1 (CANDIDATES audit) runs as a background  
-subagent sweep. Pass 1 executed this session — see next log entry.
+subagent scan. Pass 1 executed this session — see next log entry.
 
 ---
 
@@ -832,7 +1321,7 @@ subagents (design/ corpus, kitchen/docs+README corpus).
 **Summary**
 
 Ran Pass 1 of the CANDIDATES stage as two parallel background subagent  
-sweeps, per owner's confirmation: one covering `design/*.md` + `design/stories/`  
+scans, per owner's confirmation: one covering `design/*.md` + `design/stories/`  
 (24 files), one covering `kitchen/docs/**` (excluding the auto-generated  
 `kitchen/docs/examples/**` mirror tree, bulk-discarded as one entry) +  
 `README.md` + `kitchen/notes.md` + `kitchen/CLEANUP_CANDIDATES.md` +  
@@ -990,13 +1479,13 @@ mindset-not-mechanics altitude, and no-story-material constraint.
 
 **Not done this pass**: no repo-facing files touched (`README.md` itself,  
 `kitchen/mkdocs.yml` nav) — these are review drafts only. No consistency  
-sweep across the 3 drafts run yet (e.g. confirming identical phrasing for  
+scan across the 3 drafts run yet (e.g. confirming identical phrasing for  
 shared lines across all three).
 
 **Next**: owner review of the 3 drafts + the judgment calls above. Once  
 approved: promote a readme draft to replace repo `README.md`, wire  
 landing-short/landing-long into `kitchen/mkdocs.yml` nav, run  
-`build_and_test_debug.sh` + `build_site.sh` + banned-word sweep on the  
+`build_and_test_debug.sh` + `build_site.sh` + banned-word scan on the  
 promoted files.
 
 ---
@@ -1033,7 +1522,7 @@ rules, kept as-is.
 another." — reviewer suggested "eventually moves" (technically accurate,  
 Mailbox holds it in transit) but judged clunkier; not applied by default.
 
-**Not done this pass**: no consistency sweep against landing-short-001.md/  
+**Not done this pass**: no consistency scan against landing-short-001.md/  
 landing-long-001.md for the changed lines (e.g. "Backpressure appears  
 naturally" phrasing, if it should propagate). `readme-002.md` not yet  
 promoted to replace repo `README.md`.
@@ -1090,7 +1579,7 @@ verification.
 
 ---
 
-### 2026-07-15 — CANDIDATES: staccato consistency sweep (3 drafts)
+### 2026-07-15 — CANDIDATES: staccato consistency scan (3 drafts)
 
 **Participants**: human (owner), Claude (agent).
 
@@ -1098,7 +1587,7 @@ verification.
 
 Owner asked for a consistency check after the new Master-defining sentence  
 was added to `landing-short-002.md`, specifically flagging it as a long  
-comma-list sentence — not staccato. Swept all 3 composed drafts  
+comma-list sentence — not staccato. Scanned all 3 composed drafts  
 (`readme-002.md`, `landing-short-002.md`, `landing-long-001.md`) for the  
 same pattern: single sentences packing a comma-separated list of  
 substantive clauses, which violates the repo's explicit "no prose  
@@ -1132,7 +1621,7 @@ re-reviewed line by line.
 **Next**: owner review of all 3 drafts together (`readme-002.md`,  
 `landing-short-002.md`, `landing-long-001.md`). If approved: promotion to  
 repo `README.md` + landing-page nav wiring + kitchen script verification  
-(`build_and_test_debug.sh`, `build_site.sh`, banned-word sweep).
+(`build_and_test_debug.sh`, `build_site.sh`, banned-word scan).
 
 ---
 
@@ -1156,7 +1645,7 @@ list separation.
   "does not introduce" list, before the PolyNode mention. `readme-002.md`  
   left untouched (no-overwrite).
 - `design/candidates/landing-long-001.md` (in-place edit, still an
-  unreviewed working draft per the precedent set by the staccato sweep) —  
+  unreviewed working draft per the precedent set by the staccato scan) —  
   same expansion added after the "deliberately not" bullet list. Trimmed  
   the now-redundant "it only brings a little more order to your thinking"  
   fragment from the "a framework" bullet, since the full passage covers it  
@@ -1190,7 +1679,7 @@ draft).
 
 ---
 
-### 2026-07-15 — CANDIDATES: "programming model" heading fix + banned-word/long-sentence sweep
+### 2026-07-15 — CANDIDATES: "programming model" heading fix + banned-word/long-sentence scan
 
 **Participants**: human (owner), Claude (agent).
 
@@ -1207,14 +1696,14 @@ drafts.
 - `design/candidates/landing-long-001.md` — checked, does NOT have this
   heading (earlier flag was imprecise); no change needed here.
 
-**Sweeps (all 4 working drafts: `readme-002.md`, `readme-003.md`,  
+**Scans (all 4 working drafts: `readme-002.md`, `readme-003.md`,  
 `landing-short-002.md`, `landing-long-001.md`)**:
-- Full banned-word regex sweep (exact rules-024.md list). One genuine hit
+- Full banned-word regex scan (exact rules-024.md list). One genuine hit
   fixed: "Keep Io powerful. Keep it hidden. Keep Matryoshka clean." → "Keep  
   Io capable. Keep it hidden. Keep Matryoshka clean." in  
   `landing-long-001.md`. "interfaces" hits are a known false positive  
   (substring match on "faces"), not a real hit.
-- Long-sentence sweep (lines >140 chars): no further staccato violations
+- Long-sentence scan (lines >140 chars): no further staccato violations
   found; remaining long lines are reviewer-praised analogy paragraphs or  
   already-approved punchy fragment style.
 
@@ -1281,7 +1770,7 @@ and `landing-short-002.md`.
 
 ---
 
-### 2026-07-15 — CANDIDATES: rules sweep (ai-sh, long sentences, bullets) → readme-004.md, landing-long-003.md
+### 2026-07-15 — CANDIDATES: rules scan (ai-sh, long sentences, bullets) → readme-004.md, landing-long-003.md
 
 **Participants**: human (owner), Claude (agent).
 
@@ -1289,7 +1778,7 @@ and `landing-short-002.md`.
 
 Owner asked to check `readme-003.md`, `landing-short-002.md`,  
 `landing-long-002.md` against the doc rules (banned/AI-sh words, long  
-sentences, missing bullets, prose run-ons), then fix. Banned-word sweep was  
+sentences, missing bullets, prose run-ons), then fix. Banned-word scan was  
 clean on all three. Found two genuine staccato violations (comma-list  
 clauses packed into one sentence) and fixed them — but the fix was first  
 applied in place on `readme-003.md` and `landing-long-002.md`, which  
@@ -1297,12 +1786,12 @@ violates the no-overwrite rule now that both files are numbered/promoted
 versions (the in-place-edit exception only applied to `landing-long-001.md`  
 while it was still an unreviewed pre-promotion draft). Owner then asked to  
 repeat the check and version any changes — caught and corrected: reverted  
-both files to their pre-sweep state, created new versions instead.
+both files to their pre-scan state, created new versions instead.
 
 **Changes**:
-- `design/candidates/readme-003.md` — reverted to pre-sweep state (no
+- `design/candidates/readme-003.md` — reverted to pre-scan state (no
   content change from the previous session's entry).
-- `design/candidates/landing-long-002.md` — reverted to pre-sweep state
+- `design/candidates/landing-long-002.md` — reverted to pre-scan state
   (no content change from the previous session's entry).
 - `design/candidates/readme-004.md` (new) — `readme-003.md` plus two
   staccato fixes: the PolyNode aside's "which"-clause split into its own  
@@ -1318,13 +1807,13 @@ both files to their pre-sweep state, created new versions instead.
 - `landing-short-002.md` — checked, no changes needed (already clean, no
   long lines, no banned words).
 
-**Verification**: re-ran the full banned-word regex sweep and a >140-char  
-long-line sweep against the current versioned set (`readme-004.md`,  
+**Verification**: re-ran the full banned-word regex scan and a >140-char  
+long-line scan against the current versioned set (`readme-004.md`,  
 `landing-short-002.md`, `landing-long-003.md`). Zero banned-word hits.  
 Remaining long lines are the already-reviewed merged-short-sentence and  
 noun-list-apposition patterns (e.g. "Request, Response, Connection..."),  
 not comma-separated clause run-ons — left as-is, consistent with the prior  
-consistency-sweep verdict.
+consistency-scan verdict.
 
 **Next**: owner review of `readme-004.md`, `landing-short-002.md`,  
 `landing-long-003.md` together.
@@ -1377,10 +1866,10 @@ the long-superseded `matryoshka-api-reference-022.md`.
 | `grep -rl "matryoshka-api-reference-024.md\|patterns-014.md"` (repo-wide) | zero live pointers remain outside historical Session Log entries and the new docs' own "Replaces [...]" supersede links |
 | Regenerated `kitchen/docs/examples/layer4/095-mailbox_as_item.md` | confirmed "worker task"/`io.concurrent` wording present |
 
-**Not done this pass**: repo-wide diagram-notation sweep; mailbox-focused  
+**Not done this pass**: repo-wide diagram-notation scan; mailbox-focused  
 equivalent audit. Both deferred from the prior INTR 7 stage, still open.
 
-**Next**: diagram-notation sweep, or the mailbox-focused audit — owner's  
+**Next**: diagram-notation scan, or the mailbox-focused audit — owner's  
 call on order (see updated Rules/Constraints summary above).
 
 ---
@@ -1394,7 +1883,7 @@ call on order (see updated Rules/Constraints summary above).
 While reviewing `src/pool.zig` and `examples/layer4/053-pool_fan_in.zig`'s  
 diagram, two diagram bugs surfaced (`mbh[0..2]` off-by-one, `pool.get ×3`  
 mislabeling a drain-until-`NotAvailable` loop). Owner deferred diagram-  
-notation fixes (053's and a full repo-wide sweep) to a later stage and  
+notation fixes (053's and a full repo-wide scan) to a later stage and  
 redirected this stage to a deeper issue: no example pool hook reset an  
 item's data on `put`, so stale data could silently survive recycling —  
 and several docs (mainly `matryoshka-architecture-foundation-4-002.md`,  
@@ -1444,7 +1933,7 @@ Step A (code — reset helper, first):
     `collectResults` sums the array instead of draining the pool. Diagram  
     and doc comment rewritten to match — incidentally also fixes the  
     `mbh[0..2]`/`×3` diagram bugs as an unavoidable side effect of the  
-    logic rewrite (not a deliberate diagram-sweep fix).
+    logic rewrite (not a deliberate diagram-scan fix).
 
 Step B (docs — "pool is not storage" + put semantics):
 - `design/matryoshka-architecture-foundation-4-002.md` →
@@ -1487,7 +1976,7 @@ Step C (audit — 32 pool-touching files + items/hooks + patterns-013.md):
 | `examples/layer4/032-cross_layer_pool_mailbox_roundtrip.zig` | sequence-assumption (checked) | asserts pointer identity only, not data value, across the second `get` — valid under `AlwaysCreateHooks` (never destroys/replaces) | N (no bug) |
 | `examples/layer4/038-cross_layer_pool_mailbox_flow.zig` | sequence-assumption (checked) | data check happens before the deferred `put`, not after — no bug | N (no bug) |
 | remaining 25 of the 32 files, `examples/items/*`, `examples/hooks/*`, `design/patterns-013.md` | storage-framing / sequence-assumption | none found (`storage` hits are unrelated video-transcoder downstream-task naming) | N (clean) |
-| `examples/layer4/053-pool_fan_in.zig` | diagram-notation (already known) | `mbh[0..2]` off-by-one, `pool.get ×3` mislabeling a drain loop | **deferred** (fixed incidentally by the Step A architecture rewrite, not as a deliberate diagram-sweep fix) |
+| `examples/layer4/053-pool_fan_in.zig` | diagram-notation (already known) | `mbh[0..2]` off-by-one, `pool.get ×3` mislabeling a drain loop | **deferred** (fixed incidentally by the Step A architecture rewrite, not as a deliberate diagram-scan fix) |
 
 **Verification**:
 
@@ -1497,7 +1986,7 @@ Step C (audit — 32 pool-touching files + items/hooks + patterns-013.md):
 | `build_and_test_debug.sh` (final) | PASS (167/167) |
 | `build_and_test_all.sh` (all 4 optimization modes) | PASS (167/167 × 4) |
 | `build_site.sh` | clean, zero warnings (pre-existing orphan-page nav warnings unrelated to this stage) |
-| Banned-word sweep (all files touched this pass) | clean; only hits are historical changelog rows describing past work (exempt, existing precedent) |
+| Banned-word scan (all files touched this pass) | clean; only hits are historical changelog rows describing past work (exempt, existing precedent) |
 | `grep -rn "storage\|warehouse"` across touched design/kitchen docs | zero hits outside intentional "Pool is not storage" phrasing and the unrelated video-transcoder "storage task" |
 
 **Post-stage cleanup**: reviewed all files touched this pass for obsolete  
@@ -1510,11 +1999,11 @@ cleanup review (see Verification table above — no further fixes needed).
 
 **Not done this pass** (deferred, owner's call): diagram-notation fixes  
 (053's `mbh[0..2]`/`×3` — already incidentally correct after the Step A  
-rewrite, but no repo-wide diagram sweep was done); mailbox-focused  
+rewrite, but no repo-wide diagram scan was done); mailbox-focused  
 equivalent audit (reset-on-put-style hook review, "mailbox is not X"  
-framing check, sequence-assumption sweep).
+framing check, sequence-assumption scan).
 
-**Next**: owner's call — repo-wide diagram-notation sweep, or the deferred  
+**Next**: owner's call — repo-wide diagram-notation scan, or the deferred  
 mailbox audit (candidate stage). Stage 9 (docs + README + autodocs)  
 otherwise continues.
 
@@ -1563,13 +2052,13 @@ say "ownership"); for "ownership model," pick plain replacement wording
 | Check | Result |
 |---|---|
 | `grep -rl "matryoshka-architecture-foundation-4-001\|matryoshka-architecture-002.md"` (repo-wide, excluding `docs/` build output) | zero live pointers remain outside historical Session Log entries |
-| Banned-word sweep (`ownership`, `execution context`, `execution model`) on both new doc versions | zero hits (except the changelog line describing the change itself, same exemption as prior sweeps) |
+| Banned-word scan (`ownership`, `execution context`, `execution model`) on both new doc versions | zero hits (except the changelog line describing the change itself, same exemption as prior scans) |
 | `build_and_test_debug.sh` | PASS (167/167) — doc-only change, `src/` untouched |
 | `build_site.sh` | clean, zero warnings (both docs are `design/` internal references, not in mkdocs nav) |
 
 **Not fixed this pass (pre-existing, unrelated to ownership)**: 5 pre-existing  
 banned-word hits found in `matryoshka-architecture-foundation-4-002.md`  
-during the sweep — "deliver"/"delivers"/"delivery" (×4) and "fires" (×1),  
+during the scan — "deliver"/"delivers"/"delivery" (×4) and "fires" (×1),  
 all present before this pass, not introduced by it. Reported per rules-024  
 ("report hits, don't fix without approval"), not auto-fixed — owner's call.
 
@@ -1616,7 +2105,7 @@ driver files to use real threaded `Io`, not revert the migrated examples.
 | `build_cross_debug.sh` (mac x86_64/aarch64, windows x86_64) | PASS (5/5 steps) |
 | `docs_zig.sh` | PASS |
 | `grep -rln "Thread.spawn" examples/ tests/ src/` | zero hits |
-| Banned-word sweep on the 3 driver files | zero hits |
+| Banned-word scan on the 3 driver files | zero hits |
 | `gen_examples_docs.sh` + `build_site.sh` (mirrored pages regenerated) | clean, zero warnings |
 | `grep -rl "Thread.spawn" kitchen/docs/examples/` | zero hits |
 
@@ -1656,11 +2145,11 @@ Phase C pass. Fixed those sections and found the same pattern repeated in
 - `README.md`, `kitchen/docs/manifesto.md`, `design/matryoshka-manifesto-005.md`,
   `kitchen/docs/matryoshka-based-systems.md` — "transfers ownership together  
   with the object" / "ownership transfer" fixed to "transfers the object, not  
-  a reference to it" / "object transfer" (found during banned-word sweep;  
+  a reference to it" / "object transfer" (found during banned-word scan;  
   leftover from an earlier partial ownership→object pass, missed in the  
   Mailbox description sections).
 
-**Audit**: ran a full-repo sweep (Opus-model subagent) against  
+**Audit**: ran a full-repo scan (Opus-model subagent) against  
 `matryoshka-new-mindset-001.md` for old-mindset language beyond this  
 session's known-fixed set. Found and fixed the one active, nav-linked file  
 above. Two more hits are in unversioned, unlinked (not in `context.md`, not  
@@ -1679,7 +2168,7 @@ dead per the no-overwrite rule.
 | `docs_zig.sh` | pass |
 | `build_site.sh` (initial) | pass |
 | `build_site.sh` (after ownership fixes) | pass |
-| Banned-word sweep (files touched this pass) | clean after fixes; 2 remaining matches are the changelog note describing the "hybrid car" removal, not content |
+| Banned-word scan (files touched this pass) | clean after fixes; 2 remaining matches are the changelog note describing the "hybrid car" removal, not content |
 
 ### 2026-07-09 — New Mindset: Phase B audit + Phase C downstream rewrite (doc pass)
 
@@ -1753,7 +2242,7 @@ alternative.
 | `build_cross_debug.sh` | pass |
 | `docs_zig.sh` | pass |
 | `build_site.sh` | pass |
-| Banned-word sweep (all files touched this pass) | 2 hits found and fixed: "Io is powerful" → "Io does a lot" (`matryoshka-new-mindset-001.md`), "execution contexts" → "tasks" (`matryoshka-api-reference-022.md`); remaining matches are pre-existing substring false positives (`interfaces`/"faces", `unlock()` API calls) |
+| Banned-word scan (all files touched this pass) | 2 hits found and fixed: "Io is powerful" → "Io does a lot" (`matryoshka-new-mindset-001.md`), "execution contexts" → "tasks" (`matryoshka-api-reference-022.md`); remaining matches are pre-existing substring false positives (`interfaces`/"faces", `unlock()` API calls) |
 | `Thread.spawn` co-equal-option check | clean — no remaining doc presents it as an alternative to `io.concurrent()` |
 
 **Next**: either the architecture-docs `ownership` pass or the `Thread.spawn`  
@@ -1807,7 +2296,7 @@ added separately — broadens the prior src/-only ownership-language rule
 | Check | Result |
 |---|---|
 | `grep -n "ownership" design/matryoshka-new-mindset-001.md` | zero hits |
-| Full banned-word sweep of the new doc against all 7 new terms | not yet run — do before Phase B |
+| Full banned-word scan of the new doc against all 7 new terms | not yet run — do before Phase B |
 
 **Next**: owner review/approval of `matryoshka-new-mindset-001.md` wording.  
 Once approved, Phase B audit (no rewrites yet) against README, manifesto,  
@@ -1828,7 +2317,7 @@ Owner needed a way to "sell" Matryoshka-Io to readers across GitHub,
 GitHub Pages, and forums without reading like marketing copy — a prior  
 ChatGPT attempt didn't land. Explored and rejected: a dedicated landing  
 page (too ad-like), story-telling format, Mermaid diagrams (not supported  
-on Discord/forums). Settled on a new docs page — not a landing page —  
+on Discord/forums). Agreed on a new docs page — not a landing page —  
 placed after the manifesto: short staccato prose plus two Graphviz-rendered  
 diagrams (problem, then problem-with-Matryoshka), following the same  
 before/after layout so a reader recognizes their own system in five  
@@ -1909,7 +2398,7 @@ Owner spotted a rendering bug in a pasted `pool.md` snippet: bullets
 collapsed into one run-on sentence. Root cause: CommonMark/Python-Markdown  
 treats a list directly following plain text with no blank line as a lazy  
 paragraph continuation, not a list — the existing rules-018/022  
-"blank line before every list" rule was never swept for compliance.  
+"blank line before every list" rule was never scanned for compliance.  
 Fixed as a permanent, auto-fixing script wired into the doc build sequence  
 rather than a one-off manual pass.
 
@@ -2066,7 +2555,7 @@ documents for it.
 
 | Check | Result |
 |---|---|
-| `grep -rniw pitch` across all `*.md` (repo-wide) | zero live hits; remaining hits are inside historical `STATUS.md`/`matryoshka-io-docs-plan-015.md` session-log entries describing past work (exempt, same precedent as other banned-word sweeps) |
+| `grep -rniw pitch` across all `*.md` (repo-wide) | zero live hits; remaining hits are inside historical `STATUS.md`/`matryoshka-io-docs-plan-015.md` session-log entries describing past work (exempt, same precedent as other banned-word scans) |
 | `bash kitchen/tools/build_site.sh` | clean, zero warnings |
 | `bash kitchen/build_and_test_debug.sh` | PASS (167/167) |
 
@@ -2294,7 +2783,7 @@ Owner directed removing the 8 `zig build docs` example-autodoc targets
 linking them (`kitchen/docs/examples_reference.md`) — build cost for a page  
 nobody needs. `apidocs` (the real `src/matryoshka.zig` API reference) stays  
 untouched. In its place: a hand-organized examples catalog, discussed and  
-settled in-session — mirror `examples/`'s folder layout 1:1 under  
+agreed in-session — mirror `examples/`'s folder layout 1:1 under  
 `kitchen/docs/examples/` via a new permanent script, with reader-facing  
 grouping (how-to categories, not `layer1..4`) living entirely in  
 hand-authored catalog/group pages that link into the mirrored tree.  
@@ -2343,7 +2832,7 @@ Full session detail in `matryoshka-io-docs-plan-015.md`.
 | `bash kitchen/tools/build_site.sh` | mkdocs builds clean, zero warnings (two issues found and fixed mid-session: relative-link 404 risk on deploy → GitHub-blob links; mirror script wiping hand-authored pages → scoped `rm -rf` to mirrored subdirs only) |
 | Headless-Chrome render + console check, catalog index + one example page + `apidocs` | clean, titles resolve, no console errors |
 | Coverage check: all 76 mirrored pages linked exactly once across the 5 groups + index | confirmed |
-| Grep sweep for the 8 removed target names + `examples_reference` | zero hits except historical pre-DOC-20 session-log entries in this file (exempt) |
+| Grep scan for the 8 removed target names + `examples_reference` | zero hits except historical pre-DOC-20 session-log entries in this file (exempt) |
 
 **Next**: Stage 9 continues. Examples-catalog grouping may be reshuffled  
 later (doc edit only). DOC 21+ TBD.
@@ -3013,7 +3502,7 @@ terminology rewrite is a separate future stage.
 
 **Summary**  
 Owner caught two gaps left by DOC 16: (1) a re-grep found 6 remaining  
-"ownership"/"owned" hits the earlier sweep missed — `polynode.zig` (file  
+"ownership"/"owned" hits the earlier scan missed — `polynode.zig` (file  
 header + `create`/`destroy` comments) and one repeated sentence in  
 `mailbox.zig`/`pool.zig` result-type docs; (2) the `mailbox.zig` and  
 `pool.zig` file headers still read as one run-on paragraph across several  
@@ -3349,7 +3838,7 @@ contracts/invariants/thread-safety/complexity/violations/layer-deps → Change l
 |---|---|
 | Line accounting -018 → -019 | 1848 → 1853 = +4 structural +1 Change-log row — nothing lost |
 | Term-frequency diff (`PolyHelper`, `Cancelable`, `Io.Select`, `wakeUpAll`, `error.Wakeup`, `receiveResult`, `getWaitResult`, `MailboxHandle`, `PoolHandle`) | identical counts in -018 and -019 |
-| Forward-reference sweep (mailbox/pool/PolyHelper before their sections) | none in Ownership model; polynode retains only name-level pointers — flagged, accepted |
+| Forward-reference scan (mailbox/pool/PolyHelper before their sections) | none in Ownership model; polynode retains only name-level pointers — flagged, accepted |
 | Banned-word scan on -019 | CLEAN (same single historical Change-log meta-reference as -018) |
 | `.zig` / kitchen build files touched | none — doc-only stage |
 
@@ -3863,7 +4352,7 @@ decide fate of matryoshka-io's pre-copied `docs.yml` (keep vs. hold back until i
 
 **Summary**: Owner flagged that `drain` still appeared in 14 files / 43 matches despite  
 repeated requests. Root cause: prior stages only fixed `drain` inside files actively being  
-rewritten, or fixed the one finding explicitly scoped by the owner. This pass swept every  
+rewritten, or fixed the one finding explicitly scoped by the owner. This pass scanned every  
 live (non-historical, non-superseded-doc) occurrence.
 
 **Changes**:

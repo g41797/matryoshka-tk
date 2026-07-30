@@ -5,7 +5,7 @@
 //!
 //! - getAndSend: pool.get fills an item, mailbox.send transfers it.
 //! - receiveAndVerify: mailbox.receive gets it back, pool.put returns it.
-//! - One ownership circuit, single-threaded — the minimal cross-layer flow.
+//! - One transfer circuit, single-threaded — the minimal cross-layer flow.
 //!
 //!
 //! ```
@@ -16,7 +16,7 @@
 //!  pool.close ──► on_close ──► freed
 //! ```
 //!
-//!  Pattern: pool → mailbox → pool. One ownership circuit, single-threaded.
+//!  Pattern: pool → mailbox → pool. One transfer circuit, single-threaded.
 //!
 
 pub fn pool_mailbox_flow(allocator: std.mem.Allocator, io: std.Io) !void {
@@ -31,7 +31,7 @@ pub fn pool_mailbox_flow(allocator: std.mem.Allocator, io: std.Io) !void {
 
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }

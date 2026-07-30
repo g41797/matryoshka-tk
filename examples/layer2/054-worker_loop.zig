@@ -22,7 +22,7 @@
 pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -48,10 +48,10 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
         try mailbox.send(mbh, &slot);
     }
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     var remaining: usize = 0;
-    while (rem.popFirst()) |node| {
-        items.freeItem(@fieldParentPtr("node", node), allocator);
+    while (rem.popFirst()) |ih| {
+        items.freeItem(ih, allocator);
         remaining += 1;
     }
     fut.await(io);

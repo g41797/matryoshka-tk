@@ -54,4 +54,4 @@ while IFS= read -r -d '' f; do
     fix_one "$f"
 done < <(find "$docs_root" -name '*.md' -print0)
 
-echo "Blank-line-before-list sweep done."
+echo "Blank-line-before-list scan done."

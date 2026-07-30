@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-// Ownership flow:
+// Transfer flow:
 //
 //  buf_pool (VideoBuffer×N_BUFFERS)
 //  │ getWaitResult ──► Network Master (Io.Select)
@@ -36,7 +36,7 @@ const VideoBuffer = struct {
 const VideoBufferPolyHelper = polynode.PolyHelper(VideoBuffer);
 
 // StreamContext carries per-camera encoder state.
-// Routed through ready_queue — worker gets exclusive ownership, no locks needed.
+// Routed through ready_queue — worker gets exclusive access, no locks needed.
 const StreamContext = struct {
     poly: polynode.PolyNode = .{},
     camera_id: u32 = 0,
@@ -72,15 +72,13 @@ const VideoBufCtx = struct {
     fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}
 
     // Keep all returned buffers.
-    fn onPut(_: *anyopaque, _: usize, _: *Slot) ?std.DoublyLinkedList {
+    fn onPut(_: *anyopaque, _: usize, _: *Slot) ?polynode.ItemList {
         return null;
     }
 
-    fn onClose(ctx: *anyopaque, list: *std.DoublyLinkedList) void {
+    fn onClose(ctx: *anyopaque, list: *polynode.ItemList) void {
         const self: *VideoBufCtx = @ptrCast(@alignCast(ctx));
-        while (list.popFirst()) |node| {
-            const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-            polynode.reset(poly);
+        while (list.popFirst()) |poly| {
             var s: Slot = poly;
             VideoBufferPolyHelper.destroy(self.alloc, &s);
         }
@@ -209,7 +207,7 @@ const NetworkMaster = struct {
         sc.camera_id = vb.camera_id;
         sc.frame_id = vb.frame_id;
         sc.buffer_slot = buf_slot;
-        buf_slot = null; // ownership transferred to StreamContext
+        buf_slot = null; // the StreamContext holds the buffer now
 
         errdefer pool.put(self.buf_ph, &sc.buffer_slot);
         try mailbox.send(self.ready_queue, &ctx_slot);
@@ -224,10 +222,8 @@ const NetworkMaster = struct {
 
     // Shutdown: close the ready queue, reclaim buffers, free unsent contexts.
     fn closeAndReclaim(self: *NetworkMaster) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.ready_queue);
-        while (rem.popFirst()) |node| {
-            const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-            polynode.reset(poly);
+        var rem: polynode.ItemList = mailbox.close(self.ready_queue);
+        while (rem.popFirst()) |poly| {
             const sc: *StreamContext = StreamContextPolyHelper.mustFromNode(poly);
             pool.put(self.buf_ph, &sc.buffer_slot);
             if (sc.buffer_slot != null) {
@@ -251,10 +247,8 @@ fn seedBufferPool(buf_ph: PoolHandle, alloc: std.mem.Allocator) !void {
 }
 
 // Free any EncodedSegments left in the storage close list.
-fn freeSegmentList(list: *std.DoublyLinkedList, alloc: std.mem.Allocator) void {
-    while (list.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+fn freeSegmentList(list: *polynode.ItemList, alloc: std.mem.Allocator) void {
+    while (list.popFirst()) |poly| {
         var s: Slot = poly;
         EncodedSegmentPolyHelper.destroy(alloc, &s);
     }
@@ -315,7 +309,7 @@ pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
 
     // 3. Storage task: close the mailbox (signals exit), free unsent segments, await.
     {
-        var srem: std.DoublyLinkedList = mailbox.close(storage_mbh);
+        var srem: polynode.ItemList = mailbox.close(storage_mbh);
         freeSegmentList(&srem, allocator);
     }
     storage_fut.await(io) catch {};

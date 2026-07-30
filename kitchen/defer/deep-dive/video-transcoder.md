@@ -242,8 +242,8 @@ fn seedBufferPool(buf_ph: PoolHandle, alloc: std.mem.Allocator) !void {
 }
 ```
 
-`N_BUFFERS` is deliberately smaller than `N_WORKERS` in the real run — the pool runs dry  
-on purpose, so the Network Master's backpressure path actually executes.
+`N_BUFFERS` is deliberately smaller than `N_WORKERS` in the real run — the pool runs dry,  
+so the Network Master's backpressure path actually executes.
 
 ### Network Master — pool availability as a Select event source
 

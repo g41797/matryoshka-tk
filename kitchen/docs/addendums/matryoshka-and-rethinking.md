@@ -9,7 +9,7 @@ But from a different direction.
 
 The paper starts with channels.
 
-Matryoshka starts with ownership.
+Matryoshka starts with who holds the object.
 
 ---
 
@@ -25,7 +25,7 @@ Classic thinking
 Matryoshka
 
 - Send the object itself.
-- Ownership moves with the object.
+- The right to use it moves with the object.
 - No second lookup.
 
 Matryoshka
@@ -41,7 +41,7 @@ The object.
 ---
 
 # Pattern 2
-## Ownership is the message
+## The handoff is the message
 
 Classic
 
@@ -61,7 +61,7 @@ No additional protocol.
 
 No hidden state.
 
-Ownership is explicit.
+Who holds it is explicit.
 
 ---
 
@@ -133,7 +133,7 @@ This becomes the synchronization model.
 
 Not mutexes.
 
-Ownership.
+Exclusive access.
 
 ---
 
@@ -160,7 +160,7 @@ Continue.
 
 Synchronization happens naturally.
 
-Because ownership changes.
+Because the holder changes.
 
 ---
 
@@ -209,7 +209,7 @@ Matryoshka-Tk uses three independent paths.
 
 DATA
 
-Object ownership.
+Objects move.
 
 INTERRUPT
 
@@ -233,7 +233,7 @@ Pool owns reusable objects.
 
 Applications stop thinking about allocation.
 
-They think about ownership.
+They think about who holds what.
 
 ---
 
@@ -266,7 +266,7 @@ Job appears.
 
 Job finishes.
 
-Ownership remains clear.
+Who holds it remains clear.
 
 ---
 
@@ -279,7 +279,7 @@ They build software.
 
 Infrastructure quietly handles
 
-- ownership
+- exclusive access
 - transfer
 - reuse
 
@@ -309,7 +309,7 @@ Both reach similar principles.
 - Communicate instead of sharing.
 - Send the thing.
 - Remove hidden state.
-- Make ownership obvious.
+- Make the holder obvious.
 - Reduce synchronization.
 - Reduce accidental complexity.
 
@@ -319,11 +319,11 @@ Both reach similar principles.
 
 The paper communicates values.
 
-Matryoshka communicates ownership.
+Matryoshka communicates who holds the object.
 
 The paper replaces condition variables.
 
-Matryoshka replaces ownership ambiguity.
+Matryoshka removes doubt about who holds it.
 
 The paper simplifies concurrent code.
 
@@ -333,7 +333,7 @@ The paper is about communication.
 
 Matryoshka is about architecture built on communication.
 
-Ownership first.
+The holder first.
 
 Communication second.
 

@@ -27,14 +27,14 @@
 pub fn two_mailboxes_timer_in_select(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh1: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh1);
+        var rem: polynode.ItemList = mailbox.close(mbh1);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh1, allocator);
     }
 
     const mbh2: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh2);
+        var rem: polynode.ItemList = mailbox.close(mbh2);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh2, allocator);
     }

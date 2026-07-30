@@ -23,33 +23,33 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-028.md
+- API: matryoshka-api-reference-030.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
-- Architecture introduction: matryoshka-architecture-003.md
-- Tests: task1-tests-001.md (73 scenarios, Layers 1-3), task2-tests-001.md (16 scenarios, Layer 4)
-- Examples: task1-examples-003.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
+- Architecture introduction: matryoshka-architecture-004.md
+- Tests: task1-tests-003.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
+- Examples: task1-examples-004.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
 - Scenarios (historical): task1-scenarios-001.md (92), task2-scenarios-001.md (61)
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-048.md (slim, state-only)
-- Rules: rules-027.md
+- Plan: matryoshka-tk-implementation-plan-049.md (slim, state-only)
+- Rules: rules-032.md
 - Receive router design note: receive-router-001.md
 - New Mindset reference: matryoshka-new-mindset-001.md
-- Thinking model: matryoshka-model-003.md
-- Patterns: patterns-018.md
+- Thinking model: matryoshka-model-004.md
+- Patterns: patterns-020.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-027.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-032.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
 - Claude: implementation, tests
 
 ## Project
-Ownership-transfer and lifecycle toolkit for Zig 0.16.  
+Item-transfer and lifecycle toolkit for Zig 0.16.  
 Three layers: polynode, mailbox, pool. Both mailbox and pool optional.
 
 ## Folder Structure
@@ -177,7 +177,7 @@ phrasing; split long comment lines into staccato bullets; new rule
 `src/` comments). DONE (167/167 tests unchanged, `zig build docs` clean).  
 DOC 16b — gap-fix: 6 missed ownership hits reworded, `mailbox.zig`/`pool.zig`/  
 `polynode.zig` file headers restructured to std.Io-style intro+bullets, stray  
-line removed; new rule `rules-012.md` → `rules-013.md` (sweep-verification  
+line removed; new rule `rules-012.md` → `rules-013.md` (scan-verification  
 rule + header staccato standard). DONE (167/167 tests unchanged, `zig build  
 docs` clean).  
 DOC 17 — snake_case entry points, fix autodoc "Declaration not found" bug.  
@@ -238,9 +238,9 @@ matryoshka-architecture-foundation-4-003.md; `put`'s four hook-driven
 outcomes + no-fixed-sequence-guarantee caveat documented in  
 matryoshka-api-reference-023.md + kitchen/docs pool pages; audit of all  
 32 pool-touching files found and fixed 5 wrong-assumption bugs the reset  
-surfaced. Diagram-notation fixes (053's `mbh[0..2]`/`×3`, repo-wide sweep)  
+surfaced. Diagram-notation fixes (053's `mbh[0..2]`/`×3`, repo-wide scan)  
 and a mailbox-focused equivalent stage deferred, owner's call.  
-Staccato sweep — DONE (167/167 tests). Repo-wide audit found 9 files with  
+Staccato scan — DONE (167/167 tests). Repo-wide audit found 9 files with  
 prose-paragraph violations of the staccato rule; fixed 8 (video-transcoder.md  
 and a lower-confidence bucket left untouched, owner's call). Followed by a  
 "thread" audit — DONE (167/167 tests): worker-finish-signal pattern's stale  
@@ -355,16 +355,51 @@ Two review items rejected, owner's decision: `fromNode`/`toNode` keep `*PolyNode
 (`node: ItemHandle` reads badly, and `*PolyNode` is honest where the node is  
 opened); `isIt` keeps its tag parameter (`items.createByTag` has no item yet, and  
 `X.poly.tag` reads better than `Helper.toNode(&X).*.tag`).  
-API 7e — GATE, NOT IMPLEMENTED. Was 7d before the renumber. Recommends  
-`toListNode` for the 5 genuine `list.append` sites, keeping the 6 deliberate  
-raw-link sites untouched. Adds public API surface, so it needs owner approval.  
-Detail in plan-048.
+API 7e — CLOSED AS SUPERSEDED by API 8. `ItemList.append` takes an `ItemHandle`,  
+so the 5 genuine `list.append(&x.poly.node)` sites `toListNode` targeted are gone  
+without the accessor. The 6 deliberate raw-link sites stay raw.
 
-**Next stage**: API 7e decision — owner's call. CANDIDATES is dropped (owner's  
-decision) — it carried from plan-043 through plan-046 without starting, and  
-`design/candidates/` does not exist on disk. Deferred: diagram-notation sweep,  
-mailbox-focused pool-audit equivalent, showcase-post variants  
-(Ziggit/Discord/Reddit), REBRAND's editorial prose pass — all owner's call.
+API 8 — DONE (175/175 tests, +4 new). `ItemList` closes the  
+`std.DoublyLinkedList` boundary. Five public signatures moved:  
+`mailbox.receive_batch`, `mailbox.close`, `pool.put_all`, `PoolHooks.on_put`,  
+`PoolHooks.on_close`. `popFirst` returns an `ItemHandle` and calls  
+`polynode.reset`, turning the documented reset trap into a type guarantee.  
+`_concat` deleted, replaced by `ItemList.concat` forwarding to `std`'s  
+`concatByMoving`. 8a — design doc `item-list-005.md`, 25 questions answered  
+over three rounds. 8b — type + scenarios 100-103. 8c — one atomic migration,  
+~80 call sites across `src/`, `examples/`, `tests/`, `stories/`. 8d — docs to  
+api-reference-029, patterns-019, rules-029, task1-tests-002.  
+Closing gate holds: `@fieldParentPtr` appears only in `src/polynode.zig` and  
+`tests/layer1_polynode.zig` scenarios 6, 7, 8. Detail in plan-049.
+
+**Next stage**: none queued, one open question. `ItemList` forwards to  
+`std.DoublyLinkedList`, which validates nothing by design — four misuses corrupt  
+silently. Checking that found an older defect: `polynode.is_linked` is false for  
+a list's sole member, so six asserts guard with a check that has a hole —  
+`PolyHelper.destroy`, `moveFromSlot`, `_add_returned_item`, `mailbox.send`,  
+`mailbox.send_oob`, `pool.put`. The proposed debug-only `bool` on `PolyNode` was  
+withdrawn in item-list-003.md: it is written under whichever mutex the item's  
+current list sits behind, so in the buggy case it exists to catch, the field  
+itself races — and the argument applies unchanged to `prev`/`next`, so no state  
+kept in an item can validate this. Q26 recommended D. item-list-005.md then  
+recovers part of it: a **walk** of the list before insert survives the argument  
+— it writes nothing and reads only the container's own chain plus an address it  
+never dereferences — and closes two of the eight misuse cases, including  
+`insertAfter` with a foreign `existing`, which only the rejected pointer field  
+had covered. So the rule is narrower than 003 said: detection needing a fact  
+about an *item* is impossible, detection answerable from a *container's own  
+contents* is not. What survives is Q34 the walk's scope (recommended all four  
+inserts; the argument against is that every internal insert holds a mutex, so  
+Debug walks the queue under the lock), Q31 `appendFromSlot` (prevention, no  
+shared state), Q28, and Q27/Q33 on what `is_linked` becomes. Q26-Q34 in  
+item-list-005.md, recommended as a new stage API 9. Owed independently: the happens-before half of the exclusive-access  
+invariant, written down nowhere. Nothing implemented. Also open from 8a: Q25's protection list, which the owner  
+postponed — the migration ran with the three proposed protections applied as  
+written. CANDIDATES is dropped (owner's decision) — it carried from plan-043  
+through plan-046 without starting, and `design/candidates/` does not exist on  
+disk. Deferred: diagram-notation scan, mailbox-focused pool-audit equivalent,  
+showcase-post variants (Ziggit/Discord/Reddit), REBRAND's editorial prose pass —  
+all owner's call.
 
 
 ## Session Log

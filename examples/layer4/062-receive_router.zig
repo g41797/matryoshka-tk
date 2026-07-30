@@ -203,7 +203,7 @@ const RouterMaster = struct {
 
     /// Ends the stream. The router sees `.closed` and finishes.
     fn closeMailbox(self: *RouterMaster) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         pool.put_all(self.ph, &rem);
         items.freeList(&rem, self.allocator);
     }
@@ -264,7 +264,7 @@ const RouterMaster = struct {
     }
 
     fn destroy(self: *RouterMaster) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.allocator);
         mailbox.destroy(self.mbh, self.allocator);
         pool.close(self.ph);

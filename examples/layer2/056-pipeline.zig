@@ -22,9 +22,9 @@ pub fn pipeline(allocator: std.mem.Allocator, io: std.Io) !void {
     const stage1: MailboxHandle = try mailbox.new(io, allocator);
     const stage2: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var r1: std.DoublyLinkedList = mailbox.close(stage1);
+        var r1: polynode.ItemList = mailbox.close(stage1);
         items.freeList(&r1, allocator);
-        var r2: std.DoublyLinkedList = mailbox.close(stage2);
+        var r2: polynode.ItemList = mailbox.close(stage2);
         items.freeList(&r2, allocator);
         mailbox.destroy(stage1, allocator);
         mailbox.destroy(stage2, allocator);

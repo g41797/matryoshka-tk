@@ -12,7 +12,7 @@
 //! ```
 //!  pool (2 items)    mailbox (2 items)
 //!  │
-//!  mailbox.close ──► std.DoublyLinkedList ──► popFirst ──► freeItem (×2)
+//!  mailbox.close ──► ItemList ──► popFirst ──► freeItem (×2)
 //!  pool.close   ──► on_close ──► freeList (×2)
 //!  │
 //!  Entire shutdown: standard Zig stdlib — no Matryoshka-specific cleanup API.
@@ -64,11 +64,9 @@ fn seedPool(ph: PoolHandle, count: usize) !void {
 }
 
 fn closeMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator) usize {
-    var mbx_list: std.DoublyLinkedList = mailbox.close(mbh);
+    var mbx_list: polynode.ItemList = mailbox.close(mbh);
     var freed: usize = 0;
-    while (mbx_list.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+    while (mbx_list.popFirst()) |poly| {
         items.freeItem(poly, alloc);
         freed += 1;
     }

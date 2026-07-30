@@ -27,7 +27,14 @@ pub const PolyNode = struct {
 
 pub const ItemHandle = *PolyNode;
 pub const Slot = ?ItemHandle;
+pub const ItemList = struct { ... };
 ```
+
+One item, zero-or-one, many:
+
+- `ItemHandle` — one item.
+- `Slot` — zero or one item.
+- `ItemList` — many items.
 
 - `PolyNode` is the type every Item embeds. Its `tag` is a unique
   address that identifies which type a node lives inside (see Step 2).

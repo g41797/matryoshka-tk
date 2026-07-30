@@ -4,7 +4,8 @@
 
 # Matryoshka-Tk — Toolkit for Building Multitasking Systems in Zig
 
----  
+---
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Linux](https://github.com/g41797/matryoshka-tk/actions/workflows/linux.yml/badge.svg)](https://github.com/g41797/matryoshka-tk/actions/workflows/linux.yml)
 [![Windows](https://github.com/g41797/matryoshka-tk/actions/workflows/windows.yml/badge.svg)](https://github.com/g41797/matryoshka-tk/actions/workflows/windows.yml)
@@ -13,6 +14,61 @@
 
 
 ---
+
+<div style="text-align: center;">  
+<a href="https://g41797.github.io/matryoshka-tk/apidocs/index.html" target="_blank" rel="noopener noreferrer">In a hurry?</a>  
+</div>
+
+---
+
+
+Software has two worlds.
+
+- The first moves data.
+- The second processes data.
+
+Matryoshka-Tk is a _toolkit_ for the second world.
+
+It provides three building blocks.
+
+- PolyNode
+- Mailbox
+- Pool
+
+Together they helps you organizes processing.
+
+---
+
+## PolyNode — Smart Brother of Zig's `std.DoublyLinkedList.Node`
+
+As Zig developer, you already familiar with _DoublyLinkedList_ and it's _Node_.
+
+```zig
+/// This struct contains only the prev and next pointers and not any data
+/// payload. The intended usage is to embed it intrusively into another data
+/// structure and access the data with `@fieldParentPtr`.
+pub const Node = struct {
+  prev: ?*Node = null,
+  next: ?*Node = null,
+};
+```
+
+Embedding (_intrusion_) of Node to structure helps 
+
+- to 'link' structures with different types
+- without knowledge about actual type
+
+It helps to _Intrusive Container_ (DoublyLinkedList).
+
+But application still should guess what is the type of parent struct.
+
+```zig
+pub const PolyNode = struct {
+    node: std.DoublyLinkedList.Node = .{},
+    tag: *const anyopaque = undefined,
+};
+```
+
 
 ## The problem
 

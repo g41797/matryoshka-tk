@@ -20,7 +20,7 @@
 pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -38,12 +38,11 @@ pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
     f3.await(io);
 
     const total_sent: usize = ctx_ev.sent + ctx_sn.sent + ctx_alt.sent;
-    var batch: std.DoublyLinkedList = try mailbox.receive_batch(mbh);
+    var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
     var events_received: usize = 0;
     var sensors_received: usize = 0;
 
-    while (batch.popFirst()) |node| {
-        const poly: *PolyNode = @fieldParentPtr("node", node);
+    while (batch.popFirst()) |poly| {
         if (items.Event.EventPolyHelper.fromNode(poly)) |_| {
             events_received += 1;
         } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |_| {
@@ -115,6 +114,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;

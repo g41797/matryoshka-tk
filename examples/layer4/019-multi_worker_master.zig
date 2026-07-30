@@ -20,7 +20,7 @@
 pub fn multi_worker_master(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -69,7 +69,7 @@ fn sendItems(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
 }
 
 fn awaitAll(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, group: *Io.Group) !void {
-    var remaining: std.DoublyLinkedList = mailbox.close(mbh);
+    var remaining: polynode.ItemList = mailbox.close(mbh);
     items.freeList(&remaining, alloc);
     try group.await(io);
 }
@@ -79,7 +79,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
 const polynode = matryoshka.polynode;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;
 const Io = std.Io;

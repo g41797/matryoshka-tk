@@ -135,7 +135,7 @@ When to use.
 
 Code shape.  
 ```zig
-fn onClose(ctx: *anyopaque, list: *std.DoublyLinkedList) void {
+fn onClose(ctx: *anyopaque, list: *polynode.ItemList) void {
     const self: *VideoBufCtx = @ptrCast(@alignCast(ctx));
     while (list.popFirst()) |node| {
         const poly: *polynode.PolyNode = @fieldParentPtr("node", node);

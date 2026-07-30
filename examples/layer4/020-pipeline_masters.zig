@@ -138,7 +138,7 @@ const PipelineMaster = struct {
         self.io = io;
         self.transformer_mbh = try mailbox.new(io, allocator);
         errdefer {
-            var rem: std.DoublyLinkedList = mailbox.close(self.transformer_mbh);
+            var rem: polynode.ItemList = mailbox.close(self.transformer_mbh);
             items.freeList(&rem, allocator);
             mailbox.destroy(self.transformer_mbh, allocator);
         }
@@ -150,10 +150,10 @@ const PipelineMaster = struct {
     }
 
     fn destroy(self: *PipelineMaster) void {
-        var rem1: std.DoublyLinkedList = mailbox.close(self.transformer_mbh);
+        var rem1: polynode.ItemList = mailbox.close(self.transformer_mbh);
         items.freeList(&rem1, self.allocator);
         mailbox.destroy(self.transformer_mbh, self.allocator);
-        var rem2: std.DoublyLinkedList = mailbox.close(self.consumer_mbh);
+        var rem2: polynode.ItemList = mailbox.close(self.consumer_mbh);
         items.freeList(&rem2, self.allocator);
         mailbox.destroy(self.consumer_mbh, self.allocator);
         self.allocator.destroy(self);

@@ -176,7 +176,7 @@ const GracefulShutdownMaster = struct {
         self.recycled_pool = 0;
         self.mbh = try mailbox.new(io, allocator);
         errdefer {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+            var rem: polynode.ItemList = mailbox.close(self.mbh);
             items.freeList(&rem, allocator);
             mailbox.destroy(self.mbh, allocator);
         }
@@ -193,7 +193,7 @@ const GracefulShutdownMaster = struct {
     }
 
     fn destroy(self: *GracefulShutdownMaster) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.allocator);
         mailbox.destroy(self.mbh, self.allocator);
         pool.close(self.ph);

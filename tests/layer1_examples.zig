@@ -12,9 +12,9 @@ test "21 - define a PolyNode type" {
     };
 }
 
-test "22 - ownership transfer via Slot" {
+test "22 - item transfer via Slot" {
     std.testing.log_level = .debug;
-    layer1.ownership_transfer.ownership_transfer_via_slot(allocator, io) catch |err| {
+    layer1.ownership_transfer.item_transfer_via_slot(allocator, io) catch |err| {
         std.log.err("example failed: {s}", .{@errorName(err)});
         return err;
     };

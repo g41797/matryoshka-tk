@@ -88,8 +88,8 @@ pub const PoolHooks = struct {
     ctx:      *anyopaque,
     tags:     []const *const anyopaque,
     on_get:   *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,
-    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) ?std.DoublyLinkedList,
-    on_close: *const fn (ctx: *anyopaque, list: *std.DoublyLinkedList) void,
+    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) ?polynode.ItemList,
+    on_close: *const fn (ctx: *anyopaque, list: *polynode.ItemList) void,
 };
 ```
 
@@ -188,7 +188,7 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
     - **returned after reset** — hook resets the item's data before keeping it.
     - **deleted, a different item returned** — hook frees the original and puts a different item in `slot.*`.
   - `slot.*` stays non-null exactly when an item — original or replacement — is kept.
-  - `on_put` also returns `?std.DoublyLinkedList` — items to add alongside
+  - `on_put` also returns `?ItemList` — items to add alongside
     `slot`. `null` or empty: nothing extra. Non-empty: each item is added  
     the same way `slot`'s item is — same checks, same assert on foreign  
     tag. See Composite Items below.
@@ -211,7 +211,7 @@ examples' convention, not a matryoshka rule.
 An item may hold other pooled items.
 
 Before the parent item enters the pool, `on_put` can return them as an  
-extra `std.DoublyLinkedList` alongside `slot`. The pool adds every item in  
+extra `ItemList` alongside `slot`. The pool adds every item in  
 that list the same way it adds `slot`'s item.
 
 The hook is responsible for handing back only valid, unlinked,  
@@ -221,7 +221,7 @@ real composite.
 The pool does not distinguish between simple and composite items.
 
 ```zig
-pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void
+pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void
 ```
 
 - Returns batch of handles to pool.
@@ -332,13 +332,13 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
 - `on_put`:
   - Set `slot.*` to null = destroy (optionally after putting a different item there first — see the four `put` outcomes above).
   - Leave non-null = keep in pool, as-is or after resetting its data — your choice.
-  - Return value: `?std.DoublyLinkedList` of extra items — composite items.
+  - Return value: `?ItemList` of extra items — composite items.
     `null`/empty = nothing extra. Non-empty = each item added like `slot`'s.  
     You are responsible for handing back only valid, unlinked, correctly-tagged  
     items — the pool does not check that they belong together.
 
 - `on_close`:
-  - Receives `*std.DoublyLinkedList`.
+  - Receives `*ItemList`.
   - Walks via `popFirst()`, frees each handle.
 - Hook reentrancy is forbidden. From inside any hook, do not:
   - call `get`, `get_wait`, `put`, `put_all`, `close`, or `destroy` on the same pool

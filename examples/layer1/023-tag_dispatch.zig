@@ -21,7 +21,7 @@
 
 pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void {
     _ = io;
-    var list: std.DoublyLinkedList = .{};
+    var list: polynode.ItemList = .{};
 
     defer freeRemaining(&list, allocator);
 
@@ -29,7 +29,7 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
-        list.append(&slot.?.*.node);
+        list.append(slot.?);
         slot = null;
     }
 
@@ -37,15 +37,14 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
         var slot: Slot = null;
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 2.71;
-        list.append(&slot.?.*.node);
+        list.append(slot.?);
         slot = null;
     }
 
     var processed_events: usize = 0;
     var processed_sensors: usize = 0;
 
-    while (list.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
+    while (list.popFirst()) |poly| {
 
         if (items.Event.EventPolyHelper.fromNode(poly)) |recovered_ev| {
             try helpers.expect(error.TagDispatchFailed, recovered_ev.*.code == 7, "wrong event code");
@@ -64,9 +63,8 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
     try helpers.expect(error.TagDispatchFailed, processed_sensors == 1, "wrong sensor count");
 }
 
-fn freeRemaining(list: *std.DoublyLinkedList, alloc: std.mem.Allocator) void {
-    while (list.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
+fn freeRemaining(list: *polynode.ItemList, alloc: std.mem.Allocator) void {
+    while (list.popFirst()) |poly| {
         items.freeItem(poly, alloc);
     }
 }

@@ -707,7 +707,7 @@ Likewise, a Pool
 
 - may sit on the side 
 - because it is not part of the communication path 
-- but of the ownership path.
+- but of the transfer path.
 
 The resulting diagrams 
 
@@ -737,7 +737,7 @@ The reader should be able to tell immediately which layer they're reading:
 
 | Level          | Good                           | Avoid                                 |
 | -------------- | ------------------------------ | ------------------------------------- |
-| External       | Scalable.                      | Adds workers.                         |
+| External       | Handles more load.             | Adds workers.                         |
 | External       | Works with limited memory.     | Reuses buffers.                       |
 | Architecture   | Pool manages reusable buffers. | `std.ArrayList` buffer cache.         |
 | Implementation | Uses intrusive pools.          | (this belongs in implementation docs) |
@@ -776,7 +776,7 @@ Possible extensions include
 * recycler
 * timers
 * cancellation
-* ownership transfer
+* item transfer
 * system boundaries
 * external systems
 

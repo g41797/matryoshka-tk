@@ -29,10 +29,10 @@ pub fn timer_cancel_close_walk_remaining(allocator: std.mem.Allocator, io: std.I
     const mbh1: MailboxHandle = try mailbox.new(io, allocator);
     const mbh2: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem1: std.DoublyLinkedList = mailbox.close(mbh1);
+        var rem1: polynode.ItemList = mailbox.close(mbh1);
         items.freeList(&rem1, allocator);
         mailbox.destroy(mbh1, allocator);
-        var rem2: std.DoublyLinkedList = mailbox.close(mbh2);
+        var rem2: polynode.ItemList = mailbox.close(mbh2);
         items.freeList(&rem2, allocator);
         mailbox.destroy(mbh2, allocator);
     }

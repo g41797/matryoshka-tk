@@ -18,14 +18,14 @@
 pub fn request_response_between_masters(allocator: std.mem.Allocator, io: std.Io) !void {
     const a_inbox: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(a_inbox);
+        var rem: polynode.ItemList = mailbox.close(a_inbox);
         items.freeList(&rem, allocator);
         mailbox.destroy(a_inbox, allocator);
     }
 
     const b_inbox: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(b_inbox);
+        var rem: polynode.ItemList = mailbox.close(b_inbox);
         items.freeList(&rem, allocator);
         mailbox.destroy(b_inbox, allocator);
     }
@@ -102,6 +102,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
 const polynode = matryoshka.polynode;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;

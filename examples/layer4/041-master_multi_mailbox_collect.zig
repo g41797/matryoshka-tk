@@ -11,9 +11,9 @@
 //! ```
 //!  mailbox_a (2 items)    mailbox_b (3 items)
 //!  │
-//!  mailbox_a.close ──► list_a (std.DoublyLinkedList, 2 items)
-//!  mailbox_b.close ──► list_b (std.DoublyLinkedList, 3 items)
-//!  list_a.concatByMoving(&list_b) ──► combined (5 items)
+//!  mailbox_a.close ──► list_a (ItemList, 2 items)
+//!  mailbox_b.close ──► list_b (ItemList, 3 items)
+//!  list_a.concat(&list_b) ──► combined (5 items)
 //!  walk combined: popFirst ──► freeItem (×5)
 //!  │
 //!  One stdlib walk handles items from multiple mailboxes — no special API.
@@ -29,7 +29,7 @@ pub fn master_pre_shutdown_collect(allocator: std.mem.Allocator, io: std.Io) !vo
     try ctx.fillMailboxB();
     std.log.info("before collect: {d} in mailbox_a, {d} in mailbox_b", .{ N_A, N_B });
 
-    var combined: std.DoublyLinkedList = ctx.closeAndMerge();
+    var combined: polynode.ItemList = ctx.closeAndMerge();
     const freed = collectAndFree(&combined, allocator);
 
     try helpers.expect(error.MasterMultiMailboxFailed, freed == N_A + N_B, "freed count mismatch");
@@ -64,22 +64,20 @@ const Ctx = struct {
         }
     }
 
-    fn closeAndMerge(self: *Ctx) std.DoublyLinkedList {
-        var list_a: std.DoublyLinkedList = mailbox.close(self.mbh_a);
+    fn closeAndMerge(self: *Ctx) polynode.ItemList {
+        var list_a: polynode.ItemList = mailbox.close(self.mbh_a);
         mailbox.destroy(self.mbh_a, self.alloc);
-        var list_b: std.DoublyLinkedList = mailbox.close(self.mbh_b);
+        var list_b: polynode.ItemList = mailbox.close(self.mbh_b);
         mailbox.destroy(self.mbh_b, self.alloc);
-        list_a.concatByMoving(&list_b);
+        list_a.concat(&list_b);
         std.log.info("concatByMoving: combined list has {d} items", .{N_A + N_B});
         return list_a;
     }
 };
 
-fn collectAndFree(combined: *std.DoublyLinkedList, alloc: std.mem.Allocator) usize {
+fn collectAndFree(combined: *polynode.ItemList, alloc: std.mem.Allocator) usize {
     var freed: usize = 0;
-    while (combined.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+    while (combined.popFirst()) |poly| {
         items.freeItem(poly, alloc);
         freed += 1;
     }

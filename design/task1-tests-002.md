@@ -1,4 +1,8 @@
-# Task 1 — Test Scenarios for Layers 1–3
+# Task 1 — Test Scenarios for Layers 1–3 (002)
+
+Versioned doc. Replaces [task1-tests-001.md](task1-tests-001.md).
+
+Change from task1-tests-001: API 8 — scenarios 100–103 added for `ItemList`. Scenario 10 marked as deliberately raw. Cross-layer note on batch returns updated.
 
 Extracted from `task1-scenarios-001.md`. Scenario numbers preserved.
 
@@ -20,7 +24,7 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 7. **polynode.reset clears links** — after reset, `node.prev == null` and `node.next == null`
 8. **polynode.is_linked detection** — linked node returns true; reset node returns false
 9. **Slot null semantics** — `null` means not owned; non-null means owned; assignment to null releases ownership handle
-10. **Multiple types in one list** — push Event and Sensor into same `std.DoublyLinkedList`, pop and dispatch on tag, verify correct recovery via `@fieldParentPtr`. Demonstrates stdlib compatibility: PolyNode-based items participate in standard lists with no adapter
+10. **Multiple types in one list** — push Event and Sensor into the same `std.DoublyLinkedList`, pop and dispatch on tag, verify correct recovery via `@fieldParentPtr`. Demonstrates stdlib compatibility: PolyNode-based items participate in standard lists with no adapter. Deliberately raw — this scenario tests the layout itself (API 8 protection list)
 
 ### Tests — Ownership State Transitions
 
@@ -40,6 +44,13 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 18. **MailboxHandle is a PolyNode** — `MailboxHandle = *PolyNode`; verify `mailbox.is_it_you(mbh.tag)` returns true
 19. **PoolHandle is a PolyNode** — `PoolHandle = *PolyNode`; verify `pool.is_it_you(ph.tag)` returns true
 20. **Per-module destroy** — `mailbox.destroy(mbh, alloc)` frees a closed mailbox. `pool.destroy(ph, alloc)` frees a closed pool
+
+### Tests — ItemList (API 8)
+
+100. **ItemList append, prepend, insertAfter, popFirst** — build a list from `ItemHandle`, pop it back in order, recover each item with `PolyHelper.fromNode`; empty-list behaviour for `isEmpty`, `len`, and `popFirst`
+101. **ItemList popFirst returns an unlinked item** — `polynode.is_linked` is false on every popped handle, including the last; the handle drops straight into a `Slot`
+102. **ItemList moveFromList and moveToList** — both directions empty their source, never alias; empty lists move cleanly
+103. **ItemList iterate walks, concat empties the source** — `iterate` yields handles in order and removes nothing, items stay linked; `concat` moves every item over and leaves the source empty
 
 ---
 
@@ -124,5 +135,5 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 - Ownership-state tests validate the architecture's core invariants, not implementation details
 - API uses module-function style: `mailbox.send(mb, &item)` not `mailbox_send(mb, &item)`
 - Handle types are already pointers: `mbh: MailboxHandle` (= `*PolyNode`), not `mbh: *MailboxHandle`
-- Batch returns are `std.DoublyLinkedList`, walked via `popFirst()` — `DoublyLinkedList` does NOT clear links; call `polynode.reset` before checking `is_linked`
+- Batch returns are `polynode.ItemList`, walked via `popFirst()` — `ItemList.popFirst` clears the links, so no caller-side `polynode.reset` (API 8)
 - Timeout is `?u64`: null = wait forever, value = nanoseconds

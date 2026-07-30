@@ -45,15 +45,14 @@ fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}
 
 fn resetOnPut(_: *Slot) void {} // PoolHandle items carry no resettable scalar state — kept for on_put-shape consistency
 
-fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
     resetOnPut(slot);
     return null;
 }
 
-fn onClose(ctx_opaque: *anyopaque, list: *std.DoublyLinkedList) void {
+fn onClose(ctx_opaque: *anyopaque, list: *polynode.ItemList) void {
     const ctx: *CarrierCtx = @ptrCast(@alignCast(ctx_opaque));
-    while (list.popFirst()) |node| {
-        const poly: *PolyNode = @fieldParentPtr("node", node);
+    while (list.popFirst()) |poly| {
         const ph: PoolHandle = poly;
         pool.close(ph);
         pool.destroy(ph, ctx.alloc);
@@ -92,7 +91,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const pool = matryoshka.pool;
 const polynode = matryoshka.polynode;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const PoolHandle = pool.PoolHandle;
 const PoolPolyHelper = pool.PoolPolyHelper;

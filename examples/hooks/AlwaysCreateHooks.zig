@@ -17,13 +17,13 @@ pub fn onGet(ptr: *anyopaque, tag: *const anyopaque, _: usize, slot: *polynode.S
     items.createByTag(tag, self.alloc, slot);
 }
 
-pub fn onPut(_: *anyopaque, _: usize, slot: *polynode.Slot) ?std.DoublyLinkedList {
+pub fn onPut(_: *anyopaque, _: usize, slot: *polynode.Slot) ?polynode.ItemList {
     if (slot.* == null) return null;
     items.resetOnPut(slot);
     return null;
 }
 
-pub fn onClose(ptr: *anyopaque, list: *std.DoublyLinkedList) void {
+pub fn onClose(ptr: *anyopaque, list: *polynode.ItemList) void {
     const self: *Self = @ptrCast(@alignCast(ptr));
     items.freeList(list, self.alloc);
 }

@@ -159,7 +159,7 @@ When to use.
 Code shape.  
 ```zig
 fn destroy(self: *Master) void {
-    var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+    var rem: polynode.ItemList = mailbox.close(self.mbh);
     helpers.freeList(&rem, self.allocator);
     mailbox.destroy(self.mbh, self.allocator);
     pool.close(self.ph);

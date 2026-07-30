@@ -40,7 +40,7 @@ pub fn pool_hooks_mailbox_flow(allocator: std.mem.Allocator, io: std.Io) !void {
 
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }

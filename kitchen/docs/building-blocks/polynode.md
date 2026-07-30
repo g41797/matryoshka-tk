@@ -50,7 +50,7 @@ the Item itself.
 
 - One handle, one Item.
 - Specialized names exist for handles to specific infrastructure items — a mailbox
-  handle, a pool handle — but they are all the same kind of pointer underneath.
+  handle, a pool handle — but they are all the same kind of pointer.
 
 ## Slot — where a handle lives while it's yours
 

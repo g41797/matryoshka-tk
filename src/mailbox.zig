@@ -84,7 +84,7 @@ pub fn send(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     if (mbx.*.closed.load(.monotonic)) return error.Closed;
 
     const handle: polynode.ItemHandle = slot.*.?;
-    mbx.*.list.append(&handle.*.node);
+    mbx.*.list.append(handle);
     mbx.*.len += 1;
     slot.* = null;
 
@@ -114,11 +114,11 @@ pub fn send_oob(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!void {
     const handle: polynode.ItemHandle = slot.*.?;
 
     if (mbx.*.oob_last) |last| {
-        mbx.*.list.insertAfter(last, &handle.*.node);
+        mbx.*.list.insertAfter(last, handle);
     } else {
-        mbx.*.list.prepend(&handle.*.node);
+        mbx.*.list.prepend(handle);
     }
-    mbx.*.oob_last = &handle.*.node;
+    mbx.*.oob_last = handle;
     mbx.*.oob_count += 1;
     mbx.*.len += 1;
     slot.* = null;
@@ -182,16 +182,14 @@ pub fn receive(mbh: MailboxHandle, slot: *polynode.Slot, timeout_ns: ?u64) (erro
 
     if (mbx.*.len == 0) return error.Wakeup;
 
-    const node: *std.DoublyLinkedList.Node = mbx.*.list.popFirst().?;
+    const ih: polynode.ItemHandle = mbx.*.list.popFirst().?;
     mbx.*.len -= 1;
     if (mbx.*.oob_count > 0) {
         mbx.*.oob_count -= 1;
         if (mbx.*.oob_count == 0) mbx.*.oob_last = null;
     }
 
-    const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-    polynode.reset(poly);
-    slot.* = poly;
+    slot.* = ih;
 }
 
 /// If mailbox is closed - returns error.Closed
@@ -218,16 +216,14 @@ pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool 
 
     if (mbx.*.len == 0) return false;
 
-    const node: *std.DoublyLinkedList.Node = mbx.*.list.popFirst().?;
+    const ih: polynode.ItemHandle = mbx.*.list.popFirst().?;
     mbx.*.len -= 1;
     if (mbx.*.oob_count > 0) {
         mbx.*.oob_count -= 1;
         if (mbx.*.oob_count == 0) mbx.*.oob_last = null;
     }
 
-    const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-    polynode.reset(poly);
-    slot.* = poly;
+    slot.* = ih;
     return true;
 }
 
@@ -238,7 +234,7 @@ pub fn try_receive(mbh: MailboxHandle, slot: *polynode.Slot) error{Closed}!bool 
 /// - empties mailbox
 ///
 /// Returns an empty list if the mailbox is empty.
-pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
+pub fn receive_batch(mbh: MailboxHandle) error{Closed}!polynode.ItemList {
     const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
 
     if (mbx.*.closed.load(.acquire)) return error.Closed;
@@ -249,7 +245,7 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
 
     if (mbx.*.closed.load(.monotonic)) return error.Closed;
 
-    const result: std.DoublyLinkedList = mbx.*.list;
+    const result: polynode.ItemList = mbx.*.list;
     mbx.*.list = .{};
     mbx.*.len = 0;
     mbx.*.oob_count = 0;
@@ -265,7 +261,7 @@ pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList {
 ///
 /// Safe to call more than once.\
 /// Later calls return an empty list.
-pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
+pub fn close(mbh: MailboxHandle) polynode.ItemList {
     const mbx: *_Mailbox = MailboxPolyHelper.mustFromNode(mbh);
     const io: Io = mbx.*.io;
     mbx.*.mutex.lockUncancelable(io);
@@ -277,7 +273,7 @@ pub fn close(mbh: MailboxHandle) std.DoublyLinkedList {
     }
     mbx.*.closed.store(true, .release);
 
-    const result: std.DoublyLinkedList = mbx.*.list;
+    const result: polynode.ItemList = mbx.*.list;
     mbx.*.list = .{};
     mbx.*.len = 0;
     mbx.*.oob_count = 0;
@@ -366,11 +362,11 @@ const _Mailbox = struct {
     poly: polynode.PolyNode,
     mutex: Io.Mutex,
     cond: Io.Condition,
-    list: std.DoublyLinkedList,
+    list: polynode.ItemList,
     len: usize,
     closed: std.atomic.Value(bool),
     oob_count: usize,
-    oob_last: ?*std.DoublyLinkedList.Node,
+    oob_last: ?polynode.ItemHandle,
     wake_epoch: u64,
     io: Io,
     alloc: std.mem.Allocator,

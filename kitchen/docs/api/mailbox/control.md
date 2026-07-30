@@ -24,7 +24,7 @@ pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void
 ## close
 
 ```zig
-pub fn close(mbh: MailboxHandle) std.DoublyLinkedList
+pub fn close(mbh: MailboxHandle) polynode.ItemList
 ```
 
 - Can be called more than once.

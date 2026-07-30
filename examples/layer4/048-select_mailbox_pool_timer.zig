@@ -119,7 +119,7 @@ const MailboxPoolTimerMaster = struct {
         self.ticks = 0;
         self.mbh = try mailbox.new(io, allocator);
         errdefer {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+            var rem: polynode.ItemList = mailbox.close(self.mbh);
             items.freeList(&rem, allocator);
             mailbox.destroy(self.mbh, allocator);
         }
@@ -137,7 +137,7 @@ const MailboxPoolTimerMaster = struct {
     }
 
     fn destroy(self: *MailboxPoolTimerMaster) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.allocator);
         mailbox.destroy(self.mbh, self.allocator);
         pool.close(self.ph);

@@ -87,7 +87,7 @@ const MasterWithPool = struct {
     fn destroy(self: *MasterWithPool) void {
         pool.close(self.ph);
         pool.destroy(self.ph, self.allocator);
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.allocator);
         mailbox.destroy(self.mbh, self.allocator);
         self.allocator.destroy(self);

@@ -1,4 +1,4 @@
-# A boring enterprise programmer mindset
+# How a boring enterprise programmer thinks
 
 I don't want another event loop.
 
@@ -119,7 +119,7 @@ Five years later,
 
 I want to add a feature.
 
-Not rewrite the execution model.
+Not rewrite how the system runs.
 
 ---
 
@@ -133,7 +133,7 @@ architecture wins more often than microbenchmarks.
 
 ---
 
-That is the mindset behind a "boring system."
+That is the thinking behind a "boring system."
 
 Not slow.
 

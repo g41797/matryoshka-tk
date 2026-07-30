@@ -75,7 +75,7 @@ const CancelDecideMaster = struct {
                 .inbox1 => |r| switch (r) {
                     .canceled, .closed => {
                         std.log.info("inbox1: stopped — master closes mbh1", .{});
-                        var rem: std.DoublyLinkedList = mailbox.close(self.mbh1);
+                        var rem: polynode.ItemList = mailbox.close(self.mbh1);
                         items.freeList(&rem, self.allocator);
                         self.mbh1_closed = true;
                     },
@@ -153,7 +153,7 @@ const CancelDecideMaster = struct {
         self.mbh1_closed = false;
         self.mbh1 = try mailbox.new(io, allocator);
         errdefer {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbh1);
+            var rem: polynode.ItemList = mailbox.close(self.mbh1);
             items.freeList(&rem, allocator);
             mailbox.destroy(self.mbh1, allocator);
         }
@@ -163,11 +163,11 @@ const CancelDecideMaster = struct {
 
     fn destroy(self: *CancelDecideMaster) void {
         if (!self.mbh1_closed) {
-            var rem: std.DoublyLinkedList = mailbox.close(self.mbh1);
+            var rem: polynode.ItemList = mailbox.close(self.mbh1);
             items.freeList(&rem, self.allocator);
         }
         mailbox.destroy(self.mbh1, self.allocator);
-        var rem2: std.DoublyLinkedList = mailbox.close(self.mbh2);
+        var rem2: polynode.ItemList = mailbox.close(self.mbh2);
         items.freeList(&rem2, self.allocator);
         mailbox.destroy(self.mbh2, self.allocator);
         self.allocator.destroy(self);

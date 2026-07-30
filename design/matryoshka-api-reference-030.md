@@ -1,6 +1,10 @@
 # Matryoshka API Reference — Zig 0.16
 
-Replaces [matryoshka-api-reference-027.md](matryoshka-api-reference-027.md).
+Replaces [matryoshka-api-reference-029.md](matryoshka-api-reference-029.md).
+
+API 8 doc-comment sync (rules-030): `ItemList._list` reworded — "underneath" and "on purpose" are banned words, and the entry now matches the field's doc comment in `src/polynode.zig`.
+
+API 8: `ItemList` — the toolkit's list type. `mailbox.receive_batch`, `mailbox.close`, `pool.put_all`, `PoolHooks.on_put`, and `PoolHooks.on_close` speak it instead of `std.DoublyLinkedList`. `popFirst` yields `ItemHandle` and clears the links, so `@fieldParentPtr` no longer appears in application code.
 
 > Function descriptions in this reference serve as the source for `///` Zig doc comments in the implementation.
 
@@ -109,7 +113,14 @@ pub const PolyNode = struct {
 
 pub const ItemHandle = *PolyNode;
 pub const Slot = ?ItemHandle;
+pub const ItemList = struct { ... };
 ```
+
+One item, zero-or-one, many:
+
+- `ItemHandle` — one item.
+- `Slot` — zero or one item.
+- `ItemList` — many items.
 
 ### Functions
 
@@ -117,11 +128,65 @@ pub const Slot = ?ItemHandle;
 pub fn reset(n: *PolyNode) void
 ```
 - Clears intrusive link pointers (`prev`, `next` to null).
+- `ItemList.popFirst` calls it for you. Needed by hand only for `ItemList._list`.
 
 ```zig
 pub fn is_linked(n: *PolyNode) bool
 ```
 - Returns true if node is currently linked into a list.
+
+### ItemList
+
+The toolkit's list type. Holds a `std.DoublyLinkedList` inside, speaks  
+`ItemHandle` outside.
+
+Returned by `mailbox.receive_batch` and `mailbox.close`. Taken by  
+`pool.put_all`. Carried by `PoolHooks.on_put` and `PoolHooks.on_close`.
+
+```zig
+pub fn append(self: *ItemList, ih: ItemHandle) void
+pub fn prepend(self: *ItemList, ih: ItemHandle) void
+pub fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void
+pub fn popFirst(self: *ItemList) ?ItemHandle
+pub fn isEmpty(self: *const ItemList) bool
+pub fn len(self: *const ItemList) usize
+pub fn iterate(self: *const ItemList) Iterator
+pub fn concat(self: *ItemList, other: *ItemList) void
+pub fn moveFromList(list: *std.DoublyLinkedList) ItemList
+pub fn moveToList(self: *ItemList) std.DoublyLinkedList
+```
+
+- `popFirst` returns `?ItemHandle` and calls `polynode.reset` before returning.
+  A popped handle is never linked.
+- `append`, `prepend`, `insertAfter` take `ItemHandle` — no `&x.poly.node`.
+- `len` forwards std's walk. O(n). The mailbox and pool keep their own counters
+  for this reason; `len` never replaces them.
+- `iterate` walks without removing. Items stay linked, no `reset`.
+- `concat` moves every item of `other` in and leaves `other` empty.
+- `moveFromList` / `moveToList` cross to a plain std list. Both empty the
+  source, both O(1). There is no copy form — a header copy aliases.
+
+```zig
+while (batch.popFirst()) |ih| {
+    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+}
+```
+
+#### ItemList.Iterator
+
+```zig
+pub fn next(self: *Iterator) ?ItemHandle
+```
+- Non-destructive. Yields each `ItemHandle` in order, removes nothing.
+
+#### ItemList._list
+
+The plain std list this `ItemList` holds.
+
+- Use the `ItemList` methods instead. Tests that manipulate raw links use this
+  field.
+- An item taken out this way keeps its old `prev`/`next`. `popFirst` did not
+  run, so `polynode.reset` did not either — call it yourself.
 
 ### One place, one state — read-only ops
 
@@ -312,7 +377,8 @@ Runtime cost: one pointer subtraction.
 #### Step 7 — Two-level recovery (from list node)
 
 Inside a mailbox or pool, items are linked via `std.DoublyLinkedList`.  
-The list operates on `*DoublyLinkedList.Node`, not `*PolyNode`.
+The list operates on `*DoublyLinkedList.Node`, not `*PolyNode`.  
+`ItemList.popFirst` performs this conversion, so user code never does.
 
 Recovery is two steps:
 
@@ -611,9 +677,9 @@ PolyHelper(T)
 PolyNode embeds `std.DoublyLinkedList.Node`.
 - No custom list type.
 - No adapter.
-- Every PolyNode-based item participates in standard `std.DoublyLinkedList` operations.
+- Every PolyNode-based item carries the standard intrusive links.
 
-Batch operations use plain `std.DoublyLinkedList`:
+Batch operations use `polynode.ItemList`:
 - `mailbox.close()`
 - `mailbox.receive_batch()`
 - `pool.put_all()`
@@ -622,6 +688,7 @@ Walk results with `popFirst()` — standard Zig, nothing Matryoshka-specific.
 
 **Warning**:
 - `std.DoublyLinkedList.popFirst()` does NOT clear the node's `prev`/`next` links.
+- `ItemList.popFirst()` does — it calls `polynode.reset` before returning.
 - Call `polynode.reset(poly)` after popping, before re-sending the item or checking `polynode.is_linked`.
 - Skipping reset causes false positives from `is_linked` and assert failures in pool/mailbox assert guards.
 
@@ -726,11 +793,11 @@ pub fn try_receive(mbh: MailboxHandle, slot: *Slot) error{Closed}!bool
   - `slot.* == null`
 
 ```zig
-pub fn receive_batch(mbh: MailboxHandle) error{Closed}!std.DoublyLinkedList
+pub fn receive_batch(mbh: MailboxHandle) error{Closed}!polynode.ItemList
 ```
 - Non-blocking.
 - Takes everything from the queue at once.
-- Returns empty `std.DoublyLinkedList` if queue is currently empty.
+- Returns an empty `ItemList` if queue is currently empty.
 - Does not wait. Does not return error for empty.
 - Assert:
   - `mailbox.is_it_you(mbh.*.tag)`
@@ -747,7 +814,7 @@ pub fn wakeUpAll(mbh: MailboxHandle) error{Closed}!void
   - `mailbox.is_it_you(mbh.*.tag)`
 
 ```zig
-pub fn close(mbh: MailboxHandle) std.DoublyLinkedList
+pub fn close(mbh: MailboxHandle) polynode.ItemList
 ```
 - Can be called more than once.
 - Returns remaining handles as list (empty list on second call).
@@ -954,8 +1021,8 @@ pub const PoolHooks = struct {
     ctx:      *anyopaque,
     tags:     []const *const anyopaque,
     on_get:   *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,
-    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) ?std.DoublyLinkedList,
-    on_close: *const fn (ctx: *anyopaque, list: *std.DoublyLinkedList) void,
+    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) ?polynode.ItemList,
+    on_close: *const fn (ctx: *anyopaque, list: *polynode.ItemList) void,
 };
 ```
 
@@ -1043,7 +1110,7 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
     - **returned after reset** — hook resets the item's data before keeping it, `slot.*` stays non-null.
     - **deleted, a different item returned** — hook frees the original and puts a different item in `slot.*`.
   - `slot.*` stays non-null exactly when an item — original or replacement — is kept in the pool; it's null when nothing is kept.
-  - `on_put` also returns `?std.DoublyLinkedList` — items to add alongside
+  - `on_put` also returns `?ItemList` — items to add alongside
     `slot`. `null` or empty: nothing extra. Non-empty: each item is added  
     the same way `slot`'s item is — same checks, same assert on foreign  
     tag. See Composite Items below.
@@ -1067,7 +1134,7 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
 An item may hold other pooled items.
 
 Before the parent item enters the pool, `on_put` can return them as an  
-extra `std.DoublyLinkedList` alongside `slot`. The pool adds every item in  
+extra `ItemList` alongside `slot`. The pool adds every item in  
 that list the same way it adds `slot`'s item.
 
 The hook is responsible for handing back only valid, unlinked,  
@@ -1077,7 +1144,7 @@ real composite.
 The pool does not distinguish between simple and composite items.
 
 ```zig
-pub fn put_all(ph: PoolHandle, list: *std.DoublyLinkedList) void
+pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void
 ```
 - Returns batch of handles to pool.
 - Pops from caller's list.
@@ -1181,11 +1248,11 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
 - `on_put`:
   - Set `slot.*` to null = destroy.
   - Leave non-null = keep in pool.
-  - Return value: `?std.DoublyLinkedList` of extra items. `null`/empty =
+  - Return value: `?ItemList` of extra items. `null`/empty =
     nothing extra. Non-empty = each item added like `slot`'s. See  
     Composite Items above.
 - `on_close`:
-  - Receives `*std.DoublyLinkedList`.
+  - Receives `*ItemList`.
   - Walks via `popFirst()`, frees each handle.
 - Hook reentrancy is forbidden. From inside any hook, do not:
   - call `get`, `get_wait`, `put`, `put_all`, `close`, or `destroy` on the same pool

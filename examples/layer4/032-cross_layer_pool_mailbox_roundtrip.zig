@@ -6,7 +6,7 @@
 //! - getAndSend: pool.get fills an item, mailbox.send transfers it.
 //! - receiveAndVerify: mailbox.receive gets it back, verifies same pointer and data.
 //! - verifyRecycle: pool.put then pool.get(available_only) confirms the same pointer recycles.
-//! - Single-threaded — no concurrency needed to prove the ownership path.
+//! - Single-threaded — no concurrency needed to prove the transfer path.
 //!
 //!
 //! ```
@@ -33,7 +33,7 @@ pub fn pool_mailbox_pool_roundtrip(allocator: std.mem.Allocator, io: std.Io) !vo
 
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }

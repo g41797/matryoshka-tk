@@ -23,9 +23,9 @@ pub fn freeSlot(slot: *polynode.Slot, alloc: std.mem.Allocator) void {
     }
 }
 
-pub fn freeList(list: *std.DoublyLinkedList, alloc: std.mem.Allocator) void {
-    while (list.popFirst()) |node| {
-        freeItem(@fieldParentPtr("node", node), alloc);
+pub fn freeList(list: *polynode.ItemList, alloc: std.mem.Allocator) void {
+    while (list.popFirst()) |ih| {
+        freeItem(ih, alloc);
     }
 }
 

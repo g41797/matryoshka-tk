@@ -7,7 +7,7 @@
 //! - Two independent event sources: pool availability and simulated network data.
 //! - Both re-spawn until their target counts are met; no mailbox anywhere.
 //!
-//! Ownership (mailbox-less):
+//! Transfers (mailbox-less):
 //!
 //! ```
 //!  pool (seeded)            mock network (sleepFn)

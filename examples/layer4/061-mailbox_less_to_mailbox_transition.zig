@@ -7,7 +7,7 @@
 //! - Clients are unknown and independent — fan-in requires a mailbox as a third source.
 //! - Shows the transition point: mailbox-less works until senders multiply and diverge.
 //!
-//! Ownership (transition: mailbox-less → mailbox needed):
+//! Transfers (transition: mailbox-less → mailbox needed):
 //!
 //! ```
 //!  pool (seeded)       mock clients (io.concurrent ×N_CLIENTS → mailbox.send)
@@ -110,7 +110,7 @@ const Ctx = struct {
     }
 
     fn closeMailboxAfterClients(self: *Ctx) void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.alloc);
     }
 

@@ -27,7 +27,7 @@ test "3 - Future.cancel stops blocked worker" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -45,7 +45,7 @@ test "4 - Group.cancel stops all workers" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -105,7 +105,7 @@ test "5 - Worker not blocked when cancel takes effect" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -136,7 +136,7 @@ test "6 - Broadcast shutdown: mailbox.close before join" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -144,7 +144,7 @@ test "6 - Broadcast shutdown: mailbox.close before join" {
     var ctx: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
     var fut = try io.concurrent(mbxLoopWorker, .{&ctx});
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     defer items.freeList(&rem, testing.allocator);
 
     try fut.await(io);
@@ -190,12 +190,12 @@ test "7 - Cancel shutdown: future.cancel before close" {
     pool.close(ph);
     pool.destroy(ph, testing.allocator);
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     items.freeList(&rem, testing.allocator);
     mailbox.destroy(mbh, testing.allocator);
 }
 
-// --- Scenario 8: pool.put on closed pool, caller retains ownership ---
+// --- Scenario 8: pool.put on closed pool, caller keeps the item ---
 
 const Ctx8 = struct {
     mbh: MailboxHandle,
@@ -210,7 +210,7 @@ fn worker8(ctx: *Ctx8) error{Canceled}!void {
         error.Canceled => return error.Canceled,
         error.Closed, error.Timeout, error.Wakeup => return,
     };
-    pool.put(ctx.ph, &slot); // pool closed: slot stays non-null, caller retains ownership
+    pool.put(ctx.ph, &slot); // pool closed: slot stays non-null, the caller keeps the item
 }
 
 test "8 - pool.put on closed pool" {
@@ -225,7 +225,7 @@ test "8 - pool.put on closed pool" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -265,7 +265,7 @@ test "9 - mailbox.close returns remaining items" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -282,12 +282,12 @@ test "9 - mailbox.close returns remaining items" {
     var fut = try io.concurrent(worker9, .{&ctx});
     try fut.await(io);
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     defer items.freeList(&rem, testing.allocator);
 
     var count: usize = 0;
-    var node: ?*std.DoublyLinkedList.Node = rem.first;
-    while (node) |n| : (node = n.next) count += 1;
+    var it = rem.iterate();
+    while (it.next()) |_| count += 1;
     try testing.expectEqual(@as(usize, 7), count);
 }
 
@@ -303,17 +303,17 @@ const Ctx10 = struct {
         items.createByTag(tag, self.alloc, slot);
     }
 
-    fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?std.DoublyLinkedList {
+    fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
         if (slot.* == null) return null;
         items.resetOnPut(slot);
         return null;
     }
 
-    fn onClose(ctx_ptr: *anyopaque, list: *std.DoublyLinkedList) void {
+    fn onClose(ctx_ptr: *anyopaque, list: *polynode.ItemList) void {
         const self: *Ctx10 = @ptrCast(@alignCast(ctx_ptr));
         while (list.popFirst()) |node| {
             self.item_count += 1;
-            items.freeItem(@fieldParentPtr("node", node), self.alloc);
+            items.freeItem(node, self.alloc);
         }
     }
 };
@@ -382,7 +382,7 @@ test "11 - error.Canceled distinct from error.Closed in mailbox.receive" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -394,7 +394,7 @@ test "11 - error.Canceled distinct from error.Closed in mailbox.receive" {
     try testing.expect(ctx.got_canceled.load(.acquire));
     try testing.expect(!ctx.got_closed.load(.acquire));
 
-    var rem: std.DoublyLinkedList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mailbox.close(mbh);
     items.freeList(&rem, testing.allocator);
 
     var slot: Slot = null;
@@ -492,7 +492,7 @@ test "13 - pool.put is cancel-protected" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -525,9 +525,9 @@ fn worker14(ctx: *Ctx14) error{Canceled}!void {
         error.Canceled => {
             ctx.io.recancel(); // activate cancel again
             // mailbox.close uses lockUncancelable: completes despite active cancel
-            var rem: std.DoublyLinkedList = mailbox.close(ctx.mbh_data);
-            var node: ?*std.DoublyLinkedList.Node = rem.first;
-            while (node) |n| : (node = n.next) ctx.close_count += 1;
+            var rem: polynode.ItemList = mailbox.close(ctx.mbh_data);
+            var it = rem.iterate();
+            while (it.next()) |_| ctx.close_count += 1;
             items.freeList(&rem, ctx.alloc);
             return error.Canceled;
         },
@@ -544,7 +544,7 @@ test "14 - mailbox.close uses lockUncancelable" {
     // Worker blocks here (always empty); cancel takes effect while blocked.
     const mbh_listen: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh_listen);
+        var rem: polynode.ItemList = mailbox.close(mbh_listen);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh_listen, testing.allocator);
     }
@@ -552,7 +552,7 @@ test "14 - mailbox.close uses lockUncancelable" {
     // Worker closes this on cancel; second close in defer returns empty list.
     const mbh_data: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh_data);
+        var rem: polynode.ItemList = mailbox.close(mbh_data);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh_data, testing.allocator);
     }
@@ -605,7 +605,7 @@ test "15 - recancel propagation" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -652,7 +652,7 @@ test "16 - checkCancel in CPU-bound work" {
 
     const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, testing.allocator);
         mailbox.destroy(mbh, testing.allocator);
     }
@@ -817,7 +817,6 @@ const matryoshka = @import("matryoshka");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
 const pool = matryoshka.pool;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;
 const PoolHandle = pool.PoolHandle;

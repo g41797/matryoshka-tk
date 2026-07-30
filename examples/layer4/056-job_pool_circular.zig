@@ -8,7 +8,7 @@
 //! - Worker doubles the value, returns the container — which triggers the next dispatch.
 //! - Loop ends once all jobs are dispatched and the last result returns.
 //!
-//! Ownership (circular):
+//! Transfers (circular):
 //!
 //! ```
 //!  Master job list: [{code=10},{code=20},{code=30}]
@@ -123,7 +123,7 @@ const Ctx = struct {
     }
 
     fn closeMailboxAndAwait(self: *Ctx, worker_fut: *Io.Future(anyerror!void)) !void {
-        var rem: std.DoublyLinkedList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = mailbox.close(self.mbh);
         items.freeList(&rem, self.alloc);
         try worker_fut.await(self.io);
     }

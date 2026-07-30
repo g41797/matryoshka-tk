@@ -8,7 +8,7 @@
 //! - fut.await blocks until the worker finishes all N cycles.
 //! - No mailbox needed — pool is the only coordination point.
 //!
-//! Ownership (mailbox-less):
+//! Transfers (mailbox-less):
 //!
 //! ```
 //!  pool (1 empty container seeded — code=0)

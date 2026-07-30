@@ -20,7 +20,7 @@
 pub fn timer_via_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
     const mbh: MailboxHandle = try mailbox.new(io, allocator);
     defer {
-        var rem: std.DoublyLinkedList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mailbox.close(mbh);
         items.freeList(&rem, allocator);
         mailbox.destroy(mbh, allocator);
     }
@@ -119,6 +119,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
 const polynode = matryoshka.polynode;
-const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
 const MailboxHandle = mailbox.MailboxHandle;

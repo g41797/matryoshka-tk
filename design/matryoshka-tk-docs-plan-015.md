@@ -65,7 +65,7 @@ owner-flagged as likely to be reshuffled later.
 | `bash kitchen/tools/build_site.sh` | mkdocs builds clean, zero warnings (fixed two found during this session: a relative-link 404 risk on deploy, fixed by switching to GitHub-blob links; and the mirror script wiping the hand-authored catalog pages, fixed by scoping its `rm -rf` to only the mirrored subdirs) |
 | Headless-Chrome render + console check, catalog index + one example page + `apidocs` | clean, titles resolve, no console errors |
 | Coverage check: every one of the 76 mirrored pages appears in exactly one group/index link | confirmed, no duplicates, no omissions |
-| Grep sweep for the 8 removed target names + `examples_reference` across `build.zig`, `.gitignore`, `kitchen/mkdocs.yml`, `kitchen/docs/` | zero hits except historical STATUS.md session-log entries (exempt) |
+| Grep scan for the 8 removed target names + `examples_reference` across `build.zig`, `.gitignore`, `kitchen/mkdocs.yml`, `kitchen/docs/` | zero hits except historical STATUS.md session-log entries (exempt) |
 
 **Next**: Stage 9 continues. Examples-catalog grouping is a first pass — owner may reshuffle  
 groups later (doc edit only, no script change). DOC 21+ TBD.
@@ -364,7 +364,7 @@ of the two relocated blocks, one added `---` separator, the new Change-log row.
 |---|---|
 | Line accounting -018 → -019 | 1848 → 1853 = +4 structural (separator, blank, heading levels) +1 Change-log row — nothing lost |
 | Term-frequency diff (`PolyHelper`, `Cancelable`, `Io.Select`, `wakeUpAll`, `error.Wakeup`, `receiveResult`, `getWaitResult`, `MailboxHandle`, `PoolHandle`) | identical counts in -018 and -019 |
-| Forward-reference sweep (mailbox/pool/PolyHelper before their sections) | none in Ownership model; polynode retains only name-level pointers (list-node recovery note, batch-op name list) — flagged, accepted |
+| Forward-reference scan (mailbox/pool/PolyHelper before their sections) | none in Ownership model; polynode retains only name-level pointers (list-node recovery note, batch-op name list) — flagged, accepted |
 | Banned-word scan on -019 | CLEAN (same single historical Change-log meta-reference as -018) |
 | `.zig` / kitchen build files touched | none — doc-only stage |
 
