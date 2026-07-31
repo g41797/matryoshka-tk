@@ -7,5 +7,6 @@ lets you recover the typed pointer later.
 - [Item transfer via Slot](layer1/022-ownership_transfer.md)
 - [Tag-dispatch consume loop](layer1/023-tag_dispatch.md)
 - [Tag-first dispatch loop](layer1/026-tag_first_dispatch.md)
+- [Table dispatch — the choice as data](layer1/027-table_dispatch.md)
 - [Builder pattern](layer1/024-builder.md)
 - [Produce-consume with defer cleanup](layer1/025-produce_consume.md)

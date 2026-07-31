@@ -114,3 +114,14 @@ test "24 - multiple event sources one mailbox" {
         return err;
     };
 }
+
+test "25 - table dispatch, two masters" {
+    std.testing.log_level = .debug;
+    var threaded: std.Io.Threaded = std.Io.Threaded.init(testing.allocator, .{});
+    defer threaded.deinit();
+    const tio: Io = threaded.io();
+    layer4.table_dispatch_masters.table_dispatch_two_masters(testing.allocator, tio) catch |err| {
+        std.log.err("example failed: {s}", .{@errorName(err)});
+        return err;
+    };
+}

@@ -1,6 +1,15 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (023)
+# Matryoshka Zig — Pattern and Idiom Catalog (025)
 
-Versioned doc. Replaces [patterns-022.md](patterns-022.md).
+Versioned doc. Replaces [patterns-024.md](patterns-024.md).
+
+Change from patterns-024: DISPATCH 2 — a third dispatch entry, "Polymorphic  
+dispatch — table". The handler belongs to the pair (receiver, tag), so the  
+choice moves out of the chain and into data the receiver owns.
+
+Change from patterns-023: DISPATCH 1 — "Polymorphic dispatch" split into  
+item-first and tag-first, with the `PoolHooks.on_get` case that has no item at  
+all. Two new entries: the last branch of a dispatch chain, and why a `switch`  
+over tags does not compile.
 
 Change from patterns-022: API 11 — `fromNode`/`mustFromNode`/`toNode` renamed to  
 `fromPoly`/`mustFromPoly`/`toPoly`. Every idiom that names them is updated.  
@@ -46,7 +55,7 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-034.md](rules-034.md) — what is mandatory.  
+Companion: [rules-037.md](rules-037.md) — what is mandatory.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
 Companion: [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md) — signatures and contracts.
 
@@ -377,7 +386,7 @@ Why.
 Do not.
 - Do not call `fromPoly` on an item whose static type you already have. That is
   a round trip that proves nothing. `fromPoly` is for the way back, where the  
-  static type is gone — see "Polymorphic dispatch".
+  static type is gone — see "Polymorphic dispatch — item-first".
 
 Straight into a list, same shape.  
 ```zig
@@ -406,7 +415,7 @@ Why.
 - `popFirst` calls `polynode.reset` before returning. A popped handle is never
   linked, so it drops straight into a `Slot` or into `mailbox.send`.
 - Mixed types in one batch: `fromPoly` returns null on a tag mismatch, so the
-  same loop dispatches — see "Polymorphic dispatch".
+  same loop dispatches — see "Polymorphic dispatch — item-first".
 
 Walk without consuming.  
 ```zig
@@ -479,10 +488,11 @@ Why.
 - To go the other way, from a typed item to a handle, use `toPoly` — see
   "Stack item into the toolkit".
 
-### Polymorphic dispatch
+### Polymorphic dispatch — item-first
 
 When to use.
-- One mailbox or one list carries more than one item type. The receiver recovers the concrete type.
+- You hold the item.
+- Two or three types, and every branch wants the typed pointer straight away.
 
 Code shape.  
 ```zig
@@ -491,13 +501,121 @@ if (EventPolyHelper.fromPoly(handle)) |ev| {
 } else if (ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
     // handle ShutdownCommand
 } else {
-    // unknown — free and move on
+    // unknown tag
 }
 ```
 
+- One call does the tag check and the cast.
 - `fromPoly` returns null on a tag mismatch. Chain calls for each known type.
 
-Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
+Example: `examples/layer1/023-tag_dispatch.zig`,  
+`examples/layer4/031-select_graceful_shutdown.zig`,  
+`examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
+
+### Polymorphic dispatch — tag-first
+
+When to use.
+- You have a tag and no item. `PoolHooks.on_get` is the clear case: it is
+  handed `tag: *const anyopaque` and an empty Slot, so there is nothing to  
+  cast.
+- Four or more types.
+- A branch that never reaches the item — count it, route it, log it.
+
+Code shape.  
+```zig
+const tag: *const anyopaque = handle.*.tag;
+
+if (EventPolyHelper.isIt(tag)) {
+    const ev = EventPolyHelper.mustFromPoly(handle);
+    // handle Event
+} else if (SensorPolyHelper.isIt(tag)) {
+    const sn = SensorPolyHelper.mustFromPoly(handle);
+    // handle Sensor
+} else {
+    // unknown tag
+}
+```
+
+- `isIt` asks about a tag, so it works where `fromPoly` cannot be called.
+- Inside a confirmed branch the tag is proven — `mustFromPoly`, not `fromPoly`.
+- `H.isIt(tag)` and `tag == H.TAG` compute the same thing. `isIt` is the
+  toolkit's own API and keeps `TAG` out of application code.
+
+Example: `examples/layer1/026-tag_first_dispatch.zig`,  
+`examples/hooks/AlwaysCreateHooks.zig`, `examples/items/items.zig`.
+
+### Polymorphic dispatch — table
+
+When to use.
+- Two receivers do different work with the same item type. A `PolyTag` says
+  what an item *is*, not what a receiver should *do* with it, so the handler  
+  belongs to the pair (receiver, tag) — not to the tag.
+- One receiver changes what it does, and the chain would otherwise be written
+  twice and picked with an `if`.
+
+Code shape.  
+```zig
+const Table = helpers.TagTable(Master);
+
+const log_table: Table = .{ .entries = &.{
+    .{ .tag = EventPolyHelper.TAG,  .handler = Master.logEvent },
+    .{ .tag = SensorPolyHelper.TAG, .handler = Master.logSensor },
+} };
+
+const count_table: Table = .{ .entries = &.{
+    .{ .tag = EventPolyHelper.TAG,  .handler = Master.countEvent },
+} };
+
+var slot: Slot = null;
+defer items.freeSlot(&slot, allocator);   // no-op when null
+try log_table.dispatch(self, &slot);
+```
+
+- The same tag is in both tables against different handlers. No chain can
+  express that.
+- A tag stores fine in a `const`, even though a `switch` over tags does not
+  compile — see "No switch on a tag". A `const` initializer needs to know which  
+  global the pointer names; a prong needs the linker-assigned address.
+- No allocator. `entries` is `[]const Entry`, so the backing array is either a
+  comptime literal or a buffer the receiver owns.
+- `error.NoHandler` on a miss is not a defect. Nothing was called and the item
+  never left the Slot, so unlike the last branch of a chain, the caller frees  
+  it — the caller knows its own type set.
+- The handler follows the transfer rule: on return the Slot is null if the
+  handler took the item, full if it did not. See rules-037.md.
+- Not in `src/`: the handler's first parameter is the application's receiver
+  type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
+
+Example: `examples/layer1/027-table_dispatch.zig`,  
+`examples/layer4/063-table_dispatch_masters.zig`,  
+`examples/helpers/TagTable.zig`.
+
+Detail: [table-dispatch-001.md](table-dispatch-001.md).
+
+### The last branch of a dispatch chain
+
+Always write it. A chain's trailing `else` is optional, so an unrecognised item  
+falls through in silence when it is missing. `items.freeItem` did exactly that  
+until it was fixed.
+
+- Closed set, every helper in the chain — `unreachable`.
+- Open set, a mailbox anyone can send to — count it, log it, move on.
+
+It cannot free. `alloc.destroy` takes `*T` and the allocator needs the size, so  
+with no type there is no size. An unknown item can only be dropped or reported.  
+Its memory belongs to whoever knows what it is.
+
+### No switch on a tag
+
+A `switch` over `Helper.TAG` values does not compile, on any zig version or  
+backend available. A prong must be comptime-known; a tag is a global's address,  
+assigned by the linker. Zig accepts the source and the backend then fails.  
+`@intFromPtr` is refused wherever a compile-time value is required.
+
+`isIt` and `==` need only to know which global the tag names, which the  
+compiler does know.
+
+Detail: `design/llvm-pointer-switch-bug-001.md`.
 
 ### Tag identifies the class
 

@@ -1,6 +1,8 @@
-# Task 1 — Example Scenarios for Layers 1–3 (004)
+# Task 1 — Example Scenarios for Layers 1–3 (005)
 
-Versioned doc. Replaces [task1-examples-003.md](task1-examples-003.md).
+Versioned doc. Replaces [task1-examples-004.md](task1-examples-004.md).
+
+Change from -004: DISPATCH 2 — scenario 27 added, table dispatch.
 
 Change from -003: banned-word pass. `ownership` removed from the Layer 1 heading  
 and from scenario 22's title, matching the reworded `//!` description. The file  
@@ -21,6 +23,7 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 23. **Tag-dispatch consume loop** → [examples/layer1/023-tag_dispatch.zig](../examples/layer1/023-tag_dispatch.zig)
 24. **Builder pattern** → [examples/layer1/024-builder.zig](../examples/layer1/024-builder.zig)
 25. **Produce-consume with defer cleanup** → [examples/layer1/025-produce_consume.zig](../examples/layer1/025-produce_consume.zig)
+27. **Table dispatch — the choice as data** → [examples/layer1/027-table_dispatch.zig](../examples/layer1/027-table_dispatch.zig)
 
 ---
 

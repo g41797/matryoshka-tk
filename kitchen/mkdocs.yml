@@ -95,12 +95,14 @@ nav:
           - "Hook: AlwaysCreateHooks": examples/hooks/AlwaysCreateHooks.md
           - "Hook: CappedPoolHooks": examples/hooks/CappedPoolHooks.md
           - Helpers: examples/helpers/helpers.md
+          - "Helper: TagTable": examples/helpers/TagTable.md
       - How to... PolyNode:
           - Overview: examples/polynode.md
           - Define a PolyNode type: examples/layer1/021-define_type.md
           - Item transfer via Slot: examples/layer1/022-ownership_transfer.md
           - Tag-dispatch consume loop: examples/layer1/023-tag_dispatch.md
           - Tag-first dispatch loop: examples/layer1/026-tag_first_dispatch.md
+          - Table dispatch — the choice as data: examples/layer1/027-table_dispatch.md
           - Builder pattern: examples/layer1/024-builder.md
           - Produce-consume with defer cleanup: examples/layer1/025-produce_consume.md
       - How to... Mailbox:
@@ -143,6 +145,7 @@ nav:
           - Mailbox receive as Select event source: examples/layer4/042-select_mailbox_event.md
           - Select direct queue push: examples/layer4/043-select_direct_push.md
           - Receive router — one registration, many events: examples/layer4/062-receive_router.md
+          - Two Masters, the same items, two different tables: examples/layer4/063-table_dispatch_masters.md
           - Select mailbox close propagation: examples/layer4/044-select_mailbox_close.md
           - Select cancel propagation: examples/layer4/045-select_mailbox_cancel.md
           - Pool get_wait as Select event source: examples/layer4/046-select_pool_event.md

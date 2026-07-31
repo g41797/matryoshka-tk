@@ -12,6 +12,7 @@ directly instead of through a mailbox.
 - [Mailbox receive as Select event source](layer4/042-select_mailbox_event.md)
 - [Select direct queue push](layer4/043-select_direct_push.md)
 - [Receive router — one registration, many events](layer4/062-receive_router.md)
+- [Two Masters, the same items, two different tables](layer4/063-table_dispatch_masters.md)
 - [Select mailbox close propagation](layer4/044-select_mailbox_close.md)
 - [Select cancel propagation](layer4/045-select_mailbox_cancel.md)
 - [Pool get_wait as Select event source](layer4/046-select_pool_event.md)

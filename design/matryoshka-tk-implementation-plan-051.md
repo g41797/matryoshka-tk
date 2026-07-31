@@ -1,11 +1,18 @@
-# Matryoshka Zig — Implementation Plan (050)
+# Matryoshka Zig — Implementation Plan (051)
 
-Replaces [matryoshka-tk-implementation-plan-049.md](matryoshka-tk-implementation-plan-049.md).
+Replaces [matryoshka-tk-implementation-plan-050.md](matryoshka-tk-implementation-plan-050.md).
+
+Change from -050: the file had gone stale at API 9. API 10, API 11, DISPATCH 1  
+and DISPATCH 2 are now recorded, and Status carries the current test count.
 
 ## Status
 
-API 8 complete — 8a, 8b, 8c, 8d. API 9 "intrusive safety" complete.  
-177/177 tests.
+API 8 through API 11 complete. DISPATCH 1 and DISPATCH 2 complete.  
+192/192 tests across Debug, ReleaseSafe, ReleaseFast and ReleaseSmall;  
+cross-compile to x86_64-windows clean; `mkdocs build --strict` clean.
+
+The last two stages changed nothing in `src/`. They are documentation and  
+examples for what the existing blocks already do.
 
 `ItemList` closed the `std.DoublyLinkedList` boundary. `@fieldParentPtr` is  
 gone from `examples/`, `stories/`, and every test except the raw-link  
@@ -183,6 +190,25 @@ starting. `design/candidates/` does not exist on disk.
 
 ---
 
+## API 10 — DONE
+
+`ItemList` completion, prompted by an external review of `src/polynode.zig`.  
+`remove`, `popLast`, `first`, `last` and `insertBefore` added, reversing  
+item-list-007 §2.3's "first real call site" rule — a missing `remove` sends  
+callers through `_list` and hands them the `polynode.reset` obligation.  
+`iterate` renamed to `iterator` (breaking, no shim, six in-repo call sites).  
+`concat` gains `if (self == other) return;`, because the Q28 assert is  
+`unreachable` outside safety builds and `concatByMoving` rings the items and  
+then clears the header, losing the whole list. Every insert now asserts  
+`!is_linked` as well as `!_holds`; the two checks are blind to opposite cases.  
+`moveFromList` asserts its std header is consistent.
+
+Owner's instruction: "DoublyLinkedList checks nothing, ItemList should check  
+everything." 182/182 tests. Docs: item-list-008 §12, api-reference-032,  
+patterns-022, task1-tests-004.
+
+---
+
 ## API 11 — DONE
 
 `PolyHelper.fromNode` / `mustFromNode` / `toNode` renamed to `fromPoly` /  
@@ -195,6 +221,56 @@ at once — `reset` reads `node.node.prev`. The field the helper reaches is
 
 182/182 tests across four optimize modes; cross-compile clean. Docs to  
 api-reference-033, patterns-023, rules-035, item-list-009, task1-tests-005.
+
+---
+
+## DISPATCH 1 — DONE
+
+Tag-first dispatch documented. 185/185 tests, +3 new. No `src/` change.
+
+The `switch (tag)` form the task started from does not compile on any zig  
+version or backend available here — a prong needs a comptime value and a tag is  
+a linker-assigned address. Recorded in  
+[llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md) with a 17-line  
+repro and a build matrix (`kitchen/tools/build_repro_matrix.sh`). Re-scoped to  
+the `isIt` chain, which the codebase already used and no page described.
+
+New `kitchen/docs/patterns/dispatch.md`;  
+`examples/layer1/026-tag_first_dispatch.zig` and scenarios 111-112 pin it;  
+`AlwaysCreateHooks.onGet` inlines the chain so the tag-only case has a specimen;  
+`items.freeItem` gained the final `else` it was missing. Docs: patterns-024,  
+rules-036 (two new MUST rules), matryoshka-model-007.
+
+**Open, owner's:** run the repro matrix on zig 0.15.2, get a real 0.17.0-dev  
+diagnostic, file the bug upstream to ziglang/zig.
+
+---
+
+## DISPATCH 2 — DONE
+
+Table dispatch documented. 192/192 tests, +6 new. No `src/` change.
+
+A `PolyTag` says what an item *is*, not what a receiver should *do* with it, so  
+the handler belongs to the pair (receiver, tag) and cannot live in a chain — a  
+chain fixes the choice where it is written. The choice moves into data:  
+`{tag, handler}` pairs the receiver owns. `TAG`, `isIt` and `Slot` already had  
+every part, so the table is composed from blocks that exist.
+
+Storing a tag in a `const` compiles on both backends at all four optimize  
+levels, which is the opposite of DISPATCH 1's `switch` result and for a stated  
+reason: a `switch` prong needs the tag's linker-assigned *number*, while a  
+`const` initializer needs only to know *which global* the pointer names.
+
+Working document: [table-dispatch-001.md](table-dispatch-001.md).  
+`examples/helpers/TagTable.zig` is the type, shown in full on the pattern page  
+so it does not read as a supplied component. Scenarios 113-117 pin it,  
+including the receiver-built `register` form and the five outcomes of a call.  
+Examples: `examples/layer1/027-table_dispatch.zig` and  
+`examples/layer4/063-table_dispatch_masters.zig` — two Masters, two mailboxes,  
+one tag, two handlers. `kitchen/docs/patterns/dispatch.md` restructured into  
+Using item / Using tag / Using table. Docs: patterns-025, rules-037 (one entry,  
+the transfer rule — a convention for handler authors, **not** a toolkit MUST),  
+task1-examples-005, task2-examples-006.
 
 ---
 

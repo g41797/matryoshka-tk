@@ -1,6 +1,10 @@
-# Matryoshka Zig — Rules (035)
+# Matryoshka Zig — Rules (037)
 
-Versioned doc. Replaces [rules-034.md](rules-034.md).  
+Versioned doc. Replaces [rules-036.md](rules-036.md).  
+Change from -036: DISPATCH 2 — one entry, the transfer rule for table  
+dispatch handlers. It is a convention for handler authors, not a toolkit MUST.  
+Change from -035: DISPATCH 1 — two rules. Every dispatch chain ends with a  
+final branch. No `switch` over tags; it does not compile.  
 Change from -034: API 11 — the accessor naming rule names `fromPoly` /  
 `fromSlot`. The helper reaches the `poly` field, and `node` was already taken  
 by `std.DoublyLinkedList.Node` inside `PolyNode`.  
@@ -9,7 +13,7 @@ checks that are exact where it is not. API 9 keeps all seven `!is_linked`
 asserts, so what they promise has to be written down.  
 All coding, doc, and process rules for the project.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [patterns-023.md](patterns-023.md) — reusable coding patterns.
+Companion: [patterns-025.md](patterns-025.md) — reusable coding patterns.
 
 ---
 
@@ -731,7 +735,7 @@ Implementation invariants.
 
 ## Matryoshka Coding Patterns
 
-The pattern catalog lives in [patterns-020.md](patterns-020.md).
+The pattern catalog lives in [patterns-025.md](patterns-025.md).
 
 - Observable function shapes: coordinator / step / init / destroy / Select event loop / spawn-await.
 - Description as code: example/story doc comments follow the same coordinator/step shape.
@@ -739,7 +743,7 @@ The pattern catalog lives in [patterns-020.md](patterns-020.md).
 - Io.Select event loop and re-register.
 - Io.Group worker sets and shutdown.
 - Graceful shutdown ordering.
-- Polymorphic dispatch on tag.
+- Polymorphic dispatch, item-first and tag-first.
 - Error handling on receive (Closed/Timeout vs Canceled).
 - Master composition.
 
@@ -747,6 +751,94 @@ The pattern catalog lives in [patterns-020.md](patterns-020.md).
 - Patterns reuse.
 - Read the catalog for code shapes.
 - Read this doc for what is mandatory.
+
+---
+
+## Dispatch chains end with a final branch — MUST
+
+Every `fromPoly` or `isIt` chain writes its last `else`.
+
+The trailing branch is optional to the compiler. Leave it out and an item whose  
+tag nobody claimed falls through in silence. `items.freeItem` did exactly that  
+until DISPATCH 1 fixed it.
+
+What goes in it:
+
+- Closed set, every helper present in the chain — `unreachable`. Reaching it
+  means the caller passed something that cannot exist.
+- Open set, a mailbox anyone can send to — count it, log it, or return an
+  error. Then move on.
+
+It cannot free the item. `alloc.destroy` takes `*T`, and the allocator needs the  
+size to release the memory. With no type there is no size. An unknown item can  
+only be dropped or reported; its memory belongs to whoever knows what it is.
+
+Catalog: [patterns-025.md](patterns-025.md), "The last branch of a dispatch  
+chain".
+
+---
+
+## The transfer rule for dispatch handlers — convention, not a MUST
+
+Applies to a handler stored in a dispatch table:
+
+> On return, the Slot is null if the handler took the item, full if it did not.
+
+`src/` cannot enforce this and does not care. It is a convention between the  
+person writing a handler and the person writing the loop that calls it, and it  
+is written down here because both are often the same person a month apart.
+
+A handler may take the item, forward it, or look and leave it. What it must not  
+do is leave the Slot lying about which.
+
+The loop covers every case with one line:
+
+```zig
+defer items.freeSlot(&slot, allocator);   // no-op when null
+```
+
+A handler may also move the item and *then* fail. The Slot reports where the  
+item is; the error reports whether the work succeeded. They are two different  
+questions, and a caller that frees on error without looking at the Slot  
+double-frees.
+
+Where it is written: the doc comment on `TagTable.Handler`, and  
+[patterns-025.md](patterns-025.md), "Polymorphic dispatch — table".
+
+Detail: [table-dispatch-001.md](table-dispatch-001.md).
+
+---
+
+## No switch over tags — MUST
+
+Dispatch on a tag with `isIt` or `==`, never with `switch`.
+
+```zig
+// WRONG — accepted by the front end, then fails in the backend
+switch (handle.*.tag) {
+    EventPolyHelper.TAG => ...,
+    else => ...,
+}
+
+// CORRECT
+if (EventPolyHelper.isIt(handle.*.tag)) {
+    ...
+} else {
+    ...
+}
+```
+
+A switch prong must be known at compile time. A tag is the address of a global,  
+and the linker assigns that address, so the value is not known while compiling.  
+Zig accepts the source and the backend then fails — LLVM rejects the emitted  
+bitcode, or the self-hosted backend crashes or hangs. `@intFromPtr` is refused  
+wherever a compile-time value is required, including as a container-level  
+`const`.
+
+`isIt` and `==` need only to know which global the tag names. That the compiler  
+does know.
+
+Detail, with the build matrix: [llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md).
 
 ---
 

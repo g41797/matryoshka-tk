@@ -46,3 +46,4 @@ pub const mailbox_less_pool_group_workers = @import("059-mailbox_less_pool_group
 pub const mailbox_less_pool_select_network = @import("060-mailbox_less_pool_select_network.zig");
 pub const mailbox_less_to_mailbox_transition = @import("061-mailbox_less_to_mailbox_transition.zig");
 pub const receive_router = @import("062-receive_router.zig");
+pub const table_dispatch_masters = @import("063-table_dispatch_masters.zig");

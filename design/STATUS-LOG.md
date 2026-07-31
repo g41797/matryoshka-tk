@@ -2,6 +2,67 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-07-31 — DISPATCH 2 done, table dispatch
+
+Owner's opening: a `PolyTag` says what an item **is**, not what a receiver  
+should **do** with it. The same Event is a log line to one Master and a counter  
+bump to another, so the handler cannot belong to the tag. It belongs to the  
+pair (receiver, tag), and a chain cannot express that — a chain fixes the  
+choice where it is written.
+
+So the choice becomes data: `{tag, handler}` pairs the receiver owns.
+
+Step 0 first, because DISPATCH 1 spent half its length on a form that read  
+fine and did not compile. A container-level `const` table holding  
+`EventPolyHelper.TAG` builds and runs on `-fllvm` and `-fno-llvm` at all four  
+optimize levels — checked against the real `PolyHelper`, not a stand-in. The  
+two facts sit next to each other for a stated reason: a `switch` prong needs  
+the tag's linker-assigned **number**, while a `const` initializer needs only to  
+know **which global** the pointer names. Storing a tag was never the problem.
+
+Nothing in `src/` changed. `TAG`, `isIt` and `Slot` already had every part.
+
+Code, 185 -> 192 tests:
+
+- `examples/helpers/TagTable.zig` — `find`, `dispatch`, and the transfer rule
+  in the `Handler` doc comment. Not in `src/`: the handler's first parameter is  
+  the application's own receiver type, which the toolkit cannot name. A  
+  `*anyopaque` context and a cast in every handler is what `PoolHooks` pays for  
+  being library code; an application table does not have to.
+- Scenarios 113-117 in `tests/layer1_polynode.zig`. 114 is the point of the
+  stage: one tag, two tables, two handlers. 116 walks the five outcomes of a  
+  call, including the trap — a handler that forwards the item and *then* fails,  
+  where a caller that frees on error without looking at the Slot double-frees.  
+  117 pins the receiver-built `register` form and `error.TableFull`.
+- `examples/layer1/027-table_dispatch.zig` — the mechanism, plus the
+  second-table variation and a miss the caller frees.
+- `examples/layer4/063-table_dispatch_masters.zig` — the real case. Two
+  Masters, one mailbox each, the same three item types. `LogMaster` names all  
+  three tags; `CountMaster` names two and meets `error.NoHandler` on the third.  
+  Same loop in both, only the table differs.
+
+`error.NoHandler` is where a table beats a chain. The last branch of a chain  
+cannot free — no type, so no size. A table miss never took the item out of the  
+caller's Slot, and the caller knows its own type set, so the `defer` it already  
+had frees it.
+
+Docs:
+
+- `design/table-dispatch-001.md` — working document, written before the code.
+- `kitchen/docs/patterns/dispatch.md` restructured: three opening snippets over
+  the same task, then Using item / Using tag / Using table. The first two differ  
+  by what you hold; the third by where the choice lives. `TagTable` is shown in  
+  full inline so it reads as something to copy, not a supplied component.
+- patterns-025 (from -024) — "Polymorphic dispatch — table".
+- rules-037 (from -036) — one entry, the transfer rule, marked a convention for
+  handler authors and explicitly **not** a toolkit MUST. `src/` cannot enforce  
+  it and does not care.
+
+Storage: comptime literal, or a buffer the receiver owns and slices. No  
+allocator either way. An allocated table would be needed only if the entry  
+count could not be bounded at compile time — a plugin, or a config file that  
+names the types. Nothing in this toolkit works that way.
+
 ### 2026-07-31 — DISPATCH 1 addendum, the `id()` dead end
 
 Owner proposed a `PolyHelper` accessor returning `@intFromPtr(TAG)`, hoping an  

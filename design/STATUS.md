@@ -28,23 +28,24 @@
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-004.md
 - Tests: task1-tests-005.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
-- Examples: task1-examples-004.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
+- Examples: task1-examples-005.md, task2-examples-006.md (index only; full description lives in each source file's `///` doc comment)
 - Scenarios (historical): task1-scenarios-001.md (92), task2-scenarios-001.md (61)
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-050.md (slim, state-only)
-- Rules: rules-036.md
+- Plan: matryoshka-tk-implementation-plan-051.md (slim, state-only)
+- Rules: rules-037.md
 - Receive router design note: receive-router-001.md
+- Table dispatch design note: table-dispatch-001.md
 - Pointer-switch compiler bug: llvm-pointer-switch-bug-001.md
 - ItemList / intrusive safety design: item-list-009.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-007.md
-- Patterns: patterns-024.md
+- Patterns: patterns-025.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-036.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-037.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
@@ -308,6 +309,24 @@ described. New `kitchen/docs/patterns/dispatch.md` covers both ways;
 `AlwaysCreateHooks.onGet` inlines the chain so the tag-only case has a  
 specimen; `items.freeItem` gained the final `else` it was missing. Docs:  
 patterns-024, rules-036 (two new MUST rules), matryoshka-model-007.
+
+DISPATCH 2 — table dispatch documented. DONE (192/192 tests, +6 new).  
+A `PolyTag` says what an item is, not what a receiver should do with it, so  
+the handler belongs to the pair (receiver, tag) and cannot live in a chain.  
+The choice moves into data: `{tag, handler}` pairs the receiver owns. Nothing  
+in `src/` changed — `TAG`, `isIt` and `Slot` already had the parts. Storing a  
+tag in a `const` compiles on both backends at all four optimize levels, which  
+is the opposite of DISPATCH 1's `switch` result and for a stated reason.  
+`design/table-dispatch-001.md` is the working document;  
+`examples/helpers/TagTable.zig` is the type, shown in full on the pattern page  
+so it does not read as a supplied component; scenarios 113-117 pin it,  
+including the receiver-built `register` form and the five outcomes of a call;  
+`examples/layer1/027-table_dispatch.zig` and  
+`examples/layer4/063-table_dispatch_masters.zig` (two Masters, two mailboxes,  
+one tag, two handlers) are the examples. `kitchen/docs/patterns/dispatch.md`  
+restructured into Using item / Using tag / Using table. Docs: patterns-025,  
+rules-037 (one entry, the transfer rule — a convention for handler authors,  
+not a toolkit MUST).
 
 EXMPL 5a — `design/receive-router-001.md`: receive-router use case and chosen  
 solution. Working document the example and pattern pages are written from.  

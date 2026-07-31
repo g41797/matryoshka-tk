@@ -1,6 +1,8 @@
-# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (005)
+# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (006)
 
-Versioned doc. Replaces [task2-examples-004.md](task2-examples-004.md).
+Versioned doc. Replaces [task2-examples-005.md](task2-examples-005.md).
+
+Change from 005: DISPATCH 2 — scenario 63 added, two Masters and two tables.
 
 Change from 004: added scenarios 95 and 96. Both existed in `examples/layer4/`,  
 in the barrel and in the site nav, but had never been listed in this catalog.
@@ -77,6 +79,7 @@ Master is a concept, not a type. Each example may structure its coordination bou
 44. **Select mailbox close propagation** → [examples/layer4/044-select_mailbox_close.zig](../examples/layer4/044-select_mailbox_close.zig)
 45. **Select cancel propagation** → [examples/layer4/045-select_mailbox_cancel.zig](../examples/layer4/045-select_mailbox_cancel.zig)
 62. **Receive router — one registration, many events** → [examples/layer4/062-receive_router.zig](../examples/layer4/062-receive_router.zig)
+63. **Two Masters, the same items, two different tables** → [examples/layer4/063-table_dispatch_masters.zig](../examples/layer4/063-table_dispatch_masters.zig)
 
 ---
 

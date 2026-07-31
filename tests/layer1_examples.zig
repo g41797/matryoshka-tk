@@ -51,3 +51,11 @@ test "26 - tag-first dispatch loop" {
         return err;
     };
 }
+
+test "27 - table dispatch loop" {
+    std.testing.log_level = .debug;
+    layer1.table_dispatch.table_dispatch_loop(allocator, io) catch |err| {
+        std.log.err("example failed: {s}", .{@errorName(err)});
+        return err;
+    };
+}

@@ -8,5 +8,8 @@ pub fn expect(comptime err: anyerror, ok: bool, comptime msg: []const u8) anyerr
     }
 }
 
+/// Dispatch table: `{tag, handler}` pairs owned by a receiver.
+pub const TagTable = @import("TagTable.zig").TagTable;
+
 const log = std.log;
 const std = @import("std");

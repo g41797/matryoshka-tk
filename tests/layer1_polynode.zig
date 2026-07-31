@@ -318,6 +318,236 @@ test "112 - unknown tag reaches the final else" {
     try testing.expectEqual(@as(u8, 9), fr.mark);
 }
 
+// --- Scenario 113: a table finds each tag and calls the right handler ---
+test "113 - a table finds each tag and calls the right handler" {
+    const table: Table = .{ .entries = &.{
+        .{ .tag = EventPolyHelper.TAG, .handler = Counter.onEvent },
+        .{ .tag = SensorPolyHelper.TAG, .handler = Counter.onSensor },
+        .{ .tag = TimerPolyHelper.TAG, .handler = Counter.onTimer },
+    } };
+
+    var ev: Event = .{ .code = 13 };
+    EventPolyHelper.init(&ev);
+    var sn: Sensor = .{ .value = 1.5 };
+    SensorPolyHelper.init(&sn);
+    var tm: Timer = .{};
+    TimerPolyHelper.init(&tm);
+
+    var counter: Counter = .{};
+
+    for ([_]*PolyNode{
+        EventPolyHelper.toPoly(&ev),
+        SensorPolyHelper.toPoly(&sn),
+        TimerPolyHelper.toPoly(&tm),
+    }) |poly| {
+        var slot: Slot = poly;
+        try table.dispatch(&counter, &slot);
+        // These handlers look and leave. The item is still the caller's.
+        try testing.expect(slot != null);
+    }
+
+    try testing.expectEqual(@as(usize, 1), counter.events);
+    try testing.expectEqual(@as(usize, 1), counter.sensors);
+    try testing.expectEqual(@as(usize, 1), counter.timers);
+    try testing.expectEqual(@as(i32, 13), counter.last_code);
+}
+
+// --- Scenario 114: the same tag in two tables reaches two handlers ---
+test "114 - the same tag in two tables reaches two handlers" {
+    // EventPolyHelper.TAG is in both, against different handlers.
+    // No chain can express this.
+    const log_table: Table = .{ .entries = &.{
+        .{ .tag = EventPolyHelper.TAG, .handler = Counter.onEvent },
+        .{ .tag = SensorPolyHelper.TAG, .handler = Counter.onSensor },
+    } };
+
+    const count_table: Table = .{ .entries = &.{
+        .{ .tag = EventPolyHelper.TAG, .handler = Counter.onTimer },
+    } };
+
+    var ev: Event = .{ .code = 14 };
+    EventPolyHelper.init(&ev);
+
+    var log_recv: Counter = .{};
+    var count_recv: Counter = .{};
+
+    var slot: Slot = EventPolyHelper.toPoly(&ev);
+    try log_table.dispatch(&log_recv, &slot);
+    try count_table.dispatch(&count_recv, &slot);
+
+    // One item, one tag, two receivers, two different handlers.
+    try testing.expectEqual(@as(usize, 1), log_recv.events);
+    try testing.expectEqual(@as(usize, 0), log_recv.timers);
+    try testing.expectEqual(@as(usize, 0), count_recv.events);
+    try testing.expectEqual(@as(usize, 1), count_recv.timers);
+}
+
+// --- Scenario 115: a miss leaves the slot untouched ---
+test "115 - a miss leaves the slot untouched" {
+    const table: Table = .{ .entries = &.{
+        .{ .tag = EventPolyHelper.TAG, .handler = Counter.onEvent },
+    } };
+
+    var counter: Counter = .{};
+
+    // find reports the miss without an error.
+    try testing.expect(table.find(SensorPolyHelper.TAG) == null);
+
+    const alloc = testing.allocator;
+
+    var slot: Slot = null;
+    defer items.freeSlot(&slot, alloc);
+    try SensorPolyHelper.create(alloc, &slot);
+
+    try testing.expectError(error.NoHandler, table.dispatch(&counter, &slot));
+
+    // Nothing was called, and the item never left. Unlike the last branch
+    // of an isIt chain, the caller can free it — the defer above does.
+    try testing.expectEqual(@as(usize, 0), counter.events);
+    try testing.expect(slot != null);
+
+    // An empty Slot is a different miss.
+    var empty: Slot = null;
+    try testing.expectError(error.EmptySlot, table.dispatch(&counter, &empty));
+}
+
+// --- Scenario 116: a handler that takes the item leaves the slot null ---
+test "116 - a handler that takes the item leaves the slot null" {
+    const table: KeeperTable = .{ .entries = &.{
+        .{ .tag = EventPolyHelper.TAG, .handler = Keeper.take },
+        .{ .tag = SensorPolyHelper.TAG, .handler = Keeper.failHolding },
+        .{ .tag = TimerPolyHelper.TAG, .handler = Keeper.takeThenFail },
+    } };
+
+    const alloc = testing.allocator;
+    var keeper: Keeper = .{};
+    defer items.freeList(&keeper.kept, alloc);
+
+    // Took the item: slot null, no error. The caller's defer frees nothing.
+    {
+        var slot: Slot = null;
+        defer items.freeSlot(&slot, alloc);
+        try EventPolyHelper.create(alloc, &slot);
+        try table.dispatch(&keeper, &slot);
+        try testing.expect(slot == null);
+    }
+
+    // Failed before the item moved: slot full. The caller frees it.
+    {
+        var slot: Slot = null;
+        defer items.freeSlot(&slot, alloc);
+        try SensorPolyHelper.create(alloc, &slot);
+        try testing.expectError(error.HandlerFailed, table.dispatch(&keeper, &slot));
+        try testing.expect(slot != null);
+    }
+
+    // The trap: the item moved, then something else failed. The error is
+    // about the later failure, not about the item. A caller that frees on
+    // error without looking at the Slot double-frees.
+    {
+        var slot: Slot = null;
+        defer items.freeSlot(&slot, alloc);
+        try TimerPolyHelper.create(alloc, &slot);
+        try testing.expectError(error.HandlerFailed, table.dispatch(&keeper, &slot));
+        try testing.expect(slot == null);
+    }
+
+    try testing.expectEqual(@as(usize, 2), keeper.kept.len());
+}
+
+// --- Scenario 117: a receiver builds its own table at run time ---
+test "117 - a receiver builds its own table at run time" {
+    // No allocator. The buffer is a field, so its lifetime is the
+    // receiver's — and so this table cannot be shared, unlike a
+    // comptime one.
+    const Master = struct {
+        const Self = @This();
+
+        buf: [2]Table.Entry = undefined,
+        n: usize = 0,
+        table: Table = .{},
+        counter: Counter = .{},
+
+        fn register(self: *Self, tag: *const anyopaque, handler: Table.Handler) !void {
+            if (self.n == self.buf.len) return error.TableFull;
+            self.buf[self.n] = .{ .tag = tag, .handler = handler };
+            self.n += 1;
+            self.table = .{ .entries = self.buf[0..self.n] };
+        }
+    };
+
+    var master: Master = .{};
+    try master.register(EventPolyHelper.TAG, Counter.onEvent);
+    try master.register(SensorPolyHelper.TAG, Counter.onSensor);
+    try testing.expectError(error.TableFull, master.register(TimerPolyHelper.TAG, Counter.onTimer));
+
+    var ev: Event = .{ .code = 17 };
+    EventPolyHelper.init(&ev);
+    var sn: Sensor = .{ .value = 1.5 };
+    SensorPolyHelper.init(&sn);
+    var tm: Timer = .{};
+    TimerPolyHelper.init(&tm);
+
+    var slot: Slot = EventPolyHelper.toPoly(&ev);
+    try master.table.dispatch(&master.counter, &slot);
+
+    slot = SensorPolyHelper.toPoly(&sn);
+    try master.table.dispatch(&master.counter, &slot);
+
+    // The one that did not fit never got an entry.
+    slot = TimerPolyHelper.toPoly(&tm);
+    try testing.expectError(error.NoHandler, master.table.dispatch(&master.counter, &slot));
+
+    // A run-time table dispatches the same as a comptime one.
+    try testing.expectEqual(@as(usize, 1), master.counter.events);
+    try testing.expectEqual(@as(usize, 1), master.counter.sensors);
+    try testing.expectEqual(@as(i32, 17), master.counter.last_code);
+}
+
+const Table = helpers.TagTable(Counter);
+const KeeperTable = helpers.TagTable(Keeper);
+
+/// A receiver whose handlers look at the item and leave it.
+const Counter = struct {
+    events: usize = 0,
+    sensors: usize = 0,
+    timers: usize = 0,
+    last_code: i32 = 0,
+
+    fn onEvent(self: *Counter, slot: *Slot) anyerror!void {
+        self.last_code = EventPolyHelper.mustFromSlot(slot).*.code;
+        self.events += 1;
+    }
+
+    fn onSensor(self: *Counter, slot: *Slot) anyerror!void {
+        _ = slot;
+        self.sensors += 1;
+    }
+
+    fn onTimer(self: *Counter, slot: *Slot) anyerror!void {
+        _ = slot;
+        self.timers += 1;
+    }
+};
+
+/// A receiver whose handlers take the item out of the Slot.
+const Keeper = struct {
+    kept: ItemList = .{},
+
+    fn take(self: *Keeper, slot: *Slot) anyerror!void {
+        self.kept.appendFromSlot(slot);
+    }
+
+    fn failHolding(_: *Keeper, _: *Slot) anyerror!void {
+        return error.HandlerFailed;
+    }
+
+    fn takeThenFail(self: *Keeper, slot: *Slot) anyerror!void {
+        self.kept.appendFromSlot(slot);
+        return error.HandlerFailed;
+    }
+};
+
 /// A type the dispatch site does not know about.
 const Foreign = struct {
     poly: PolyNode = .{},
@@ -325,7 +555,9 @@ const Foreign = struct {
 };
 const ForeignPolyHelper = polynode.PolyHelper(Foreign);
 
-const items = @import("examples").items;
+const examples = @import("examples");
+const items = examples.items;
+const helpers = examples.helpers;
 const Event = items.Event;
 const Sensor = items.Sensor;
 const Timer = items.Timer;

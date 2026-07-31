@@ -71,6 +71,41 @@ This allows infrastructure and application code
 ---
 
 
+## One pointer, two names
+
+`ItemHandle` and `*PolyNode` are the same pointer.
+
+The name says what you mean to do with it.
+
+`ItemHandle` — you are carrying it.
+
+Hold it. Send it. Put it in a Slot.
+
+Do not look inside.
+
+`*PolyNode` — you are opening it.
+
+Read the tag. Reach the item.
+
+`PolyHelper` is the only thing that takes it.
+
+So `fromPoly` is the border:
+
+```zig
+const ev = EventPolyHelper.fromPoly(handle) orelse return;
+```
+
+The pointer arrives opaque.
+
+It leaves as an `*Event`.
+
+Nothing was converted. Nothing was allocated.
+
+You changed your mind about what you were holding.
+
+---
+
+
 ## Matryoshka
 
 ---

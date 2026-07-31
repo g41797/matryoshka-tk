@@ -381,7 +381,7 @@ Why.
 ### Polymorphic dispatch
 
 Moved. One mailbox or one list carries more than one item type, and the  
-receiver recovers the concrete type — two ways, and the advice on choosing  
+receiver recovers the concrete type — three ways, and the advice on choosing  
 between them: [Patterns — Dispatch](dispatch.md).
 
 ### Tag identifies the class
