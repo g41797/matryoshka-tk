@@ -307,7 +307,7 @@ pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void {
 
     // Validate all tags under one lock — no partial transfer on bad input.
     p.*.mutex.lockUncancelable(io);
-    var it = list.iterate();
+    var it = list.iterator();
     while (it.next()) |ih| {
         std.debug.assert(p.*.lists.contains(ih.*.tag));
     }

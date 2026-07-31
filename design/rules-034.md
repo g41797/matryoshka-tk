@@ -6,7 +6,7 @@ checks that are exact where it is not. API 9 keeps all seven `!is_linked`
 asserts, so what they promise has to be written down.  
 All coding, doc, and process rules for the project.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [patterns-021.md](patterns-021.md) — reusable coding patterns.
+Companion: [patterns-022.md](patterns-022.md) — reusable coding patterns.
 
 ---
 
@@ -460,14 +460,14 @@ Banned words.
   - Nothing repairs it. State kept in an item cannot validate this class of
     mistake — reading that state needs the exclusivity whose absence is the  
     bug.
-  - Two checks are exact, and both ask something other than the item.
-    - Ask the container: `ItemList._holds` walks the list it already holds
-      under its own lock, and computes an address rather than reading the  
-      item. Under runtime safety only.
-    - Ask the caller's own slot: `concat` compares two arguments;
-      `appendFromSlot` reads a `Slot` in the caller's own frame.
-  - Prefer prevention. `appendFromSlot` / `prependFromSlot` empty the slot
-    themselves, so the mistake they guard against cannot be written.
+  - Two checks are exact. Neither reads the item.
+    - `ItemList._holds` walks the list it already holds under its own lock,
+      and compares addresses instead of reading the item. Runtime safety  
+      only.
+    - `concat` compares its two arguments; `appendFromSlot` reads a `Slot` in
+      the caller's own frame.
+  - Prevention beats detection. `appendFromSlot` / `prependFromSlot` empty the
+    slot themselves, so there is no `slot = null` line left to forget.
 
 - No references to design docs (`.md` files: rules, plans, api-reference,
   STATUS, patterns) inside `src/*.zig` comments (added in rules-012).

@@ -23,11 +23,11 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-031.md
+- API: matryoshka-api-reference-032.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-004.md
-- Tests: task1-tests-003.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
+- Tests: task1-tests-004.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
 - Examples: task1-examples-004.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
 - Scenarios (historical): task1-scenarios-001.md (92), task2-scenarios-001.md (61)
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
@@ -36,10 +36,10 @@
 - Plan: matryoshka-tk-implementation-plan-050.md (slim, state-only)
 - Rules: rules-034.md
 - Receive router design note: receive-router-001.md
-- ItemList / intrusive safety design: item-list-007.md
+- ItemList / intrusive safety design: item-list-008.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-006.md
-- Patterns: patterns-021.md
+- Patterns: patterns-022.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
@@ -372,6 +372,43 @@ over three rounds. 8b — type + scenarios 100-103. 8c — one atomic migration,
 api-reference-029, patterns-019, rules-029, task1-tests-002.  
 Closing gate holds: `@fieldParentPtr` appears only in `src/polynode.zig` and  
 `tests/layer1_polynode.zig` scenarios 6, 7, 8. Detail in plan-050.
+
+API 10 "ItemList completion" — DONE 2026-07-31 (182/182 tests, +5 new).  
+Prompted by an external review of `src/polynode.zig`: implementation 8.5/10,  
+comments 3/10. Owner's instruction: "DoublyLinkedList checks nothing, ItemList  
+should check everything."
+
+- **The list is complete.** `remove`, `popLast`, `first`, `last`,
+  `insertBefore`. item-list-007 §2.3 had declined `remove` and `pop` on a  
+  "first real call site" rule; API 10 reverses that. A caller who needs  
+  `remove` and does not have it reaches through `_list` and inherits the  
+  `polynode.reset` obligation — the gap does not stay a gap, it becomes a  
+  documented sharp edge. `remove` calls `reset`, the same guarantee `popFirst`  
+  gives.
+- **`concat` self-concat was a silent leak, not just an assert violation.**
+  Traced through `std/DoublyLinkedList.zig:62`: with both arguments the same  
+  list, `concatByMoving` rings the items and then clears the header they are  
+  reachable through. The list comes back empty and every item in it is lost.  
+  The Q28 assert is `unreachable` outside safety builds, so ReleaseFast ran it.  
+  Fix: keep the assert, add `if (self == other) return;`.
+- **Both checks on every insert.** `!_holds` and `!is_linked`. `_holds` sees
+  this list including a list of one; `is_linked` sees a different list except  
+  when the item is alone in it. Neither is complete, they are blind to opposite  
+  cases. This widens Q26 = D, which chose not to read the item — the race  
+  objection stands, but `PolyHelper.moveFromSlot` and `destroy` already assert  
+  `!is_linked`, and the addition is strictly additive. **Misuse case 1 is now  
+  partly covered**; case 5 is not.
+- **`iterate` → `iterator`.** The std name. Breaking, no shim. Six in-repo call
+  sites, three design docs, no example.
+- **`moveFromList` checks its argument** — the one entry point that accepts a
+  header built outside the toolkit.
+- **Not acted on** from the review: `popFirst`'s `reset()` mention (a documented
+  std-compatibility guarantee, not a leaked detail), the `_list` comment  
+  (owner's own prose, owner's decision to keep), `_holds` documentation  
+  (private — comment trimmed instead).
+- **Docs** — item-list-008 §12, api-reference-032, patterns-022,
+  task1-tests-004 (which also backfills 104-105, registered late), and the  
+  kitchen polynode/patterns pages.
 
 API 9 "intrusive safety" — DONE 2026-07-30 (177/177 tests, +2 new).  
 Approved and shipped in the ship order of item-list-006.md §8 / -007 §11.

@@ -6,6 +6,10 @@ Change from -005: companion cross-references updated to rules-034.md and
 patterns-021.md. No model content changed — API 9's neighbour-check rule is a  
 coding rule, not a model claim.
 
+API 10 (2026-07-31): companion link points at patterns-022.md. No model content  
+changed — completing `ItemList` and widening its asserts is API surface and  
+coding rules, not a model claim.
+
 Change from -004: exclusive access gains its second half. The transfer moves  
 possession *and* orders memory. -004 said "whoever holds it has exclusive  
 access" and stopped there, which left the reason the library can assert on an  
@@ -13,7 +17,7 @@ item's fields without atomics unstated.
 
 The mental model behind every Matryoshka design decision.  
 Companion: [rules-034.md](rules-034.md) — the coding and process rules.  
-Companion: [patterns-021.md](patterns-021.md) — reusable coding patterns.
+Companion: [patterns-022.md](patterns-022.md) — reusable coding patterns.
 
 ---
 
@@ -220,7 +224,7 @@ Four parts.
 - Full implementation of the story.
 - All actors, all layers, graceful shutdown.
 - ASCII transfer circuit diagram at the top of the file.
-- Code is structured around Masters. See [patterns-021.md](patterns-021.md) for the coding patterns and the Master composition pattern.
+- Code is structured around Masters. See [patterns-022.md](patterns-022.md) for the coding patterns and the Master composition pattern.
 
 ### Test wrapper — `tests/stories_test.zig`
 

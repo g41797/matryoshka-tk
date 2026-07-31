@@ -33,6 +33,49 @@ while (batch.popFirst()) |ih| {
 One step. `popFirst` hands back an `ItemHandle`, not a list node, so  
 `@fieldParentPtr` never appears in your code.
 
+## What ItemList adds
+
+`std.DoublyLinkedList` checks nothing. `ItemList` is where it is checked.
+
+```zig
+pub fn append(self: *ItemList, ih: ItemHandle) void
+pub fn prepend(self: *ItemList, ih: ItemHandle) void
+pub fn appendFromSlot(self: *ItemList, slot: *Slot) void
+pub fn prependFromSlot(self: *ItemList, slot: *Slot) void
+pub fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void
+pub fn insertBefore(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void
+pub fn popFirst(self: *ItemList) ?ItemHandle
+pub fn popLast(self: *ItemList) ?ItemHandle
+pub fn remove(self: *ItemList, ih: ItemHandle) void
+pub fn first(self: *const ItemList) ?ItemHandle
+pub fn last(self: *const ItemList) ?ItemHandle
+pub fn isEmpty(self: *const ItemList) bool
+pub fn len(self: *const ItemList) usize
+pub fn iterator(self: *const ItemList) Iterator
+pub fn concat(self: *ItemList, other: *ItemList) void
+pub fn moveFromList(list: *std.DoublyLinkedList) ItemList
+pub fn moveToList(self: *ItemList) std.DoublyLinkedList
+```
+
+- `popFirst`, `popLast` and `remove` all call `polynode.reset`. The item comes
+  back unlinked, ready for a `Slot` or another list.
+
+- `first` and `last` look without taking. A list of one returns the same item
+  from both.
+
+- `len` forwards std's walk. O(n) — the mailbox and pool keep their own counters
+  for that reason.
+
+## Taking one item out
+
+`remove` takes an item from anywhere in the list — head, middle, or tail:
+
+```zig
+list.remove(ih);   // ih comes back unlinked
+```
+
+This list must hold the item. Use it instead of reaching through `_list`.
+
 ## Inserting from a Slot
 
 `append` takes an `ItemHandle`, so it has no Slot to clear. `appendFromSlot`  
@@ -46,23 +89,33 @@ list.appendFromSlot(&slot);   // slot == null
 - Both assert the Slot holds an item. An insert is not a `defer` target.
 - Use `append`/`prepend` for a stack item, which has no Slot to empty.
 
-Every transfer in the toolkit empties its source. These two make `ItemList`  
-the same, so the `slot = null` line is no longer yours to remember.
+Every other transfer in the toolkit empties its source. Now `ItemList` does  
+too, so you write no `slot = null` line after an insert.
 
-## The inserts check the list
+## The inserts check twice
 
-Under a safety build, `append`, `prepend` and `insertAfter` walk the list  
-first and assert the item is not already in it. `insertAfter` also asserts  
-`existing` is.
+Under a safety build every insert asserts twice on the item going in: the list  
+does not already hold it, and `polynode.is_linked` is false. `insertAfter` and  
+`insertBefore` also assert `existing` is in the list.
+
+Neither check is complete, and they are blind to opposite cases:
+
+| check | sees | blind to |
+|---|---|---|
+| the list walk | this list, including a list of one | any other list |
+| `is_linked` | any list | the list holding the item alone |
 
 - O(n) per insert under safety builds. Nothing outside them.
-- The walk asks the container, not the item, so it sees the list of one that
-  `polynode.is_linked` cannot.
+- An item alone in a *different* list still passes both.
 
-- It says nothing about an item held by a *different* list.
+`concat` asserts its two arguments are different lists, and returns early if  
+they are the same one. The assert is `unreachable` outside safety builds, and  
+`std.DoublyLinkedList.concatByMoving` would ring the items and then clear the  
+header they are reachable through — the list would come back empty with every  
+item in it lost.
 
-`concat` asserts its two arguments are different lists — self-concat would  
-empty the list and leak every item in it.
+`moveFromList` asserts the std header it is handed is consistent: `first` and  
+`last` both null, or both set.
 
 ## popFirst clears the links
 
@@ -93,9 +146,10 @@ Both are O(1) — a header value copy, no walk.
 `ItemList._list` is the plain std list this `ItemList` holds. Tests that  
 manipulate raw links use it — the layout is what those tests check.
 
-Use the `ItemList` methods instead. Take an item out through the field, and it  
-still points at the list it left: `popFirst` did not run, so `polynode.reset`  
-did not either. Call it yourself.
+Use the `ItemList` methods instead. To take one item out, `remove` is the  
+method — it calls `polynode.reset` for you. Take an item out through the field  
+and it still points at the list it left, and `polynode.reset` becomes yours to  
+call.
 
 ---
 

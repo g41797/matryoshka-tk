@@ -286,7 +286,7 @@ test "9 - mailbox.close returns remaining items" {
     defer items.freeList(&rem, testing.allocator);
 
     var count: usize = 0;
-    var it = rem.iterate();
+    var it = rem.iterator();
     while (it.next()) |_| count += 1;
     try testing.expectEqual(@as(usize, 7), count);
 }
@@ -526,7 +526,7 @@ fn worker14(ctx: *Ctx14) error{Canceled}!void {
             ctx.io.recancel(); // activate cancel again
             // mailbox.close uses lockUncancelable: completes despite active cancel
             var rem: polynode.ItemList = mailbox.close(ctx.mbh_data);
-            var it = rem.iterate();
+            var it = rem.iterator();
             while (it.next()) |_| ctx.close_count += 1;
             items.freeList(&rem, ctx.alloc);
             return error.Canceled;

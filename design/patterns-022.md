@@ -1,12 +1,17 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (021)
+# Matryoshka Zig — Pattern and Idiom Catalog (022)
 
-Versioned doc. Replaces [patterns-020.md](patterns-020.md).
+Versioned doc. Replaces [patterns-021.md](patterns-021.md).
+
+Change from patterns-021: API 10 — `list.iterate()` becomes `list.iterator()`.  
+"Walk a batch — ItemList" gains a "Take one item out" idiom for `remove` and  
+the widened insert checks. Companion cross-reference updated to  
+matryoshka-api-reference-032.md.
 
 Change from patterns-020: API 9 — new "Insert from a Slot" idiom under Slot and  
 transfer idioms. "Transfer clears the slot" gains `appendFromSlot` as a fourth  
 shape. "Walk a batch — ItemList" gains the insert half and the neighbour-check  
 note. Companion cross-references updated to rules-034.md,  
-matryoshka-model-006.md and matryoshka-api-reference-031.md.
+matryoshka-model-006.md and matryoshka-api-reference-032.md.
 
 Change from patterns-019: banned-word pass. `ownership` removed from prose and  
 from two section titles — "Slot and ownership idioms" → "Slot and transfer  
@@ -39,7 +44,7 @@ Change from patterns-011:
 One unified catalog. Every pattern and idiom appears once, in logical order.  
 Companion: [rules-034.md](rules-034.md) — what is mandatory.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [matryoshka-api-reference-031.md](matryoshka-api-reference-031.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -401,7 +406,7 @@ Why.
 
 Walk without consuming.  
 ```zig
-var it = list.iterate();
+var it = list.iterator();
 while (it.next()) |ih| {
     // items stay linked, nothing is removed
 }
@@ -413,17 +418,30 @@ list.appendFromSlot(&slot);            // from a Slot — see "Insert from a Slo
 list.append(EventPolyHelper.toNode(&ev));   // from a stack item
 ```
 
-- Under a safety build, `append`, `prepend` and `insertAfter` walk the list
-  first and assert the item is not already in it. O(n), and nothing outside  
-  safety builds.
-- The walk reads the list, not the item. It catches a double-insert into the
-  same list, including the list of one that `polynode.is_linked` misses. It  
-  says nothing about an item held by a *different* list.
+- Under a safety build every insert asserts twice on the new item, and both
+  asserts are partial.
+- The list walk reads the list, not the item. It catches a double-insert into
+  the same list, including the list of one that `polynode.is_linked` misses.  
+  It says nothing about an item held by a *different* list.
+- `!is_linked` reads the item. It catches that different list — except when the
+  item is its only member.
+- O(n) per insert under safety builds. Nothing outside them.
+
+Take one item out.  
+```zig
+list.remove(ih);                  // wherever it sits — head, middle, tail
+const head = list.first();        // look without taking
+const tail = list.popLast();      // take from the other end
+```
+
+- `remove` calls `polynode.reset`, the same guarantee `popFirst` gives. The item
+  comes back unlinked and goes straight into a `Slot` or another list.
+- This is the reason not to reach through `list._list`.
 
 Do not.
 - Do not reach through `list._list` in application code. It is the raw field,
   there for tests that manipulate raw links. Items taken out that way keep stale  
-  `prev`/`next`, and `polynode.reset` becomes yours to call.
+  `prev`/`next`, and `polynode.reset` becomes yours to call. Use `remove`.
 - Do not use `len()` under a lock in a hot path. It walks the list, O(n). The
   mailbox and pool keep their own counters for that reason.
 

@@ -2,85 +2,248 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-07-31 — `src/polynode.zig` block order
+
+`PolyHelper` moved ahead of `ItemList`, and `validatePolyType` moved to sit
+directly after `PolyHelper` instead of past `ItemList`. Pure block moves: no text
+edited, no signature changed, file still 506 lines, `zig fmt --check` clean.
+
+Final order: `PolyTag`/`ItemHandle`/`PolyNode`/`Slot`/`reset`/`is_linked`,
+`PolyHelper`, `validatePolyType`, `ItemList`, `std` import.
+
+Reason: `PolyHelper` is how a `PolyNode` is used — tag, casts, init,
+create/destroy — so it belongs beside the type it serves. `ItemList`'s 193 lines
+had been sitting between them, so the file read node → container of nodes → back
+to node. Neither depends on the other, so the swap is free. The largest
+self-contained block is now last.
+
+`PolyNode` stays first, ahead of both: `ItemList` is built from `ItemHandle`,
+`Slot`, `reset` and `is_linked`, and nothing in `PolyNode` refers to `ItemList`.
+Same rule the docs follow — nothing used before it is introduced.
+
+Not changed: `ItemHandle = *PolyNode` still precedes `PolyNode`. Strict
+dependency order wants the reverse, but `PolyNode`'s doc comment *is* the
+ItemHandle-vs-`*PolyNode` explanation and needs the name already introduced.
+Prose order wins there on purpose.
+
+Also considered and dropped this session, owner's decision: removing the
+`PolyHelper` two-variant duplication (~82 lines). Three routes were priced —
+`@compileError` guards in always-generated bodies (verified to work on 0.16,
+rejected as messy); a base type plus 9 explicit aliases with a decl-sync test
+(verified); free `create`/`destroy` functions (dead — 160 call sites). An
+earlier suggestion to delete `no_create_destroy` outright was wrong and was
+withdrawn: `_Mailbox`/`_Pool` have no field defaults so the compiler already
+blocks `create` for them, but a user type has defaults, and there the guard is
+the only thing stopping it. **Left as is.**
+
+Verification: `build_and_test_all.sh` exit 0, 4× 182/182. `build_cross_debug.sh`
+exit 0. No `*.md` changed, so no doc tooling run and nothing new to scan.
+
+Git untouched.
+
+### 2026-07-31 — API 10 "ItemList completion"
+
+**182/182 tests, +5 new.** Four optimize modes plus cross-compile. Prompted by  
+an external review of `src/polynode.zig` that the owner passed on:  
+implementation 8.5/10, comments 3/10.
+
+Owner's instruction mid-stage: "DoublyLinkedList checks nothing, ItemList should  
+check everything."
+
+**Code — `src/polynode.zig`.**
+
+- `remove`, `popLast`, `first`, `last`, `insertBefore` added. `remove` calls
+  `polynode.reset`, the guarantee `popFirst` already gave.
+- `iterate` renamed to `iterator`. Breaking, no shim. Six in-repo call sites:
+  `src/pool.zig`, `tests/layer1_itemlist.zig` ×2, `tests/layer4_cancel.zig` ×2,  
+  plus the scenario 103 title. No example used it.
+- `concat` gained `if (self == other) return;` alongside the existing assert.
+- New private `_checkInsert`, called by all four inserts: asserts `!_holds(ih)`
+  and `!is_linked(ih)`, both under `std.debug.runtime_safety`.
+- `moveFromList` asserts `(list.first == null) == (list.last == null)`.
+- `_holds` comment trimmed. `Iterator` header line shortened.
+
+**The concat finding.** Traced through `std/DoublyLinkedList.zig:62`. With  
+`list1 == list2`, `concatByMoving` sets `l1_last.next = list2.first` and  
+`l2_first.prev = list1.last` — a ring — then clears `list2.first`/`list2.last`,  
+which are the same header. The list comes back **empty** with every item in it  
+unreachable. Q28's assert is `unreachable` outside safety builds, so ReleaseFast  
+ran it. Not a corruption caught later — a silent leak of the whole list.
+
+**Decision reversals, both recorded rather than absorbed.**
+
+1. `item-list-007.md` §2.3 declined `remove` and `pop` under a "first real call
+   site. Not before" rule. API 10 reverses it. The rule assumes an omitted  
+   method costs nothing until someone needs it; for `remove` that is false,  
+   because the caller who needs it reaches through `_list` and inherits the  
+   `polynode.reset` obligation. Recorded in item-list-008 §12.1, and §2.3 itself  
+   carries a pointer to the reversal.
+2. Q26 = D chose "ask the container, not the item", and `_holds` was written to
+   avoid reading item links. Adding `!is_linked` to every insert reads the item.  
+   The race objection stands and is stated. It was added anyway on the owner's  
+   explicit instruction, after being flagged: `PolyHelper.moveFromSlot` and  
+   `destroy` already assert `!is_linked`, and the addition is strictly additive.  
+   **Misuse case 1 is now partly covered**; case 5 is not. Recorded in §12.2.
+
+**Tests — `tests/layer1_itemlist.zig`.** Scenarios 106-110. Scenario 103 gained  
+the self-concat case, gated behind `if (!std.debug.runtime_safety)` — the assert  
+fires everywhere else, so only the builds without it reach the early return, and  
+those are the builds that need it.
+
+**Docs.** New versions: `item-list-008.md` (§12, the decision record),  
+`matryoshka-api-reference-032.md`, `patterns-022.md`, `task1-tests-004.md`.  
+Cross-references updated in place in `STATUS.md`, `context.md`, `rules-034.md`,  
+`matryoshka-model-006.md`, `matryoshka-tk-implementation-plan-050.md`. Kitchen  
+pages edited in place: `api/polynode/stdlib-compatibility.md`,  
+`patterns/slot-and-polynode.md`.
+
+**Two things caught while doing it.**
+
+- `task1-tests-003.md` stopped at scenario 103. Scenarios **104 and 105 shipped
+  with API 9 and were never registered.** Pre-existing gap, backfilled in -004.
+- A first pass of `sed` over the cross-references rewrote the *historical* API 9
+  records in `STATUS.md`, `context.md`, `matryoshka-model-006.md` and  
+  `plan-050.md` — those sentences name the docs API 9 actually shipped to, and  
+  rewriting them falsifies the record. Reverted; API 10 is a new entry beside  
+  them, not an edit of them.
+- `item-list-007.md` §2.2 quoted the `_list` doc comment as "the authority", but
+  the shipped comment is the owner's own text, not the one quoted. The quote was  
+  already stale before this stage. -008 §2.2 now matches `src/polynode.zig`.
+
+**Review points not acted on**, with reasons in item-list-008 §12.6:  
+`popFirst`'s `reset()` mention (a documented std-compatibility guarantee — see  
+the "popFirst clears the links" section — not a leaked detail); the `_list`  
+comment (owner's own prose, owner's decision to keep it); `_holds`  
+documentation (private, so its comment was trimmed instead).
+
+**Verification.** `build_and_test_all.sh` exit 0, 4× "182/182 tests passed", run  
+twice — before and after the doc tooling. `build_cross_debug.sh` exit 0.  
+`gen_examples_docs.sh`, `fix_md_lists.sh`, `fix_md_hardbreaks.sh` all exit 0.  
+`mkdocs build --strict` exit 0, zero warnings. AI-sh + banned-word scan over  
+every changed `*.zig` and `*.md`: **all new text clean**. Remaining hits are  
+inherited from the predecessor docs that were copied forward, plus  
+`mutex.unlock()` as an API name — the backlog already reported.
+
+Git untouched. The commit is the owner's.
+
+### 2026-07-31 — API 9 comment and prose style pass
+
+Owner: "very bad non-human comments ... smell of AI ... fix". Style only. No  
+code changed, no decision changed, no API changed.
+
+Every site was text written during API 9 the day before. The recurring shape:  
+state the fact, restate it as a consequence, then close with an em-dash clause  
+justifying it. Also parallel bullet trios and two-word imperative flourishes.  
+The owner's own older comments (`Fix laziness of std.DoubleLinkedList`, `No  
+clue how to get rid of them. Be patient.`, `Same type. Different intent.`) were  
+left untouched — they are the style being matched.
+
+`src/polynode.zig`, six sites: `is_linked` (dropped the third sentence, which  
+restated the second), the `ItemList` header (bullet trio to one line), the  
+`_list` field comment (three-bullet consequence list to three lines), `_holds`  
+("Called only ... and only under" to "Called by ... under ... only"), and both  
+`appendFromSlot` / `prependFromSlot`.
+
+Shipped site docs, edited in place (not versioned): `api/polynode/functions.md`  
+(is_linked bullets), `api/polynode/stdlib-compatibility.md` (two sections),  
+`patterns/slot-and-polynode.md` (the "Insert from a Slot" why-block and the  
+ItemList insert bullet).
+
+Design docs, **edited in place** — owner's call when asked. The no-overwrite  
+rule would have minted item-list-008 and patterns-022 plus a cross-reference  
+cascade, for prose that changed no content and was minted the previous day.  
+Recorded here so the deviation is visible: `item-list-007.md` §11.1, §11.2,  
+§11.4, §11.5; `patterns-021.md` two blocks; `rules-034.md` the neighbour-check  
+rule ("Two checks are exact, and both ask something other than the item" and  
+"Prefer prevention" were the two worst lines in it).
+
+One consequence caught: `item-list-007.md` §2.2 quotes the `_list` doc comment  
+and calls it "the authority". Fixing the source made the quote stale, so §2.2  
+was re-synced to match `src/polynode.zig`.
+
+Verification: `build_and_test_all.sh` exit 0, 177/177 × four optimize modes.  
+`gen_examples_docs.sh`, `fix_md_lists.sh`, `fix_md_hardbreaks.sh` all exit 0.  
+`mkdocs build --strict` exit 0, zero warnings.
+
 ### 2026-07-30 — API 9 "intrusive safety" DONE (177/177)
 
-Owner approved the stage and said "go in auto mode". Built in the ship order of
-item-list-006.md §8 Q32. Step 0 (the happens-before invariant) had shipped
+Owner approved the stage and said "go in auto mode". Built in the ship order of  
+item-list-006.md §8 Q32. Step 0 (the happens-before invariant) had shipped  
 earlier the same day.
 
-**1. Prevention (Q31).** `ItemList.appendFromSlot` / `prependFromSlot` in
-`src/polynode.zig`. Each asserts the Slot holds an item, inserts, empties the
-Slot. Four call sites migrated: `examples/layer1/023-tag_dispatch.zig` ×2,
-`025-produce_consume.zig`, `tests/layer3_pool.zig`. The `slot = null` line is
-gone from all four, and with it the §9 follow-up comment at
+**1. Prevention (Q31).** `ItemList.appendFromSlot` / `prependFromSlot` in  
+`src/polynode.zig`. Each asserts the Slot holds an item, inserts, empties the  
+Slot. Four call sites migrated: `examples/layer1/023-tag_dispatch.zig` ×2,  
+`025-produce_consume.zig`, `tests/layer3_pool.zig`. The `slot = null` line is  
+gone from all four, and with it the §9 follow-up comment at  
 `tests/layer3_pool.zig:627` — it explained a line that no longer exists.
 
-The 7.4 sketch carried a second assert, `!is_linked(slot.*.?)`. **Not written.**
-7.4 itself calls that line "inherited habit, not mechanism", and the container
+The 7.4 sketch carried a second assert, `!is_linked(slot.*.?)`. **Not written.**  
+7.4 itself calls that line "inherited habit, not mechanism", and the container  
 walk now covers the same ground exactly rather than partially.
 
-**2. Tests (Q29).** `tests/layer1_itemlist.zig`, registered in
-`matryoshka_tests.zig`. Scenarios 100-103 **moved** out of `layer1_polynode.zig`
-unchanged — they are `ItemList`'s contract, and that file is `PolyNode`'s. New
-104 (both methods empty the Slot) and 105 (`popFirst` → `appendFromSlot` round
+**2. Tests (Q29).** `tests/layer1_itemlist.zig`, registered in  
+`matryoshka_tests.zig`. Scenarios 100-103 **moved** out of `layer1_polynode.zig`  
+unchanged — they are `ItemList`'s contract, and that file is `PolyNode`'s. New  
+104 (both methods empty the Slot) and 105 (`popFirst` → `appendFromSlot` round  
 trip, which is what proves a popped handle is a legal Slot value). 175 → 177.
 
-**3. Detection (Q34 C).** `ItemList._holds`, private, O(n), the walk verbatim
-from 7.3. `append`/`prepend` assert `!_holds(ih)`; `insertAfter` also asserts
+**3. Detection (Q34 C).** `ItemList._holds`, private, O(n), the walk verbatim  
+from 7.3. `append`/`prepend` assert `!_holds(ih)`; `insertAfter` also asserts  
 `_holds(existing)`.
 
-One thing the design did not anticipate: the asserts are wrapped in
-`if (std.debug.runtime_safety)` rather than left to `std.debug.assert`. The
-first attempt put an early `return false` inside `_holds` for non-safety builds,
-which turns `assert(_holds(existing))` — a *positive* assert — into
-`assert(false)`, and outside safety builds that is `unreachable`, undefined
-behaviour. The explicit gate keeps the positive and negative forms uniform and
+One thing the design did not anticipate: the asserts are wrapped in  
+`if (std.debug.runtime_safety)` rather than left to `std.debug.assert`. The  
+first attempt put an early `return false` inside `_holds` for non-safety builds,  
+which turns `assert(_holds(existing))` — a *positive* assert — into  
+`assert(false)`, and outside safety builds that is `unreachable`, undefined  
+behaviour. The explicit gate keeps the positive and negative forms uniform and  
 puts the cost at the call site where it can be seen.
 
-`mailbox.send` and `pool.put` **inherit** the walk through `ItemList.append` /
-`prepend`. Q34's closing paragraph reads as though they need their own; they do
-not. What was not added is a walk of the destination list from inside `send` or
+`mailbox.send` and `pool.put` **inherit** the walk through `ItemList.append` /  
+`prepend`. Q34's closing paragraph reads as though they need their own; they do  
+not. What was not added is a walk of the destination list from inside `send` or  
 `put` before the lock is taken.
 
-**4. Q28.** `concat` asserts `self != other`. Not gated — `std.debug.assert` is
-already a no-op outside safety builds, and this one is a pointer comparison, not
+**4. Q28.** `concat` asserts `self != other`. Not gated — `std.debug.assert` is  
+already a no-op outside safety builds, and this one is a pointer comparison, not  
 a walk.
 
-**5. `is_linked` (Q27, Q33).** Name, signature and all seven asserts unchanged.
-Doc comment now says "True if the node has neighbours" and states the
-sole-member case outright. Rules entry "The neighbour check" added. The three
-test comments of Q33 corrected — `layer1_polynode.zig:71`,
-`layer2_mailbox.zig:598`, `layer3_pool.zig:808`. Scenario 88's existing comment
+**5. `is_linked` (Q27, Q33).** Name, signature and all seven asserts unchanged.  
+Doc comment now says "True if the node has neighbours" and states the  
+sole-member case outright. Rules entry "The neighbour check" added. The three  
+test comments of Q33 corrected — `layer1_polynode.zig:71`,  
+`layer2_mailbox.zig:598`, `layer3_pool.zig:808`. Scenario 88's existing comment  
 already described the hole; the new lines say it is deliberate, not incidental.
 
-**Docs.** New versions, no overwrites: `rules-034.md` (the neighbour-check
-entry), `patterns-021.md` (new "Insert from a Slot" idiom; "Transfer clears the
-slot" gains a fourth shape; "Walk a batch" gains the insert half),
-`matryoshka-api-reference-031.md`, `matryoshka-model-006.md`,
-`item-list-007.md` (§11, what shipped), `matryoshka-tk-implementation-plan-050.md`.
-Kitchen: `api/polynode/functions.md`, `api/polynode/stdlib-compatibility.md`,
+**Docs.** New versions, no overwrites: `rules-034.md` (the neighbour-check  
+entry), `patterns-021.md` (new "Insert from a Slot" idiom; "Transfer clears the  
+slot" gains a fourth shape; "Walk a batch" gains the insert half),  
+`matryoshka-api-reference-031.md`, `matryoshka-model-006.md`,  
+`item-list-007.md` (§11, what shipped), `matryoshka-tk-implementation-plan-050.md`.  
+Kitchen: `api/polynode/functions.md`, `api/polynode/stdlib-compatibility.md`,  
 `patterns/slot-and-polynode.md`, plus regenerated example pages.
 
-**A judgment call worth recording.** `matryoshka-model-006.md` changes nothing
-but two companion links. Minting a version for a link is noise, and leaving
-model-005 pointing at rules-033 is rot. Minted, because the cascade turned out
-to be contained — only patterns and the model point at rules, and both needed a
+**A judgment call worth recording.** `matryoshka-model-006.md` changes nothing  
+but two companion links. Minting a version for a link is noise, and leaving  
+model-005 pointing at rules-033 is rot. Minted, because the cascade turned out  
+to be contained — only patterns and the model point at rules, and both needed a  
 bump anyway. Had the cascade been wide, this would have gone back to the owner.
 
-**Still open, by decision.** Misuse cases 1 and 5. An item in a *different* list
-is not reachable from `self`; `PolyHelper.destroy` and `moveFromSlot` hold a
-Slot and no list. That is the price of Q26 = D. Cases 6, 7, 8 stay documented
+**Still open, by decision.** Misuse cases 1 and 5. An item in a *different* list  
+is not reachable from `self`; `PolyHelper.destroy` and `moveFromSlot` hold a  
+Slot and no list. That is the price of Q26 = D. Cases 6, 7, 8 stay documented  
 sharp edges.
 
-**Verification.** `build_and_test_all.sh` — 177/177 × Debug, ReleaseSafe,
-ReleaseFast, ReleaseSmall. `build_cross_debug.sh` clean.
-`gen_examples_docs.sh` + both fixers + `mkdocs build --strict`, exit 0, zero
-warnings. Banned-word scan over every changed `.zig` and `.md`: zero new hits —
-the only matches are the rule text listing the words, inherited change-log rows,
+**Verification.** `build_and_test_all.sh` — 177/177 × Debug, ReleaseSafe,  
+ReleaseFast, ReleaseSmall. `build_cross_debug.sh` clean.  
+`gen_examples_docs.sh` + both fixers + `mkdocs build --strict`, exit 0, zero  
+warnings. Banned-word scan over every changed `.zig` and `.md`: zero new hits —  
+the only matches are the rule text listing the words, inherited change-log rows,  
 and `unlock()` as an API name.
 
-**Process note.** I ran one `git status --short` to check which generated pages
-had changed. Git is disabled; that was a slip. Read-only, nothing written, and I
+**Process note.** I ran one `git status --short` to check which generated pages  
+had changed. Git is disabled; that was a slip. Read-only, nothing written, and I  
 used a grep instead afterwards.
 
 ### 2026-07-30 — kitchen docs: examples verified in sync, nav defects, ItemList in building-blocks

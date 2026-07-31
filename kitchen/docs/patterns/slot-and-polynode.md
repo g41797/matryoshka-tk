@@ -100,13 +100,13 @@ list.appendFromSlot(&slot);
 Why.
 
 - `append` takes an `ItemHandle`, so it cannot clear a Slot. Every call site
-  used to write `slot = null` on the next line by hand.
+  wrote `slot = null` on the next line by hand.
 
-- That is the line that gets forgotten, and defer-destroy-early then frees an
-  item the list still points at.
+- Forget that line and defer-destroy-early frees an item the list still points
+  at.
 
-- `appendFromSlot` empties the Slot itself. The mistake cannot be written.
-- The Slot must hold an item — an insert is not a `defer` target, so it follows
+- `appendFromSlot` empties the Slot itself, so there is no line to forget.
+- The Slot must hold an item. An insert is not a `defer` target, so it follows
   `mailbox.send` rather than `pool.put`.
 
 Do not.
@@ -300,9 +300,14 @@ Why.
   raw std list over with `ItemList.moveFromList`, which leaves the raw list  
   empty.
 
-- Under a safety build every insert walks the list first and asserts the item
-  is not already in it. That asks the container, so it sees the list of one  
-  `polynode.is_linked` cannot.
+- Under a safety build every insert asserts twice on the item going in: this
+  list does not hold it, and `polynode.is_linked` is false. The list walk  
+  catches a list of one, which `is_linked` misses; `is_linked` catches a  
+  *different* list, which the walk cannot reach. Neither alone is complete.
+
+- Take one item out with `remove(ih)` — head, middle or tail. It calls
+  `polynode.reset`, so the item comes back unlinked. `popLast` is `popFirst` at  
+  the other end, and `first`/`last` look without taking.
 
 Example: `examples/layer2/060-batch_processing.zig`.  
 Details: `api/polynode/stdlib-compatibility.md`.
