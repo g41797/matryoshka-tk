@@ -64,7 +64,11 @@ pub inline fn reset(node: *PolyNode) void {
     node.node.next = null;
 }
 
-/// True if the node is linked into a list.
+/// True if the node has neighbours.
+///
+/// Not the same as "is in a list". The sole member of a list has no
+/// neighbours, so this returns false for it.\
+/// A false result means nothing about whether the node is held somewhere.
 pub inline fn is_linked(node: *PolyNode) bool {
     return node.node.prev != null or node.node.next != null;
 }
@@ -94,18 +98,55 @@ pub const ItemList = struct {
     /// the item is no longer in.
     _list: std.DoublyLinkedList = .{},
 
+    /// True if this list already holds the item.
+    ///
+    /// Called only by the asserts below, and only under runtime safety.\
+    /// Computes the address of the item's node. Never reads the item.\
+    /// O(n) — std.DoublyLinkedList has no contains().
+    fn _holds(self: *const ItemList, ih: ItemHandle) bool {
+        var it = self._list.first;
+        while (it) |n| : (it = n.next) if (n == &ih.node) return true;
+        return false;
+    }
+
     /// Adds the item at the end.
     pub inline fn append(self: *ItemList, ih: ItemHandle) void {
+        if (std.debug.runtime_safety) std.debug.assert(!self._holds(ih));
         self._list.append(&ih.node);
     }
 
     /// Adds the item at the front.
     pub inline fn prepend(self: *ItemList, ih: ItemHandle) void {
+        if (std.debug.runtime_safety) std.debug.assert(!self._holds(ih));
         self._list.prepend(&ih.node);
+    }
+
+    /// Adds the item at the end, taking it out of the Slot.
+    ///
+    /// The Slot is left empty.\
+    /// Asserts the Slot holds an item — an append is not a defer target.
+    pub fn appendFromSlot(self: *ItemList, slot: *Slot) void {
+        std.debug.assert(slot.* != null);
+        self.append(slot.*.?);
+        slot.* = null;
+    }
+
+    /// Adds the item at the front, taking it out of the Slot.
+    ///
+    /// The Slot is left empty.\
+    /// Asserts the Slot holds an item — a prepend is not a defer target.
+    pub fn prependFromSlot(self: *ItemList, slot: *Slot) void {
+        std.debug.assert(slot.* != null);
+        self.prepend(slot.*.?);
+        slot.* = null;
     }
 
     /// Adds the item right after one already in the list.
     pub inline fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void {
+        if (std.debug.runtime_safety) {
+            std.debug.assert(self._holds(existing));
+            std.debug.assert(!self._holds(ih));
+        }
         self._list.insertAfter(&existing.node, &ih.node);
     }
 
@@ -141,6 +182,7 @@ pub const ItemList = struct {
     ///
     /// `other` is left empty.
     pub inline fn concat(self: *ItemList, other: *ItemList) void {
+        std.debug.assert(self != other);
         self._list.concatByMoving(&other._list);
     }
 

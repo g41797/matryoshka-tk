@@ -61,6 +61,24 @@ A Slot is a place that either holds a handle or is empty.
 - When the item moves, the slot becomes empty — that's the proof the move
   happened, not just bookkeeping.
 
+## ItemList — where many handles live at once
+
+An ItemList is a place that holds any number of handles, in order.
+
+- One handle, one Item. One Slot, one place for one Item. One ItemList, many.
+- The three together cover every shape the toolkit passes around. Nothing else
+  is needed to describe an API that carries items.
+
+- Anything moving more than one item at a time speaks ItemList — receiving a
+  whole queue, returning a batch to a pool, handing back what a pool held when  
+  it closes.
+
+- Taking an item out of a list gives you a handle, the same kind you already
+  hold anywhere else. The list's own links are cleared as it leaves.
+
+- The list is a container, not a holder. The items in it belong to whoever
+  holds the list.
+
 ## Why this matters
 
 Given a handle, you can identify the Item it came from and cast back to it:

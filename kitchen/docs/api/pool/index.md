@@ -93,7 +93,7 @@ pub const PoolHooks = struct {
     ctx:      *anyopaque,
     tags:     []const *const anyopaque,
     on_get:   *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,
-    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) void,
+    on_put:   *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *Slot) ?polynode.ItemList,
     on_close: *const fn (ctx: *anyopaque, list: *polynode.ItemList) void,
 };
 ```

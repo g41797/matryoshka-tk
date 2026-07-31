@@ -67,7 +67,9 @@ test "7 - polynode.reset clears links" {
     try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), ev.poly.node.next);
 }
 
-// --- Scenario 8: polynode.is_linked detection ---
+// --- Scenario 8: polynode.is_linked reads the neighbour links ---
+// Not a membership test: the sole member of a list has no neighbours, so
+// is_linked reports false for it. See rules — the neighbour check.
 test "8 - polynode.is_linked detection" {
     var ev: Event = .{};
     EventPolyHelper.init(&ev);
@@ -238,144 +240,6 @@ test "99 - toNode reaches the embedded PolyNode" {
     var other: Event = .{ .code = 7 };
     EventPolyHelper.init(&other);
     try testing.expect(EventPolyHelper.toNode(&other) != node);
-}
-
-// --- Scenario 100: ItemList speaks ItemHandle ---
-test "100 - ItemList append, prepend, insertAfter, popFirst" {
-    var a: Event = .{ .code = 1 };
-    var b: Event = .{ .code = 2 };
-    var c: Event = .{ .code = 3 };
-    EventPolyHelper.init(&a);
-    EventPolyHelper.init(&b);
-    EventPolyHelper.init(&c);
-
-    var list: ItemList = .{};
-    try testing.expect(list.isEmpty());
-    try testing.expectEqual(@as(usize, 0), list.len());
-    try testing.expect(list.popFirst() == null);
-
-    // append puts items at the end, prepend at the front.
-    list.append(EventPolyHelper.toNode(&b));
-    list.append(EventPolyHelper.toNode(&c));
-    list.prepend(EventPolyHelper.toNode(&a));
-
-    try testing.expect(!list.isEmpty());
-    try testing.expectEqual(@as(usize, 3), list.len());
-
-    // Items come back in order, as Event, with no builtin in sight.
-    for ([_]i32{ 1, 2, 3 }) |want| {
-        const ih = list.popFirst() orelse unreachable;
-        const ev: *Event = EventPolyHelper.fromNode(ih) orelse unreachable;
-        try testing.expectEqual(want, ev.*.code);
-    }
-    try testing.expect(list.isEmpty());
-    try testing.expect(list.popFirst() == null);
-
-    // insertAfter places an item directly behind one already in the list.
-    list.append(EventPolyHelper.toNode(&a));
-    list.insertAfter(EventPolyHelper.toNode(&a), EventPolyHelper.toNode(&c));
-    list.insertAfter(EventPolyHelper.toNode(&a), EventPolyHelper.toNode(&b));
-
-    for ([_]i32{ 1, 2, 3 }) |want| {
-        const ih = list.popFirst() orelse unreachable;
-        try testing.expectEqual(want, EventPolyHelper.mustFromNode(ih).*.code);
-    }
-}
-
-// --- Scenario 101: popFirst clears the links ---
-test "101 - ItemList popFirst returns an unlinked item" {
-    var a: Event = .{ .code = 1 };
-    var b: Event = .{ .code = 2 };
-    EventPolyHelper.init(&a);
-    EventPolyHelper.init(&b);
-
-    var list: ItemList = .{};
-    list.append(EventPolyHelper.toNode(&a));
-    list.append(EventPolyHelper.toNode(&b));
-
-    // Linked while held.
-    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&a)));
-
-    // This is the guarantee: no caller-side reset() needed.
-    const first = list.popFirst() orelse unreachable;
-    try testing.expect(!polynode.is_linked(first));
-
-    // Holds for the last item too, whose links point back, not forward.
-    const second = list.popFirst() orelse unreachable;
-    try testing.expect(!polynode.is_linked(second));
-
-    // A popped item goes straight into a Slot, which asserts it is unlinked.
-    var slot: Slot = second;
-    try testing.expectEqual(@as(i32, 2), EventPolyHelper.moveFromSlot(&slot).?.*.code);
-}
-
-// --- Scenario 102: moves empty their source ---
-test "102 - ItemList moveFromList and moveToList" {
-    var a: Event = .{ .code = 1 };
-    var b: Event = .{ .code = 2 };
-    EventPolyHelper.init(&a);
-    EventPolyHelper.init(&b);
-
-    // Arriving from a std list: the source is emptied, never aliased.
-    var raw: std.DoublyLinkedList = .{};
-    raw.append(&a.poly.node);
-    raw.append(&b.poly.node);
-
-    var list = ItemList.moveFromList(&raw);
-    try testing.expect(raw.first == null);
-    try testing.expect(raw.last == null);
-    try testing.expectEqual(@as(usize, 2), list.len());
-
-    // Leaving for a std list: this list is emptied in turn.
-    var back = list.moveToList();
-    try testing.expect(list.isEmpty());
-    try testing.expectEqual(@as(usize, 2), back.len());
-    try testing.expectEqual(@as(*std.DoublyLinkedList.Node, &a.poly.node), back.first.?);
-
-    // Both directions are fine with an empty list.
-    var nothing: std.DoublyLinkedList = .{};
-    var empty = ItemList.moveFromList(&nothing);
-    try testing.expect(empty.isEmpty());
-    try testing.expect(empty.moveToList().first == null);
-}
-
-// --- Scenario 103: iterate and concat ---
-test "103 - ItemList iterate walks, concat empties the source" {
-    var a: Event = .{ .code = 1 };
-    var b: Event = .{ .code = 2 };
-    var c: Event = .{ .code = 3 };
-    EventPolyHelper.init(&a);
-    EventPolyHelper.init(&b);
-    EventPolyHelper.init(&c);
-
-    var first: ItemList = .{};
-    first.append(EventPolyHelper.toNode(&a));
-
-    var second: ItemList = .{};
-    second.append(EventPolyHelper.toNode(&b));
-    second.append(EventPolyHelper.toNode(&c));
-
-    // concat moves every item over and leaves the source empty.
-    first.concat(&second);
-    try testing.expect(second.isEmpty());
-    try testing.expectEqual(@as(usize, 3), first.len());
-
-    // iterate yields ItemHandle in order and removes nothing.
-    var seen: i32 = 0;
-    var it = first.iterate();
-    while (it.next()) |ih| {
-        seen += 1;
-        try testing.expectEqual(seen, EventPolyHelper.mustFromNode(ih).*.code);
-        // Still linked — a walk is not a pop.
-        try testing.expect(polynode.is_linked(ih));
-    }
-    try testing.expectEqual(@as(i32, 3), seen);
-    try testing.expectEqual(@as(usize, 3), first.len());
-
-    // Walking an empty list yields nothing.
-    var none: ItemList = .{};
-    var empty_it = none.iterate();
-    try testing.expect(empty_it.next() == null);
 }
 
 const items = @import("examples").items;

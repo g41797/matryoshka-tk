@@ -595,6 +595,8 @@ test "48 - receive: HELD to IN_FLIGHT, slot is non-null" {
 }
 
 // --- Scenario 49: is_linked detection; assert triggers in Debug/ReleaseSafe (no panic-catch in testing) ---
+// The list holds two items here, which is the case the assert catches. Against
+// a list of one it would not fire — is_linked reads neighbours, not membership.
 test "49 - send linked item: is_linked detection (assert documented)" {
     var ev1: Event = .{ .code = 49 };
     var ev2: Event = .{ .code = 50 };
@@ -605,7 +607,8 @@ test "49 - send linked item: is_linked detection (assert documented)" {
     list.append(&ev1.poly);
     list.append(&ev2.poly);
 
-    // mailbox.send would assert(!is_linked) here (Open Item 11)
+    // mailbox.send would assert(!is_linked) here (Open Item 11), and does
+    // catch it, because ev1 has a neighbour.
     try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev1)));
 
     // ItemList.popFirst clears the links on the way out

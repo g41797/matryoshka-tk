@@ -1,6 +1,8 @@
 # Matryoshka API Reference — Zig 0.16
 
-Replaces [matryoshka-api-reference-029.md](matryoshka-api-reference-029.md).
+Replaces [matryoshka-api-reference-030.md](matryoshka-api-reference-030.md).
+
+API 9 (intrusive safety): `ItemList.appendFromSlot` and `ItemList.prependFromSlot` added — they take the item out of a `Slot` and leave it empty, so the caller writes no `slot = null` line. `append`, `prepend` and `insertAfter` assert against the container's own contents under runtime safety. `concat` asserts its two arguments are different lists. `is_linked` is documented for what it computes: whether the node has neighbours, which is false for a list's only member.
 
 API 8 doc-comment sync (rules-030): `ItemList._list` reworded — "underneath" and "on purpose" are banned words, and the entry now matches the field's doc comment in `src/polynode.zig`.
 
@@ -133,7 +135,13 @@ pub fn reset(n: *PolyNode) void
 ```zig
 pub fn is_linked(n: *PolyNode) bool
 ```
-- Returns true if node is currently linked into a list.
+- Returns true if the node has neighbours (`prev` or `next` is set).
+- Not a membership test. `std.DoublyLinkedList` never sets the links of a
+  list's only member, so a list of exactly one reports false.
+- The `!is_linked` asserts in `mailbox.send`, `pool.put`, `PolyHelper.destroy`
+  and `PolyHelper.moveFromSlot` catch the multi-element case and are blind for  
+  a list of one.
+- A false result means nothing about whether the item is held somewhere.
 
 ### ItemList
 
@@ -146,6 +154,8 @@ Returned by `mailbox.receive_batch` and `mailbox.close`. Taken by
 ```zig
 pub fn append(self: *ItemList, ih: ItemHandle) void
 pub fn prepend(self: *ItemList, ih: ItemHandle) void
+pub fn appendFromSlot(self: *ItemList, slot: *Slot) void
+pub fn prependFromSlot(self: *ItemList, slot: *Slot) void
 pub fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void
 pub fn popFirst(self: *ItemList) ?ItemHandle
 pub fn isEmpty(self: *const ItemList) bool
@@ -159,6 +169,17 @@ pub fn moveToList(self: *ItemList) std.DoublyLinkedList
 - `popFirst` returns `?ItemHandle` and calls `polynode.reset` before returning.
   A popped handle is never linked.
 - `append`, `prepend`, `insertAfter` take `ItemHandle` — no `&x.poly.node`.
+- `appendFromSlot` / `prependFromSlot` take the item out of a `Slot` and leave
+  it empty. Use them whenever the item is in a Slot; `append` and `prepend`  
+  stay for a stack item, which has no Slot to empty.
+- Both assert the Slot holds an item. An insert is not a `defer` target, so it
+  follows `mailbox.send` rather than `pool.put`.
+- Under runtime safety, `append`, `prepend` and `insertAfter` walk the list and
+  assert the item is not already in it; `insertAfter` also asserts `existing`  
+  is. O(n), and nothing outside safety builds. The walk asks the container, so  
+  it sees the list of one that `is_linked` cannot.
+- `concat` asserts `other != self`. Self-concat would silently empty the list
+  and leak every item in it.
 - `len` forwards std's walk. O(n). The mailbox and pool keep their own counters
   for this reason; `len` never replaces them.
 - `iterate` walks without removing. Items stay linked, no `reset`.

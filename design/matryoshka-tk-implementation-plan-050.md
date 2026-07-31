@@ -1,10 +1,11 @@
-# Matryoshka Zig — Implementation Plan (049)
+# Matryoshka Zig — Implementation Plan (050)
 
-Replaces [matryoshka-tk-implementation-plan-048.md](matryoshka-tk-implementation-plan-048.md).
+Replaces [matryoshka-tk-implementation-plan-049.md](matryoshka-tk-implementation-plan-049.md).
 
 ## Status
 
-API 8 complete — 8a, 8b, 8c, 8d. 175/175 tests.
+API 8 complete — 8a, 8b, 8c, 8d. API 9 "intrusive safety" complete.  
+177/177 tests.
 
 `ItemList` closed the `std.DoublyLinkedList` boundary. `@fieldParentPtr` is  
 gone from `examples/`, `stories/`, and every test except the raw-link  
@@ -65,7 +66,7 @@ the sites `toListNode` targeted no longer exist.
   answered), 8b type + scenarios 100-103, 8c one atomic migration across  
   `src/`, `examples/`, `tests/`, `stories/`, 8d docs to api-reference-029,  
   patterns-019, rules-029, task1-tests-002. DONE (175/175 tests).  
-  Agreed design: [item-list-005.md](item-list-005.md).
+  Agreed design: [item-list-006.md](item-list-006.md).
 
 Rejected during API 7d, owner's decision. Recorded so they are not re-proposed.
 
@@ -96,7 +97,7 @@ answered it (Q22): `ItemList.append` takes an `ItemHandle`, so the 5 genuine
 The 6 deliberate raw-link sites in `tests/layer1_polynode.zig` scenarios 6, 7,  
 8 stay raw, unchanged. That layout is the thing under test.
 
-Full reasoning: [item-list-005.md](item-list-005.md).
+Full reasoning: [item-list-006.md](item-list-006.md).
 
 ---
 
@@ -124,21 +125,51 @@ It closes two of the eight misuse cases — including `insertAfter` with a forei
 is narrower than 003 stated: detection needing a fact about an *item* is  
 impossible; detection answerable from a *container's own contents* is not.
 
-What is left: Q34 how far the walk goes (recommended: all four inserts; the  
-argument against is that every internal insert holds a mutex, so Debug builds  
-walk the queue under the lock), Q31 `appendFromSlot`/`prependFromSlot`  
-(prevention, needs no shared state), Q28 the `concat` self-identity assert,  
-Q27/Q33 what `is_linked` and its seven assert lines become, Q29 the dedicated test  
-file, Q32 the stage's name and order. Questions Q26-Q34 in  
-[item-list-005.md](item-list-005.md). Nothing gates anything else now. Recommended as a new stage API 9, not a reopening of  
-API 8 — API 8 shipped and its gate holds. Nothing implemented. Owner's call.
+**Answered 2026-07-30 and shipped the same day** — Q26 D, Q27 A, Q28 yes,  
+Q31 A, Q32 A, Q33 A, Q34 C, and Q25 closed with nothing further off-limits.  
+Decision record in [item-list-007.md](item-list-007.md) §8; what shipped against  
+it is §11.
 
-**Also owed, independent of API 9.** The synchronization invariant that makes  
-reading an item's own fields defined at all — every transfer establishes  
-happens-before, because an item's address travels only through a synchronized  
-primitive. `rules-029.md:405` has half of it, `matryoshka-model-004.md:30` the  
-access half. The happens-before consequence is written down nowhere, and the  
-six existing asserts already depend on it.
+The stage is **"intrusive safety"**, not "ItemList round 2" — the asserts that  
+benefit are in `mailbox.zig`, `pool.zig` and `PolyHelper`, none of them  
+`ItemList`.
+
+## API 9 — DONE
+
+Built in the ship order of Q32. 177/177 tests across Debug, ReleaseSafe,  
+ReleaseFast and ReleaseSmall; cross-compile clean.
+
+1. **Prevention (Q31).** `ItemList.appendFromSlot` / `prependFromSlot`. Each
+   asserts the Slot holds an item, inserts, and empties the Slot. Four call  
+   sites migrated — two in `examples/layer1/023-tag_dispatch.zig`, one in  
+   `025-produce_consume.zig`, one in `tests/layer3_pool.zig`. The `slot = null`  
+   line is gone from all of them. `append`/`prepend` stay for the stack-item  
+   case, which has no Slot.
+2. **Tests (Q29).** `tests/layer1_itemlist.zig`. Scenarios 100-103 moved out of
+   `layer1_polynode.zig` unchanged — they are `ItemList`'s contract, and that  
+   file is `PolyNode`'s. 104 and 105 are new: the slot-emptying guarantee, and  
+   the `popFirst` → `appendFromSlot` round trip. 175 → 177.
+3. **Detection (Q34 C).** `ItemList._holds`, private, O(n), the walk as
+   designed. `append`/`prepend` assert `!_holds(ih)`; `insertAfter` also  
+   asserts `_holds(existing)`. All behind `if (std.debug.runtime_safety)` — the  
+   positive assert would trip `unreachable` in a build where the walk is  
+   compiled out, so the gate is explicit rather than left to  
+   `std.debug.assert`. `mailbox.send` and `pool.put` inherit the check through  
+   the same methods; no separate walk was added inside them.
+4. **Q28.** `concat` asserts `self != other`.
+5. **Docs.** rules-034 ("The neighbour check"), patterns-021 ("Insert from a
+   Slot"), api-reference-031, matryoshka-model-006 (companion links only),  
+   item-list-007 §11, and the kitchen pages for `is_linked`, std compatibility,  
+   and the Slot idioms.
+
+`is_linked` keeps its name, signature, and all seven asserts (Q27, Q33). Its  
+doc comment now claims only what it computes. The three test comments that read  
+as though the check works are corrected.
+
+**Still open, by decision.** Misuse cases 1 and 5 — an item held by a  
+*different* list is not reachable from `self`, and `PolyHelper.destroy` holds a  
+Slot rather than a list. That is the price of Q26 = D, and nothing in this stage  
+recovers it. Cases 6, 7 and 8 stay documented sharp edges.
 
 Open from API 8a, deferred by the owner: Q25's protection list. It was  
 answered "postpone decision" and the migration ran with the three proposed  

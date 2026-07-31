@@ -21,7 +21,18 @@ pub fn reset(n: *PolyNode) void
 pub fn is_linked(n: *PolyNode) bool
 ```
 
-- Returns true if node is currently linked into a list.
+- Returns true if the node has neighbours — `prev` or `next` is set.
+- Not a membership test. `std.DoublyLinkedList` never sets the links of a
+  list's only member, so a list of exactly one reports false.
+
+- The `!is_linked` asserts inside `mailbox.send`, `pool.put`,
+  `PolyHelper.destroy` and `PolyHelper.moveFromSlot` catch the multi-element  
+  case and are blind for a list of one.
+
+- A false result means nothing about whether the item is held somewhere.
+- To ask whether a list holds an item, the list has to be asked. That is what
+  the insert asserts do — see  
+  [Std compatibility](stdlib-compatibility.md).
 
 ---
 

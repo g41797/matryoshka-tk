@@ -12,7 +12,7 @@ per "Description as code" in [rules-028.md](rules-028.md).
 
 Pool items are empty containers on acquisition. Work input comes from outside the pool item:  
 a mailbox, a timer, a network source, spawn-time arguments, or the worker's own accumulated state.  
-See "Pool items are empty containers" in [matryoshka-model-004.md](matryoshka-model-004.md).
+See "Pool items are empty containers" in [matryoshka-model-005.md](matryoshka-model-005.md).
 
 All Layer 4 examples use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, real I/O.
 

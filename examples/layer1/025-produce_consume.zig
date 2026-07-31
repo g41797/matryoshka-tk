@@ -27,8 +27,7 @@ pub fn produce_consume_with_defer_cleanup(allocator: std.mem.Allocator, io: std.
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
-        list.append(slot.?);
-        slot = null;
+        list.appendFromSlot(&slot);
     }
 
     var sum: i32 = 0;

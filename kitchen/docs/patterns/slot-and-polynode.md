@@ -66,11 +66,55 @@ const ev: *Event = EventPolyHelper.moveFromSlot(&slot) orelse return error.Wrong
 // slot == null, the caller holds ev
 ```
 
+or, when a list takes the item:
+
+```zig
+list.appendFromSlot(&slot);
+// slot == null
+```
+
 Why.
 
 - Sender no longer owns the item.
 - Cleanup code becomes naturally safe.
 - Transfer pre-empts cleanup: a later `defer` sees null and does nothing.
+
+### Insert from a Slot
+
+When to use.
+
+- Putting an item that sits in a Slot into an `ItemList`.
+
+Code shape.  
+```zig
+var slot: Slot = null;
+try EventPolyHelper.create(allocator, &slot);
+EventPolyHelper.mustFromSlot(&slot).code = 7;
+
+list.appendFromSlot(&slot);
+// slot == null
+```
+
+`prependFromSlot` is the same at the front.
+
+Why.
+
+- `append` takes an `ItemHandle`, so it cannot clear a Slot. Every call site
+  used to write `slot = null` on the next line by hand.
+
+- That is the line that gets forgotten, and defer-destroy-early then frees an
+  item the list still points at.
+
+- `appendFromSlot` empties the Slot itself. The mistake cannot be written.
+- The Slot must hold an item — an insert is not a `defer` target, so it follows
+  `mailbox.send` rather than `pool.put`.
+
+Do not.
+
+- Do not use these for a stack item. There is no Slot to empty — use `append`
+  with `toNode`.
+
+Example: `examples/layer1/023-tag_dispatch.zig`.
 
 ### Null-safe cleanup
 
@@ -225,6 +269,43 @@ Why.
 - No separate link object to keep in sync with the payload.
 
 Example: `examples/layer1/021-define_type.zig`.
+
+### ItemList for many items
+
+When to use.
+
+- Any API that carries more than one item: `receive_batch`, `close`,
+  `put_all`, `on_put`, `on_close`.
+
+Code shape.  
+```zig
+var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+while (batch.popFirst()) |ih| {
+    const msg = MessagePolyHelper.mustFromNode(ih);
+    // ... use msg
+}
+```
+
+Why.
+
+- `ItemHandle` is one item, `Slot` is a place for one item, `ItemList` is many.
+  The trio covers every shape the toolkit passes around.
+
+- `popFirst` yields an `ItemHandle`, so `@fieldParentPtr` stays out of your code.
+- `popFirst` calls `polynode.reset` before it returns. The old `prev`/`next`
+  links are cleared for you — with a raw `std.DoublyLinkedList` they are not,  
+  and that was a documented trap.
+
+- Build one with `.{}` and `appendFromSlot` — see "Insert from a Slot". Take a
+  raw std list over with `ItemList.moveFromList`, which leaves the raw list  
+  empty.
+
+- Under a safety build every insert walks the list first and asserts the item
+  is not already in it. That asks the container, so it sees the list of one  
+  `polynode.is_linked` cannot.
+
+Example: `examples/layer2/060-batch_processing.zig`.  
+Details: `api/polynode/stdlib-compatibility.md`.
 
 ### PolyHelper everywhere
 

@@ -2,7 +2,270 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-07-30 — API 9 "intrusive safety" DONE (177/177)
+
+Owner approved the stage and said "go in auto mode". Built in the ship order of
+item-list-006.md §8 Q32. Step 0 (the happens-before invariant) had shipped
+earlier the same day.
+
+**1. Prevention (Q31).** `ItemList.appendFromSlot` / `prependFromSlot` in
+`src/polynode.zig`. Each asserts the Slot holds an item, inserts, empties the
+Slot. Four call sites migrated: `examples/layer1/023-tag_dispatch.zig` ×2,
+`025-produce_consume.zig`, `tests/layer3_pool.zig`. The `slot = null` line is
+gone from all four, and with it the §9 follow-up comment at
+`tests/layer3_pool.zig:627` — it explained a line that no longer exists.
+
+The 7.4 sketch carried a second assert, `!is_linked(slot.*.?)`. **Not written.**
+7.4 itself calls that line "inherited habit, not mechanism", and the container
+walk now covers the same ground exactly rather than partially.
+
+**2. Tests (Q29).** `tests/layer1_itemlist.zig`, registered in
+`matryoshka_tests.zig`. Scenarios 100-103 **moved** out of `layer1_polynode.zig`
+unchanged — they are `ItemList`'s contract, and that file is `PolyNode`'s. New
+104 (both methods empty the Slot) and 105 (`popFirst` → `appendFromSlot` round
+trip, which is what proves a popped handle is a legal Slot value). 175 → 177.
+
+**3. Detection (Q34 C).** `ItemList._holds`, private, O(n), the walk verbatim
+from 7.3. `append`/`prepend` assert `!_holds(ih)`; `insertAfter` also asserts
+`_holds(existing)`.
+
+One thing the design did not anticipate: the asserts are wrapped in
+`if (std.debug.runtime_safety)` rather than left to `std.debug.assert`. The
+first attempt put an early `return false` inside `_holds` for non-safety builds,
+which turns `assert(_holds(existing))` — a *positive* assert — into
+`assert(false)`, and outside safety builds that is `unreachable`, undefined
+behaviour. The explicit gate keeps the positive and negative forms uniform and
+puts the cost at the call site where it can be seen.
+
+`mailbox.send` and `pool.put` **inherit** the walk through `ItemList.append` /
+`prepend`. Q34's closing paragraph reads as though they need their own; they do
+not. What was not added is a walk of the destination list from inside `send` or
+`put` before the lock is taken.
+
+**4. Q28.** `concat` asserts `self != other`. Not gated — `std.debug.assert` is
+already a no-op outside safety builds, and this one is a pointer comparison, not
+a walk.
+
+**5. `is_linked` (Q27, Q33).** Name, signature and all seven asserts unchanged.
+Doc comment now says "True if the node has neighbours" and states the
+sole-member case outright. Rules entry "The neighbour check" added. The three
+test comments of Q33 corrected — `layer1_polynode.zig:71`,
+`layer2_mailbox.zig:598`, `layer3_pool.zig:808`. Scenario 88's existing comment
+already described the hole; the new lines say it is deliberate, not incidental.
+
+**Docs.** New versions, no overwrites: `rules-034.md` (the neighbour-check
+entry), `patterns-021.md` (new "Insert from a Slot" idiom; "Transfer clears the
+slot" gains a fourth shape; "Walk a batch" gains the insert half),
+`matryoshka-api-reference-031.md`, `matryoshka-model-006.md`,
+`item-list-007.md` (§11, what shipped), `matryoshka-tk-implementation-plan-050.md`.
+Kitchen: `api/polynode/functions.md`, `api/polynode/stdlib-compatibility.md`,
+`patterns/slot-and-polynode.md`, plus regenerated example pages.
+
+**A judgment call worth recording.** `matryoshka-model-006.md` changes nothing
+but two companion links. Minting a version for a link is noise, and leaving
+model-005 pointing at rules-033 is rot. Minted, because the cascade turned out
+to be contained — only patterns and the model point at rules, and both needed a
+bump anyway. Had the cascade been wide, this would have gone back to the owner.
+
+**Still open, by decision.** Misuse cases 1 and 5. An item in a *different* list
+is not reachable from `self`; `PolyHelper.destroy` and `moveFromSlot` hold a
+Slot and no list. That is the price of Q26 = D. Cases 6, 7, 8 stay documented
+sharp edges.
+
+**Verification.** `build_and_test_all.sh` — 177/177 × Debug, ReleaseSafe,
+ReleaseFast, ReleaseSmall. `build_cross_debug.sh` clean.
+`gen_examples_docs.sh` + both fixers + `mkdocs build --strict`, exit 0, zero
+warnings. Banned-word scan over every changed `.zig` and `.md`: zero new hits —
+the only matches are the rule text listing the words, inherited change-log rows,
+and `unlock()` as an API name.
+
+**Process note.** I ran one `git status --short` to check which generated pages
+had changed. Git is disabled; that was a slip. Read-only, nothing written, and I
+used a grep instead afterwards.
+
+### 2026-07-30 — kitchen docs: examples verified in sync, nav defects, ItemList in building-blocks
+
+Owner asked for the same check over `kitchen/docs/examples` and  
+`kitchen/docs/building-blocks` that the previous round ran over `api/` and  
+`patterns/`. Cleaner: no wrong signatures, two nav defects, one gap.
+
+**`docs/examples/**` is generated — verified in sync, not audited by eye.**  
+Checksummed all 83 pages, ran `gen_examples_docs.sh`, 9 changed. Not drift:  
+re-running `fix_md_lists.sh` and `fix_md_hardbreaks.sh` restored 8 of the 9  
+byte-identical. The generator emits pre-lint markdown, so "gen then lint" is a  
+fixed point and a mid-pipeline comparison shows differences that are not  
+staleness. Recorded because the same false positive will appear next time.  
+The 9th, `layer1/023-tag_dispatch.md`, was real but cosmetic — a blank line  
+inside a code fence absent from the `.zig` source. Now matches.
+
+**Banned word in the site nav.** `mkdocs.yml:100` read "Ownership transfer via  
+Slot". The 2026-07-30 banned-word pass reworded the example's `//!` title and  
+the link text in `examples/polynode.md:7` but not the nav label, so the word  
+rendered in the sidebar of every page on the site. Now "Item transfer via Slot".  
+The filename `022-ownership_transfer.zig` still carries it — owner's standing  
+decision, since renaming trips the examples-catalog nav-sync rule.
+
+**`building-blocks/index.md` was orphaned.** Absent from `mkdocs.yml`. Unlike  
+the five `api/` orphans deleted earlier the same day, this page has two real  
+inbound links — `the-shape.md:57` and `patterns/index.md:4`, both telling the  
+reader to read Building Blocks first. Readers arriving by link saw it; readers  
+using the sidebar never did. Added to nav as "Overview" rather than deleted.  
+The two cases took opposite fixes for the same symptom, which is the point:  
+orphan status alone does not decide it, inbound links do.
+
+**ItemList missing from the concept page.** `building-blocks/polynode.md` is  
+titled "Item/ItemHandle/PolyNode", has a Slot section, and never mentioned  
+`ItemList` — two-thirds of the trio, while the API page it links to  
+(`api/polynode/index.md:37`) carries all three. Added "ItemList — where many  
+handles live at once": the trio as a complete vocabulary, which APIs speak it,  
+that taking an item out yields an ordinary handle with links cleared, and that  
+the list is a container rather than a holder. Prose only, matching the  
+conceptual voice of the page — no code, which is the api/ and patterns/ job.
+
+Verification: `fix_md_lists.sh`, `fix_md_hardbreaks.sh`, `mkdocs build --strict`  
+exit 0, no warnings or errors. No test run — `.md` and nav only, so 175/175 x 4  
+modes plus 5/5 cross-compile stands.
+
+### 2026-07-30 — kitchen docs: pool hook signature, ItemList in patterns, orphan API pages deleted
+
+Owner asked whether `kitchen/docs/api/polynode`, `kitchen/docs/patterns`, and the  
+hook docs needed updating. All three did.
+
+**Wrong signature on a live page.** `api/pool/index.md:96` declared  
+`on_put ... void`. `src/pool.zig:72` returns `?polynode.ItemList` and has since  
+API 5a. Its sibling `api/pool/put.md:23` described the return correctly, so the  
+Pool section contradicted itself. Fixed. `patterns/pool.md:99` carried the same  
+stale `void` in its code shape — fixed, plus a bullet naming the return.
+
+**Stale `on_close` shape.** `patterns/pool.md` showed `popFirst` yielding a list  
+node, then `@fieldParentPtr` and `polynode.reset` by hand. API 8 moved both  
+inside `ItemList.popFirst`. Replaced with the real shape from  
+`stories/video_transcoder/video_transcoder.zig`.
+
+**ItemList missing from patterns entirely.** Zero mentions across `patterns/`  
+before this. Added two sections: "Composite item — return the parts" in  
+`patterns/pool.md` (code taken from `onPutComposite`, scenario 89 in  
+`tests/layer3_pool.zig` — the only non-null return in the repo; every  
+`examples/` hook returns null, and the doc says so) and "ItemList for many  
+items" in `patterns/slot-and-polynode.md` (the batch idiom, popFirst clearing  
+links, moveFromList).
+
+**Five orphan API pages deleted.** `api/polynode.md`, `api/mailbox.md`,  
+`api/pool.md`, `api/tags-and-slots.md`, `api/cleanup.md` — all superseded by the  
+split directories in nav, none referenced by `mkdocs.yml`, none linked from any  
+page (the apparent inbound links in `building-blocks/`, `examples/`, and  
+`patterns/index.md` are same-directory siblings). They still built as orphan  
+pages and had been hand-maintained in parallel through API 8, which is how the  
+`on_put` fix reached the flat copy and not the live one. Owner approved deletion.
+
+Verification: `fix_md_lists.sh`, `fix_md_hardbreaks.sh`, `mkdocs build --strict`  
+exit 0, no warnings or errors. Banned-word scan clean on all three changed  
+files. No test run — `.md` only, so 175/175 x 4 modes stands.
+
+### 2026-07-30 — rules-033 / matryoshka-model-005: the transfer orders memory
+
+Owner asked what to do next, then whether items 1 and 2 conflict if API 9 is  
+approved, then "up to you". Took the ordering call: step 0 (docs, owed  
+independently, no approval needed) now; API 9 code still not approved and not  
+started.
+
+**What was owed.** `rules-032.md:428` carried "an object sits in exactly one  
+place, in exactly one state, at any moment" and `matryoshka-model-004.md:37`  
+carried "whoever holds it has exclusive access". Both describe possession.  
+Neither states the consequence — that the transfer also orders memory — and  
+seven live assert lines read an item's fields with plain loads on that basis.
+
+**rules-033.md** — new entry "Exclusive access, second half (added in  
+rules-033)" in the `src/` comment-rule section, directly after the existing  
+no-"ownership" entry it completes. Six bullets: the new holder sees the  
+previous holder's writes; the mailbox/pool mutex carries the ordering; plain  
+loads, no atomics or fences; this is what the `is_linked`/`prev`/`next` asserts  
+rest on; the limit — nothing is guaranteed about an item two holders both  
+believe they hold, so no assert can catch that; and phrase it in `src/`  
+comments as "the previous holder's writes are visible", not as a memory-model  
+term.
+
+**matryoshka-model-005.md** — new core principle "The transfer orders memory",  
+placed after "Transfer = lock-free concurrency", which it completes. Same  
+content in model voice, seven bullets, closing with a pointer to rules-033.
+
+The limit bullet is deliberate: it is the same hole as misuse cases 1 and 5 in  
+item-list-006 §8, stated from the invariant's side rather than the defect's.
+
+**Cross-references bumped** (`rules-032` → `rules-033`, `matryoshka-model-004`  
+→ `matryoshka-model-005`): item-list-006.md, task2-examples-005.md, context.md,  
+plan-049.md, STATUS.md, patterns-020.md, plus the internal companion links in  
+both new files. Superseded versions (item-list-005, rules-031/032, model-004)  
+left alone per the no-overwrite rule.
+
+**Status text updated** in the three living files from "owed" to DONE, each  
+naming both new sections. `item-list-006.md` §9 still lists the item as  
+outstanding and was **not** edited — it is a versioned doc and that is how it  
+read when written; STATUS.md says so explicitly.
+
+**Verification.** `fix_md_lists.sh` — one fix in rules-033.md.  
+`fix_md_hardbreaks.sh` — clean. `mkdocs build --strict` — clean, 3.22s.  
+Banned-word scan over both new docs — only the rule text quoting `ownership`  
+while banning it, the documented exception. No test run: `.md` only, so  
+175/175 × 4 modes plus 5/5 cross-compile stands.
+
+**Not done, still needing approval.** API 9 "intrusive safety" steps 1-5.  
+`design/receive-router-001.md:11` still reads `## Agreed design`.
+
+---
+
 ## Session Log
+
+### 2026-07-30 — item-list-006: round 6 answered, API 9 designed
+
+**Participants**: human (owner), Claude (agent).
+
+Owner reviewed `item-list-005.md` against an outside design review, then  
+answered every open question. `item-list-005.md` → `item-list-006.md`.
+
+**Answers**
+
+| Q | answer | what it means |
+|---|---|---|
+| Q25 | closed | the three API 8 protections held; nothing else off-limits |
+| Q26 | D | no debug field on `PolyNode` |
+| Q27 | A | `is_linked` keeps its name, doc comment corrected |
+| Q28 | yes | `concat` asserts `other != self` under runtime safety |
+| Q31 | A | both `appendFromSlot` and `prependFromSlot` |
+| Q32 | A | the stage is "intrusive safety", not "ItemList round 2" |
+| Q33 | A | the seven assert lines stay, the hole is documented |
+| Q34 | C | the walk on all four inserts, plus `mailbox.send` / `pool.put` |
+
+Every answer matched the recommendation. Section 8 changed from a question list  
+to a decision record; section 9 retitled "Required follow-up".
+
+**On the outside review.** It rated the document 10/10 on architecture and  
+reasoning, and named size as the one significant weakness — but it had read a  
+document that no longer exists: it cited `ownership` (0 occurrences after the  
+banned-word pass) and a length matching 004's 2048 lines, not 005's 941. Its  
+repetition complaint was likewise already addressed by the re-composition, which  
+replaced repeated arguments with citations. Two points taken: the §9 rename, and  
+the observation that `ItemList` had become the example rather than the subject —  
+which is Q32 = A, reached independently.
+
+**Prediction missed.** I estimated 006 would land near 780 lines once the  
+questions collapsed. It is 962, longer than 005. Each answer needed its reason,  
+its cost, and what it does not promise; that is about as much text as the option  
+list it replaced. The split question the review raised stays open on the same  
+footing as before, not settled.
+
+**Cross-references bumped** in `STATUS.md` (including a new Sources of Truth  
+line for the design), `context.md`, `matryoshka-tk-implementation-plan-049.md`.  
+The "Next stage" paragraphs in all three now read as a designed, unapproved  
+stage rather than an open question.
+
+**Verification**: markdown fixers run (`item-list-006.md` needed one list fix),  
+`mkdocs build --strict` clean in 3.15s, banned-word scan over the new doc clean.  
+No test run — `.md` only, so 175/175 × 4 modes stands.
+
+**Not started.** Nothing in sections 5-8 is implemented. API 9 needs its own  
+approval. Owed independently: the happens-before half of the exclusive-access  
+invariant, into a new `rules` and a new `matryoshka-model` version.
 
 ### 2026-07-30 — Rules: "hatch" added to banned words
 

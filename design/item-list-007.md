@@ -1,16 +1,25 @@
-# ItemList (005)
+# ItemList (007)
 
-Versioned doc. Replaces [item-list-004.md](item-list-004.md).
+Versioned doc. Replaces [item-list-006.md](item-list-006.md).
+
+Change from -006: API 9 "intrusive safety" shipped on 2026-07-30. Section 8's
+decisions are implemented, so the "nothing here is implemented" notices are
+replaced with what was built. No decision changed. Sections 5-7 stay as the
+argument that produced them.
 
 The design document for `ItemList` and for the validation question it opened.
 
-Composed by subject, not by round. Every decision that has been made appears as  
-a decision with its reason. Every question still open appears in one place at the  
-end. Nothing here is a transcript.
+Change from -005: the round 6 questions are answered. Q26 D, Q27 A, Q28 yes,  
+Q31 A, Q32 A, Q33 A, Q34 C. Section 8 is now a decision record, not a question  
+list. Q25 is closed. Section 9 retitled.
 
-Sections 1-4 describe code that shipped: API 8 is complete, 175/175 tests.  
-Sections 5-8 describe a defect that predates it and what to do about it. Nothing  
-in sections 5-8 is implemented.
+Composed by subject, not by round. Every decision appears as a decision with its  
+reason. Nothing here is a transcript.
+
+Sections 1-4 describe API 8: complete, 175/175 tests. Sections 5-8 describe a  
+defect that predates it and what was done about it — **API 9, shipped
+2026-07-30, 177/177 tests**. Section 8 is the decision record; section 11 is
+what shipped against it.
 
 ---
 
@@ -199,11 +208,11 @@ item until it learns the pointer, and in this toolkit a pointer reaches another
 thread only through a mailbox or a pool, both mutex-synchronized. The handoff  
 that delivers the pointer is the same edge that orders the writes to it.
 
-**This is owed to two other documents.** `rules-032.md:405` carries "an object  
+**This is owed to two other documents.** `rules-033.md:405` carries "an object  
 sits in exactly one place, in exactly one state, at any moment";  
-`matryoshka-model-004.md:30` carries the exclusive-access claim. Neither states  
+`matryoshka-model-005.md:30` carries the exclusive-access claim. Neither states  
 the happens-before consequence. Writing it down is independent of every open  
-question in section 8.
+decision in section 8.
 
 ---
 
@@ -521,7 +530,7 @@ create it. It had the chance to close it and did not.
 
 ## 6. The eight misuse cases
 
-The map. Every question in section 8 refers to these numbers.
+The map. Every decision in section 8 refers to these numbers.
 
 | # | misuse | paired APIs | what breaks |
 |---|---|---|---|
@@ -534,7 +543,7 @@ The map. Every question in section 8 refers to these numbers.
 | 7 | mutate during a walk | `iterate` + `append` / `popFirst` | the iterator's `_next` may already be freed or relinked |
 | 8 | copy an `ItemList` header | `const b = a;` | two headers alias one chain; the first `popFirst` corrupts the other |
 
-Coverage today, and with everything section 8 proposes:
+Coverage today, and after section 8 is implemented:
 
 | # | today | prevention (§7.4) | container check (§7.3) |
 |---|---|---|---|
@@ -547,7 +556,7 @@ Coverage today, and with everything section 8 proposes:
 | 7 | no | — | — |
 | 8 | no — a copy is a language operation | — | — |
 
-Cases 1 and 5 are what remains after everything proposed, and they share the  
+Cases 1 and 5 are what remains after everything decided, and they share the  
 `is_linked` condition from 5.2. Case 5 is the one that matters most, because  
 `PolyHelper.destroy` is where it becomes a use-after-free. Cases 6, 7 and 8 are  
 documented sharp edges, not candidates.
@@ -556,7 +565,7 @@ documented sharp edges, not candidates.
 
 ## 7. Where a check can live
 
-Three places, and the difference between them decides everything in section 8.
+Three places, and the difference between them decided everything in section 8.
 
 | asks | exact | needs | instances |
 |---|---|---|---|
@@ -742,207 +751,292 @@ Prevention was always immune, because it reads nothing.
 
 ---
 
-## 8. Open issues
+## 8. Decisions — round 6
 
-Numbering is preserved from 004 — Q26-Q34 are cited by number in `STATUS-LOG.md`,  
-`plan-049.md` and `context.md`. Q25 predates them and is postponed by choice.
+Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
+are cited by number in `STATUS-LOG.md`, `plan-049.md` and `context.md`, so the  
+labels stay even though these are no longer questions.
 
-Write answers on the `Answer:` line.
+Every full argument lives in sections 5-7. This section records what was decided  
+and why, not the reasoning that produced it.
 
-### Q25 — the protection list for a migration stage
+**Shipped 2026-07-30 as API 9.** See section 11.
 
-Postponed by owner's decision, not undecided. The API 8 migration ran with the  
-three proposed protections applied as written. Recorded in
+### Q25 — the protection list — closed
+
+The API 8 migration ran with three protections applied as written, and all three  
+held: `tests/layer1_polynode.zig` scenarios 6, 7 and 8 are still on raw links,  
+`polynode.reset` and `polynode.is_linked` are still public with unchanged  
+signatures, and the test count went 171 to 175, never down. Recorded in
 [item-list-004.md](item-list-004.md) §Q25.
 
-**Answer:** postponed
+The second half of the question — is anything else off-limits — was asked again  
+against the stage this section defines. **Answer: nothing else off-limits.**
 
-### Q26 — does `PolyNode` gain a debug field?
+What that does not license: the stage's own decisions still bound it. Q27 = A  
+keeps the `is_linked` name, Q31 = A adds to `append`/`prepend` rather than  
+replacing them, and Q33 = A keeps all seven assert lines. Those are constraints  
+from decisions, not from a protection list.
 
-Full argument: 7.1.
+### Q26 — `PolyNode` gains no debug field — **D**
 
-- A. `bool` link mark, `void` outside safety builds.
-- B. `?*const anyopaque` owner field. Also covers case 4, at the cost of making
-  `concat`, `moveFromList` and `moveToList` O(n) under safety builds.
-- C. Head-only check: `!is_linked(ih) and self._list.first != &ih.node`.
-  Superseded — this is 7.3 truncated to the first element, so it is a weaker Q34  
-  = B rather than an option of its own.
-- D. **Nothing.** No state on `PolyNode`.
+**Decision.** No state is added to `PolyNode`. Not the `bool` link mark, not the  
+`?*const anyopaque` owner field.
 
-**Recommendation: D**, on the concurrency argument in 7.1. Reversed from A, which  
-002 recommended twice; the reversal and its reasoning are in
-[item-list-003.md](item-list-003.md).
+**Why.** Section 7.1. Any flag written into an item is written under whichever  
+mutex that item's current list sits behind, so two lists behind two mutexes race  
+on it in exactly the case the flag exists to catch. Atomics would protect the  
+flag, not the topology. The same argument reaches `prev` and `next`, which is why  
+the conclusion is general: no state stored in an item can validate this class of  
+mistake.
 
-What D costs, stated plainly: the seven asserts of 5.2 stay blind for a list of  
-one, `PolyHelper.destroy` keeps guarding a use-after-free with a check that  
-cannot see it, and cases 1 and 5 stay open. That is not acceptable as a resting  
-state, which is what makes Q33 necessary.
+**Reverses** the recommendation A that item-list-002 made twice. The reversal is  
+in [item-list-003.md](item-list-003.md).
 
-Q34 does not change this answer. The walk is not in-item state, so it is not one  
-of A/B/C.
+**What this costs, stated plainly.** The seven assert lines of 5.2 stay blind for  
+a list of one. `PolyHelper.destroy` keeps guarding a use-after-free with a check  
+that cannot see it. Misuse cases 1 and 5 stay open and there is no proposal that  
+closes them. That is the price of D and it is not recovered elsewhere — Q34  
+recovers cases 2 and 4, which are different cases.
 
-**Answer:**
+### Q27 — `is_linked` keeps its name, the doc comment is corrected — **A**
 
-### Q27 — what does `is_linked` say?
+**Decision.** The function stays `is_linked` with its current signature. The doc  
+comment at `src/polynode.zig:67` is rewritten to claim only what the function  
+computes: whether the node has neighbours.
 
-With Q26 at D, `is_linked` **cannot** be made exact, so the question is what it  
-should claim.
+**Why.** With Q26 at D the function cannot be made exact, so the only question is  
+what it claims. The present comment — "True if the node is linked into a list" —  
+is false for a list of one, and a false statement in a public doc comment is the  
+worst of the three options. Renaming to `has_neighbours` would be honest but  
+changes nine call sites, including `examples/layer1/021-define_type.zig:48`, and  
+teaches a caller nothing the corrected comment does not.
 
-- A. Keep the name, fix the doc comment. It answers "do I have neighbours", and
-  the comment says exactly that — no more.
-- B. Rename to `has_neighbours`. Honest, and a breaking change on a public
-  function.
-- C. Leave it, including the comment at `src/polynode.zig:67` that is false for a
-  list of one.
+**What it does not promise.** A caller reading `is_linked(ih) == false` still  
+learns nothing about whether the item is in a list. The comment stops lying; the  
+function is unchanged.
 
-**Recommendation: A.** C is a false statement in a public doc comment. B is  
-honest, but the name appears in `examples/layer1/021-define_type.zig:48` and  
-eight test sites, and renaming it changes nothing a caller can learn.
+### Q28 — `concat` asserts `other != self` — **yes**
 
-**Answer:**
+**Decision.** Under `std.debug.runtime_safety`, `concat` asserts its two  
+arguments are different lists.
 
-### Q28 — does `concat` assert `other != self`?
+**Why.** Self-concat silently empties the list and leaks every item in it. The  
+check is section 7.2 — a pointer comparison between two arguments the caller  
+already handed over, needing no shared state and no build-mode reasoning beyond  
+the safety gate. It is independent of every other decision here and could ship  
+alone.
 
-Self-concat silently empties the list and leaks every item.
+### Q29 — a dedicated test file — answered earlier
 
-**Recommendation: yes**, under `runtime_safety`. Independent of everything else —  
-this is 7.2, a pointer comparison between two arguments.
+`tests/layer1_itemlist.zig`. Pins current behaviour before any of this changes.  
+Second in the ship order below.
 
-**Answer:**
+### Q31 — `ItemList` gains slot-taking inserts — **A**
 
-### Q31 — does `ItemList` get a slot-taking append?
-
-The user-facing half. Mechanism in 7.4, hazard in 5.3.
+**Decision.** Both are added:
 
 ```zig
 pub fn appendFromSlot(self: *ItemList, slot: *Slot) void
 pub fn prependFromSlot(self: *ItemList, slot: *Slot) void
 ```
 
-- A. Both, and the four call sites migrate. `append`/`prepend` stay for the
-  stack-item case (`EventPolyHelper.toNode(&ev)`), which has no slot.
-- B. `appendFromSlot` only. `prepend` from a slot has no caller today.
-- C. Neither. The hand-written `slot = null` stays.
+Four call sites migrate. `append` and `prepend` stay for the stack-item case —  
+`EventPolyHelper.toNode(&ev)` has no slot to take from.
 
-**Recommendation: A.** B leaves the pair asymmetric, which gets noticed later and  
-reopened. C keeps a hazard the toolkit closes everywhere else.
+**Why.** Section 7.4. This is prevention, not detection: the hazard of misuse  
+case 3 is that a caller inserts from a slot and forgets to clear it, and an API  
+that clears the slot itself makes the mistake unavailable rather than detectable.  
+B — `appendFromSlot` only — leaves the pair asymmetric, which gets noticed later  
+and reopened for no gain, since the second function is three lines.
 
-Naming follows the API 6 rule: a `move`- or `from`-prefixed operation empties its  
-source. On a null slot it should follow `send` and assert, not follow `put` and  
-return silently — `put` is tolerant because it is the standard `defer` target,  
-and an append is not.
+**Naming and behaviour.** Follows the API 6 rule: a `move`- or `from`-prefixed  
+operation empties its source. On a null slot it asserts, following `send` rather  
+than `put` — `put` is tolerant because it is the standard `defer` target, and an  
+append is not.
 
-**No field, no build-mode condition, independent of Q26 — it can ship alone.**  
-With Q26 at D this is the implementable half of the work.
+**Independent of Q26.** No field, no build-mode condition. With Q26 at D this is  
+the half of the work that has a user-visible payoff.
 
-**Answer:**
+### Q32 — the stage is "intrusive safety" — **A**
 
-### Q32 — what is the stage, and in what order does it ship?
+**Decision.** The stage is named for the subject, not for the type the work  
+arrived through. `ItemList` is one caller of `PolyNode`, and the asserts that  
+benefit live in `src/mailbox.zig`, `src/pool.zig` and `PolyHelper` — none of them  
+`ItemList`.
 
-- A. **"Intrusive safety".** The subject is `PolyNode` and every intrusive
-  container over it, present and future. `ItemList` is one caller.
-- B. **"ItemList round 2".** The subject is the type API 8 added.
+**Why not "ItemList round 2".** That is how the work arrived, not what it is. A  
+stage named after `ItemList` would make the mailbox and pool asserts look  
+incidental to it, and would make the next intrusive container look like new work  
+rather than a beneficiary of this one.
 
-**Recommendation: A.** B is how the work arrived, not what it is. The payoff is  
-existing asserts in `mailbox.zig`, `pool.zig` and `PolyHelper` — none of them  
-`ItemList`. A stage named after `ItemList` would make those look incidental, and  
-would make the next intrusive container look like new work rather than a  
-beneficiary.
-
-Ship order, if A:
+**Ship order.**
 
 1. `appendFromSlot` / `prependFromSlot` (Q31). Prevention. No dependency, and the
    only item with a user-visible payoff.
-2. The dedicated test file (Q29, answered), pinning current behaviour before it
-   changes.
+2. `tests/layer1_itemlist.zig` (Q29), pinning current behaviour before it changes.
 3. The walk (Q34) and `is_linked`'s disposition (Q27, Q33). Detection.
 4. `concat`'s identity assert (Q28).
 5. Docs.
 
-Prevention before detection: a bug that cannot happen needs no assert, and step 1  
-removes the hazard for the four real call sites whether or not the rest is ever  
-approved.
+**Prevention before detection.** A bug that cannot happen needs no assert, and  
+step 1 removes the hazard for the four real call sites whether or not the rest of  
+the stage is ever approved.
 
-**Answer:**
+### Q33 — the seven assert lines stay, and the hole is documented — **A**
 
-### Q33 — what becomes of the seven assert lines?
+**Decision.** All seven `!is_linked` source asserts stay in place. What they are  
+worth is written down: a rules entry stating that the check catches the  
+multi-element case and is blind for a list of one.
 
-Inventory: 5.2. Forced by Q26 = D — if nothing can repair `is_linked`, seven  
-production asserts promise a guarantee they do not keep.
+**Why.** Forced by Q26 = D — if nothing can repair `is_linked`, seven production  
+asserts promise a guarantee they do not keep, and the choice is between keeping a  
+partial guard and deleting it. They do catch something: most real double-sends  
+happen against a list that holds more than one item. B would delete a partial  
+guard on a use-after-free and gain nothing but consistency.
 
-- A. **Keep them, document the hole.** They catch the multi-element case, which
-  is most real double-sends. A partial guard is better than none.
-- B. **Remove them.** A check that is wrong for a list of one and undefined in
-  the concurrent case is worse than nothing, because three tests currently read  
-  as though it works.
+**Three test comments are corrected** under this answer, because they read as  
+though the check works: `layer1_polynode.zig:71`, `layer2_mailbox.zig:598`,  
+`layer3_pool.zig:808`. Scenario 88's comment already documents the hole —  
+*"single-node list has prev==next==null"* — written around the defect rather than  
+reporting it.
 
-**Recommendation: A.** The asserts do catch something, and the cost of A is one  
-doc-comment fix plus a rules entry saying what the check is worth. B would delete  
-a partial guard on a use-after-free and gain nothing.
+**What the walk cannot do for this.** `PolyHelper.destroy` and `moveFromSlot` are  
+handed a `Slot` and hold no list to interrogate, so Q34 does not reach the two  
+sites where this matters most. That is why A is a resting state and not a fix.
 
-Under either answer, three tests encode the broken semantics and need their  
-comments corrected: `layer1_polynode.zig:71`, `layer2_mailbox.zig:598`,  
-`layer3_pool.zig:808`. Scenario 88's comment already documents the hole  
-(*"single-node list has prev==next==null"*) — it was written around the defect  
-rather than reporting it.
+### Q34 — the container walk, all four inserts — **C**
 
-004 carried a third option here — apply the container walk to `pool.put` and  
-`mailbox.send` — which is now part of Q34, where it belongs. Note what that  
-implies: the walk cannot help the two sites that matter most, because  
-`PolyHelper.destroy` and `moveFromSlot` are handed a `Slot` and hold no list to  
-interrogate.
+**Decision.** Under `std.debug.runtime_safety`, every insert asserts against the  
+container's own contents:
 
-**Answer:**
+```zig
+fn _holds(self: *const ItemList, ih: ItemHandle) bool {
+    var it = self._list.first;
+    while (it) |n| : (it = n.next) if (n == &ih.node) return true;
+    return false;
+}
+```
 
-### Q34 — how far does the container walk go?
+- `append`, `prepend`, and both directions of `insertAfter`: `assert(!_holds(ih))`
+- `insertAfter` additionally: `assert(_holds(existing))`
 
-Mechanism, soundness and cost: 7.3.
+Closes misuse cases 2 and 4.
 
-- A. **Not at all.** The coverage table of section 6 stands.
-- B. **`append` and `prepend`.** `assert(!_holds(ih))`. Closes case 2.
-- C. **All four inserts, both directions.** B, plus `insertAfter` asserting
-  `!_holds(ih)` and `_holds(existing)`. Closes cases 2 and 4.
-- D. **C behind a length cap.** Walk only while the list is short. Bounds the
-  worst case at the price of a guarantee that holds only for small lists.
+**Why it survives the argument that killed Q26.** The walk computes the address  
+`&ih.node` and never dereferences the item. It writes nothing, and reads only the  
+chain the container already owns under the container's own lock. It is not  
+in-item state, so it is not an option of A/B/C in Q26 — it is a different  
+question with a different answer.
 
-**Recommendation: C**, with D as the fallback if Debug throughput on mailbox or  
-pool measurably suffers. Recording D as the fallback rather than the  
-recommendation is deliberate: a cap makes the assert's guarantee conditional on  
-list length, which is a worse thing to document than an honest O(n).
-
-C is the only option that closes a case no other surviving mechanism can reach.  
-The argument against it is placement, not complexity — every internal insert  
-holds a mutex, and Debug is where the concurrency tests run.
+**Why C and not D.** D — the same walk behind a length cap — was recorded as the  
+fallback if Debug throughput on mailbox or pool measurably suffers, and only  
+then. A cap makes the assert's guarantee conditional on list length, which is a  
+worse thing to document than an honest O(n) under safety builds. The argument  
+against C is placement, not complexity: every internal insert already holds a  
+mutex, and Debug is where the concurrency tests run.
 
 **Also applies to `mailbox.send` and `pool.put`**, which hold their own lists  
-under their own locks. That is the part inherited from Q33, and it should be  
-answered here: same walk, same soundness, larger lists.
+under their own locks. Same walk, same soundness, larger lists. This is the part  
+inherited from Q33.
 
-**Answer:**
+**What it does not promise.** Nothing about misuse case 1 — an item in *another*  
+list is not reachable from `self`. Nothing outside safety builds.
 
 ---
 
-## 9. What this document owes elsewhere
+## 9. Required follow-up — done
 
-Independent of every answer above:
-
-- **The happens-before invariant of 3.2** into a new `rules` version and a new
-  `matryoshka-model` version. Half of it is written down; the consequence is not,  
-  and seven assert lines rest on it.
-- **`src/polynode.zig:67`** — the `is_linked` doc comment is false for a list of
-  one. Fixed under Q27 = A.
-- **`tests/layer3_pool.zig:627`** — a comment explaining that an item now belongs
-  to the batch, which Q31 = A makes unnecessary.
+- **The happens-before invariant of 3.2** — done 2026-07-30 in `rules-033.md`
+  ("Exclusive access, second half") and `matryoshka-model-005.md` ("The transfer  
+  orders memory"). Step 0 of the ship order.
+- **`src/polynode.zig:67`** — the `is_linked` doc comment now claims only what
+  the function computes: whether the node has neighbours.
+- **`tests/layer3_pool.zig:627`** — the comment is gone with the line it
+  explained. The site is `batch.appendFromSlot(&slot)`, which empties the slot  
+  itself.
 
 ---
 
 ## 10. History
 
-005 replaces 004 and is composed by subject. The round-by-round argument —  
-including the link mark's two recommendations and its withdrawal, the coverage  
-table's corrections, and the answers to Q1-Q25 as they were given — is in
-[item-list-004.md](item-list-004.md),
-[item-list-003.md](item-list-003.md),
-[item-list-002.md](item-list-002.md) and
-[item-list-001.md](item-list-001.md). Nothing from those versions is contradicted
-here; what is dropped is the record of the order in which it was learned.
+005 replaced 004 and composed the document by subject. 006 answered the round 6  
+questions in place, turning section 8 from a question list into a decision  
+record. 007 records what shipped against it. No decision in sections 1-4 or 8  
+changed.
+
+---
+
+## 11. What shipped — API 9
+
+Approved and built 2026-07-30, in the ship order of Q32. 177/177 tests across  
+Debug, ReleaseSafe, ReleaseFast and ReleaseSmall; cross-compile clean.
+
+### 11.1 Prevention (Q31)
+
+```zig
+pub fn appendFromSlot(self: *ItemList, slot: *Slot) void
+pub fn prependFromSlot(self: *ItemList, slot: *Slot) void
+```
+
+Each asserts the Slot holds an item, inserts, and empties the Slot. All four  
+call sites migrated: `examples/layer1/023-tag_dispatch.zig` (two),  
+`examples/layer1/025-produce_consume.zig`, `tests/layer3_pool.zig`. The  
+`slot = null` line no longer appears in any of them, so misuse case 3 is not  
+writable at those sites.
+
+`append` and `prepend` stay, unchanged, for the stack-item case.
+
+**Departure from the 7.4 sketch.** The sketch carried a second assert,  
+`!is_linked(slot.*.?)`. It was not written: 7.4 itself calls that line  
+"inherited habit, not mechanism", and the container walk of 11.2 now covers the  
+same ground exactly rather than partially.
+
+### 11.2 Detection (Q34, Q28)
+
+`ItemList._holds` — private, O(n), the walk of 7.3 verbatim. Called from three  
+asserts, all behind `if (std.debug.runtime_safety)`:
+
+| method | assert |
+|---|---|
+| `append`, `prepend` | `!_holds(ih)` |
+| `insertAfter` | `_holds(existing)` and `!_holds(ih)` |
+
+`concat` asserts `self != other` (Q28) — a pointer comparison, not a walk, and  
+not gated, since `std.debug.assert` is already a no-op outside safety builds.
+
+**Why the safety gate is explicit.** `assert(_holds(existing))` is a *positive*  
+assert. With the walk compiled out it would read false and trip `unreachable` in  
+a build where `unreachable` is undefined. The `if` keeps the negative and  
+positive forms uniform and makes the cost visible at the call site.
+
+**Not applied to `mailbox.send` / `pool.put`.** Q34's closing paragraph extends  
+the walk to those two. They reach `ItemList.append` and `ItemList.prepend`, so  
+they inherit it — no separate code. What was *not* added is a walk of the  
+destination list from inside `send` or `put` before the lock is taken.
+
+### 11.3 `is_linked` (Q27, Q33)
+
+Name and signature unchanged. All seven `!is_linked` asserts kept. The doc  
+comment at `src/polynode.zig:67` now says "True if the node has neighbours" and  
+states the sole-member case outright. The rules entry is in `rules-034.md`  
+("The neighbour check"), and the three test comments of Q33 are corrected.
+
+### 11.4 Tests (Q29)
+
+`tests/layer1_itemlist.zig`. Scenarios 100-103 moved out of  
+`tests/layer1_polynode.zig` unchanged — they are `ItemList`'s own contract, and  
+that file is `PolyNode`'s. Scenarios 104 and 105 are new: the slot-emptying  
+guarantee of both new methods, and the `popFirst` → `appendFromSlot` round trip,  
+which is the shape that proves a popped handle is a legal Slot value.
+
+Test count 175 → 177.
+
+### 11.5 What is still open
+
+Unchanged by this stage, and stated in §6: **misuse cases 1 and 5**. An item  
+held by a *different* list is not reachable from `self`, and  
+`PolyHelper.destroy` holds a Slot rather than a list. Q26 = D is why, and  
+nothing here recovers it.
+
+Cases 6, 7 and 8 remain documented sharp edges.

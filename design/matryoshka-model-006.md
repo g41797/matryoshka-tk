@@ -1,8 +1,19 @@
-# Matryoshka Thinking Model (003)
+# Matryoshka Thinking Model (006)
+
+Versioned doc. Replaces [matryoshka-model-005.md](matryoshka-model-005.md).
+
+Change from -005: companion cross-references updated to rules-034.md and  
+patterns-021.md. No model content changed — API 9's neighbour-check rule is a  
+coding rule, not a model claim.
+
+Change from -004: exclusive access gains its second half. The transfer moves  
+possession *and* orders memory. -004 said "whoever holds it has exclusive  
+access" and stopped there, which left the reason the library can assert on an  
+item's fields without atomics unstated.
 
 The mental model behind every Matryoshka design decision.  
-Companion: [rules-003.md](rules-003.md) — the coding and process rules.  
-Companion: [patterns-002.md](patterns-002.md) — reusable coding patterns.
+Companion: [rules-034.md](rules-034.md) — the coding and process rules.  
+Companion: [patterns-021.md](patterns-021.md) — reusable coding patterns.
 
 ---
 
@@ -16,8 +27,8 @@ Every Matryoshka design starts with one question.
 - Not "which thread processes it."
 - Just: who owns it.
 
-Ownership is visible at the call site.
-- If you must read the implementation to know who owns an item, the design is wrong.
+Who holds it is visible at the call site.
+- If you must read the implementation to know who holds an item, the design is wrong.
 
 ---
 
@@ -25,25 +36,36 @@ Ownership is visible at the call site.
 
 ### Route state, not data
 
-- Pass ownership pointers, not byte copies.
+- Pass the item's pointer, not byte copies.
 - The object that carries state moves between owners.
-- Whoever holds it has exclusive ownership — and exclusive access.
+- Whoever holds it has exclusive access.
 - Wrong: put raw data into a queue, process it, produce results.
 - Right: route the object that carries the state machine.
 
-### Ownership moves, it never duplicates
+### The item moves, it never duplicates
 
 - An item has exactly one owner at any moment.
 - Owners: user code (IN_FLIGHT), mailbox (HELD), pool (HELD).
-- When ownership transfers, the slot becomes null.
-- `slot.* = null` is the ownership protocol, not a bookkeeping detail.
+- When the item moves, the slot becomes null.
+- `slot.* = null` is the transfer protocol, not a bookkeeping detail.
 - The null is the proof of transfer.
 
-### Ownership transfer = lock-free concurrency
+### Transfer = lock-free concurrency
 
 - One owner at a time means no mutex during processing.
 - Not a lock-free algorithm. Just: one owner at a time.
 - The routing gives the lock-freedom.
+
+### The transfer orders memory
+
+- Exclusive access has two halves. Possession is the visible one.
+- The second half: the new holder sees every write the previous holder made.
+- Mailbox and pool publish through their own mutex. That is what carries it.
+- So a holder reads the item's fields with plain loads. No atomics. No fences.
+- This is why the library can assert on an item's internal state at all.
+- It does not extend to an item two holders both believe they hold. That
+  mistake breaks the premise the guarantee is built on.
+- See [rules-034.md](rules-034.md) for how to phrase this in `src/` comments.
 
 ### Pool availability = backpressure signal
 
@@ -73,17 +95,17 @@ Ownership is visible at the call site.
 ```text
 PolyNode           who owns this item?
   +
-Mailbox            how does ownership move?
+Mailbox            how does the item move?
   +
 Pool               should this item be reused or destroyed?
   +
 Master             who coordinates startup, shutdown, cancellation, policy?
 ```
 
-- Need ownership and movement only: use PolyNode + Mailbox. Stop there.
+- Need holding and movement only: use PolyNode + Mailbox. Stop there.
 - Need backpressure and reuse: add Pool.
 - Need coordination: add Master.
-- The ownership model never changes. Only capabilities are added.
+- The holding model never changes. Only capabilities are added.
 
 ### Cancel is not close
 
@@ -98,7 +120,7 @@ Master             who coordinates startup, shutdown, cancellation, policy?
 
 - Master is the coordination boundary.
 - Any `Io.Select` loop is a Master.
-- It is the place where startup order, shutdown order, cancellation policy, and resource ownership live.
+- It is the place where startup order, shutdown order, cancellation policy, and resource lifetime live.
 - There is no required Master struct. No required interface.
 - The responsibility matters. The structure does not.
 - Workers are also Masters when they grow beyond minimal functionality.
@@ -142,7 +164,7 @@ Tests, examples, and stories have different jobs.
 - Shows a complete pattern: origin of work input, what the worker does, where results go.
 - An example that shows only lifecycle or shutdown — without a work input source — cannot be used as a template.
 - Small examples use a flat function. Big examples allocate a Master struct.
-- See "When to allocate a Master" above and the Master pattern rule in [rules-003.md](rules-003.md).
+- See "When to allocate a Master" above and the Master pattern rule in [rules-034.md](rules-034.md).
 - Part of the docs.
 
 ### Story
@@ -150,7 +172,7 @@ Tests, examples, and stories have different jobs.
 - Shows how to think with Matryoshka.
 - Multiple layers composing into a real flow.
 - Starts from a real domain problem. Translates to Matryoshka patterns. Implements.
-- Reader learns how to reason about a new problem using ownership thinking.
+- Reader learns how to reason about a new problem by asking who holds what.
 - Pool resources in a story must have an explicit work input source — mailbox, network, timer, or worker state.
 - Stories always use the Master pattern. A story is never a flat function.
 - Part of the docs.
@@ -189,7 +211,7 @@ Four parts.
 
 **Part 4 — Flow Diagram**
 - Full system ASCII diagram.
-- Shows all layers, all ownership flows, all event sources.
+- Shows all layers, all transfer flows, all event sources.
 - Diagram only. No prose.
 
 ### Code — `stories/name/name.zig`
@@ -197,8 +219,8 @@ Four parts.
 - Signature: `pub fn run(allocator: std.mem.Allocator, io: std.Io) !void`.
 - Full implementation of the story.
 - All actors, all layers, graceful shutdown.
-- ASCII ownership circuit diagram at the top of the file.
-- Code is structured around Masters. See [patterns-002.md](patterns-002.md) for the coding patterns and the Master composition pattern.
+- ASCII transfer circuit diagram at the top of the file.
+- Code is structured around Masters. See [patterns-021.md](patterns-021.md) for the coding patterns and the Master composition pattern.
 
 ### Test wrapper — `tests/stories_test.zig`
 

@@ -29,23 +29,20 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
-        list.append(slot.?);
-        slot = null;
+        list.appendFromSlot(&slot);
     }
 
     {
         var slot: Slot = null;
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 2.71;
-        list.append(slot.?);
-        slot = null;
+        list.appendFromSlot(&slot);
     }
 
     var processed_events: usize = 0;
     var processed_sensors: usize = 0;
 
     while (list.popFirst()) |poly| {
-
         if (items.Event.EventPolyHelper.fromNode(poly)) |recovered_ev| {
             try helpers.expect(error.TagDispatchFailed, recovered_ev.*.code == 7, "wrong event code");
             processed_events += 1;

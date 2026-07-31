@@ -1,6 +1,20 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (019)
+# Matryoshka Zig — Pattern and Idiom Catalog (021)
 
-Versioned doc. Replaces [patterns-018.md](patterns-018.md).
+Versioned doc. Replaces [patterns-020.md](patterns-020.md).
+
+Change from patterns-020: API 9 — new "Insert from a Slot" idiom under Slot and  
+transfer idioms. "Transfer clears the slot" gains `appendFromSlot` as a fourth  
+shape. "Walk a batch — ItemList" gains the insert half and the neighbour-check  
+note. Companion cross-references updated to rules-034.md,  
+matryoshka-model-006.md and matryoshka-api-reference-031.md.
+
+Change from patterns-019: banned-word pass. `ownership` removed from prose and  
+from two section titles — "Slot and ownership idioms" → "Slot and transfer  
+idioms", "Transfer clears ownership" → "Transfer clears the slot", "Cancellation  
+preserves ownership" → "Cancellation keeps the item where it is". The  
+replacement table is in rules-033.md. `escape hatch` also removed — banned in  
+rules-033. Companion cross-references updated to rules-033.md and  
+matryoshka-model-005.md.
 
 Change from patterns-018: API 8 — `ItemList` closes the `std.DoublyLinkedList` boundary. New "Walk a batch — ItemList" entry. "Stack item into the toolkit" gained its list half. Hook and close examples now take `*polynode.ItemList`. Companion cross-references updated to rules-029.md and api-reference-029.md.
 
@@ -23,9 +37,9 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-030.md](rules-030.md) — what is mandatory.  
-Companion: [matryoshka-model-003.md](matryoshka-model-003.md) — the thinking model.  
-Companion: [matryoshka-api-reference-030.md](matryoshka-api-reference-030.md) — signatures and contracts.
+Companion: [rules-034.md](rules-034.md) — what is mandatory.  
+Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
+Companion: [matryoshka-api-reference-031.md](matryoshka-api-reference-031.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -42,7 +56,7 @@ Each entry lists: name, when to use, code shape, example reference.
 Every example path is under `examples/` or `stories/`.
 
 Order of this catalog.
-- Slot and ownership idioms first — they appear in every pattern below.
+- Slot and transfer idioms first — they appear in every pattern below.
 - PolyNode, Mailbox, Pool next — the building blocks.
 - Topology patterns after Mailbox — recurring shapes built from mailboxes and workers.
 - Futures, Select, Group after — the Io integration.
@@ -50,14 +64,14 @@ Order of this catalog.
 
 ---
 
-## Slot and ownership idioms
+## Slot and transfer idioms
 
 The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-030.md).
 
 ### Empty Slot initialization
 
 When to use.
-- Every ownership acquisition.
+- Every time the caller takes an item.
 
 Code shape.  
 ```zig
@@ -80,13 +94,13 @@ std.debug.assert(slot.* == null);
 
 Why.
 - A slot always owns exactly one object.
-- Overwriting a non-null slot loses ownership.
+- Overwriting a non-null slot loses the item it held.
 - Every acquisition API contains this assert. Wrong use panics immediately.
 
-### Transfer clears ownership
+### Transfer clears the slot
 
 When to use.
-- Every ownership transfer.
+- Every transfer.
 
 Code shape.  
 ```zig
@@ -108,10 +122,49 @@ const ev: *Event = EventPolyHelper.moveFromSlot(&slot) orelse return error.Wrong
 // slot == null, the caller holds ev
 ```
 
+or, when a list takes the item:
+
+```zig
+list.appendFromSlot(&slot);
+// slot == null
+```
+
 Why.
 - Sender no longer owns the object.
 - Cleanup code becomes naturally safe.
 - Transfer pre-empts cleanup: a later `defer` sees null and does nothing.
+
+### Insert from a Slot
+
+When to use.
+- Putting an item that sits in a Slot into an `ItemList`.
+
+Code shape.  
+```zig
+var slot: Slot = null;
+try EventPolyHelper.create(allocator, &slot);
+EventPolyHelper.mustFromSlot(&slot).code = 7;
+
+list.appendFromSlot(&slot);
+// slot == null
+```
+
+`prependFromSlot` is the same at the front.
+
+Why.
+- `append` takes an `ItemHandle`, so it cannot clear a Slot. Every call site
+  used to write `slot = null` on the next line by hand.
+- That line is the one that gets forgotten, and the defer-destroy-early idiom
+  then frees an item the list still points at.
+- `appendFromSlot` empties the Slot itself. The mistake cannot be written.
+
+Do not.
+- Do not use these for a stack item. There is no Slot to empty — use `append`
+  with `toNode`, see "Stack item into the toolkit".
+
+Asserts.
+- The Slot must hold an item. An insert is not a `defer` target, so it follows
+  `mailbox.send` rather than `pool.put` and rejects a null Slot.
 
 ### Null-safe cleanup
 
@@ -201,8 +254,8 @@ defer pool.put(ph, &slot);                          // primary: recycles to pool
 
 Why.
 - Pool receives the item if open.
-- A closed pool leaves the slot non-null — the caller keeps ownership.
-- Destroy executes only if ownership remained with the caller.
+- A closed pool leaves the slot non-null — the caller keeps the item.
+- Destroy executes only if the item stayed with the caller.
 
 Example: `stories/video_transcoder/video_transcoder.zig`.
 
@@ -354,9 +407,22 @@ while (it.next()) |ih| {
 }
 ```
 
+Insert side.  
+```zig
+list.appendFromSlot(&slot);            // from a Slot — see "Insert from a Slot"
+list.append(EventPolyHelper.toNode(&ev));   // from a stack item
+```
+
+- Under a safety build, `append`, `prepend` and `insertAfter` walk the list
+  first and assert the item is not already in it. O(n), and nothing outside  
+  safety builds.
+- That walk asks the container, not the item. It catches a double-insert into
+  the same list, including the list of one that `polynode.is_linked` cannot  
+  see. It says nothing about an item held by a *different* list.
+
 Do not.
-- Do not reach through `list._list` in application code. It is the escape hatch
-  for tests that manipulate raw links. Items taken out that way keep stale  
+- Do not reach through `list._list` in application code. It is the raw field,
+  there for tests that manipulate raw links. Items taken out that way keep stale  
   `prev`/`next`, and `polynode.reset` becomes yours to call.
 - Do not use `len()` under a lock in a hot path. It walks the list, O(n). The
   mailbox and pool keep their own counters for that reason.
@@ -387,7 +453,7 @@ Why.
 - `mustFromSlot` panics if the Slot is empty or the tag does not match.
 - Use `fromSlot` (nullable) when the type is not guaranteed.
 - Inspection leaves the Slot full. The item is still there for `send` or `put`.
-- To take the item out instead, use `moveFromSlot` — see "Transfer clears ownership".
+- To take the item out instead, use `moveFromSlot` — see "Transfer clears the slot".
 - To go the other way, from a typed item to a handle, use `toNode` — see
   "Stack item into the toolkit".
 
@@ -458,7 +524,7 @@ Why.
 ### Mailbox-as-message
 
 When to use.
-- Returning ownership of communication endpoints.
+- Handing communication endpoints back.
 
 Pattern.  
 ```
@@ -488,7 +554,7 @@ Pattern.
 - Master closes and destroys `worker_mbh`, then awaits the worker's future.
 
 Why.
-- Replaces relying on the future await as a completion signal, or a separate shutdown message, with ownership transfer.
+- Replaces relying on the future await as a completion signal, or a separate shutdown message, by transferring the item.
 
 Details: [api-reference — Transporting infra handles](matryoshka-api-reference-030.md).
 
@@ -608,7 +674,7 @@ Example: `examples/layer2/097-wake_up_all.zig`.
 
 ## Topology patterns
 
-Recurring shapes for wiring mailboxes and workers together. Each is a composition of the  
+Recurring shapes for connecting mailboxes and workers. Each is a composition of the  
 Mailbox patterns above, not a new mechanism.
 
 ### Request-Response
@@ -871,7 +937,7 @@ try future.cancel(io);
 ```
 
 Why.
-- Ownership stays in mailbox/pool.
+- The item stays in the mailbox or pool.
 - Only the wait is canceled.
 
 ---
@@ -1211,7 +1277,7 @@ Examples.
 
 Everything else completes normally.
 
-### Cancellation preserves ownership
+### Cancellation keeps the item where it is
 
 When to use.
 - Recovering after cancellation.
@@ -1656,5 +1722,5 @@ Pattern.
 Purpose.
 - Event-driven coordination.
 - Worker parallelism.
-- Ownership-safe transport.
+- Transport that never loses an item.
 - Automatic backpressure.

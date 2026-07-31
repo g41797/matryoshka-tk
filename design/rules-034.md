@@ -1,9 +1,12 @@
-# Matryoshka Zig — Rules (032)
+# Matryoshka Zig — Rules (034)
 
-Versioned doc. Replaces [rules-031.md](rules-031.md).  
+Versioned doc. Replaces [rules-033.md](rules-033.md).  
+Change from -033: the neighbour check — what `is_linked` is worth, and the two  
+checks that are exact where it is not. API 9 keeps all seven `!is_linked`  
+asserts, so what they promise has to be written down.  
 All coding, doc, and process rules for the project.  
-Companion: [matryoshka-model-004.md](matryoshka-model-004.md) — the thinking model.  
-Companion: [patterns-020.md](patterns-020.md) — reusable coding patterns.
+Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
+Companion: [patterns-021.md](patterns-021.md) — reusable coding patterns.
 
 ---
 
@@ -212,7 +215,7 @@ Completeness.
 - Show where results go after processing.
 - A lifecycle-only example (get → put, no input source, no output destination) is not complete.
 - Pool items are empty containers on acquisition. Work intent must come from outside the pool item.
-- See "Pool items are empty containers" in [matryoshka-model-004.md](matryoshka-model-004.md).
+- See "Pool items are empty containers" in [matryoshka-model-005.md](matryoshka-model-005.md).
 
 Master pattern.
 - Small examples: flat function. All state fits in local variables. No Master needed.
@@ -429,6 +432,43 @@ Banned words.
     one state, at any moment. Not "one owner."
   - Staccato style allows an extra bullet line if plain language needs more
     room than the abstract term did.
+- Exclusive access, second half (added in rules-033): the transfer also orders
+  memory.
+  - The holder that receives an item sees every write the previous holder made
+    before the transfer.
+  - Mailbox and pool publish through their own mutex. The mutex carries the
+    ordering.
+  - Consequence: a holder reads and asserts on the item's fields with plain
+    loads. No atomics, no fences.
+  - This is what the `is_linked` / `prev` / `next` asserts rest on. Without it
+    they would be data races, not checks.
+  - Limit: the guarantee covers an item that has been transferred. It says
+    nothing about an item two holders both believe they hold — that mistake  
+    breaks the premise, so no assert can catch it.
+  - State this in `src/` comments as "the previous holder's writes are visible",
+    not as a memory-model term.
+- The neighbour check (added in rules-034): `polynode.is_linked` reads
+  `prev` and `next`. It answers "does this node have neighbours", not "is this  
+  node in a list".
+  - `std.DoublyLinkedList` never sets the links of a list's only member, so a
+    list of exactly one reports false.
+  - The seven `!is_linked` asserts in `src/` are kept. They catch the
+    multi-element case, which is where most real double-sends land, and they  
+    are blind for a list of one.
+  - Do not write a comment, a doc line, or a test name that presents the check
+    as a membership test. Say "has neighbours".
+  - Nothing repairs it. State kept in an item cannot validate this class of
+    mistake — reading that state needs the exclusivity whose absence is the  
+    bug.
+  - Two checks are exact, and both ask something other than the item.
+    - Ask the container: `ItemList._holds` walks the list it already holds
+      under its own lock, and computes an address rather than reading the  
+      item. Under runtime safety only.
+    - Ask the caller's own slot: `concat` compares two arguments;
+      `appendFromSlot` reads a `Slot` in the caller's own frame.
+  - Prefer prevention. `appendFromSlot` / `prependFromSlot` empty the slot
+    themselves, so the mistake they guard against cannot be written.
+
 - No references to design docs (`.md` files: rules, plans, api-reference,
   STATUS, patterns) inside `src/*.zig` comments (added in rules-012).
   - Readers of source or generated docs only see the `.zig` files.
@@ -513,7 +553,7 @@ Banned words.
 
 * Link to:
 
-   * `matryoshka-model-004.md`
+   * `matryoshka-model-005.md`
    * `rules-009.md`
    * `patterns-008.md`
 

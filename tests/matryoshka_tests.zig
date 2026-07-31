@@ -7,6 +7,7 @@ test "matryoshka module loads" {
 
 test {
     _ = @import("layer1_polynode.zig");
+    _ = @import("layer1_itemlist.zig");
     _ = @import("layer1_examples.zig");
     _ = @import("layer2_mailbox.zig");
     _ = @import("layer2_examples.zig");

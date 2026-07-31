@@ -33,6 +33,37 @@ while (batch.popFirst()) |ih| {
 One step. `popFirst` hands back an `ItemHandle`, not a list node, so  
 `@fieldParentPtr` never appears in your code.
 
+## Inserting from a Slot
+
+`append` takes an `ItemHandle`, so it has no Slot to clear. `appendFromSlot`  
+does:
+
+```zig
+list.appendFromSlot(&slot);   // slot == null
+```
+
+- `prependFromSlot` is the same at the front.
+- Both assert the Slot holds an item. An insert is not a `defer` target.
+- Use `append`/`prepend` for a stack item, which has no Slot to empty.
+
+Every transfer in the toolkit empties its source. These two make `ItemList`  
+the same, so the `slot = null` line is no longer yours to remember.
+
+## The inserts check the list
+
+Under a safety build, `append`, `prepend` and `insertAfter` walk the list  
+first and assert the item is not already in it. `insertAfter` also asserts  
+`existing` is.
+
+- O(n) per insert under safety builds. Nothing outside them.
+- The walk asks the container, not the item, so it sees the list of one that
+  `polynode.is_linked` cannot.
+
+- It says nothing about an item held by a *different* list.
+
+`concat` asserts its two arguments are different lists — self-concat would  
+empty the list and leak every item in it.
+
 ## popFirst clears the links
 
 `std.DoublyLinkedList.popFirst()` leaves `prev`/`next` pointing at the old  

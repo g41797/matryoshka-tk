@@ -23,7 +23,7 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-030.md
+- API: matryoshka-api-reference-031.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-004.md
@@ -33,16 +33,17 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-049.md (slim, state-only)
-- Rules: rules-032.md
+- Plan: matryoshka-tk-implementation-plan-050.md (slim, state-only)
+- Rules: rules-034.md
 - Receive router design note: receive-router-001.md
+- ItemList / intrusive safety design: item-list-007.md
 - New Mindset reference: matryoshka-new-mindset-001.md
-- Thinking model: matryoshka-model-004.md
-- Patterns: patterns-020.md
+- Thinking model: matryoshka-model-006.md
+- Patterns: patterns-021.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-032.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-034.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
@@ -365,37 +366,64 @@ API 8 — DONE (175/175 tests, +4 new). `ItemList` closes the
 `PoolHooks.on_close`. `popFirst` returns an `ItemHandle` and calls  
 `polynode.reset`, turning the documented reset trap into a type guarantee.  
 `_concat` deleted, replaced by `ItemList.concat` forwarding to `std`'s  
-`concatByMoving`. 8a — design doc `item-list-005.md`, 25 questions answered  
+`concatByMoving`. 8a — design doc `item-list-006.md`, 25 questions answered  
 over three rounds. 8b — type + scenarios 100-103. 8c — one atomic migration,  
 ~80 call sites across `src/`, `examples/`, `tests/`, `stories/`. 8d — docs to  
 api-reference-029, patterns-019, rules-029, task1-tests-002.  
 Closing gate holds: `@fieldParentPtr` appears only in `src/polynode.zig` and  
-`tests/layer1_polynode.zig` scenarios 6, 7, 8. Detail in plan-049.
+`tests/layer1_polynode.zig` scenarios 6, 7, 8. Detail in plan-050.
 
-**Next stage**: none queued, one open question. `ItemList` forwards to  
-`std.DoublyLinkedList`, which validates nothing by design — four misuses corrupt  
-silently. Checking that found an older defect: `polynode.is_linked` is false for  
-a list's sole member, so six asserts guard with a check that has a hole —  
-`PolyHelper.destroy`, `moveFromSlot`, `_add_returned_item`, `mailbox.send`,  
-`mailbox.send_oob`, `pool.put`. The proposed debug-only `bool` on `PolyNode` was  
-withdrawn in item-list-003.md: it is written under whichever mutex the item's  
-current list sits behind, so in the buggy case it exists to catch, the field  
-itself races — and the argument applies unchanged to `prev`/`next`, so no state  
-kept in an item can validate this. Q26 recommended D. item-list-005.md then  
-recovers part of it: a **walk** of the list before insert survives the argument  
-— it writes nothing and reads only the container's own chain plus an address it  
-never dereferences — and closes two of the eight misuse cases, including  
-`insertAfter` with a foreign `existing`, which only the rejected pointer field  
-had covered. So the rule is narrower than 003 said: detection needing a fact  
-about an *item* is impossible, detection answerable from a *container's own  
-contents* is not. What survives is Q34 the walk's scope (recommended all four  
-inserts; the argument against is that every internal insert holds a mutex, so  
-Debug walks the queue under the lock), Q31 `appendFromSlot` (prevention, no  
-shared state), Q28, and Q27/Q33 on what `is_linked` becomes. Q26-Q34 in  
-item-list-005.md, recommended as a new stage API 9. Owed independently: the happens-before half of the exclusive-access  
-invariant, written down nowhere. Nothing implemented. Also open from 8a: Q25's protection list, which the owner  
-postponed — the migration ran with the three proposed protections applied as  
-written. CANDIDATES is dropped (owner's decision) — it carried from plan-043  
+API 9 "intrusive safety" — DONE 2026-07-30 (177/177 tests, +2 new).  
+Approved and shipped in the ship order of item-list-006.md §8 / -007 §11.
+
+The subject was not `ItemList`. `ItemList` forwards to `std.DoublyLinkedList`,  
+which validates nothing by design, and checking that found an older defect:  
+`polynode.is_linked` is false for a list's sole member, so seven assert lines  
+guard with a check that has a hole — `PolyHelper.destroy`, `moveFromSlot`,  
+`_add_returned_item`, `mailbox.send`, `mailbox.send_oob`, `pool.put`. The  
+proposed debug-only `bool` on `PolyNode` was withdrawn in item-list-003.md: it  
+is written under whichever mutex the item's current list sits behind, so in the  
+buggy case it exists to catch, the field itself races — and the argument applies  
+unchanged to `prev`/`next`, so no state kept in an item can validate this. The  
+rule is narrower than 003 said: detection needing a fact about an *item* is  
+impossible, detection answerable from a *container's own contents*, or from the  
+caller's own *slot*, is not.
+
+What shipped, in order:
+
+- **Prevention (Q31)** — `ItemList.appendFromSlot` / `prependFromSlot`. They
+  empty the Slot themselves, so the `slot = null` line that used to follow every  
+  insert is gone from all four call sites and cannot be forgotten.
+- **Tests (Q29)** — `tests/layer1_itemlist.zig`. Scenarios 100-103 moved out of
+  `layer1_polynode.zig` unchanged; 104 and 105 are new. 175 → 177.
+- **Detection (Q34 C)** — `ItemList._holds`, a private O(n) walk under runtime
+  safety. `append`/`prepend` assert `!_holds(ih)`; `insertAfter` also asserts  
+  `_holds(existing)`. It asks the container, not the item, so it sees the list  
+  of one that `is_linked` cannot. `mailbox.send` and `pool.put` inherit it  
+  through the same methods.
+- **Q28** — `concat` asserts `self != other`. Self-concat would silently empty
+  the list and leak every item in it.
+- **Q27, Q33** — `is_linked` keeps its name and all seven asserts. Its doc
+  comment now claims only what it computes, the rules entry is  
+  `rules-034.md` ("The neighbour check"), and three test comments that read as  
+  though the check works are corrected.
+- **Docs** — rules-034, patterns-021, api-reference-031,
+  matryoshka-model-006 (companion links only), item-list-007, and the kitchen  
+  pages for `is_linked`, std compatibility, and the Slot idioms.
+
+**Misuse cases 1 and 5 stay open.** An item held by a *different* list is not  
+reachable from `self`, and `PolyHelper.destroy` holds a Slot rather than a list.  
+That is the price of Q26 = D and nothing in this stage recovers it.
+
+Step 0, the happens-before half of the exclusive-access invariant, shipped  
+first, on the same day: `rules-033.md` (new entry "Exclusive access, second  
+half") and `matryoshka-model-005.md` (new principle "The transfer orders  
+memory"). It states that the transfer carries the previous holder's writes, that  
+the mutex is what carries them, that plain loads therefore suffice, and that the  
+guarantee does not reach an item two holders both believe they hold. That last  
+limit is the same hole as misuse cases 1 and 5.
+
+CANDIDATES is dropped (owner's decision) — it carried from plan-043  
 through plan-046 without starting, and `design/candidates/` does not exist on  
 disk. Deferred: diagram-notation scan, mailbox-focused pool-audit equivalent,  
 showcase-post variants (Ziggit/Discord/Reddit), REBRAND's editorial prose pass —  

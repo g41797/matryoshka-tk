@@ -39,6 +39,7 @@ nav:
   - History:  history.md
   - In a hurry?:  addendums/api_reference.md
   - Building Blocks:
+      - Overview: building-blocks/index.md
       - Item: building-blocks/polynode.md
       - Mailbox: building-blocks/mailbox.md
       - Pool: building-blocks/pool.md
@@ -97,7 +98,7 @@ nav:
       - How to... PolyNode:
           - Overview: examples/polynode.md
           - Define a PolyNode type: examples/layer1/021-define_type.md
-          - Ownership transfer via Slot: examples/layer1/022-ownership_transfer.md
+          - Item transfer via Slot: examples/layer1/022-ownership_transfer.md
           - Tag-dispatch consume loop: examples/layer1/023-tag_dispatch.md
           - Builder pattern: examples/layer1/024-builder.md
           - Produce-consume with defer cleanup: examples/layer1/025-produce_consume.md

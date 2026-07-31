@@ -96,13 +96,49 @@ keep or destroy
 Code shape.  
 ```zig
 fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}        // fixed-size: never create
-fn onPut(_: *anyopaque, _: usize, _: *Slot) void {}                              // keep all
+fn onPut(_: *anyopaque, _: usize, _: *Slot) ?polynode.ItemList { return null; }   // keep all
 ```
 
 - `on_put`: set `slot.* = null` to destroy; leave non-null to keep.
+- `on_put` returns `?polynode.ItemList` — extra items to store alongside this
+  one, or `null` for none. See "Composite item — return the parts" below.
+
 - Allocation policy stays outside business logic.
 
 Example: `examples/layer3/capped_pool.zig` (cap policy), `examples/hooks/CappedPoolHooks.zig` (thread-safe reference).
+
+### Composite item — return the parts
+
+When to use.
+
+- A pooled item holds other pooled items.
+
+Code shape.  
+```zig
+fn onPut(ctx_opaque: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
+    const ctx: *CompositeCtx = @ptrCast(@alignCast(ctx_opaque));
+    resetOnPut(slot);                     // the parent goes back through slot
+
+    var list: polynode.ItemList = .{};
+    const sn: *Sensor = ctx.alloc.create(Sensor) catch @panic("OOM");
+    sn.* = .{};
+    SensorPolyHelper.init(sn);
+    list.append(&sn.*.poly);              // the part goes back too
+    return list;
+}
+```
+
+- The parent enters the pool through `slot`. Every item in the returned list
+  enters the same way.
+
+- Return `null` when there is nothing extra — the common case.
+- The hook hands back only unlinked, correctly-tagged items. The pool does not
+  check that they form a real composite.
+
+- The pool draws no distinction between a simple and a composite item.
+
+Pinned by scenario 89 in `tests/layer3_pool.zig`. No example returns a non-null  
+list yet — the hooks in `examples/` all return `null`.
 
 ### Hook outside lock
 
@@ -137,16 +173,15 @@ Code shape.
 ```zig
 fn onClose(ctx: *anyopaque, list: *polynode.ItemList) void {
     const self: *VideoBufCtx = @ptrCast(@alignCast(ctx));
-    while (list.popFirst()) |node| {
-        const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-        polynode.reset(poly);
+    while (list.popFirst()) |poly| {
         var s: Slot = poly;
         VideoBufferPolyHelper.destroy(self.alloc, &s);
     }
 }
 ```
 
-- Always call `polynode.reset(poly)` after `popFirst` before destroy.
+- `ItemList.popFirst` yields an `ItemHandle` and calls `polynode.reset` itself.
+- No `@fieldParentPtr`, no reset by hand. Both were needed before `ItemList`.
 
 Example: `examples/layer3/pool_teardown.zig`, `stories/video_transcoder/video_transcoder.zig`.
 

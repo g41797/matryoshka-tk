@@ -624,8 +624,7 @@ test "82 - pool.put_all returns batch from ItemList" {
     for (0..3) |_| {
         var slot: Slot = null;
         try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
-        batch.append(slot.?);
-        slot = null; // the batch holds the item now
+        batch.appendFromSlot(&slot);
     }
 
     pool.put_all(ph, &batch);
@@ -805,6 +804,9 @@ test "87 - transfer: IN_FLIGHT->FREE via pool.put with destroy" {
 }
 
 // --- Scenario 88: is_linked detection; assert triggers on double pool.put in Debug/ReleaseSafe ---
+// The 2-item list below is deliberate: it is the case the assert catches. A
+// pool holding exactly one item leaves that item without neighbours, and the
+// same assert stays silent. See rules — the neighbour check.
 test "88 - double pool.put: is_linked detection (assert documented)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
