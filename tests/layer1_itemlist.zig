@@ -13,9 +13,9 @@ test "100 - ItemList append, prepend, insertAfter, popFirst" {
     try testing.expect(list.popFirst() == null);
 
     // append puts items at the end, prepend at the front.
-    list.append(EventPolyHelper.toNode(&b));
-    list.append(EventPolyHelper.toNode(&c));
-    list.prepend(EventPolyHelper.toNode(&a));
+    list.append(EventPolyHelper.toPoly(&b));
+    list.append(EventPolyHelper.toPoly(&c));
+    list.prepend(EventPolyHelper.toPoly(&a));
 
     try testing.expect(!list.isEmpty());
     try testing.expectEqual(@as(usize, 3), list.len());
@@ -23,20 +23,20 @@ test "100 - ItemList append, prepend, insertAfter, popFirst" {
     // Items come back in order, as Event, with no builtin in sight.
     for ([_]i32{ 1, 2, 3 }) |want| {
         const ih = list.popFirst() orelse unreachable;
-        const ev: *Event = EventPolyHelper.fromNode(ih) orelse unreachable;
+        const ev: *Event = EventPolyHelper.fromPoly(ih) orelse unreachable;
         try testing.expectEqual(want, ev.*.code);
     }
     try testing.expect(list.isEmpty());
     try testing.expect(list.popFirst() == null);
 
     // insertAfter places an item directly behind one already in the list.
-    list.append(EventPolyHelper.toNode(&a));
-    list.insertAfter(EventPolyHelper.toNode(&a), EventPolyHelper.toNode(&c));
-    list.insertAfter(EventPolyHelper.toNode(&a), EventPolyHelper.toNode(&b));
+    list.append(EventPolyHelper.toPoly(&a));
+    list.insertAfter(EventPolyHelper.toPoly(&a), EventPolyHelper.toPoly(&c));
+    list.insertAfter(EventPolyHelper.toPoly(&a), EventPolyHelper.toPoly(&b));
 
     for ([_]i32{ 1, 2, 3 }) |want| {
         const ih = list.popFirst() orelse unreachable;
-        try testing.expectEqual(want, EventPolyHelper.mustFromNode(ih).*.code);
+        try testing.expectEqual(want, EventPolyHelper.mustFromPoly(ih).*.code);
     }
 }
 
@@ -48,11 +48,11 @@ test "101 - ItemList popFirst returns an unlinked item" {
     EventPolyHelper.init(&b);
 
     var list: ItemList = .{};
-    list.append(EventPolyHelper.toNode(&a));
-    list.append(EventPolyHelper.toNode(&b));
+    list.append(EventPolyHelper.toPoly(&a));
+    list.append(EventPolyHelper.toPoly(&b));
 
     // Linked while held.
-    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&a)));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toPoly(&a)));
 
     // This is the guarantee: no caller-side reset() needed.
     const first = list.popFirst() orelse unreachable;
@@ -107,11 +107,11 @@ test "103 - ItemList iterator walks, concat empties the source" {
     EventPolyHelper.init(&c);
 
     var first: ItemList = .{};
-    first.append(EventPolyHelper.toNode(&a));
+    first.append(EventPolyHelper.toPoly(&a));
 
     var second: ItemList = .{};
-    second.append(EventPolyHelper.toNode(&b));
-    second.append(EventPolyHelper.toNode(&c));
+    second.append(EventPolyHelper.toPoly(&b));
+    second.append(EventPolyHelper.toPoly(&c));
 
     // concat moves every item over and leaves the source empty.
     first.concat(&second);
@@ -123,7 +123,7 @@ test "103 - ItemList iterator walks, concat empties the source" {
     var it = first.iterator();
     while (it.next()) |ih| {
         seen += 1;
-        try testing.expectEqual(seen, EventPolyHelper.mustFromNode(ih).*.code);
+        try testing.expectEqual(seen, EventPolyHelper.mustFromPoly(ih).*.code);
         // Still linked — a walk is not a pop.
         try testing.expect(polynode.is_linked(ih));
     }
@@ -143,8 +143,8 @@ test "103 - ItemList iterator walks, concat empties the source" {
     if (!std.debug.runtime_safety) {
         first.concat(&first);
         try testing.expectEqual(@as(usize, 3), first.len());
-        try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromNode(first.first().?).*.code);
-        try testing.expectEqual(@as(i32, 3), EventPolyHelper.mustFromNode(first.last().?).*.code);
+        try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromPoly(first.first().?).*.code);
+        try testing.expectEqual(@as(i32, 3), EventPolyHelper.mustFromPoly(first.last().?).*.code);
     }
 }
 
@@ -161,22 +161,22 @@ test "104 - ItemList appendFromSlot and prependFromSlot take the item" {
 
     // The Slot Rule, now kept by the insert itself: the caller writes no
     // `slot = null` line, so it cannot be the line the caller forgets.
-    var slot: Slot = EventPolyHelper.toNode(&b);
+    var slot: Slot = EventPolyHelper.toPoly(&b);
     list.appendFromSlot(&slot);
     try testing.expect(slot == null);
 
-    slot = EventPolyHelper.toNode(&c);
+    slot = EventPolyHelper.toPoly(&c);
     list.appendFromSlot(&slot);
     try testing.expect(slot == null);
 
-    slot = EventPolyHelper.toNode(&a);
+    slot = EventPolyHelper.toPoly(&a);
     list.prependFromSlot(&slot);
     try testing.expect(slot == null);
 
     try testing.expectEqual(@as(usize, 3), list.len());
     for ([_]i32{ 1, 2, 3 }) |want| {
         const ih = list.popFirst() orelse unreachable;
-        try testing.expectEqual(want, EventPolyHelper.mustFromNode(ih).*.code);
+        try testing.expectEqual(want, EventPolyHelper.mustFromPoly(ih).*.code);
     }
 }
 
@@ -188,8 +188,8 @@ test "105 - ItemList popFirst feeds appendFromSlot directly" {
     EventPolyHelper.init(&b);
 
     var from: ItemList = .{};
-    from.append(EventPolyHelper.toNode(&a));
-    from.append(EventPolyHelper.toNode(&b));
+    from.append(EventPolyHelper.toPoly(&a));
+    from.append(EventPolyHelper.toPoly(&b));
 
     // popFirst hands back an unlinked item, so it is a legal Slot value, and
     // appendFromSlot asserts nothing the pop did not already guarantee.
@@ -202,8 +202,8 @@ test "105 - ItemList popFirst feeds appendFromSlot directly" {
 
     try testing.expect(from.isEmpty());
     try testing.expectEqual(@as(usize, 2), to.len());
-    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromNode(to.popFirst().?).*.code);
-    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromNode(to.popFirst().?).*.code);
+    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromPoly(to.popFirst().?).*.code);
+    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromPoly(to.popFirst().?).*.code);
 }
 
 // --- Scenario 106: remove takes one item out, wherever it sits ---
@@ -215,9 +215,9 @@ test "106 - ItemList remove unlinks head, middle and tail" {
     EventPolyHelper.init(&b);
     EventPolyHelper.init(&c);
 
-    const ia = EventPolyHelper.toNode(&a);
-    const ib = EventPolyHelper.toNode(&b);
-    const ic = EventPolyHelper.toNode(&c);
+    const ia = EventPolyHelper.toPoly(&a);
+    const ib = EventPolyHelper.toPoly(&b);
+    const ic = EventPolyHelper.toPoly(&c);
 
     var list: ItemList = .{};
     list.append(ia);
@@ -255,17 +255,17 @@ test "107 - ItemList popLast returns an unlinked item" {
     try testing.expect(empty.popLast() == null);
 
     var list: ItemList = .{};
-    list.append(EventPolyHelper.toNode(&a));
-    list.append(EventPolyHelper.toNode(&b));
+    list.append(EventPolyHelper.toPoly(&a));
+    list.append(EventPolyHelper.toPoly(&b));
 
     const last_ih = list.popLast() orelse unreachable;
-    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromNode(last_ih).*.code);
+    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromPoly(last_ih).*.code);
     try testing.expect(!polynode.is_linked(last_ih));
 
     // The sole member of a list. is_linked reports false for it either way,
     // which is why the pop has to call reset itself.
     const only = list.popLast() orelse unreachable;
-    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromNode(only).*.code);
+    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromPoly(only).*.code);
     try testing.expect(!polynode.is_linked(only));
     try testing.expect(list.isEmpty());
     try testing.expect(list.popLast() == null);
@@ -283,13 +283,13 @@ test "108 - ItemList first and last leave the item in place" {
     try testing.expect(list.last() == null);
 
     // A list of one. Both ends are the same item.
-    list.append(EventPolyHelper.toNode(&a));
+    list.append(EventPolyHelper.toPoly(&a));
     try testing.expect(list.first().? == list.last().?);
-    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromNode(list.first().?).*.code);
+    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromPoly(list.first().?).*.code);
 
-    list.append(EventPolyHelper.toNode(&b));
-    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromNode(list.first().?).*.code);
-    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromNode(list.last().?).*.code);
+    list.append(EventPolyHelper.toPoly(&b));
+    try testing.expectEqual(@as(i32, 1), EventPolyHelper.mustFromPoly(list.first().?).*.code);
+    try testing.expectEqual(@as(i32, 2), EventPolyHelper.mustFromPoly(list.last().?).*.code);
 
     // Nothing was taken.
     try testing.expectEqual(@as(usize, 2), list.len());
@@ -304,9 +304,9 @@ test "109 - ItemList insertBefore places the item ahead of an existing one" {
     EventPolyHelper.init(&b);
     EventPolyHelper.init(&c);
 
-    const ia = EventPolyHelper.toNode(&a);
-    const ib = EventPolyHelper.toNode(&b);
-    const ic = EventPolyHelper.toNode(&c);
+    const ia = EventPolyHelper.toPoly(&a);
+    const ib = EventPolyHelper.toPoly(&b);
+    const ic = EventPolyHelper.toPoly(&c);
 
     var list: ItemList = .{};
     list.append(ic);
@@ -320,7 +320,7 @@ test "109 - ItemList insertBefore places the item ahead of an existing one" {
 
     for ([_]i32{ 1, 2, 3 }) |want| {
         const ih = list.popFirst() orelse unreachable;
-        try testing.expectEqual(want, EventPolyHelper.mustFromNode(ih).*.code);
+        try testing.expectEqual(want, EventPolyHelper.mustFromPoly(ih).*.code);
     }
 }
 
@@ -330,7 +330,7 @@ test "110 - ItemList moveFromList takes a consistent std list" {
     EventPolyHelper.init(&a);
 
     var raw: std.DoublyLinkedList = .{};
-    raw.append(&EventPolyHelper.toNode(&a).node);
+    raw.append(&EventPolyHelper.toPoly(&a).node);
 
     var list = ItemList.moveFromList(&raw);
     try testing.expect(raw.first == null);

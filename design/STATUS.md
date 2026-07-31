@@ -23,27 +23,27 @@
 - AI-sh scan after every stage that changes *.md or *.zig.
 
 ## Sources of Truth
-- API: matryoshka-api-reference-032.md
+- API: matryoshka-api-reference-033.md
 - Zig details: matryoshka-tk-0.16-implementation-guide-001.md
 - Architecture: matryoshka-architecture-foundation-4-004.md
 - Architecture introduction: matryoshka-architecture-004.md
-- Tests: task1-tests-004.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
+- Tests: task1-tests-005.md (77 scenarios, Layers 1-3), task2-tests-002.md (16 scenarios, Layer 4)
 - Examples: task1-examples-004.md, task2-examples-005.md (index only; full description lives in each source file's `///` doc comment)
 - Scenarios (historical): task1-scenarios-001.md (92), task2-scenarios-001.md (61)
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
 - Plan: matryoshka-tk-implementation-plan-050.md (slim, state-only)
-- Rules: rules-034.md
+- Rules: rules-035.md
 - Receive router design note: receive-router-001.md
-- ItemList / intrusive safety design: item-list-008.md
+- ItemList / intrusive safety design: item-list-009.md
 - New Mindset reference: matryoshka-new-mindset-001.md
 - Thinking model: matryoshka-model-006.md
-- Patterns: patterns-022.md
+- Patterns: patterns-023.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-034.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-035.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
@@ -372,6 +372,31 @@ over three rounds. 8b — type + scenarios 100-103. 8c — one atomic migration,
 api-reference-029, patterns-019, rules-029, task1-tests-002.  
 Closing gate holds: `@fieldParentPtr` appears only in `src/polynode.zig` and  
 `tests/layer1_polynode.zig` scenarios 6, 7, 8. Detail in plan-050.
+
+API 11 "accessor rename" — DONE 2026-07-31 (182/182 tests, no new).  
+Prompted by a naming review the owner passed on.
+
+- **`fromNode`/`mustFromNode`/`toNode` → `fromPoly`/`mustFromPoly`/`toPoly`.**
+  Hard rename, no aliases, both `PolyHelper` branches. 164 call sites across  
+  `src/`, `tests/`, `examples/` and `stories/`, including the `//!` headers and  
+  ASCII transfer diagrams in `examples/`.
+- **Why.** `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named
+  two things in one file — `reset` reads `node.node.prev`. The field the helper  
+  reaches is `poly`: `@fieldParentPtr("poly", node)`.
+- **The Slot accessors keep their names.** `fromSlot`, `mustFromSlot`,
+  `moveFromSlot` were never ambiguous. The `cast()`/`as()`/`of()` variants the  
+  review suggested were rejected — they break symmetry with those three.
+- **Docs** — api-reference-033, patterns-023, rules-035, item-list-009,
+  task1-tests-005, plus the five kitchen api/patterns pages. The 14 generated  
+  example pages came from `gen_examples_docs.sh`.
+- **Historical text left verbatim** — the API 6/7 records here (:321-358) and in
+  plan-050 (:43-80), changelog row 027 in api-reference-033, and the "Change  
+  from patterns-017/-016" lines in patterns-023.
+- **Noted, not fixed.** The api-reference change log stops at row 027 — APIs 7
+  through 10 recorded themselves in the header block instead, and API 11  
+  followed that. And the parameters are still named `node`; `reset` and  
+  `is_linked` share the name, so that is one decision, not a leftover.
+
 
 API 10 "ItemList completion" — DONE 2026-07-31 (182/182 tests, +5 new).  
 Prompted by an external review of `src/polynode.zig`: implementation 8.5/10,  

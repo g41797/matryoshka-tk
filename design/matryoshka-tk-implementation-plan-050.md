@@ -183,6 +183,21 @@ starting. `design/candidates/` does not exist on disk.
 
 ---
 
+## API 11 — DONE
+
+`PolyHelper.fromNode` / `mustFromNode` / `toNode` renamed to `fromPoly` /  
+`mustFromPoly` / `toPoly`. Hard rename, no aliases, 164 call sites across  
+`src/`, `tests/`, `examples/` and `stories/`.
+
+`PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two things  
+at once — `reset` reads `node.node.prev`. The field the helper reaches is  
+`poly`. The Slot accessors keep their names: they were never ambiguous.
+
+182/182 tests across four optimize modes; cross-compile clean. Docs to  
+api-reference-033, patterns-023, rules-035, item-list-009, task1-tests-005.
+
+---
+
 ## Deferred — owner's call on order
 
 - Diagram-notation scan.

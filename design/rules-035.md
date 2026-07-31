@@ -1,12 +1,15 @@
-# Matryoshka Zig — Rules (034)
+# Matryoshka Zig — Rules (035)
 
-Versioned doc. Replaces [rules-033.md](rules-033.md).  
+Versioned doc. Replaces [rules-034.md](rules-034.md).  
+Change from -034: API 11 — the accessor naming rule names `fromPoly` /  
+`fromSlot`. The helper reaches the `poly` field, and `node` was already taken  
+by `std.DoublyLinkedList.Node` inside `PolyNode`.  
 Change from -033: the neighbour check — what `is_linked` is worth, and the two  
 checks that are exact where it is not. API 9 keeps all seven `!is_linked`  
 asserts, so what they promise has to be written down.  
 All coding, doc, and process rules for the project.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [patterns-022.md](patterns-022.md) — reusable coding patterns.
+Companion: [patterns-023.md](patterns-023.md) — reusable coding patterns.
 
 ---
 
@@ -337,7 +340,7 @@ Handle naming (API 4).
 Accessor naming (API 6).
 - A name says what the caller does, not how the helper works. `identifyNodeAs`
   and `identifySlotAs` described the implementation and are gone.
-- Inspection is `fromNode` / `fromSlot`. It never empties a Slot and never
+- Inspection is `fromPoly` / `fromSlot`. It never empties a Slot and never
   modifies a Node. `fromSlot` takes `*const Slot` so it cannot.
 - Extraction is `moveFromSlot`. It always empties the Slot on success, and
   leaves it unchanged on failure.
@@ -345,7 +348,7 @@ Accessor naming (API 6).
   `EventPolyHelper.fromSlot(&slot)`.
 - A helper that mutates its argument gets no `must` variant. Hiding failure
   behind `unreachable` would make the state change less obvious. This is why  
-  `moveFromSlot` has none while `fromNode` and `fromSlot` do.
+  `moveFromSlot` has none while `fromPoly` and `fromSlot` do.
 - Every consuming operation asserts the item is not linked into a list.
 
 General Zig style.

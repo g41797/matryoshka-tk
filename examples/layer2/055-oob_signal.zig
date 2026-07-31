@@ -52,13 +52,13 @@ pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.freeSlot(&slot, allocator);
         try mailbox.receive(mbh, &slot, 1_000_000_000);
         const poly: *PolyNode = slot.?;
-        if (items.Sensor.SensorPolyHelper.fromNode(poly)) |oob_sn| {
+        if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |oob_sn| {
             std.log.info("OOB signal value={d:.1}", .{oob_sn.value});
             try helpers.expect(error.OobSignalFailed, !received_oob, "duplicate OOB");
             try helpers.expect(error.OobSignalFailed, event_count == 0, "OOB did not arrive first");
             received_oob = true;
             items.freeSlot(&slot, allocator);
-        } else if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        } else if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             std.log.info("event code={d}", .{ev.code});
             event_count += 1;
             items.freeSlot(&slot, allocator);

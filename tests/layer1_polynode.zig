@@ -22,23 +22,23 @@ test "3 - tag identity check" {
     try testing.expect(!SensorPolyHelper.isIt(ev.poly.tag));
 }
 
-// --- Scenario 4: fromNode success ---
-test "4 - fromNode success" {
+// --- Scenario 4: fromPoly success ---
+test "4 - fromPoly success" {
     var ev: Event = .{ .code = 42 };
     EventPolyHelper.init(&ev);
 
-    const poly: *PolyNode = EventPolyHelper.toNode(&ev);
-    const recovered: *Event = EventPolyHelper.mustFromNode(poly);
+    const poly: *PolyNode = EventPolyHelper.toPoly(&ev);
+    const recovered: *Event = EventPolyHelper.mustFromPoly(poly);
     try testing.expectEqual(@as(i32, 42), recovered.*.code);
 }
 
-// --- Scenario 5: fromNode wrong tag ---
-test "5 - fromNode wrong tag" {
+// --- Scenario 5: fromPoly wrong tag ---
+test "5 - fromPoly wrong tag" {
     var ev: Event = .{ .code = 42 };
     EventPolyHelper.init(&ev);
 
-    const poly: *PolyNode = EventPolyHelper.toNode(&ev);
-    const result: ?*Sensor = SensorPolyHelper.fromNode(poly);
+    const poly: *PolyNode = EventPolyHelper.toPoly(&ev);
+    const result: ?*Sensor = SensorPolyHelper.fromPoly(poly);
     try testing.expectEqual(@as(?*Sensor, null), result);
 }
 
@@ -49,7 +49,7 @@ test "6 - two-level fieldParentPtr chain" {
 
     const dll_node: *std.DoublyLinkedList.Node = &ev.poly.node;
     const poly: *PolyNode = @fieldParentPtr("node", dll_node);
-    const recovered: *Event = EventPolyHelper.mustFromNode(poly);
+    const recovered: *Event = EventPolyHelper.mustFromPoly(poly);
     try testing.expectEqual(@as(i32, 99), recovered.*.code);
 }
 
@@ -60,9 +60,9 @@ test "7 - polynode.reset clears links" {
 
     ev.poly.node.prev = &ev.poly.node;
     ev.poly.node.next = &ev.poly.node;
-    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev)));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toPoly(&ev)));
 
-    polynode.reset(EventPolyHelper.toNode(&ev));
+    polynode.reset(EventPolyHelper.toPoly(&ev));
     try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), ev.poly.node.prev);
     try testing.expectEqual(@as(?*std.DoublyLinkedList.Node, null), ev.poly.node.next);
 }
@@ -74,13 +74,13 @@ test "8 - polynode.is_linked detection" {
     var ev: Event = .{};
     EventPolyHelper.init(&ev);
 
-    try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev)));
+    try testing.expect(!polynode.is_linked(EventPolyHelper.toPoly(&ev)));
 
     ev.poly.node.prev = &ev.poly.node;
-    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev)));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toPoly(&ev)));
 
-    polynode.reset(EventPolyHelper.toNode(&ev));
-    try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev)));
+    polynode.reset(EventPolyHelper.toPoly(&ev));
+    try testing.expect(!polynode.is_linked(EventPolyHelper.toPoly(&ev)));
 }
 
 // --- Scenario 9: Slot null semantics ---
@@ -88,7 +88,7 @@ test "9 - slot null semantics" {
     var ev: Event = .{};
     EventPolyHelper.init(&ev);
 
-    var slot: Slot = EventPolyHelper.toNode(&ev);
+    var slot: Slot = EventPolyHelper.toPoly(&ev);
     try testing.expect(slot != null);
 
     slot = null;
@@ -111,10 +111,10 @@ test "10 - multiple types in one list" {
 
     while (list.popFirst()) |node| {
         const poly: *PolyNode = @fieldParentPtr("node", node);
-        if (EventPolyHelper.fromNode(poly)) |recovered_ev| {
+        if (EventPolyHelper.fromPoly(poly)) |recovered_ev| {
             try testing.expectEqual(@as(i32, 10), recovered_ev.*.code);
             count_event += 1;
-        } else if (SensorPolyHelper.fromNode(poly)) |recovered_sn| {
+        } else if (SensorPolyHelper.fromPoly(poly)) |recovered_sn| {
             try testing.expectEqual(@as(f64, 3.14), recovered_sn.*.value);
             count_sensor += 1;
         } else {
@@ -131,9 +131,9 @@ test "11 - FREE to IN_FLIGHT" {
     var ev: Event = .{ .code = 1 };
     EventPolyHelper.init(&ev);
 
-    const slot: Slot = EventPolyHelper.toNode(&ev);
+    const slot: Slot = EventPolyHelper.toPoly(&ev);
     try testing.expect(slot != null);
-    try testing.expect(!polynode.is_linked(EventPolyHelper.toNode(&ev)));
+    try testing.expect(!polynode.is_linked(EventPolyHelper.toPoly(&ev)));
 }
 
 // --- Scenario 12: IN_FLIGHT → HELD (list) ---
@@ -143,14 +143,14 @@ test "12 - IN_FLIGHT to HELD via list" {
     var ev2: Event = .{};
     EventPolyHelper.init(&ev2);
 
-    var slot: Slot = EventPolyHelper.toNode(&ev1);
+    var slot: Slot = EventPolyHelper.toPoly(&ev1);
     var list: std.DoublyLinkedList = .{};
     list.append(&ev1.poly.node);
     list.append(&ev2.poly.node);
     slot = null;
 
     try testing.expectEqual(@as(Slot, null), slot);
-    try testing.expect(polynode.is_linked(EventPolyHelper.toNode(&ev1)));
+    try testing.expect(polynode.is_linked(EventPolyHelper.toPoly(&ev1)));
 }
 
 // --- Scenario 13: HELD → IN_FLIGHT (list) ---
@@ -177,7 +177,7 @@ test "14 - IN_FLIGHT to FREE" {
     try testing.expect(slot != null);
 
     const poly: *PolyNode = slot.?;
-    _ = EventPolyHelper.mustFromNode(poly);
+    _ = EventPolyHelper.mustFromPoly(poly);
     EventPolyHelper.destroy(alloc, &slot);
 
     try testing.expectEqual(@as(Slot, null), slot);
@@ -188,7 +188,7 @@ test "17 - slot is null after nil-out" {
     var ev: Event = .{};
     EventPolyHelper.init(&ev);
 
-    var slot: Slot = EventPolyHelper.toNode(&ev);
+    var slot: Slot = EventPolyHelper.toPoly(&ev);
     slot = null;
     try testing.expectEqual(@as(Slot, null), slot);
 }
@@ -204,10 +204,10 @@ test "98 - moveFromSlot takes the item and empties the slot" {
     try testing.expectEqual(@as(Slot, null), empty);
 
     // Wrong tag — slot is left unchanged.
-    var slot: Slot = EventPolyHelper.toNode(&ev);
+    var slot: Slot = EventPolyHelper.toPoly(&ev);
     try testing.expect(SensorPolyHelper.moveFromSlot(&slot) == null);
     try testing.expect(slot != null);
-    try testing.expectEqual(@as(*PolyNode, EventPolyHelper.toNode(&ev)), slot.?);
+    try testing.expectEqual(@as(*PolyNode, EventPolyHelper.toPoly(&ev)), slot.?);
 
     // Right tag — item comes back, slot is empty.
     const taken: *Event = EventPolyHelper.moveFromSlot(&slot) orelse unreachable;
@@ -216,30 +216,30 @@ test "98 - moveFromSlot takes the item and empties the slot" {
     try testing.expectEqual(@as(Slot, null), slot);
 }
 
-// --- Scenario 99: toNode contract ---
-test "99 - toNode reaches the embedded PolyNode" {
+// --- Scenario 99: toPoly contract ---
+test "99 - toPoly reaches the embedded PolyNode" {
     var ev: Event = .{ .code = 99 };
     EventPolyHelper.init(&ev);
 
     // Reaches the embedded node.
-    const node: *PolyNode = EventPolyHelper.toNode(&ev);
+    const node: *PolyNode = EventPolyHelper.toPoly(&ev);
     try testing.expectEqual(@as(*PolyNode, &ev.poly), node);
     try testing.expectEqual(EventPolyHelper.TAG, node.*.tag);
 
-    // Inverse of fromNode.
-    try testing.expectEqual(@as(*Event, &ev), EventPolyHelper.mustFromNode(node));
+    // Inverse of fromPoly.
+    try testing.expectEqual(@as(*Event, &ev), EventPolyHelper.mustFromPoly(node));
 
     // Never modifies the item — still unlinked after the call.
     try testing.expect(!polynode.is_linked(node));
 
     // Coerces straight into a Slot, no separate accessor needed.
-    const slot: Slot = EventPolyHelper.toNode(&ev);
+    const slot: Slot = EventPolyHelper.toPoly(&ev);
     try testing.expectEqual(@as(i32, 99), EventPolyHelper.mustFromSlot(&slot).*.code);
 
     // Each item reaches its own node.
     var other: Event = .{ .code = 7 };
     EventPolyHelper.init(&other);
-    try testing.expect(EventPolyHelper.toNode(&other) != node);
+    try testing.expect(EventPolyHelper.toPoly(&other) != node);
 }
 
 const items = @import("examples").items;

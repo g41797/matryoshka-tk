@@ -49,9 +49,7 @@ pub const PolyNode = struct {
     tag: *const anyopaque = undefined,
 };
 
-/// Optional ItemHandle.
-///
-/// Think about it as ItemHandle' 'container'.
+/// "Container" for ItemHandle.
 pub const Slot = ?ItemHandle;
 
 /// Clears the intrusive list links.
@@ -116,26 +114,26 @@ pub fn PolyHelper(comptime T: type) type {
             ///
             /// Returns null on type mismatch.\
             /// Never modifies the node.
-            pub inline fn fromNode(node: *PolyNode) ?*T {
+            pub inline fn fromPoly(node: *PolyNode) ?*T {
                 if (node.tag != TAG)
                     return null;
 
                 return @fieldParentPtr("poly", node);
             }
 
-            /// Same as fromNode().
+            /// Same as fromPoly().
             ///
             /// Panics on type mismatch.
-            pub inline fn mustFromNode(node: *PolyNode) *T {
-                return fromNode(node) orelse unreachable;
+            pub inline fn mustFromPoly(node: *PolyNode) *T {
+                return fromPoly(node) orelse unreachable;
             }
 
             /// Reach the PolyNode embedded in T.
             ///
-            /// The inverse of fromNode().\
+            /// The inverse of fromPoly().\
             /// Cannot fail — T is known at compile time.\
             /// Never modifies the item.
-            pub inline fn toNode(self: *T) *PolyNode {
+            pub inline fn toPoly(self: *T) *PolyNode {
                 return &self.poly;
             }
 
@@ -145,7 +143,7 @@ pub fn PolyHelper(comptime T: type) type {
             /// Does not empty the Slot.
             pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
-                return fromNode(node);
+                return fromPoly(node);
             }
 
             /// Same as fromSlot().
@@ -162,7 +160,7 @@ pub fn PolyHelper(comptime T: type) type {
             /// On failure the Slot is unchanged.
             pub inline fn moveFromSlot(slot: *Slot) ?*T {
                 const node = slot.* orelse return null;
-                const item = fromNode(node) orelse return null;
+                const item = fromPoly(node) orelse return null;
 
                 std.debug.assert(!is_linked(node));
 
@@ -192,7 +190,7 @@ pub fn PolyHelper(comptime T: type) type {
                 item.* = .{};
                 Self.init(item);
 
-                slot.* = Self.toNode(item);
+                slot.* = Self.toPoly(item);
             }
 
             /// Destroys the item stored in the Slot.
@@ -206,7 +204,7 @@ pub fn PolyHelper(comptime T: type) type {
 
                 std.debug.assert(!is_linked(poly));
 
-                const item = Self.fromNode(poly);
+                const item = Self.fromPoly(poly);
                 std.debug.assert(item != null);
 
                 // Clear the Slot before releasing the item.
@@ -233,26 +231,26 @@ pub fn PolyHelper(comptime T: type) type {
             ///
             /// Returns null on type mismatch.\
             /// Never modifies the node.
-            pub inline fn fromNode(node: *PolyNode) ?*T {
+            pub inline fn fromPoly(node: *PolyNode) ?*T {
                 if (node.tag != TAG)
                     return null;
 
                 return @fieldParentPtr("poly", node);
             }
 
-            /// Same as fromNode().
+            /// Same as fromPoly().
             ///
             /// Panics on type mismatch.
-            pub inline fn mustFromNode(node: *PolyNode) *T {
-                return fromNode(node) orelse unreachable;
+            pub inline fn mustFromPoly(node: *PolyNode) *T {
+                return fromPoly(node) orelse unreachable;
             }
 
             /// Reach the PolyNode embedded in T.
             ///
-            /// The inverse of fromNode().\
+            /// The inverse of fromPoly().\
             /// Cannot fail — T is known at compile time.\
             /// Never modifies the item.
-            pub inline fn toNode(self: *T) *PolyNode {
+            pub inline fn toPoly(self: *T) *PolyNode {
                 return &self.poly;
             }
 
@@ -262,7 +260,7 @@ pub fn PolyHelper(comptime T: type) type {
             /// Does not empty the Slot.
             pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
-                return fromNode(node);
+                return fromPoly(node);
             }
 
             /// Same as fromSlot().
@@ -279,7 +277,7 @@ pub fn PolyHelper(comptime T: type) type {
             /// On failure the Slot is unchanged.
             pub inline fn moveFromSlot(slot: *Slot) ?*T {
                 const node = slot.* orelse return null;
-                const item = fromNode(node) orelse return null;
+                const item = fromPoly(node) orelse return null;
 
                 std.debug.assert(!is_linked(node));
 

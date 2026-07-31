@@ -60,13 +60,13 @@ fn processingLoop(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
         try mailbox.receive(mbh, &slot, null);
         const poly: *PolyNode = slot.?;
 
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             try helpers.expect(error.OobOrderFailed, !shutdown_seen, "OOB ShutdownCommand must arrive before any Event");
             try helpers.expect(error.OobOrderFailed, event_count == 0, "OOB must be first item received");
             shutdown_seen = true;
             std.log.info("received OOB ShutdownCommand (first, as expected)", .{});
             items.freeSlot(&slot, alloc);
-        } else if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        } else if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             try helpers.expect(error.OobOrderFailed, shutdown_seen, "Events must arrive after the OOB item");
             event_count += 1;
             std.log.info("received Event code={d} (event {d}/3)", .{ ev.code, event_count });

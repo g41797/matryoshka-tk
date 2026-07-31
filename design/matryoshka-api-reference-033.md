@@ -1,6 +1,8 @@
 # Matryoshka API Reference — Zig 0.16
 
-Replaces [matryoshka-api-reference-031.md](matryoshka-api-reference-031.md).
+Replaces [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md).
+
+API 11 (accessor rename): `fromNode`, `mustFromNode` and `toNode` become `fromPoly`, `mustFromPoly` and `toPoly`. `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two things at once, and the field the helper reaches is `poly`. Hard rename, no aliases. The Slot accessors keep their names.
 
 API 10 (ItemList completion): `remove`, `popLast`, `first`, `last` and `insertBefore` added. `iterate` renamed to `iterator`, the std name — breaking, no shim. `concat` returns early on the same list twice, because its assert is `unreachable` outside safety builds and `concatByMoving` would ring the items and clear the header. Every insert now also asserts `!is_linked` on the new item, which sees a different list where the container walk cannot. `moveFromList` asserts the std header it is handed is consistent. `std.DoublyLinkedList` checks nothing; `ItemList` is where it is checked.
 
@@ -209,7 +211,7 @@ pub fn moveToList(self: *ItemList) std.DoublyLinkedList
 
 ```zig
 while (batch.popFirst()) |ih| {
-    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
 }
 ```
 
@@ -519,20 +521,20 @@ pub fn isIt(tag: *const anyopaque) bool
 
 Two directions, and two kinds of access.
 
-- In — `toNode`. Your type to the toolkit. Cannot fail.
-- Out — `fromNode`, `fromSlot`, `moveFromSlot`. The toolkit to your type.
+- In — `toPoly`. Your type to the toolkit. Cannot fail.
+- Out — `fromPoly`, `fromSlot`, `moveFromSlot`. The toolkit to your type.
   Each checks the tag.
 
 Within the outbound direction the names say what happens to the Slot.
 
-- Inspection — `fromNode`, `fromSlot`. Leaves the Slot full.
+- Inspection — `fromPoly`, `fromSlot`. Leaves the Slot full.
 - Extraction — `moveFromSlot`. Leaves the Slot empty.
 
 ```zig
-pub fn toNode(self: *T) *PolyNode
+pub fn toPoly(self: *T) *PolyNode
 ```
 - Returns `&self.poly`.
-- The inverse of `fromNode`.
+- The inverse of `fromPoly`.
 - Cannot fail. `T` is known at compile time, so there is no tag to check.
 - No `must` variant and no optional return, for the same reason.
 - Never modifies the item.
@@ -544,7 +546,7 @@ pub fn toNode(self: *T) *PolyNode
   `PolyHelper`, where `validatePolyType` and `@fieldParentPtr` already keep it.
 
 ```zig
-pub fn fromNode(node: *PolyNode) ?*T
+pub fn fromPoly(node: *PolyNode) ?*T
 ```
 - Returns `null` if the runtime tag does not match.
 - Returns `@fieldParentPtr("poly", node)` if it does.
@@ -554,9 +556,9 @@ pub fn fromNode(node: *PolyNode) ?*T
   already `*T`, there is nothing to recover and no reason to call it.
 
 ```zig
-pub fn mustFromNode(node: *PolyNode) *T
+pub fn mustFromPoly(node: *PolyNode) *T
 ```
-- Same as `fromNode`, but panics (`orelse unreachable`) if the tag does not match.
+- Same as `fromPoly`, but panics (`orelse unreachable`) if the tag does not match.
 
 ```zig
 pub fn fromSlot(slot: *const Slot) ?*T
@@ -613,15 +615,15 @@ var ev: Event = .{ .code = 42 };
 EventPolyHelper.init(&ev);
 
 // Get PolyNode pointer (Step 4, no hand-written field access)
-const poly: *PolyNode = EventPolyHelper.toNode(&ev);
+const poly: *PolyNode = EventPolyHelper.toPoly(&ev);
 
 // Identify and recover (Steps 5+6 combined, returns null on wrong tag)
-const recovered: *Event = EventPolyHelper.mustFromNode(poly);
+const recovered: *Event = EventPolyHelper.mustFromPoly(poly);
 // recovered.code == 42
 ```
 
 The round trip above is there to line the two columns up. Real code calls  
-`toNode` to hand an item to a Mailbox or a Pool, and `fromNode` on the way  
+`toPoly` to hand an item to a Mailbox or a Pool, and `fromPoly` on the way  
 back out, where the static type is gone.
 
 ```text
@@ -632,10 +634,10 @@ const EVENT_TAG = &_event_tag;      EventPolyHelper.TAG
 
 poly.tag == EVENT_TAG               EventPolyHelper.isIt(poly.tag)
 
-&ev.poly                            EventPolyHelper.toNode(&ev)
+&ev.poly                            EventPolyHelper.toPoly(&ev)
                                        → *PolyNode (cannot fail)
 
-if (poly.tag == EVENT_TAG)          EventPolyHelper.fromNode(poly)
+if (poly.tag == EVENT_TAG)          EventPolyHelper.fromPoly(poly)
   @fieldParentPtr("poly", poly)       → ?*Event (null if wrong tag)
 
 // slot: ?*PolyNode                 EventPolyHelper.fromSlot(&slot)
@@ -697,7 +699,7 @@ Some types must not expose `create`/`destroy`.
 const no_create_destroy = void{};
 ```
 
-If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toNode`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
+If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toPoly`, `fromPoly`, `mustFromPoly`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
 They manage their own lifecycle.  
@@ -707,10 +709,10 @@ Generating `create`/`destroy` for them would be wrong.
 PolyHelper(T)
   │
   ├── @hasDecl(T, "no_create_destroy") == false
-  │     → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
+  │     → TAG, isIt, toPoly, fromPoly, mustFromPoly, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
   │
   └── @hasDecl(T, "no_create_destroy") == true
-        → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
+        → TAG, isIt, toPoly, fromPoly, mustFromPoly, fromSlot, mustFromSlot, moveFromSlot, init
 ```
 
 ### stdlib compatibility
@@ -1309,7 +1311,7 @@ pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) 
 `PolyHelper(T)` generates one static `_tag: PolyTag` per type `T` at comptime.  
 `TAG` is a pointer to that static — the same address for every instance of `T`.
 
-Tag dispatch (`is_it_you`, `isIt`, `fromNode`) answers one question: **"is this a T?"**  
+Tag dispatch (`is_it_you`, `isIt`, `fromPoly`) answers one question: **"is this a T?"**  
 It does not answer: "which T?" or "what role does this T play?"
 
 For user-defined types (Event, Sensor, etc.):

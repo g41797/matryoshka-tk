@@ -4,7 +4,7 @@
 //! Mixed types through shared mailbox.
 //!
 //! - Send one Event and one Sensor into the same mailbox.
-//! - receiveAndDispatch pops both, dispatches on tag via fromNode.
+//! - receiveAndDispatch pops both, dispatches on tag via fromPoly.
 //! - Verifies each payload, frees each item.
 //!
 //!
@@ -14,8 +14,8 @@
 //!  │
 //!  mailbox.receive ──► slot (Event or Sensor)
 //!    dispatch on poly.tag:
-//!    == EventPolyHelper.TAG  ──► fromNode ──► *Event  ──► verify code==10 ──► freeSlot
-//!    == SensorPolyHelper.TAG ──► fromNode ──► *Sensor ──► verify value==3.14 ──► freeSlot
+//!    == EventPolyHelper.TAG  ──► fromPoly ──► *Event  ──► verify code==10 ──► freeSlot
+//!    == SensorPolyHelper.TAG ──► fromPoly ──► *Sensor ──► verify value==3.14 ──► freeSlot
 //!  │
 //!  mailbox.close ──► freeList (empty: all received)
 //! ```
@@ -61,11 +61,11 @@ fn receiveAndDispatch(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
         try mailbox.receive(mbh, &slot, null);
         defer items.freeSlot(&slot, alloc);
         const poly: *polynode.PolyNode = slot.?;
-        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             try helpers.expect(error.CrossLayerMixedTypesFailed, ev.code == 10, "wrong Event code");
             std.log.info("received: Event code={d}", .{ev.code});
             event_ok = true;
-        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
             try helpers.expect(error.CrossLayerMixedTypesFailed, sn.value == 3.14, "wrong Sensor value");
             std.log.info("received: Sensor value={d}", .{sn.value});
             sensor_ok = true;

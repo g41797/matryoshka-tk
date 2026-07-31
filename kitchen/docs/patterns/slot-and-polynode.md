@@ -112,7 +112,7 @@ Why.
 Do not.
 
 - Do not use these for a stack item. There is no Slot to empty — use `append`
-  with `toNode`.
+  with `toPoly`.
 
 Example: `examples/layer1/023-tag_dispatch.zig`.
 
@@ -281,7 +281,7 @@ Code shape.
 ```zig
 var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
 while (batch.popFirst()) |ih| {
-    const msg = MessagePolyHelper.mustFromNode(ih);
+    const msg = MessagePolyHelper.mustFromPoly(ih);
     // ... use msg
 }
 ```
@@ -338,7 +338,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.fromNode(handle)) |ev| {
+if (EventPolyHelper.fromPoly(handle)) |ev| {
     ...
 }
 ```
@@ -386,16 +386,16 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.fromNode(handle)) |ev| {
+if (EventPolyHelper.fromPoly(handle)) |ev| {
     // handle Event
-} else if (ShutdownCommandPolyHelper.fromNode(handle)) |_| {
+} else if (ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
     // handle ShutdownCommand
 } else {
     // unknown — free and move on
 }
 ```
 
-- `fromNode` returns null on a tag mismatch. Chain calls for each known type.
+- `fromPoly` returns null on a tag mismatch. Chain calls for each known type.
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
 

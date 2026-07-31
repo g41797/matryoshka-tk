@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) void {
         mailbox.receive(ctx.worker_mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly) != null) {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly) != null) {
             items.freeSlot(&slot, ctx.alloc);
             slot = ctx.worker_mbh;
             mailbox.send(ctx.master_inbox, &slot) catch {};
@@ -68,7 +68,7 @@ fn workerFn(ctx: *WorkerCtx) void {
             return;
         }
 
-        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             ctx.processed += 1;
             std.log.info("worker processed Event code={d}", .{ev.code});
             items.freeSlot(&slot, ctx.alloc);

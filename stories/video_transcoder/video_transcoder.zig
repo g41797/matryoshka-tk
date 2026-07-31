@@ -224,7 +224,7 @@ const NetworkMaster = struct {
     fn closeAndReclaim(self: *NetworkMaster) void {
         var rem: polynode.ItemList = mailbox.close(self.ready_queue);
         while (rem.popFirst()) |poly| {
-            const sc: *StreamContext = StreamContextPolyHelper.mustFromNode(poly);
+            const sc: *StreamContext = StreamContextPolyHelper.mustFromPoly(poly);
             pool.put(self.buf_ph, &sc.buffer_slot);
             if (sc.buffer_slot != null) {
                 VideoBufferPolyHelper.destroy(self.alloc, &sc.buffer_slot);

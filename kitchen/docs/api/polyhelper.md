@@ -42,24 +42,24 @@ pub fn isIt(tag: *const anyopaque) bool
 
 Two directions, and two kinds of access.
 
-- In — `toNode`. Your type to the toolkit. Cannot fail.
-- Out — `fromNode`, `fromSlot`, `moveFromSlot`. The toolkit to your type.
+- In — `toPoly`. Your type to the toolkit. Cannot fail.
+- Out — `fromPoly`, `fromSlot`, `moveFromSlot`. The toolkit to your type.
   Each checks the tag.
 
 Within the outbound direction the names say what happens to the Slot.
 
-- Inspection — `fromNode`, `fromSlot`. Leaves the Slot full.
+- Inspection — `fromPoly`, `fromSlot`. Leaves the Slot full.
 - Extraction — `moveFromSlot`. Leaves the Slot empty.
 
 ---
 
 
 ```zig
-pub fn toNode(self: *T) *PolyNode
+pub fn toPoly(self: *T) *PolyNode
 ```
 
 - Returns `&self.poly`.
-- The inverse of `fromNode`.
+- The inverse of `fromPoly`.
 - Cannot fail. `T` is known at compile time, so there is no tag to check.
 - No `must` variant and no optional return, for the same reason.
 - Never modifies the item.
@@ -71,7 +71,7 @@ pub fn toNode(self: *T) *PolyNode
 
 
 ```zig
-pub fn fromNode(node: *PolyNode) ?*T
+pub fn fromPoly(node: *PolyNode) ?*T
 ```
 
 - Returns `null` if the runtime tag does not match.
@@ -84,10 +84,10 @@ pub fn fromNode(node: *PolyNode) ?*T
 
 
 ```zig
-pub fn mustFromNode(node: *PolyNode) *T
+pub fn mustFromPoly(node: *PolyNode) *T
 ```
 
-- Same as `fromNode`, but panics (`orelse unreachable`) if the tag does not match.
+- Same as `fromPoly`, but panics (`orelse unreachable`) if the tag does not match.
 
 ---
 
@@ -174,10 +174,10 @@ var ev: Event = .{ .code = 42 };
 EventPolyHelper.init(&ev);
 
 // Get PolyNode pointer (Step 4, no hand-written field access)
-const poly: *PolyNode = EventPolyHelper.toNode(&ev);
+const poly: *PolyNode = EventPolyHelper.toPoly(&ev);
 
 // Identify and recover (Steps 5+6 combined, returns null on wrong tag)
-const recovered: *Event = EventPolyHelper.mustFromNode(poly);
+const recovered: *Event = EventPolyHelper.mustFromPoly(poly);
 // recovered.code == 42
 ```
 
@@ -192,10 +192,10 @@ const EVENT_TAG = &_event_tag;      EventPolyHelper.TAG
 
 poly.tag == EVENT_TAG               EventPolyHelper.isIt(poly.tag)
 
-&ev.poly                            EventPolyHelper.toNode(&ev)
+&ev.poly                            EventPolyHelper.toPoly(&ev)
                                        → *PolyNode (cannot fail)
 
-if (poly.tag == EVENT_TAG)          EventPolyHelper.fromNode(poly)
+if (poly.tag == EVENT_TAG)          EventPolyHelper.fromPoly(poly)
   @fieldParentPtr("poly", poly)       → ?*Event (null if wrong tag)
 
 // slot: ?*PolyNode                 EventPolyHelper.fromSlot(&slot)
@@ -286,7 +286,7 @@ Some types must not expose `create`/`destroy`.
 const no_create_destroy = void{};
 ```
 
-If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toNode`, `fromNode`, `mustFromNode`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
+If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toPoly`, `fromPoly`, `mustFromPoly`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
 They manage their own lifecycle.  
@@ -299,10 +299,10 @@ Generating `create`/`destroy` for them would be wrong.
 PolyHelper(T)
   │
   ├── @hasDecl(T, "no_create_destroy") == false
-  │     → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
+  │     → TAG, isIt, toPoly, fromPoly, mustFromPoly, fromSlot, mustFromSlot, moveFromSlot, init, create, destroy
   │
   └── @hasDecl(T, "no_create_destroy") == true
-        → TAG, isIt, toNode, fromNode, mustFromNode, fromSlot, mustFromSlot, moveFromSlot, init
+        → TAG, isIt, toPoly, fromPoly, mustFromPoly, fromSlot, mustFromSlot, moveFromSlot, init
 ```
 
 ---

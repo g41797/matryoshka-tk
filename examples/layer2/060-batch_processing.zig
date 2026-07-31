@@ -68,7 +68,7 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             items.freeSlot(&slot, ctx.alloc);
             return;
         }
@@ -78,7 +78,7 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
 
         var batch: polynode.ItemList = mailbox.receive_batch(ctx.mbh) catch return;
         while (batch.popFirst()) |bpoly| {
-            if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(bpoly)) |_| {
+            if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(bpoly)) |_| {
                 items.freeItem(bpoly, ctx.alloc);
                 return;
             }

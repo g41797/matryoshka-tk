@@ -196,11 +196,11 @@ const ev: *Event = @fieldParentPtr("poly", poly);
 ```
 
 You write neither line. `ItemList.popFirst` does step 1 and hands back an  
-`ItemHandle`; `PolyHelper.fromNode` does step 2 with the tag check:
+`ItemHandle`; `PolyHelper.fromPoly` does step 2 with the tag check:
 
 ```zig
 while (batch.popFirst()) |ih| {
-    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
 }
 ```
 

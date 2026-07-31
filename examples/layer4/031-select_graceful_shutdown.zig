@@ -90,13 +90,13 @@ const GracefulShutdownMaster = struct {
             switch (event) {
                 .inbox => |r| switch (r) {
                     .item => |handle| {
-                        if (items.Event.EventPolyHelper.fromNode(handle)) |ev| {
+                        if (items.Event.EventPolyHelper.fromPoly(handle)) |ev| {
                             var slot: Slot = handle;
                             defer items.freeSlot(&slot, self.allocator);
                             self.events_processed += 1;
                             std.log.info("inbox: Event code={d}", .{ev.code});
                             try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
-                        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(handle)) |_| {
+                        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
                             var slot: Slot = handle;
                             items.freeSlot(&slot, self.allocator);
                             std.log.info("inbox: ShutdownCommand — initiating graceful shutdown", .{});

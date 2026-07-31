@@ -32,7 +32,7 @@ pub fn produce_consume_with_defer_cleanup(allocator: std.mem.Allocator, io: std.
 
     var sum: i32 = 0;
     while (list.popFirst()) |poly| {
-        const ev: *items.Event = items.Event.EventPolyHelper.fromNode(poly) orelse return error.CastFailed;
+        const ev: *items.Event = items.Event.EventPolyHelper.fromPoly(poly) orelse return error.CastFailed;
         sum += ev.*.code;
         items.freeItem(poly, allocator);
     }

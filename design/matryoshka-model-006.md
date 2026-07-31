@@ -6,6 +6,10 @@ Change from -005: companion cross-references updated to rules-034.md and
 patterns-021.md. No model content changed — API 9's neighbour-check rule is a  
 coding rule, not a model claim.
 
+API 11 (2026-07-31): companion links point at rules-035.md and patterns-023.md.  
+No model content changed — renaming `fromNode`/`toNode` to `fromPoly`/`toPoly` is  
+API surface, not a model claim.
+
 API 10 (2026-07-31): companion link points at patterns-022.md. No model content  
 changed — completing `ItemList` and widening its asserts is API surface and  
 coding rules, not a model claim.
@@ -16,8 +20,8 @@ access" and stopped there, which left the reason the library can assert on an
 item's fields without atomics unstated.
 
 The mental model behind every Matryoshka design decision.  
-Companion: [rules-034.md](rules-034.md) — the coding and process rules.  
-Companion: [patterns-022.md](patterns-022.md) — reusable coding patterns.
+Companion: [rules-035.md](rules-035.md) — the coding and process rules.  
+Companion: [patterns-023.md](patterns-023.md) — reusable coding patterns.
 
 ---
 
@@ -69,7 +73,7 @@ Who holds it is visible at the call site.
 - This is why the library can assert on an item's internal state at all.
 - It does not extend to an item two holders both believe they hold. That
   mistake breaks the premise the guarantee is built on.
-- See [rules-034.md](rules-034.md) for how to phrase this in `src/` comments.
+- See [rules-035.md](rules-035.md) for how to phrase this in `src/` comments.
 
 ### Pool availability = backpressure signal
 
@@ -168,7 +172,7 @@ Tests, examples, and stories have different jobs.
 - Shows a complete pattern: origin of work input, what the worker does, where results go.
 - An example that shows only lifecycle or shutdown — without a work input source — cannot be used as a template.
 - Small examples use a flat function. Big examples allocate a Master struct.
-- See "When to allocate a Master" above and the Master pattern rule in [rules-034.md](rules-034.md).
+- See "When to allocate a Master" above and the Master pattern rule in [rules-035.md](rules-035.md).
 - Part of the docs.
 
 ### Story
@@ -224,7 +228,7 @@ Four parts.
 - Full implementation of the story.
 - All actors, all layers, graceful shutdown.
 - ASCII transfer circuit diagram at the top of the file.
-- Code is structured around Masters. See [patterns-022.md](patterns-022.md) for the coding patterns and the Master composition pattern.
+- Code is structured around Masters. See [patterns-023.md](patterns-023.md) for the coding patterns and the Master composition pattern.
 
 ### Test wrapper — `tests/stories_test.zig`
 

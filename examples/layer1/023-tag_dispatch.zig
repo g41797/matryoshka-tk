@@ -5,7 +5,7 @@
 //!
 //! - Push one Event and one Sensor into a mixed-type list.
 //! - Pop each node, check its tag.
-//! - Recover the typed pointer with fromNode, process it.
+//! - Recover the typed pointer with fromPoly, process it.
 //! - Free every item; count events and sensors separately.
 //!
 //!
@@ -14,7 +14,7 @@
 //!  alloc.create (Sensor) ──► list
 //!       │ list.popFirst
 //!       ▼
-//!  tag check ──► EventPolyHelper.fromNode or SensorPolyHelper.fromNode
+//!  tag check ──► EventPolyHelper.fromPoly or SensorPolyHelper.fromPoly
 //!       │ freeItem per node
 //! ```
 //!
@@ -43,11 +43,11 @@ pub fn tag_dispatch_consume_loop(allocator: std.mem.Allocator, io: std.Io) !void
     var processed_sensors: usize = 0;
 
     while (list.popFirst()) |poly| {
-        if (items.Event.EventPolyHelper.fromNode(poly)) |recovered_ev| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |recovered_ev| {
             try helpers.expect(error.TagDispatchFailed, recovered_ev.*.code == 7, "wrong event code");
             processed_events += 1;
             items.freeItem(poly, allocator);
-        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |recovered_sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |recovered_sn| {
             try helpers.expect(error.TagDispatchFailed, recovered_sn.*.value == 2.71, "wrong sensor value");
             processed_sensors += 1;
             items.freeItem(poly, allocator);

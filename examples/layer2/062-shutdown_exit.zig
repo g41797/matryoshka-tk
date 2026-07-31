@@ -62,13 +62,13 @@ fn workerFn(ctx: *WorkerCtx) void {
         defer items.freeSlot(&slot, ctx.alloc);
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
-        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
+        if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             std.log.info("worker: ShutdownCommand received, exiting cleanly", .{});
             return;
-        } else if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        } else if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             std.log.debug("worker: Event code={d}", .{ev.*.code});
             ctx.processed += 1;
-        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
             std.log.debug("worker: Sensor value={d:.1}", .{sn.*.value});
             ctx.processed += 1;
         }

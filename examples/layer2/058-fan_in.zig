@@ -43,9 +43,9 @@ pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
     var sensors_received: usize = 0;
 
     while (batch.popFirst()) |poly| {
-        if (items.Event.EventPolyHelper.fromNode(poly)) |_| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |_| {
             events_received += 1;
-        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |_| {
+        } else if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |_| {
             sensors_received += 1;
         }
         items.freeItem(poly, allocator);

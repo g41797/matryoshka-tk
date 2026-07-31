@@ -76,11 +76,11 @@ fn workerFn(ctx: *WorkerCtx) void {
         defer items.freeSlot(&slot, ctx.alloc);
         mailbox.receive(ctx.mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
-        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             std.log.debug("worker: Event code={d}", .{ev.*.code});
             ctx.event_sum += ev.*.code;
             ctx.count += 1;
-        } else if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
+        } else if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
             std.log.debug("worker: Sensor value={d:.1}", .{sn.*.value});
             ctx.sensor_sum += sn.*.value;
             ctx.count += 1;

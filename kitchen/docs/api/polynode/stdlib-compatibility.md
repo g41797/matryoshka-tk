@@ -25,7 +25,7 @@ Walk results with `popFirst()`:
 ```zig
 var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
 while (batch.popFirst()) |ih| {
-    const ev: *Event = Event.EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+    const ev: *Event = Event.EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
     // ...
 }
 ```

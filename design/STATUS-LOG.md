@@ -2,41 +2,78 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-07-31 — API 11 accessor rename
+
+`PolyHelper.fromNode` / `mustFromNode` / `toNode` are now `fromPoly` /  
+`mustFromPoly` / `toPoly`. Hard rename, no aliases, both `PolyHelper` branches.
+
+Reason: `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two  
+different things in one file — `reset` reads `node.node.prev`. The field the  
+helper reaches is `poly`: `@fieldParentPtr("poly", node)`.
+
+`fromSlot` / `mustFromSlot` / `moveFromSlot` keep their names. The `cast()` /  
+`as()` / `of()` variants the review suggested were rejected — they break  
+symmetry with the Slot accessors.
+
+164 `.zig` call sites across `src/`, `tests/`, `examples/` and `stories/`,  
+including the `//!` headers and ASCII transfer diagrams in `examples/`. No hits  
+in build scripts, `kitchen/tools/`, `mkdocs.yml` or `README.md`.
+
+182/182 tests across four optimize modes, cross-compile clean, `zig fmt --check`  
+clean, `mkdocs build --strict` zero warnings.
+
+Docs: api-reference-033, patterns-023, rules-035, item-list-009,  
+task1-tests-005. Live pointers updated in STATUS.md, context.md,  
+matryoshka-model-006.md and plan-050.
+
+Historical text left verbatim, by rule: the API 6/7 records in STATUS.md  
+(:321-358), plan-050 (:43-80), the changelog row 027 in api-reference-033, and  
+the "Change from patterns-017/-016" lines in patterns-023. Those sentences say  
+what a past stage shipped.
+
+Noted, not fixed: the api-reference change-log table stops at row 027 (API 6).  
+APIs 7 through 10 recorded themselves in the header block at the top of the file  
+instead, so API 11 followed that convention rather than reviving the table.
+
+Noted, not fixed: the parameters are still named `node` — `fromPoly(node:  
+*PolyNode)`. Renaming them to `poly` was not in scope, and `reset`/`is_linked`  
+use the same parameter name, so it is one decision, not two.
+
 ### 2026-07-31 — `src/polynode.zig` block order
 
-`PolyHelper` moved ahead of `ItemList`, and `validatePolyType` moved to sit
-directly after `PolyHelper` instead of past `ItemList`. Pure block moves: no text
+`PolyHelper` moved ahead of `ItemList`, and `validatePolyType` moved to sit  
+directly after `PolyHelper` instead of past `ItemList`. Pure block moves: no text  
 edited, no signature changed, file still 506 lines, `zig fmt --check` clean.
 
-Final order: `PolyTag`/`ItemHandle`/`PolyNode`/`Slot`/`reset`/`is_linked`,
+Final order: `PolyTag`/`ItemHandle`/`PolyNode`/`Slot`/`reset`/`is_linked`,  
 `PolyHelper`, `validatePolyType`, `ItemList`, `std` import.
 
-Reason: `PolyHelper` is how a `PolyNode` is used — tag, casts, init,
-create/destroy — so it belongs beside the type it serves. `ItemList`'s 193 lines
-had been sitting between them, so the file read node → container of nodes → back
-to node. Neither depends on the other, so the swap is free. The largest
+Reason: `PolyHelper` is how a `PolyNode` is used — tag, casts, init,  
+create/destroy — so it belongs beside the type it serves. `ItemList`'s 193 lines  
+had been sitting between them, so the file read node → container of nodes → back  
+to node. Neither depends on the other, so the swap is free. The largest  
 self-contained block is now last.
 
-`PolyNode` stays first, ahead of both: `ItemList` is built from `ItemHandle`,
-`Slot`, `reset` and `is_linked`, and nothing in `PolyNode` refers to `ItemList`.
+`PolyNode` stays first, ahead of both: `ItemList` is built from `ItemHandle`,  
+`Slot`, `reset` and `is_linked`, and nothing in `PolyNode` refers to `ItemList`.  
 Same rule the docs follow — nothing used before it is introduced.
 
-Not changed: `ItemHandle = *PolyNode` still precedes `PolyNode`. Strict
-dependency order wants the reverse, but `PolyNode`'s doc comment *is* the
-ItemHandle-vs-`*PolyNode` explanation and needs the name already introduced.
+Not changed: `ItemHandle = *PolyNode` still precedes `PolyNode`. Strict  
+dependency order wants the reverse, but `PolyNode`'s doc comment *is* the  
+ItemHandle-vs-`*PolyNode` explanation and needs the name already introduced.  
 Prose order wins there on purpose.
 
-Also considered and dropped this session, owner's decision: removing the
-`PolyHelper` two-variant duplication (~82 lines). Three routes were priced —
-`@compileError` guards in always-generated bodies (verified to work on 0.16,
-rejected as messy); a base type plus 9 explicit aliases with a decl-sync test
-(verified); free `create`/`destroy` functions (dead — 160 call sites). An
-earlier suggestion to delete `no_create_destroy` outright was wrong and was
-withdrawn: `_Mailbox`/`_Pool` have no field defaults so the compiler already
-blocks `create` for them, but a user type has defaults, and there the guard is
+Also considered and dropped this session, owner's decision: removing the  
+`PolyHelper` two-variant duplication (~82 lines). Three routes were priced —  
+`@compileError` guards in always-generated bodies (verified to work on 0.16,  
+rejected as messy); a base type plus 9 explicit aliases with a decl-sync test  
+(verified); free `create`/`destroy` functions (dead — 160 call sites). An  
+earlier suggestion to delete `no_create_destroy` outright was wrong and was  
+withdrawn: `_Mailbox`/`_Pool` have no field defaults so the compiler already  
+blocks `create` for them, but a user type has defaults, and there the guard is  
 the only thing stopping it. **Left as is.**
 
-Verification: `build_and_test_all.sh` exit 0, 4× 182/182. `build_cross_debug.sh`
+Verification: `build_and_test_all.sh` exit 0, 4× 182/182. `build_cross_debug.sh`  
 exit 0. No `*.md` changed, so no doc tooling run and nothing new to scan.
 
 Git untouched.

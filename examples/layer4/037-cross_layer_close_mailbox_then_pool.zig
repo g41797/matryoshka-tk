@@ -13,7 +13,7 @@
 //!  pool (1 item in free-list)    mailbox (1 item in queue)
 //!  │
 //!  mailbox.close ──► ItemList (1 item)
-//!  walk list: popFirst ──► fromNode ──► pool.put (pool still open)
+//!  walk list: popFirst ──► fromPoly ──► pool.put (pool still open)
 //!  │                                        └──► pool free-list (now 2 items)
 //!  pool.close ──► on_close ──► freeList (both items freed)
 //!  │
@@ -72,7 +72,7 @@ fn returnCloseListToPool(ph: PoolHandle, rem: *polynode.ItemList) usize {
         var slot: Slot = poly;
         pool.put(ph, &slot);
         returned += 1;
-        std.log.info("mailbox close list: returned item to pool (code={d})", .{items.Event.EventPolyHelper.mustFromNode(poly).code});
+        std.log.info("mailbox close list: returned item to pool (code={d})", .{items.Event.EventPolyHelper.mustFromPoly(poly).code});
     }
     return returned;
 }

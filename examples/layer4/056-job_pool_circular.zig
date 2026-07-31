@@ -107,7 +107,7 @@ const Ctx = struct {
                             try mailbox.send(self.mbh, &slot);
                             try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, items.Event.EventPolyHelper.TAG, null });
                         } else {
-                            const ev: *items.Event = items.Event.EventPolyHelper.mustFromNode(handle);
+                            const ev: *items.Event = items.Event.EventPolyHelper.mustFromPoly(handle);
                             completed.* = job_idx.*;
                             std.log.info("master: last result code={d}, all {d} jobs complete", .{ ev.code, completed.* });
                             var slot: Slot = handle;

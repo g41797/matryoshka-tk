@@ -1,6 +1,15 @@
-# Task 1 — Test Scenarios for Layers 1–3 (003)
+# Task 1 — Test Scenarios for Layers 1–3 (005)
 
-Versioned doc. Replaces [task1-tests-002.md](task1-tests-002.md).
+Versioned doc. Replaces [task1-tests-004.md](task1-tests-004.md).
+
+Change from -004: API 11 — scenario 100 names `PolyHelper.fromPoly`. Numbers  
+and meanings unchanged.
+
+Change from -003: API 10. Scenarios 104 and 105 registered — they shipped with  
+API 9 and this list stopped at 103. Scenario 103 retitled for the  
+`iterate` → `iterator` rename and given the self-`concat` case. Scenarios  
+106–110 added for `remove`, `popLast`, `first`/`last`, `insertBefore` and the  
+`moveFromList` header check.
 
 Change from -002: banned-word pass. `ownership` and `idempotent` removed from  
 section titles and scenario text. Scenarios 34, 43, 44, 75, 77, 85, 86, 87 are  
@@ -51,10 +60,23 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 
 ### Tests — ItemList (API 8)
 
-100. **ItemList append, prepend, insertAfter, popFirst** — build a list from `ItemHandle`, pop it back in order, recover each item with `PolyHelper.fromNode`; empty-list behaviour for `isEmpty`, `len`, and `popFirst`
+100. **ItemList append, prepend, insertAfter, popFirst** — build a list from `ItemHandle`, pop it back in order, recover each item with `PolyHelper.fromPoly`; empty-list behaviour for `isEmpty`, `len`, and `popFirst`
 101. **ItemList popFirst returns an unlinked item** — `polynode.is_linked` is false on every popped handle, including the last; the handle drops straight into a `Slot`
 102. **ItemList moveFromList and moveToList** — both directions empty their source, never alias; empty lists move cleanly
-103. **ItemList iterate walks, concat empties the source** — `iterate` yields handles in order and removes nothing, items stay linked; `concat` moves every item over and leaves the source empty
+103. **ItemList iterator walks, concat empties the source** — `iterator` yields handles in order and removes nothing, items stay linked; `concat` moves every item over and leaves the source empty; the same list twice is a no-op, checked only where runtime safety is off, because the assert catches it everywhere else
+
+### Tests — ItemList (API 9)
+
+104. **ItemList appendFromSlot and prependFromSlot take the item** — both empty the Slot themselves, so no `slot = null` line is left for a caller to forget
+105. **ItemList popFirst feeds appendFromSlot directly** — a popped handle is unlinked, so it is a legal Slot value and the round trip needs no `reset`
+
+### Tests — ItemList (API 10)
+
+106. **ItemList remove unlinks head, middle and tail** — `remove` takes one item out wherever it sits, including the last one; the removed item is unlinked and goes straight back into a list
+107. **ItemList popLast returns an unlinked item** — mirror of `popFirst`; null on empty, and the sole member comes back unlinked because the pop calls `reset` itself
+108. **ItemList first and last leave the item in place** — null on empty, the same item at both ends of a list of one, nothing removed
+109. **ItemList insertBefore places the item ahead of an existing one** — mirror of `insertAfter`; before the only item is also a prepend
+110. **ItemList moveFromList takes a consistent std list** — the header check accepts a well-formed std list and the source is left empty
 
 ---
 

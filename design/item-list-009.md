@@ -1,6 +1,15 @@
-# ItemList (007)
+# ItemList (009)
 
-Versioned doc. Replaces [item-list-006.md](item-list-006.md).
+Versioned doc. Replaces [item-list-008.md](item-list-008.md).
+
+Change from -008: API 11 — `fromNode` and `toNode` renamed to `fromPoly` and  
+`toPoly` wherever this doc names them. No decision changed.
+
+Change from -007: API 10 "ItemList completion" shipped on 2026-07-31. Section 2  
+is updated to the shipped API, section 2.3 records the reversal of its own  
+"first real call site" rule, and section 12 is the decision record. Sections  
+5-8 are unchanged — API 10 widens the checks they argued for, it does not  
+revisit the argument.
 
 Change from -006: API 9 "intrusive safety" shipped on 2026-07-30. Section 8's  
 decisions are implemented, so the "nothing here is implemented" notices are  
@@ -19,7 +28,8 @@ reason. Nothing here is a transcript.
 Sections 1-4 describe API 8: complete, 175/175 tests. Sections 5-8 describe a  
 defect that predates it and what was done about it — **API 9, shipped  
 2026-07-30, 177/177 tests**. Section 8 is the decision record; section 11 is  
-what shipped against it.
+what shipped against it. Section 12 is **API 10, shipped 2026-07-31, 182/182  
+tests**: the list completed, and the checks widened.
 
 ---
 
@@ -45,7 +55,7 @@ every caller converted back by hand:
 
 ```zig
 const poly: *polynode.PolyNode = @fieldParentPtr("node", node);
-const ev: *items.Event = items.Event.EventPolyHelper.fromNode(poly) orelse return error.CastFailed;
+const ev: *items.Event = items.Event.EventPolyHelper.fromPoly(poly) orelse return error.CastFailed;
 ```
 
 Two steps, the first a compiler builtin about struct layout —  
@@ -73,7 +83,7 @@ A written rule is a trap, not a guard.
 - Intrusive, and stays intrusive. The links live in the item.
 - Never allocates, and never holds an allocator.
 - Never copies, clones, or frees an item, and never inspects a payload.
-- Not tag-aware. Dispatch stays `Helper.fromNode(ih)`.
+- Not tag-aware. Dispatch stays `Helper.fromPoly(ih)`.
 - Gains no method because `std.DoublyLinkedList` has one. Only because a caller
   in this repo needs it.
 
@@ -101,15 +111,21 @@ struct.
 
 | method | returns | guarantees |
 |---|---|---|
-| `append(self, ih: ItemHandle)` | — | links at the end. Validates nothing — section 6 |
+| `append(self, ih: ItemHandle)` | — | links at the end. Asserts `!_holds` and `!is_linked` under safety — section 12.2 |
 | `prepend(self, ih: ItemHandle)` | — | links at the front. Same |
-| `insertAfter(self, existing, ih)` | — | both `ItemHandle`. Assumes `existing` is in this list |
+| `appendFromSlot(self, slot: *Slot)` | — | takes the item and empties the Slot |
+| `prependFromSlot(self, slot: *Slot)` | — | same at the front |
+| `insertAfter(self, existing, ih)` | — | both `ItemHandle`. Asserts `existing` is in this list |
+| `insertBefore(self, existing, ih)` | — | mirror of `insertAfter` |
 | `popFirst(self)` | `?ItemHandle` | **the returned item is never linked** — `reset` has run. `null` if empty |
+| `popLast(self)` | `?ItemHandle` | same at the other end |
+| `remove(self, ih: ItemHandle)` | — | takes one item out wherever it sits, and calls `reset`. Asserts this list holds it |
+| `first(self)` / `last(self)` | `?ItemHandle` | look without taking. A list of one returns the same item from both |
 | `isEmpty(self)` | `bool` | replaces every `list.first == null` check |
 | `len(self)` | `usize` | forwards `std`'s walk. O(n). Nothing in `src/` calls it |
-| `iterate(self)` | `Iterator` | non-destructive. Yields `ItemHandle`. No unlink, no `reset` |
-| `concat(self, other: *ItemList)` | — | keeps `self`'s order, keeps `other`'s order, appends the second to the first, empties `other`. O(1) |
-| `moveFromList(list: *std.DoublyLinkedList)` | `ItemList` | takes the contents, empties the source, returns fresh. O(1) |
+| `iterator(self)` | `Iterator` | non-destructive. Yields `ItemHandle`. No unlink, no `reset` |
+| `concat(self, other: *ItemList)` | — | keeps `self`'s order, keeps `other`'s order, appends the second to the first, empties `other`. O(1). The same list twice does nothing |
+| `moveFromList(list: *std.DoublyLinkedList)` | `ItemList` | takes the contents, empties the source, returns fresh. O(1). Asserts the header is consistent |
 | `moveToList(self)` | `std.DoublyLinkedList` | hands the contents over, empties `self`. O(1) |
 
 `Iterator.next()` returns `?ItemHandle`. A std list node never reaches a caller.
@@ -125,27 +141,29 @@ yours", matching `_Mailbox`, `_Pool`, `_concat`, `_add_returned_item`.
 Its shipped doc comment, which is the authority:
 
 ```zig
-/// The plain std list this ItemList holds.
+/// Don't use it directly.\
+/// Use the methods below.
 ///
-/// Use the methods below. Tests use this field, because the raw links
-/// are what they check.
+/// Using of this field allowed for tests.
 ///
-/// Take an item out through this field and call reset() on it yourself.
-/// popFirst() does that for you. This does not. Skip it and the item
-/// still points into the list it left.
 _list: std.DoublyLinkedList = .{},
 ```
+
+Since API 10 there is a method for the case that used to force callers here:  
+`remove` takes one item out from anywhere and calls `reset` itself.
 
 ### 2.3 Not included
 
 | omitted | reason |
 |---|---|
-| `pop` | zero callers. `popFirst` is 31 |
-| `remove` | zero callers. Removal happens through a pop |
 | `popFirstOf(TAG)`, `splitByTag`, `countOf(TAG)` | zero callers |
 | `fromList`, `toList` | a header copy aliases, it does not borrow — section 4.5 |
 
 Rule for adding any of them: first real call site. Not before.
+
+**API 10 reversed that rule for five methods.** `pop` (as `popLast`), `remove`,  
+`first`, `last` and `insertBefore` were declined here for having zero callers.  
+They shipped anyway. Section 12.1 says why the rule was wrong for this case.
 
 ### 2.4 Inside the toolkit
 
@@ -160,7 +178,7 @@ Rule for adding any of them: first real call site. Not before.
 
 **End state.** `@fieldParentPtr` survives in three places, all in  
 `src/polynode.zig`: `ItemList.popFirst`, `ItemList.Iterator.next`, and  
-`PolyHelper.fromNode`. Everywhere else in the repo it is gone, except the  
+`PolyHelper.fromPoly`. Everywhere else in the repo it is gone, except the  
 raw-link tests in `tests/layer1_polynode.zig` scenarios 6, 7, 8, where the  
 layout is the thing under test.
 
@@ -352,7 +370,7 @@ what a `PolyTag` is.
 
 Rejected anyway, because the two candidate callers do not want it.  
 `items.freeList` dispatches to a *destructor*, which is application knowledge  
-and not a tag test. Per-item dispatch is already `Helper.fromNode(ih)` on each  
+and not a tag test. Per-item dispatch is already `Helper.fromPoly(ih)` on each  
 popped handle, and that returns null on a tag mismatch — the filter is already  
 there, one item at a time.
 
@@ -838,7 +856,7 @@ pub fn prependFromSlot(self: *ItemList, slot: *Slot) void
 ```
 
 Four call sites migrate. `append` and `prepend` stay for the stack-item case —  
-`EventPolyHelper.toNode(&ev)` has no slot to take from.
+`EventPolyHelper.toPoly(&ev)` has no slot to take from.
 
 **Why.** Section 7.4. This is prevention, not detection: the hazard of misuse  
 case 3 is that a caller inserts from a slot and forgets to clear it, and an API  
@@ -1035,5 +1053,108 @@ Unchanged by this stage, and stated in §6: **misuse cases 1 and 5**. An item
 held by a *different* list is not reachable from `self`, and  
 `PolyHelper.destroy` holds a Slot rather than a list. Q26 = D says why nothing  
 here reaches them.
+
+Cases 6, 7 and 8 remain documented sharp edges.
+
+---
+
+## 12. What shipped — API 10
+
+**2026-07-31, 182/182 tests.** Prompted by an external review of  
+`src/polynode.zig`: implementation 8.5/10, comments 3/10.
+
+### 12.1 The list is complete (reverses §2.3)
+
+`remove`, `popLast`, `first`, `last`, `insertBefore` added.
+
+§2.3 declined them on the "first real call site" rule. The rule assumes an  
+omitted method costs nothing until someone needs it. For `remove` that is  
+false: a caller who needs it and does not have it reaches through `_list`, and  
+the `_list` doc comment then has to explain that `polynode.reset` is now their  
+job. The gap does not stay a gap — it becomes a documented sharp edge.
+
+`remove` calls `reset`, so it gives the guarantee `popFirst` gives, and taking  
+one item out of the middle stops being a raw-links operation. The other four  
+are its neighbours: an intrusive list that can `insertAfter` but not  
+`insertBefore`, `popFirst` but not `popLast`, is asymmetric for no reason a  
+caller can see.
+
+### 12.2 Both checks, not one (widens §7, does not revisit it)
+
+Q26 = D chose "ask the container, not the item", and `_holds` was written that  
+way. Every insert now also asserts `!is_linked` on the new item.
+
+Neither check is complete, and they fail on opposite cases:
+
+| check | sees | blind to |
+|---|---|---|
+| `_holds` | this list, including a list of one | any other list |
+| `is_linked` | any list | the list holding the item alone |
+
+Reading the item is what Q26 = D avoided, because the item's links sit under  
+whichever list's mutex currently holds it. That objection stands. Two things  
+outweigh it: `PolyHelper.moveFromSlot` and `PolyHelper.destroy` already assert  
+`!is_linked`, so the precedent is in the same file; and the addition is strictly  
+additive — `_holds` is unchanged, and `is_linked` only widens coverage to  
+**misuse case 1**, which §11.5 listed as open.
+
+Misuse case 1 is now partly covered. Case 5 is not.
+
+Owner's instruction: "DoublyLinkedList checks nothing, ItemList should check  
+everything."
+
+### 12.3 `concat` self-concat is a leak (strengthens Q28)
+
+Q28 added `std.debug.assert(self != other)`. That assert is `unreachable`  
+outside safety builds, so ReleaseFast runs the call.
+
+Traced through `std/DoublyLinkedList.zig:62`. With `list1 == list2`:
+
+```zig
+l1_last.next = list2.first;   // ring
+l2_first.prev = list1.last;
+list1.last = list2.last;
+list2.first = null;           // the same header
+list2.last = null;
+```
+
+The list comes back **empty** and every item in it is unreachable in a cycle.  
+Not a no-op, not a corruption to be caught later — a silent leak of the whole  
+list.
+
+Fix: keep the assert, add `if (self == other) return;`. The assert still names  
+the caller's bug loudly where safety is on; the early return makes it a no-op  
+where it is off. Scenario 103 tests the early return under  
+`if (!std.debug.runtime_safety)`, since the assert is what runs everywhere else.
+
+### 12.4 `iterate` → `iterator`
+
+The std name. Breaking, no deprecation shim — six in-repo call sites  
+(`src/pool.zig`, `tests/layer1_itemlist.zig`, `tests/layer4_cancel.zig`) and  
+three design docs. No example used it.
+
+### 12.5 `moveFromList` checks its argument
+
+Asserts `(list.first == null) == (list.last == null)`. It is the one entry point  
+that accepts a header built outside the toolkit, so it is the one place a  
+half-set `std.DoublyLinkedList` can walk in.
+
+### 12.6 Review points not acted on
+
+| point | why not |
+|---|---|
+| "`popFirst`'s mention of `reset()` leaks implementation" | It is a documented std-compatibility guarantee — see `kitchen/docs/api/polynode/stdlib-compatibility.md`, "popFirst clears the links". Repairing that std trap is the method's reason to exist |
+| "the `_list` comment is poor English" | Owner's own prose. Owner's decision: leave it |
+| "`_holds` needs documentation" | `_holds` is private. Its comment was trimmed to two lines |
+
+### 12.7 What is still open
+
+**Misuse case 5** — `PolyHelper.destroy` holds a `Slot`, not a list, so no  
+container is reachable from it. Unchanged.
+
+**Misuse case 1** — partly covered now. An item alone in a different list still  
+passes both checks: `_holds` cannot see that list, and `is_linked` is false for  
+its only member. The `std.DoublyLinkedList` gap of §5 is the reason, and nothing  
+in API 10 repairs it.
 
 Cases 6, 7 and 8 remain documented sharp edges.

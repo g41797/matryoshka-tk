@@ -5,13 +5,13 @@ pub const ShutdownCommand = @import("ShutdownCommand.zig");
 pub const Timer = @import("Timer.zig");
 
 pub fn freeItem(poly: *polynode.PolyNode, alloc: std.mem.Allocator) void {
-    if (Event.EventPolyHelper.fromNode(poly)) |ev| {
+    if (Event.EventPolyHelper.fromPoly(poly)) |ev| {
         alloc.destroy(ev);
-    } else if (Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
+    } else if (Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
         alloc.destroy(sn);
-    } else if (Timer.TimerPolyHelper.fromNode(poly)) |tm| {
+    } else if (Timer.TimerPolyHelper.fromPoly(poly)) |tm| {
         alloc.destroy(tm);
-    } else if (ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |sc| {
+    } else if (ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |sc| {
         alloc.destroy(sc);
     }
 }

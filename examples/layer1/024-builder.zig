@@ -5,14 +5,14 @@
 //!
 //! - Builder wraps an allocator, no other state.
 //! - createEvent / createSensor build a typed item into a Slot.
-//! - fromNode recovers the typed pointer for field access.
+//! - fromPoly recovers the typed pointer for field access.
 //! - destroyByTag frees whichever type the Slot holds.
 //!
 //!
 //! ```
 //!  alloc.create ──► slot (non-null)
 //!       │
-//!  Builder.fromNode ──► field access (no transfer)
+//!  Builder.fromPoly ──► field access (no transfer)
 //!       │
 //!  Builder.destroyByTag ──► slot = null (freed)
 //! ```

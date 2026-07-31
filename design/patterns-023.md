@@ -1,12 +1,21 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (021)
+# Matryoshka Zig — Pattern and Idiom Catalog (023)
 
-Versioned doc. Replaces [patterns-020.md](patterns-020.md).
+Versioned doc. Replaces [patterns-022.md](patterns-022.md).
+
+Change from patterns-022: API 11 — `fromNode`/`mustFromNode`/`toNode` renamed to  
+`fromPoly`/`mustFromPoly`/`toPoly`. Every idiom that names them is updated.  
+Companion cross-reference updated to matryoshka-api-reference-033.md.
+
+Change from patterns-021: API 10 — `list.iterate()` becomes `list.iterator()`.  
+"Walk a batch — ItemList" gains a "Take one item out" idiom for `remove` and  
+the widened insert checks. Companion cross-reference updated to  
+matryoshka-api-reference-032.md.
 
 Change from patterns-020: API 9 — new "Insert from a Slot" idiom under Slot and  
 transfer idioms. "Transfer clears the slot" gains `appendFromSlot` as a fourth  
 shape. "Walk a batch — ItemList" gains the insert half and the neighbour-check  
 note. Companion cross-references updated to rules-034.md,  
-matryoshka-model-006.md and matryoshka-api-reference-031.md.
+matryoshka-model-006.md and matryoshka-api-reference-032.md.
 
 Change from patterns-019: banned-word pass. `ownership` removed from prose and  
 from two section titles — "Slot and ownership idioms" → "Slot and transfer  
@@ -39,7 +48,7 @@ Change from patterns-011:
 One unified catalog. Every pattern and idiom appears once, in logical order.  
 Companion: [rules-034.md](rules-034.md) — what is mandatory.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [matryoshka-api-reference-031.md](matryoshka-api-reference-031.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -160,7 +169,7 @@ Why.
 
 Do not.
 - Do not use these for a stack item. There is no Slot to empty — use `append`
-  with `toNode`, see "Stack item into the toolkit".
+  with `toPoly`, see "Stack item into the toolkit".
 
 Asserts.
 - The Slot must hold an item. An insert is not a `defer` target, so it follows
@@ -331,7 +340,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.fromNode(handle)) |ev| {
+if (EventPolyHelper.fromPoly(handle)) |ev| {
     ...
 }
 ```
@@ -351,29 +360,29 @@ Code shape.
 var ev: Event = .{ .code = 42 };
 EventPolyHelper.init(&ev);
 
-const handle: polynode.ItemHandle = EventPolyHelper.toNode(&ev);
+const handle: polynode.ItemHandle = EventPolyHelper.toPoly(&ev);
 ```
 
 Straight into a Slot, no separate accessor.  
 ```zig
-var slot: Slot = EventPolyHelper.toNode(&ev);
+var slot: Slot = EventPolyHelper.toPoly(&ev);
 ```
 
 Why.
-- `toNode` cannot fail. The type is known at compile time, so there is no tag to check.
+- `toPoly` cannot fail. The type is known at compile time, so there is no tag to check.
 - The field name stays inside `PolyHelper`. Application code never writes `&ev.poly`.
 - `Slot` is `?ItemHandle`, so the result coerces with no conversion step.
 - The heap path does not need this idiom. `create` fills a Slot already.
 
 Do not.
-- Do not call `fromNode` on an item whose static type you already have. That is
-  a round trip that proves nothing. `fromNode` is for the way back, where the  
+- Do not call `fromPoly` on an item whose static type you already have. That is
+  a round trip that proves nothing. `fromPoly` is for the way back, where the  
   static type is gone — see "Polymorphic dispatch".
 
 Straight into a list, same shape.  
 ```zig
 var list: polynode.ItemList = .{};
-list.append(EventPolyHelper.toNode(&ev));
+list.append(EventPolyHelper.toPoly(&ev));
 ```
 
 ### Walk a batch — ItemList
@@ -386,7 +395,7 @@ Code shape.
 ```zig
 var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
 while (batch.popFirst()) |ih| {
-    const ev: *Event = EventPolyHelper.fromNode(ih) orelse return error.WrongTag;
+    const ev: *Event = EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
     // ...
 }
 ```
@@ -396,12 +405,12 @@ Why.
   `@fieldParentPtr`.
 - `popFirst` calls `polynode.reset` before returning. A popped handle is never
   linked, so it drops straight into a `Slot` or into `mailbox.send`.
-- Mixed types in one batch: `fromNode` returns null on a tag mismatch, so the
+- Mixed types in one batch: `fromPoly` returns null on a tag mismatch, so the
   same loop dispatches — see "Polymorphic dispatch".
 
 Walk without consuming.  
 ```zig
-var it = list.iterate();
+var it = list.iterator();
 while (it.next()) |ih| {
     // items stay linked, nothing is removed
 }
@@ -410,20 +419,33 @@ while (it.next()) |ih| {
 Insert side.  
 ```zig
 list.appendFromSlot(&slot);            // from a Slot — see "Insert from a Slot"
-list.append(EventPolyHelper.toNode(&ev));   // from a stack item
+list.append(EventPolyHelper.toPoly(&ev));   // from a stack item
 ```
 
-- Under a safety build, `append`, `prepend` and `insertAfter` walk the list
-  first and assert the item is not already in it. O(n), and nothing outside  
-  safety builds.
-- The walk reads the list, not the item. It catches a double-insert into the
-  same list, including the list of one that `polynode.is_linked` misses. It  
-  says nothing about an item held by a *different* list.
+- Under a safety build every insert asserts twice on the new item, and both
+  asserts are partial.
+- The list walk reads the list, not the item. It catches a double-insert into
+  the same list, including the list of one that `polynode.is_linked` misses.  
+  It says nothing about an item held by a *different* list.
+- `!is_linked` reads the item. It catches that different list — except when the
+  item is its only member.
+- O(n) per insert under safety builds. Nothing outside them.
+
+Take one item out.  
+```zig
+list.remove(ih);                  // wherever it sits — head, middle, tail
+const head = list.first();        // look without taking
+const tail = list.popLast();      // take from the other end
+```
+
+- `remove` calls `polynode.reset`, the same guarantee `popFirst` gives. The item
+  comes back unlinked and goes straight into a `Slot` or another list.
+- This is the reason not to reach through `list._list`.
 
 Do not.
 - Do not reach through `list._list` in application code. It is the raw field,
   there for tests that manipulate raw links. Items taken out that way keep stale  
-  `prev`/`next`, and `polynode.reset` becomes yours to call.
+  `prev`/`next`, and `polynode.reset` becomes yours to call. Use `remove`.
 - Do not use `len()` under a lock in a hot path. It walks the list, O(n). The
   mailbox and pool keep their own counters for that reason.
 
@@ -454,7 +476,7 @@ Why.
 - Use `fromSlot` (nullable) when the type is not guaranteed.
 - Inspection leaves the Slot full. The item is still there for `send` or `put`.
 - To take the item out instead, use `moveFromSlot` — see "Transfer clears the slot".
-- To go the other way, from a typed item to a handle, use `toNode` — see
+- To go the other way, from a typed item to a handle, use `toPoly` — see
   "Stack item into the toolkit".
 
 ### Polymorphic dispatch
@@ -464,16 +486,16 @@ When to use.
 
 Code shape.  
 ```zig
-if (EventPolyHelper.fromNode(handle)) |ev| {
+if (EventPolyHelper.fromPoly(handle)) |ev| {
     // handle Event
-} else if (ShutdownCommandPolyHelper.fromNode(handle)) |_| {
+} else if (ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
     // handle ShutdownCommand
 } else {
     // unknown — free and move on
 }
 ```
 
-- `fromNode` returns null on a tag mismatch. Chain calls for each known type.
+- `fromPoly` returns null on a tag mismatch. Chain calls for each known type.
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
 

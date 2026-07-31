@@ -61,7 +61,7 @@ fn transformerFn(ctx: *TransformerCtx) anyerror!void {
         mailbox.receive(ctx.in_mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.Event.EventPolyHelper.fromNode(poly)) |ev| {
+        if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             const value: f64 = @floatFromInt(ev.code);
             items.freeSlot(&slot, ctx.alloc);
             items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch continue;
@@ -70,7 +70,7 @@ fn transformerFn(ctx: *TransformerCtx) anyerror!void {
                 items.freeSlot(&slot, ctx.alloc);
             };
             std.log.info("transformer: Event→Sensor value={d}", .{value});
-        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
+        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             mailbox.send(ctx.out_mbh, &slot) catch {};
             std.log.info("transformer: forwarded ShutdownCommand, done", .{});
             return;
@@ -93,11 +93,11 @@ fn consumerFn(ctx: *ConsumerCtx) anyerror!void {
         mailbox.receive(ctx.in_mbh, &slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
-        if (items.Sensor.SensorPolyHelper.fromNode(poly)) |sn| {
+        if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
             ctx.count += 1;
             std.log.info("consumer: Sensor value={d} (total={d})", .{ sn.value, ctx.count });
             items.freeSlot(&slot, ctx.alloc);
-        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromNode(poly)) |_| {
+        } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             std.log.info("consumer: ShutdownCommand received, done", .{});
             items.freeSlot(&slot, ctx.alloc);
             return;
