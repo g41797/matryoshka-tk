@@ -1,0 +1,88 @@
+
+
+# Handle-Based Programming
+
+---
+
+
+Handle-Based Programming is 
+
+- a programming style 
+- where components communicate through handles 
+- instead of concrete object types
+
+A handle represents an object.
+
+The handle defines how the object is accessed.
+
+Different handle types may serve different purposes.
+
+---
+
+
+## Infrastructure Handles
+
+Infrastructure handles hide implementation details.
+
+Examples:
+
+* `MailboxHandle`
+* `PoolHandle`
+
+Applications cannot access the internal structure of a mailbox or a pool.   
+All operations use handles.  
+All interaction happens through their public API.
+
+The handle is always the first argument:
+
+```zig
+mailbox.destroy(mbh, allocator);
+pool.get(ph, .available_or_new);
+```
+
+This allows the implementation to change without affecting application code.
+
+---
+
+
+## ItemHandle
+
+---
+
+
+`ItemHandle` has a different purpose.
+
+It provides a common way to work with every application item.
+
+The infrastructure never needs to know the actual item type.  
+It operates only on `ItemHandle`.
+
+The application can recover the actual item from an `ItemHandle`.
+
+Likewise, an application item can produce its corresponding `ItemHandle`.
+
+This allows infrastructure and application code 
+
+- to communicate 
+- using a single representation 
+- while preserving access to the original object 
+- when needed
+
+---
+
+
+## Matryoshka
+
+---
+
+
+Infrastructure components such as `Mailbox` and `Pool` always exchange `ItemHandle`s.
+
+Applications work with their own item types.
+
+Conversion between an application item and its `ItemHandle` is explicit and inexpensive.
+
+As a result
+
+- the infrastructure is completely generic
+- while applications remain fully type-safe

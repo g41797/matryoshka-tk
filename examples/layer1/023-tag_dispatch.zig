@@ -8,6 +8,10 @@
 //! - Recover the typed pointer with fromPoly, process it.
 //! - Free every item; count events and sensors separately.
 //!
+//! This is item-first dispatch: the item is in hand, each type is asked to
+//! cast it. For the other way round — a tag and no item — see
+//! 026-tag_first_dispatch.
+//!
 //!
 //! ```
 //!  alloc.create (Event) ──► list

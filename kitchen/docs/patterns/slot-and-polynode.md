@@ -380,24 +380,9 @@ Why.
 
 ### Polymorphic dispatch
 
-When to use.
-
-- One mailbox or one list carries more than one item type. The receiver recovers the concrete type.
-
-Code shape.  
-```zig
-if (EventPolyHelper.fromPoly(handle)) |ev| {
-    // handle Event
-} else if (ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
-    // handle ShutdownCommand
-} else {
-    // unknown — free and move on
-}
-```
-
-- `fromPoly` returns null on a tag mismatch. Chain calls for each known type.
-
-Example: `examples/layer4/031-select_graceful_shutdown.zig`, `examples/layer4/033-cross_layer_mixed_types_mailbox.zig`.
+Moved. One mailbox or one list carries more than one item type, and the  
+receiver recovers the concrete type — two ways, and the advice on choosing  
+between them: [Patterns — Dispatch](dispatch.md).
 
 ### Tag identifies the class
 

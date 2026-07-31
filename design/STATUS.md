@@ -34,16 +34,17 @@
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
 - Plan: matryoshka-tk-implementation-plan-050.md (slim, state-only)
-- Rules: rules-035.md
+- Rules: rules-036.md
 - Receive router design note: receive-router-001.md
+- Pointer-switch compiler bug: llvm-pointer-switch-bug-001.md
 - ItemList / intrusive safety design: item-list-009.md
 - New Mindset reference: matryoshka-new-mindset-001.md
-- Thinking model: matryoshka-model-006.md
-- Patterns: patterns-023.md
+- Thinking model: matryoshka-model-007.md
+- Patterns: patterns-024.md
 - Docs plan: matryoshka-tk-docs-plan-015.md
 - Manifesto: matryoshka-manifesto-005.md
 - Latest context: collected-context-005.md
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-035.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-036.md
 
 ## Participants
 - Owner(g41797-human): design, decision-making
@@ -295,6 +296,18 @@ dedicated "Composite Items" section in `kitchen/docs/api/pool/put.md`
 `on_put`'s `?std.DoublyLinkedList` return-value signature unchanged — an  
 out-param alternative was proposed and rejected. DONE (168/168 tests  
 unchanged, `mkdocs build --strict` clean).
+
+DISPATCH 1 — tag-first dispatch documented. DONE (185/185 tests, +3 new).  
+The `switch (tag)` form the task started from does not compile on any zig  
+version or backend available — a prong needs a comptime value and a tag is a  
+linker-assigned address. Recorded in `llvm-pointer-switch-bug-001.md` with a  
+17-line repro and a build matrix (`kitchen/tools/build_repro_matrix.sh`).  
+Re-scoped to the `isIt` chain, which the codebase already used and no page  
+described. New `kitchen/docs/patterns/dispatch.md` covers both ways;  
+`examples/layer1/026-tag_first_dispatch.zig` and scenarios 111-112 pin it;  
+`AlwaysCreateHooks.onGet` inlines the chain so the tag-only case has a  
+specimen; `items.freeItem` gained the final `else` it was missing. Docs:  
+patterns-024, rules-036 (two new MUST rules), matryoshka-model-007.
 
 EXMPL 5a — `design/receive-router-001.md`: receive-router use case and chosen  
 solution. Working document the example and pattern pages are written from.  

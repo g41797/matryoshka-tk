@@ -242,11 +242,96 @@ test "99 - toPoly reaches the embedded PolyNode" {
     try testing.expect(EventPolyHelper.toPoly(&other) != node);
 }
 
+// --- Scenario 111: tag-first dispatch recovers every type ---
+test "111 - tag-first dispatch recovers every type" {
+    var ev: Event = .{ .code = 11 };
+    EventPolyHelper.init(&ev);
+
+    var sn: Sensor = .{ .value = 1.5 };
+    SensorPolyHelper.init(&sn);
+
+    var tm: Timer = .{};
+    TimerPolyHelper.init(&tm);
+
+    var list: ItemList = .{};
+    list.append(EventPolyHelper.toPoly(&ev));
+    list.append(SensorPolyHelper.toPoly(&sn));
+    list.append(TimerPolyHelper.toPoly(&tm));
+
+    var events: usize = 0;
+    var sensors: usize = 0;
+    var timers: usize = 0;
+    var unknown: usize = 0;
+
+    // isIt proves the tag. mustFromPoly then cannot fail.
+    while (list.popFirst()) |ih| {
+        const tag: *const anyopaque = ih.*.tag;
+        if (EventPolyHelper.isIt(tag)) {
+            try testing.expectEqual(@as(i32, 11), EventPolyHelper.mustFromPoly(ih).*.code);
+            events += 1;
+        } else if (SensorPolyHelper.isIt(tag)) {
+            try testing.expectEqual(@as(f64, 1.5), SensorPolyHelper.mustFromPoly(ih).*.value);
+            sensors += 1;
+        } else if (TimerPolyHelper.isIt(tag)) {
+            timers += 1;
+        } else {
+            unknown += 1;
+        }
+    }
+
+    try testing.expectEqual(@as(usize, 1), events);
+    try testing.expectEqual(@as(usize, 1), sensors);
+    try testing.expectEqual(@as(usize, 1), timers);
+    try testing.expectEqual(@as(usize, 0), unknown);
+}
+
+// --- Scenario 112: unknown tag reaches the final else ---
+test "112 - unknown tag reaches the final else" {
+    var ev: Event = .{ .code = 12 };
+    EventPolyHelper.init(&ev);
+
+    var fr: Foreign = .{ .mark = 9 };
+    ForeignPolyHelper.init(&fr);
+
+    var list: ItemList = .{};
+    list.append(EventPolyHelper.toPoly(&ev));
+    list.append(ForeignPolyHelper.toPoly(&fr));
+
+    var events: usize = 0;
+    var unknown: usize = 0;
+
+    while (list.popFirst()) |ih| {
+        if (EventPolyHelper.isIt(ih.*.tag)) {
+            try testing.expectEqual(@as(i32, 12), EventPolyHelper.mustFromPoly(ih).*.code);
+            events += 1;
+        } else {
+            // The item is dropped, not freed. Freeing needs the type,
+            // and the branch that runs has none.
+            unknown += 1;
+        }
+    }
+
+    try testing.expectEqual(@as(usize, 1), events);
+    try testing.expectEqual(@as(usize, 1), unknown);
+
+    // Dispatch left the unknown item alone. Its holder still owns it.
+    try testing.expectEqual(@as(u8, 9), fr.mark);
+}
+
+/// A type the dispatch site does not know about.
+const Foreign = struct {
+    poly: PolyNode = .{},
+    mark: u8 = 0,
+};
+const ForeignPolyHelper = polynode.PolyHelper(Foreign);
+
 const items = @import("examples").items;
 const Event = items.Event;
 const Sensor = items.Sensor;
+const Timer = items.Timer;
 const EventPolyHelper = items.Event.EventPolyHelper;
 const SensorPolyHelper = items.Sensor.SensorPolyHelper;
+const TimerPolyHelper = items.Timer.TimerPolyHelper;
 
 const polynode = @import("matryoshka").polynode;
 const PolyNode = polynode.PolyNode;

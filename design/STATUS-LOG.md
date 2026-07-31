@@ -2,6 +2,121 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-07-31 — DISPATCH 1 addendum, the `id()` dead end
+
+Owner proposed a `PolyHelper` accessor returning `@intFromPtr(TAG)`, hoping an  
+integer would bring back `switch` over tags. It does not. `inline fn` inlines a  
+run-time computation; it does not make the result comptime-known, and zig says  
+so: "operation is runtime due to this operand". A prong needs the number and  
+`id()` cannot supply it either.
+
+As a run-time accessor it works on both backends, but `@intFromPtr(tag)` is  
+already available at any call site, so it would add a name and not a  
+capability — and it would duplicate `isIt`, the same kind of second spelling  
+API 6 and API 11 each removed. Not added.
+
+Recorded as a new "Runtime `id()` — considered, does not help" section in  
+`llvm-pointer-switch-bug-001.md`, next to the comptime-ID one, plus a row in  
+the comptime-known table. Doc-only, no code, tree stays at 185/185.
+
+### 2026-07-31 — DISPATCH 1 done, tag-first dispatch
+
+Re-scoped after the switch form turned out not to compile (entry below). The  
+tag-first way is the `isIt` chain — which `items.createByTag`,  
+`items.destroyByTag` and `021-define_type.zig` already used, and no page  
+described. So this documented an idiom rather than introducing one.
+
+Code, 182 -> 185 tests:
+
+- Scenarios 111 and 112 in `tests/layer1_polynode.zig`. 111 dispatches over a
+  mixed `ItemList` of Event, Sensor and Timer. 112 pins the final `else`: a  
+  locally defined `Foreign` type reaches it, dispatch continues, and the item  
+  is left untouched — the branch drops, it does not free.
+- `examples/layer1/026-tag_first_dispatch.zig`, sibling to 023's item-first
+  loop. Barrel entry, test wrapper, and a pointer in 023's header.
+- `examples/hooks/AlwaysCreateHooks.zig` — `onGet` inlines the chain instead of
+  delegating to `items.createByTag`, so the tag-only case has a runnable  
+  specimen where the tag arrives from the pool. `CappedPoolHooks` keeps  
+  delegating; the contrast is the point.
+- `examples/items/items.zig` — `freeItem` gained the final `else` it was
+  missing. `createByTag` and `destroyByTag` were already the idiom and were not  
+  touched. Every `AlwaysCreateHooks` registration was checked first: all are  
+  Event or Sensor, so the `unreachable` is reachable only by a bug.
+
+The last branch cannot free. `alloc.destroy` takes `*T` and the allocator needs  
+the size, so with no type there is no size. An unknown item can only be dropped  
+or reported. That is why the rule is `unreachable` for a closed set rather than  
+"free and move on".
+
+Docs: new `kitchen/docs/patterns/dispatch.md`, "Polymorphic dispatch" removed  
+from `slot-and-polynode.md` and replaced by a pointer, nav and index and group  
+page updated per the nav-sync rule, examples catalog regenerated. Design side:  
+patterns-023 -> -024, rules-035 -> -036 (two new MUST rules: dispatch chains end  
+with a final branch, no switch over tags), matryoshka-model-006 -> -007  
+(companion links only), context.md and STATUS.md Sources of Truth repointed.
+
+185/185 across four optimize modes, cross-compile clean, `zig fmt --check`  
+clean, `mkdocs build --strict` zero warnings.
+
+### 2026-07-31 — DISPATCH 1 blocked by a zig bug
+
+New task, owner-initiated: document a second way of dispatch — tag-first,  
+`switch (ih.*.tag)` with `Helper.TAG` prongs — alongside the existing  
+`fromPoly` chain. Plan approved: one `patterns/dispatch.md` page, scenarios  
+111/112, example `026-tag_switch.zig`, a hooks example, and conversion of the  
+tag-first helpers in `examples/items/items.zig`.
+
+Stopped at the first build. A `switch` on a pointer value that is not known at  
+compile time does not compile on zig 0.16.0.
+
+Three symptoms from one 17-line file, `design/llvm-pointer-switch-repro.zig`:
+
+- `-fllvm` — 16 of 16 builds fail with `Invalid record (Producer: 'zig 0.16.0'  
+  Reader: 'LLVM 21.1.0')`. Every target, every optimize level.
+- `-fno-llvm` on x86_64-linux — the compiler segfaults. Debug every time,  
+  ReleaseSafe on two runs of three.
+- `-fno-llvm` on aarch64-macos — the compiler hangs.
+
+The `==` chain doing the same dispatch passes 24 of 24 builds, both backends,  
+all four optimize levels, native plus macos plus windows.
+
+Root cause, from `--verbose-llvm-ir`: the emitted switch has `ptrtoint`  
+constant expressions as case values, where LLVM wants literal constant  
+integers. Explains the `-fllvm` case only, not the crash or the hang.
+
+Settled by writing the same switch over `@intFromPtr`: all 8 combinations are  
+rejected by the front end with "unable to evaluate comptime expression". A  
+prong must be comptime-known; a global's address is assigned at link time.  
+So `switch (@intFromPtr(tag))` is diagnosed and `switch (tag)` — the same  
+thing, same values — is accepted and miscompiled. A front-end hole, not a  
+backend defect. No zig version will make this work; the fix upstream is to  
+reject it. The `==` chain is the correct construct, not a workaround.
+
+Why the front end let it through: `TAG` is comptime-known *symbolically* — the  
+compiler knows which global it names, so `TA == TB` evaluates at comptime — but  
+not *numerically*. A prong needs the number; `==` needs only the symbol.  
+`@intFromPtr` is refused everywhere it is asked: as a prong, in a `comptime`  
+block, and as a container-level `const`. No spelling gets the number.
+
+A real `switch` needs tags that were never addresses. A comptime  
+`Fnv1a_64.hash(@typeName(T))` ID works on both backends — verified. Declined  
+for now: it trades guaranteed-unique identity for a possible undetectable  
+collision between independently compiled libraries, and touches every reader of  
+`tag`. Link-time IDs and comptime auto-increment counters were ruled out —  
+neither exists in Zig. Recorded in the design doc as considered-and-declined.
+
+Three earlier "passes" were false and are recorded so nobody repeats them:  
+comptime folding removed the switch entirely, `items.destroyByTag` is dead code  
+and was never lowered, and small isolated files fold the same way.
+
+New: `design/llvm-pointer-switch-bug-001.md`, `design/llvm-pointer-switch-repro.zig`,  
+`kitchen/tools/build_repro_matrix.sh`.
+
+Tree unchanged and green, 182/182. No docs written, no examples added. Open:  
+the switch idiom is not viable, so DISPATCH 1 needs re-scoping to the `==`  
+chain — owner's call. Also open: the real 0.17 diagnostic, and an upstream  
+report.
+
 ### 2026-07-31 — API 11 accessor rename
 
 `PolyHelper.fromNode` / `mustFromNode` / `toNode` are now `fromPoly` /  

@@ -43,3 +43,11 @@ test "25 - produce-consume with defer cleanup" {
         return err;
     };
 }
+
+test "26 - tag-first dispatch loop" {
+    std.testing.log_level = .debug;
+    layer1.tag_first_dispatch.tag_first_dispatch_loop(allocator, io) catch |err| {
+        std.log.err("example failed: {s}", .{@errorName(err)});
+        return err;
+    };
+}

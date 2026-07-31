@@ -51,7 +51,6 @@ nav:
           - Defining user types — manual step by step: api/polynode/manual-definition.md
           - Std compatibility: api/polynode/stdlib-compatibility.md
       - PolyHelper: api/polyhelper.md
-      - Handle-based API: api/handle-based-apis.md
       - Mailbox:
           - Overview: api/mailbox/index.md
           - Send group: api/mailbox/send.md
@@ -80,6 +79,7 @@ nav:
           - No raw allocator calls: api/cleanup/no-raw-allocator.md
   - Patterns & Cookbook:
       - Slot & PolyNode Idioms: patterns/slot-and-polynode.md
+      - Dispatch: patterns/dispatch.md
       - Mailbox & Topology Patterns: patterns/mailbox-and-topology.md
       - Pool Patterns: patterns/pool.md
       - Io related: patterns/async.md
@@ -100,6 +100,7 @@ nav:
           - Define a PolyNode type: examples/layer1/021-define_type.md
           - Item transfer via Slot: examples/layer1/022-ownership_transfer.md
           - Tag-dispatch consume loop: examples/layer1/023-tag_dispatch.md
+          - Tag-first dispatch loop: examples/layer1/026-tag_first_dispatch.md
           - Builder pattern: examples/layer1/024-builder.md
           - Produce-consume with defer cleanup: examples/layer1/025-produce_consume.md
       - How to... Mailbox:
@@ -179,6 +180,7 @@ nav:
       - Slot vs Ref-Counting: addendums/slot-vs-ref-counting.md
       - Tag vs Tagged Union: addendums/tag-vs-tagged-union.md
       - Mailbox vs TypeErasedQueue: addendums/typeErasedQueue-vs-mailbox.md
+      - Handle-Based Programming: addendums/handle-based-programming.md
       - Why Boring: addendums/why-boring.md
       - Notation: addendums/matryoshka-tk-notation.md
 

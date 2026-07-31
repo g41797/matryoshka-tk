@@ -13,6 +13,11 @@ pub fn freeItem(poly: *polynode.PolyNode, alloc: std.mem.Allocator) void {
         alloc.destroy(tm);
     } else if (ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |sc| {
         alloc.destroy(sc);
+    } else {
+        // An unknown tag cannot be freed here — destroy needs the type.
+        // These four are the whole item set of the examples, so reaching
+        // this branch means the caller passed something else.
+        unreachable;
     }
 }
 
@@ -30,11 +35,11 @@ pub fn freeList(list: *polynode.ItemList, alloc: std.mem.Allocator) void {
 }
 
 pub fn createByTag(tag: *const anyopaque, alloc: std.mem.Allocator, slot: *polynode.Slot) void {
-    if (Event.EventPolyHelper.isIt(tag)) {
+    if (tag == Event.EventPolyHelper.TAG) {
         Event.EventPolyHelper.create(alloc, slot) catch return;
-    } else if (Sensor.SensorPolyHelper.isIt(tag)) {
+    } else if (tag == Sensor.SensorPolyHelper.TAG) {
         Sensor.SensorPolyHelper.create(alloc, slot) catch return;
-    }
+    } else unreachable;
 }
 
 pub fn resetOnPut(slot: *polynode.Slot) void {

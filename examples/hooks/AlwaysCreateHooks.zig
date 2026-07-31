@@ -14,7 +14,17 @@ pub fn poolHooks(self: *Self, tags: []const *const anyopaque) pool_mod.PoolHooks
 pub fn onGet(ptr: *anyopaque, tag: *const anyopaque, _: usize, slot: *polynode.Slot) void {
     if (slot.* != null) return;
     const self: *Self = @ptrCast(@alignCast(ptr));
-    items.createByTag(tag, self.alloc, slot);
+
+    // The pool hands over a tag and an empty Slot. There is no item to cast,
+    // so the tag is the only thing to dispatch on.
+    if (items.Event.EventPolyHelper.isIt(tag)) {
+        items.Event.EventPolyHelper.create(self.alloc, slot) catch return;
+    } else if (items.Sensor.SensorPolyHelper.isIt(tag)) {
+        items.Sensor.SensorPolyHelper.create(self.alloc, slot) catch return;
+    } else {
+        // Registered with a tag this hook cannot build — a bug at pool.init.
+        unreachable;
+    }
 }
 
 pub fn onPut(_: *anyopaque, _: usize, slot: *polynode.Slot) ?polynode.ItemList {

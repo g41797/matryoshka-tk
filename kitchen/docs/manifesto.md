@@ -138,12 +138,11 @@ A **Master** is
 An **Item** is
 
 - movable application object
-  - Request
-  - Connection
-  - Session
-  - Buffer
-  - Job
-  - ...
+    - PDLChunk
+    - Session
+    - RawBuffer
+    - JobTicket
+    -  ...
 - **allocated** (as all building blocks)
 - outlive the function that created them
 
@@ -188,9 +187,9 @@ The same is for Matryoshka-Tk API
 A **Mailbox** moves an Item from one Master to another:
 
 - One Master places an Item in
-  - Mailbox ensures that it's only owner of Item
+    - Mailbox ensures that it's only owner of Item
 - Another Master later receives it
-  - Mailbox ensures that receiver is only owner of Item
+    - Mailbox ensures that receiver is only owner of Item
 
 ---
 
@@ -207,32 +206,31 @@ Usually Master
 - gets Item from Pool
 - process Item
 - on finish
-  - send Item to another Master for further processing
-  - returns Item to Pool
+    - send Item to another Master for further processing
+    - returns Item to Pool
 
 A Pool is not storage.  
 An empty Pool is
 
 - not an error
-- it is backpressure.
-
-Matryoshka-Tk supports backpressure 'naturally'
+- it is information e.g. _backpressure_.
 
 ---
 
 ##  Take it easy
 
+---
+
+
 Start with Items.
 
 Add a Pool when reuse becomes useful.
 
-Add a Mailbox when communication becomes useful.
-
 Organize long-running tasks as Masters.
 
-Each step is useful right away.
+You will need to add a Mailbox(es) for communication. 
 
-Each step stays useful after the next one.
+---
 
 Can you describe your application using only
 
@@ -249,6 +247,8 @@ If
 ---
 
 ## Master is King
+
+---
 
 Master is YOUR CODE.
 
@@ -267,3 +267,6 @@ Another building blocks are "slaves":
 ---
 
 Be Master **of your** systems.
+
+---
+
