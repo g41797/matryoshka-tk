@@ -55,7 +55,7 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-037.md](rules-037.md) — what is mandatory.  
+Companion: [rules-039.md](rules-039.md) — what is mandatory.  
 Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
 Companion: [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md) — signatures and contracts.
 
@@ -582,7 +582,7 @@ try log_table.dispatch(self, &slot);
   never left the Slot, so unlike the last branch of a chain, the caller frees  
   it — the caller knows its own type set.
 - The handler follows the transfer rule: on return the Slot is null if the
-  handler took the item, full if it did not. See rules-037.md.
+  handler took the item, full if it did not. See rules-039.md.
 - Not in `src/`: the handler's first parameter is the application's receiver
   type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
 
