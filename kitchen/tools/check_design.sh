@@ -139,7 +139,7 @@ echo "== 4. glossary conformance =="
 gl=0
 exempt='Status file ownership|ownership_transfer\.zig|^[^:]*:[0-9]+:\| *[0-9]{3} *\||^[^:]*:[0-9]+:- (DOC|INTR|CMPCT|DISPATCH) |^[^:]*:[0-9]+:Change from'
 
-allow="$kitchen/tools/.check_design_allow"
+allow="$repo_root/kitchen/tools/.check_design_allow"
 filter() {
     sed "s|^$repo_root/||" | grep -vE "$exempt" | {
         if [ -f "$allow" ]; then

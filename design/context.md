@@ -21,7 +21,7 @@ drafts, session logs and unstarted intentions live in
 ## State
 
 - [STATUS.md](STATUS.md) — where we are and what is next. Read in full each session.
-- [matryoshka-tk-implementation-plan-054.md](matryoshka-tk-implementation-plan-054.md) — forward-looking work + one-line ledger of completed stages.
+- [matryoshka-tk-implementation-plan-055.md](matryoshka-tk-implementation-plan-055.md) — forward-looking work + one-line ledger of completed stages.
 - [STATUS-LOG.md](STATUS-LOG.md) — session narrative, by date. Do not read by default.
 
 ## Sources of truth

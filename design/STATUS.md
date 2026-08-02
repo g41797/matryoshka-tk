@@ -37,7 +37,7 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-054.md (slim, state-only)
+- Plan: matryoshka-tk-implementation-plan-055.md (slim, state-only)
 - Rules: rules-041.md
 - Receive router design note: receive-router-001.md
 - Table dispatch design note: table-dispatch-001.md
@@ -106,11 +106,11 @@ matryoshka-tk/
 192/192 tests across Debug, ReleaseSafe, ReleaseFast and ReleaseSmall.  
 Cross-compile to x86_64-windows clean. `mkdocs build --strict` clean.
 
-Last completed stage: DOC 23 — the two large docs split by audience,  
-2026-08-02.  
-Current plan: matryoshka-tk-implementation-plan-054.md.
+Last completed stage: WEB 1 — the landing-page line-count badge is now the link  
+to the API docs, 2026-08-02.  
+Current plan: matryoshka-tk-implementation-plan-055.md.
 
-The last six stages changed nothing in `src/`. They are documentation and  
+The last seven stages changed nothing in `src/`. They are documentation and  
 examples for what the existing blocks already do.
 
 ## Next

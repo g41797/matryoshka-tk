@@ -1,14 +1,13 @@
-# Matryoshka Zig — Implementation Plan (054)
+# Matryoshka Zig — Implementation Plan (055)
 
-Change from -053: DOC 23 ledger line, one reported item closed, and the stale  
-references this stage repaired.
+Change from -054: WEB 1 ledger line.
 
 ## Status
 
 192/192 tests across Debug, ReleaseSafe, ReleaseFast and ReleaseSmall.  
 Cross-compile to x86_64-windows clean. `mkdocs build --strict` clean.
 
-Last completed stage: DOC 23, 2026-08-02. The last six stages changed nothing  
+Last completed stage: WEB 1, 2026-08-02. The last seven stages changed nothing  
 in `src/` — they document what the existing blocks already do.
 
 ---
@@ -72,6 +71,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - CMPCT 2 — rules regrouped into rules-039.md: gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
 - DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-001.md](matryoshka-concepts-001.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-041.md](rules-041.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
 - DOC 23 — the two large docs split by audience. `matryoshka-tk-0.16-implementation-guide-001.md` retired: its Odin idiom mapping to [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md), its still-binding material to [matryoshka-zig-0.16-notes-002.md](matryoshka-zig-0.16-notes-002.md), its walkthroughs of shipped code deleted with owner approval. [matryoshka-architecture-foundation-4-005.md](matryoshka-architecture-foundation-4-005.md) drops the four sections `matryoshka-concepts-001.md` already owns and renames `MayItem` to `Slot`. New gate `kitchen/tools/check_design.sh`. DONE 2026-08-02 (192/192, doc-only).
+- WEB 1 — the landing page reaches the API docs. `kitchen/docs/index.md`: the `XYZ Lines Of Code` badge is now the link to `apidocs/`, opening in a new tab; the API button above it, hidden by CSS since it was added, is deleted. `kitchen/docs/stylesheets/extra.css`: the badge gains link styling and a per-scheme hover, and the button styling it made dead — `.hero-button`, both `-primary` and `-secondary` scheme pairs, the `display: none` rule, the unused `.hero-buttons` selector — is removed. DONE 2026-08-02 (doc-only, no `src/` change).
 
 CANDIDATES was dropped, owner's decision. It carried from plan-043 through  
 plan-046 without starting, and `design/candidates/` does not exist on disk.

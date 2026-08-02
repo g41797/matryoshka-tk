@@ -37,7 +37,6 @@ nav:
   - The laws of documentation: laws_of_docs.md
   - The Manifesto: manifesto.md
   - History:  history.md
-  - In a hurry?:  addendums/api_reference.md
   - Building Blocks:
       - Overview: building-blocks/index.md
       - Item: building-blocks/polynode.md

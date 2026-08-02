@@ -72,8 +72,7 @@ body:has(.hero-wrapper) .md-sidebar {
 }
 
 /* Hero Buttons - Stacked vertically as lines */
-.hero-buttons-top,
-.hero-buttons {
+.hero-buttons-top {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -83,83 +82,7 @@ body:has(.hero-wrapper) .md-sidebar {
   width: 100%;
 }
 
-.hero-button {
-  display: inline-block;
-  padding: 1rem 2.5rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  cursor: pointer;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Primary Button - Light Mode */
-[data-md-color-scheme="default"] .hero-button-primary {
-  background-color: #3f51b5; /* indigo */
-  color: white;
-  border-color: #3f51b5;
-}
-
-[data-md-color-scheme="default"] .hero-button-primary:hover {
-  background-color: #303f9f;
-  border-color: #303f9f;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(63, 81, 181, 0.3);
-}
-
-/* Primary Button - Dark Mode */
-[data-md-color-scheme="slate"] .hero-button-primary {
-  background-color: #009688; /* teal */
-  color: white;
-  border-color: #009688;
-}
-
-[data-md-color-scheme="slate"] .hero-button-primary:hover {
-  background-color: #00796b;
-  border-color: #00796b;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 150, 136, 0.3);
-}
-
-/* Secondary Button - Light Mode */
-[data-md-color-scheme="default"] .hero-button-secondary {
-  background-color: transparent;
-  color: #00bcd4; /* cyan */
-  border-color: #00bcd4;
-}
-
-[data-md-color-scheme="default"] .hero-button-secondary:hover {
-  background-color: #00bcd4;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
-}
-
-/* Secondary Button - Dark Mode */
-[data-md-color-scheme="slate"] .hero-button-secondary {
-  background-color: transparent;
-  color: #cddc39; /* lime */
-  border-color: #cddc39;
-}
-
-[data-md-color-scheme="slate"] .hero-button-secondary:hover {
-  background-color: #cddc39;
-  color: #121212;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(205, 220, 57, 0.3);
-}
-
-/* API button hidden on landing page - markup kept, toggle by removing this rule */
-.hero-buttons-top .hero-button {
-  display: none;
-}
-
-/* LOC badge - companion stat next to the API button */
+/* LOC badge - the live line count, and the way in to the API docs */
 .hero-loc-badge {
   display: inline-block;
   padding: 0.35rem 1rem;
@@ -167,16 +90,35 @@ body:has(.hero-wrapper) .md-sidebar {
   font-family: var(--md-code-font, monospace);
   border-radius: 999px;
   letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
+/* LOC badge - Light Mode */
 [data-md-color-scheme="default"] .hero-loc-badge {
   background-color: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.65);
 }
 
+[data-md-color-scheme="default"] .hero-loc-badge:hover {
+  background-color: #00bcd4; /* cyan */
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+}
+
+/* LOC badge - Dark Mode */
 [data-md-color-scheme="slate"] .hero-loc-badge {
   background-color: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
+}
+
+[data-md-color-scheme="slate"] .hero-loc-badge:hover {
+  background-color: #cddc39; /* lime */
+  color: #121212;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(205, 220, 57, 0.3);
 }
 
 /* ===================================================================

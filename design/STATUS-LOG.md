@@ -2,6 +2,45 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-02 — WEB 1: the LOC badge is the way in to the API docs
+
+**Participants**: human (owner), Claude (agent).
+
+**Why.** Owner looked at the landing page and saw one thing under the logo: the  
+text `XYZ Lines Of Code`. It reads like a button, its number updates on every  
+build, and clicking it does nothing. Owner asked for it to open the Zig-generated  
+API docs, in another tab, staying inside the same site.
+
+**What the survey found.** `hero-buttons-top` held two elements, not one. Line 28  
+was already an API button linking to `apidocs/` with `target="_blank"` — but  
+`extra.css` carried `.hero-buttons-top .hero-button { display: none }`, so no  
+visitor had ever seen it. Line 29 was the badge, a `<span>`, unclickable by  
+construction. The autodocs themselves were already in place: `zig build docs` via  
+`kitchen/tools/docs_zig.sh`, copied into the site as static files.
+
+**What changed.**
+
+- `kitchen/docs/index.md` — the badge became  
+  `<a href="apidocs/" class="hero-loc-badge" target="_blank" rel="noopener">`,  
+  keeping the `{{ src_loc() }}` placeholder verbatim. The hook substitutes on  
+  `on_page_markdown`, so it fills raw HTML unchanged.
+- The hidden API button was deleted. Owner's call, once the badge carried the  
+  link the button was a second, invisible route to the same page.
+- `kitchen/docs/stylesheets/extra.css` — the badge took `text-decoration`,  
+  `cursor`, `transition` and a hover state per palette, cyan in light and lime in  
+  dark, matching what the old secondary button did. A grep over `kitchen/docs/`  
+  showed `.hero-button`, `.hero-button-primary`, `.hero-button-secondary` and  
+  `.hero-buttons` were used on the deleted line and nowhere else, so all of it  
+  went, along with the `display: none` rule.
+
+**Verification.** `kitchen/tools/build_site.sh` exit 0, no MkDocs warning. The  
+emitted `docs/index.html` carries  
+`<a href="apidocs/" class="hero-loc-badge" target="_blank" rel="noopener">722 Lines Of Code</a>`.  
+`check_design.sh` exit 0. No `src/` change, so the suite was not re-run — this is  
+a doc-only stage.
+
+---
+
 ### 2026-08-02 — DOC 23: the two large docs split by audience
 
 **Participants**: human (owner), Claude (agent).
