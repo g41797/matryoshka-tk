@@ -25,6 +25,7 @@ One line per doc: the link, what it is, why it is kept.
 - [mtk-readme.md](mtk-readme.md) — alternate draft of the README intro, the "troika" phrasing. Input to the editorial prose pass in STATUS.md "Next".
 - [llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md) — why `switch` over tags does not compile. Repro plus build matrix. A compiler-bug write-up, not Matryoshka design. Referenced from `../table-dispatch-001.md`.
 - [llvm-pointer-switch-repro.zig](llvm-pointer-switch-repro.zig) — standalone repro for the above. Outside the build graph. Build commands in its header comment.
+- [error-as-type-id-001.md](error-as-type-id-001.md) — why a Zig error cannot replace the pointer tag. Errors are interned by name and no automatic source of a unique name exists. Rejected, with the test evidence. Read it before proposing integer tags again.
 - [video-transcoder-notations-001.md](video-transcoder-notations-001.md) — first notation experiment for the transcoder story. Input to the diagram-notation scan in STATUS.md "Next".
 - [video-transcoder-notations-002.md](video-transcoder-notations-002.md) — second notation experiment. The larger of the two.
 - [odin-to-zig-backport-001.md](odin-to-zig-backport-001.md) — every Odin idiom in the prototype, with its Zig equivalent. Extracted from the retired 0.16 implementation guide. The direction that still matters is backporting `matryoshka-tk` to Odin. Its Zig column is the pre-implementation proposal, not the shipped API.

@@ -2,6 +2,51 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-02 — Errors as type IDs: tested, rejected, written down
+
+**Participants**: human (owner), Claude (agent).
+
+**Why.** Owner brought a proposal: replace the pointer tag with a unique Zig  
+error, so `@intFromError` gives an integer and `switch` becomes possible. It  
+asked four open questions and said to test before discussing.
+
+**What the test found.** The mechanism works. `@intFromError(error.X)` is a real  
+comptime `u16`, usable as an array length and as a `switch` prong at all four  
+optimize levels. So the DISPATCH 1 wall is about pointers, not about tags.
+
+Two problems. Values renumber on any source change — `Player` was 171 at Debug,  
+1 at Release, and moved to 173 when two unrelated errors were added elsewhere.  
+Survivable, since every comparison is inside one compilation.
+
+The second is not survivable. Errors are interned by name, globally, and no  
+automatic source of a unique name exists. Owner caught this first: `@typeName`  
+is not unique. Confirmed — it carries the path within a module but no module  
+prefix. Owner then asked whether `PolyHelper` could mint the error itself.  
+Tested: `@typeName(@This())` wraps `@typeName(T)` and adds polynode's module  
+rather than `T`'s, so it collides identically. Two genuinely distinct types in  
+two modules both produced `TAG=168`. `@src()` is illegal at container scope,  
+which is where `PolyHelper` is always instantiated, and there is no  
+container-scope `comptime var`, so neither a location nor a counter is  
+reachable.
+
+**The decision.** Owner: "looks it's dangerous — i give up." A collision is  
+silent: `isIt` matches the wrong type, `fromPoly` returns a `*T` onto a  
+different struct, nothing reports it. The pointer makes that unrepresentable.  
+`TagTable` already covers dispatch. No `src/` change.
+
+**What changed.** Documentation only. No `*.zig` touched.
+
+- `design/secondary/error-as-type-id-001.md` — new. The proposal, what works,  
+  what does not, the demonstrated collision, why it was rejected, and the three  
+  mitigations that narrow but do not close the risk.
+- `design/secondary/context.md` — one line for it.
+
+**The constraint worth keeping.** A generic cannot learn which module its type  
+parameter came from. Any future scheme deriving identity from a type meets this.
+
+**Post-stage cleanup.** Nothing to clean. No code changed, and the note is new  
+rather than a revision.
+
 ### 2026-08-02 — WEB 1: the LOC badge is the way in to the API docs
 
 **Participants**: human (owner), Claude (agent).

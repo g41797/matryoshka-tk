@@ -106,8 +106,8 @@ matryoshka-tk/
 192/192 tests across Debug, ReleaseSafe, ReleaseFast and ReleaseSmall.  
 Cross-compile to x86_64-windows clean. `mkdocs build --strict` clean.
 
-Last completed stage: WEB 1 — the landing-page line-count badge is now the link  
-to the API docs, 2026-08-02.  
+Last completed stage: errors as type IDs — tested, rejected, written up in  
+`secondary/error-as-type-id-001.md`, 2026-08-02.  
 Current plan: matryoshka-tk-implementation-plan-055.md.
 
 The last seven stages changed nothing in `src/`. They are documentation and  
