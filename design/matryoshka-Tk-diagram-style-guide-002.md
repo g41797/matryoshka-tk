@@ -88,7 +88,7 @@ Never describe implementation.
 
 Describe responsibilities.
 
-Describe ownership.
+Describe hold.
 
 Describe communication.
 
@@ -162,7 +162,7 @@ Examples
 - What are the Masters?
 - How does work flow?
 - Where is concurrency?
-- Where is ownership?
+- Where is hold?
 - Where is backpressure?
 - How is shutdown propagated?
 
@@ -182,7 +182,7 @@ Example
 - system overview
 - main flow
 - worker farm
-- ownership
+- hold
 - memory reuse
 - complete architecture
 
@@ -198,7 +198,7 @@ Draw responsibilities.
 
 Draw communication.
 
-Draw ownership.
+Draw hold.
 
 Draw concurrency.
 
@@ -304,7 +304,7 @@ that communicates best.
 
 # Pools
 
-Pool represents ownership.
+Pool represents hold.
 
 Pool represents reuse.
 
@@ -336,7 +336,7 @@ only through Mailboxes.
 
 Master interacts with Pools
 
-through ownership.
+through hold.
 
 ---
 
@@ -380,7 +380,7 @@ moves Items.
 
 Pools
 
-manage ownership.
+manage hold.
 
 These are different relationships.
 
@@ -537,7 +537,7 @@ ask yourself
 - Is implementation hidden?
 - Are Item names domain-oriented?
 - Is communication obvious?
-- Is ownership obvious?
+- Is hold obvious?
 - Is concurrency obvious?
 - Is the diagram easy to redraw?
 - Does it fit naturally in a README?
@@ -560,7 +560,7 @@ Is that:
 
 * a mailbox?
 * a connection?
-* ownership?
+* hold?
 * just spacing?
 
 The reader has to guess.

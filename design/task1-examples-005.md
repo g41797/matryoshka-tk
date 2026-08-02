@@ -1,6 +1,5 @@
 # Task 1 — Example Scenarios for Layers 1–3 (005)
 
-Versioned doc. Replaces [task1-examples-004.md](task1-examples-004.md).
 
 Change from -004: DISPATCH 2 — scenario 27 added, table dispatch.
 
@@ -9,7 +8,7 @@ and from scenario 22's title, matching the reworded `//!` description. The file
 name `022-ownership_transfer.zig` is unchanged — owner's decision.
 
 Index only. Full staccato description lives in each source file's `///` doc comment,  
-per "Description as code" in [rules-009.md](rules-009.md).
+per "Description as code" in [rules-041.md](rules-041.md).
 
 Master, Cancel, Futures, Io.Group, and subsystem coordination  
 are intentionally excluded. Layers 1–3 must be fully testable without them.

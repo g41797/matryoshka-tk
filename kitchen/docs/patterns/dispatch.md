@@ -417,7 +417,7 @@ asked for the number, which nobody has.
 
 The same distinction is why a table works. Storing a tag has always been fine.
 
-Full write-up, with the build matrix: `design/llvm-pointer-switch-bug-001.md`.
+Full write-up, with the build matrix: `design/secondary/llvm-pointer-switch-bug-001.md`.
 
 ## Which way
 

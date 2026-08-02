@@ -1,10 +1,9 @@
 # Task 2 — Test Scenarios for Layer 4 and Cross-Layer (002)
 
-Versioned doc. Replaces [task2-tests-001.md](task2-tests-001.md).
 
 Change from -001: banned-word pass. `fires` removed from three scenarios.
 
-Extracted from `task2-scenarios-001.md`. Scenario numbers preserved.
+Extracted from the original task2 scenario list. Scenario numbers preserved.
 
 Tests check implementation: correctness, error paths, state transitions, contract violations.  
 All tests use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, real I/O.
@@ -44,6 +43,6 @@ All tests use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, r
 
 ## Notes
 
-- Scenarios 3-5 are listed under Cancellation Mechanics in the source but numbered in the Shutdown section. Numbers preserved from `task2-scenarios-001.md`.
+- Scenarios 3-5 are listed under Cancellation Mechanics in the source but numbered in the Shutdown section. Numbers preserved from the original scenario list.
 - All 16 scenarios are done: Stage 5.a (1-2), Stage 6 (3-16). 121/121 tests passing.
-- Remaining task2 scenarios (17-61) are all examples — see `task2-examples-001.md`.
+- Remaining task2 scenarios (17-61) are all examples — see `task2-examples-006.md`.

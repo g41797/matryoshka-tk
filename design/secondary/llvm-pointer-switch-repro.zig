@@ -1,6 +1,6 @@
 //! Repro — switch on a runtime pointer value.
 //!
-//! Full write-up: design/llvm-pointer-switch-bug-001.md
+//! Full write-up: design/secondary/llvm-pointer-switch-bug-001.md
 //!
 //! What it tests.
 //!
@@ -35,8 +35,8 @@
 //! How to run one case by hand.
 //!
 //! ```
-//! zig build-exe design/llvm-pointer-switch-repro.zig -fllvm    -ODebug && ./llvm-pointer-switch-repro
-//! zig build-exe design/llvm-pointer-switch-repro.zig -fno-llvm -ODebug && ./llvm-pointer-switch-repro
+//! zig build-exe design/secondary/llvm-pointer-switch-repro.zig -fllvm    -ODebug && ./llvm-pointer-switch-repro
+//! zig build-exe design/secondary/llvm-pointer-switch-repro.zig -fno-llvm -ODebug && ./llvm-pointer-switch-repro
 //! ```
 //!
 //! `-fllvm` means use LLVM. `-fno-llvm` means use the self-hosted backend.
@@ -46,7 +46,7 @@
 //! To see the generated IR:
 //!
 //! ```
-//! zig build-exe design/llvm-pointer-switch-repro.zig -fllvm --verbose-llvm-ir > ir.txt 2>&1
+//! zig build-exe design/secondary/llvm-pointer-switch-repro.zig -fllvm --verbose-llvm-ir > ir.txt 2>&1
 //! grep -n -A6 "define.*byTag" ir.txt
 //! ```
 //!

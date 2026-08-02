@@ -1,6 +1,5 @@
 # Task 1 — Test Scenarios for Layers 1–3 (005)
 
-Versioned doc. Replaces [task1-tests-004.md](task1-tests-004.md).
 
 Change from -004: API 11 — scenario 100 names `PolyHelper.fromPoly`. Numbers  
 and meanings unchanged.
@@ -17,7 +16,7 @@ reworded to match the renamed tests in `tests/`. Numbers and meanings unchanged.
 
 Change from task1-tests-001: API 8 — scenarios 100–103 added for `ItemList`. Scenario 10 marked as deliberately raw. Cross-layer note on batch returns updated.
 
-Extracted from `task1-scenarios-001.md`. Scenario numbers preserved.
+Extracted from the original task1 scenario list. Scenario numbers preserved.
 
 Tests check implementation: correctness, edge cases, error paths, state transitions, contract violations.
 

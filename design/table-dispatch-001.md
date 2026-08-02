@@ -101,7 +101,7 @@ other and the difference matters.
 So storing a tag has always worked. It was only ever `switch` that asked for  
 something that does not exist.
 
-Full write-up: `llvm-pointer-switch-bug-001.md`.
+Full write-up: `secondary/llvm-pointer-switch-bug-001.md`.
 
 ---
 
@@ -266,7 +266,7 @@ And it is the one place a table beats a chain.
 
 The last branch of an `isIt` chain **cannot free** the item. There is no type  
 there, so there is no size, so `alloc.destroy` cannot be called. See  
-`patterns/dispatch.md`.
+`kitchen/docs/patterns/dispatch.md`.
 
 A table miss is different. The item never left the caller's Slot, and the  
 caller knows its own type set even though the table matched nothing. So the  
@@ -284,7 +284,7 @@ person writing a handler and the person writing the loop that calls it.
 It lives in three places:
 
 - the doc comment on `Handler`, where a handler author reads it
-- `patterns/dispatch.md`
+- `kitchen/docs/patterns/dispatch.md`
 - this table
 
 ## Several tables per receiver — optional
@@ -331,7 +331,7 @@ handler set opened up.
 ## Related
 
 - `patterns-025.md` — Polymorphic dispatch, all three forms
-- `rules-039.md` — the transfer rule as an author convention
-- `llvm-pointer-switch-bug-001.md` — why a tag cannot be a `switch` prong
+- `rules-041.md` — the transfer rule as an author convention
+- `secondary/llvm-pointer-switch-bug-001.md` — why a tag cannot be a `switch` prong
 - `receive-router-001.md` — the other example-plus-pattern that stayed out of
   `src/`, for the same reason

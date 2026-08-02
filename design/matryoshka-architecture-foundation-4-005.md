@@ -1,323 +1,18 @@
 # Matryoshka Architecture Foundation
 
-# 1. What Matryoshka Is
+The four-layer contract: what each layer solves, what it refuses to solve, and  
+why each boundary sits where it does.
 
-Matryoshka is a small set of building blocks for constructing modular monoliths.
+Read [matryoshka-concepts-001.md](matryoshka-concepts-001.md) first. It covers  
+what Matryoshka is, why it exists, and the four concepts. This document assumes  
+all of that and starts at the layer contracts.
 
-It is built around one idea:
-
-> Hold should always be visible.
-
-Most concurrency systems focus on execution:
-
-* threads
-* actors
-* tasks
-* schedulers
-
-Matryoshka focuses on hold.
-
-Every operation answers a simple question:
-
-> Who holds this item right now?
-
-Everything else exists to support that rule.
-
-Matryoshka is organized as four layers:
-
-```text
-Hold
-    ↓
-Movement
-    ↓
-Lifecycle
-    ↓
-Coordination
-```
-
-Each layer solves one problem and introduces one new capability.
-
-You stop when you have enough.
-
-The goal is not to build a framework.
-
-The goal is to provide a small set of concepts that can be combined into larger systems while preserving visible hold.
+Companion: [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md) — the shipped surface.\  
+Companion: [matryoshka-zig-0.16-notes-002.md](matryoshka-zig-0.16-notes-002.md) — the Zig 0.16 constraints.
 
 ---
 
-# 2. Why Matryoshka Exists
-
-Most non-trivial systems eventually face the same questions:
-
-* Who holds this object?
-* When can it be destroyed?
-* How does it move between tasks?
-* Can it be reused safely?
-* What happens during shutdown?
-* What happens to items still in flight?
-
-Different subsystems often answer these questions differently.
-
-One part of the codebase uses queues.
-
-Another uses callbacks.
-
-Another uses pools.
-
-Another passes raw pointers.
-
-Another relies on conventions hidden in comments.
-
-The result is multiple rule sets inside the same application.
-
-The larger the system becomes, the harder those models are to keep consistent.
-
-Matryoshka attempts to use one rule set everywhere.
-
-The same rules apply whether an item is:
-
-* newly created
-* being processed
-* waiting in a mailbox
-* stored in a pool
-* part of the infrastructure itself
-
-The goal is not maximum abstraction.
-
-The goal is not maximum performance.
-
-The goal is reducing ambiguity.
-
-A programmer should be able to inspect a call site and answer:
-
-> Who holds this item right now?
-
-without reading the implementation.
-
-Visible hold does not eliminate bugs.
-
-It makes many classes of bugs easier to reason about:
-
-* forgotten cleanup
-* double destruction
-* use-after-free
-* accidental sharing
-* unclear shutdown ordering
-* lifecycle leaks
-
-Matryoshka is an attempt to make hold a first-class design concern.
-
----
-
-# 3. Problems It Solves
-
-Matryoshka focuses on four related problems.
-
-Each layer addresses one of them.
-
----
-
-## Hold
-
-After many function calls hold becomes unclear.
-
-Conceptually:
-
-```text
-create
-send
-receive
-destroy
-```
-
-Most systems document hold.
-
-Few systems make hold visible.
-
-Matryoshka attempts to make hold explicit.
-
----
-
-## Movement
-
-Tasks need to exchange work.
-
-Examples:
-
-* threads
-* workers
-* subsystems
-
-Many systems solve this by sharing memory.
-
-Matryoshka prefers hold transfer.
-
-The item moves.
-
-Hold moves with it.
-
----
-
-## Lifecycle
-
-Objects are often created and destroyed repeatedly.
-
-Some should be reused.
-
-Some should be discarded.
-
-Matryoshka separates reuse from lifecycle policy.
-
----
-
-## Coordination
-
-Hold, movement, and lifecycle eventually meet at subsystem boundaries.
-
-Someone must coordinate:
-
-* startup
-* shutdown
-* cancellation
-* who holds each resource
-* cleanup ordering
-
-Matryoshka calls that coordination layer Master.
-
----
-
-# 4. Core Concepts
-
-Before discussing layers, it is useful to define the concepts that appear throughout the system.
-
-Everything in Matryoshka is built from these ideas.
-
----
-
-## Hold
-
-Hold is the right and responsibility to:
-
-* use an item
-* transfer an item
-* recycle an item
-* destroy an item
-
-At any moment an item has exactly one holder.
-
-Hold may belong to:
-
-* user code
-* mailbox
-* pool
-
-Hold must never be shared.
-
-Hold may only move.
-
-The entire system is designed around this rule.
-
----
-
-## PolyNode
-
-PolyNode is the common unit every item shares.
-
-Every item participating in Matryoshka contains a PolyNode.
-
-Conceptually:
-
-```text
-PolyNode
-    intrusive links
-    runtime type tag
-```
-
-PolyNode provides:
-
-* runtime identity
-* intrusive container support
-* transport
-
-PolyNode does not provide:
-
-* inheritance
-* virtual methods
-* automatic memory management
-
-PolyNode is intentionally small.
-
-Its purpose is not behavior.
-
-Its purpose is hold.
-
----
-
-## Tag
-
-Every item type has a unique tag.
-
-Conceptually:
-
-```text
-Chunk
-    tag = CHUNK_TAG
-
-Progress
-    tag = PROGRESS_TAG
-```
-
-Tags provide runtime identity.
-
-They are used for:
-
-* validation
-* dispatch
-* recycling policy
-
-They are not used for inheritance.
-
-They are not used for object-oriented polymorphism.
-
-A tag simply answers:
-
-> What kind of item is this?
-
----
-
-## MayItem
-
-MayItem is the presence marker.
-
-Conceptually:
-
-```text
-held item
-or
-nothing
-```
-
-The exact implementation is language-specific.
-
-The meaning is universal:
-
-```text
-item present
-    you hold it
-
-item absent
-    you do not hold it
-```
-
-This is the most important convention in Matryoshka.
-
-Hold becomes visible at every call site.
-
-A programmer can see hold simply by looking at the variable state.
-
----
-
-## Hold States
+# 1. Hold States and Transfers
 
 An item can exist in four conceptual states.
 
@@ -424,14 +119,14 @@ That single rule removes an entire category of shared-state problems.
 
 ---
 
-# 5. Layer 1 — Hold
+# 2. Layer 1 — Hold
 
 Layer 1 consists of:
 
 ```text
 PolyNode
 Tag
-MayItem
+Slot
 ```
 
 Nothing more.
@@ -502,7 +197,7 @@ The next layer is added only when a new problem appears.
 
 ---
 
-# 6. Layer 2 — Movement (Mailbox)
+# 3. Layer 2 — Movement (Mailbox)
 
 Once hold is visible, the next problem appears:
 
@@ -734,7 +429,7 @@ The next layer appears when allocation and destruction become expensive.
 
 ---
 
-# 7. Layer 3 — Lifecycle (Pool)
+# 4. Layer 3 — Lifecycle (Pool)
 
 Layer 1 makes hold visible.
 
@@ -1243,7 +938,7 @@ The rule set does not change.
 
 Only the lifecycle options grow.
 
-# 8. Layer 4 — Coordination (Master)
+# 5. Layer 4 — Coordination (Master)
 
 Layer 1 introduces hold.
 
@@ -1806,7 +1501,7 @@ This is the point where hold, movement, and lifecycle become a complete design.
 
 ---
 
-# 9. Concurrency Contract
+# 6. Concurrency Contract
 
 Matryoshka uses three independent communication channels.
 
@@ -2126,7 +1821,7 @@ lifecycle
 These responsibilities should remain independent.
 
 
-# 10. Infrastructure As Items
+# 7. Infrastructure As Items
 
 One of the more unusual ideas in Matryoshka is that infrastructure can participate in the same rule set as user items.
 
@@ -2349,7 +2044,7 @@ That consistency is the real benefit.
 
 ---
 
-# 11. Design Decisions
+# 8. Design Decisions
 
 This section summarizes the major architectural decisions and the reasoning behind them.
 
@@ -2410,9 +2105,9 @@ Tags provide that identity without inheritance or virtual methods.
 
 ---
 
-## Decision: MayItem Represents Hold
+## Decision: A Slot Represents Hold
 
-Hold state is carried through MayItem.
+Hold state is carried through the Slot.
 
 ### Reason
 
@@ -2548,7 +2243,7 @@ Hold is the common foundation underneath all higher-level behavior.
 
 ---
 
-# 12. Non-Goals
+# 9. Non-Goals
 
 Matryoshka intentionally does not attempt to solve every problem.
 
@@ -2645,12 +2340,13 @@ pub const PolyNode = struct {
 
 ---
 
-## MayItem
+## Slot
 
-Typical Zig representation:
+The shipped Zig representation, from `src/polynode.zig`:
 
 ```zig
-pub const MayItem = ?*PolyNode;
+pub const ItemHandle = *PolyNode;
+pub const Slot = ?ItemHandle;
 ```
 
 The hold meaning remains:
@@ -2734,7 +2430,7 @@ Layer 1
 Hold
     │
     V
-PolyNode + Tag + MayItem
+PolyNode + Tag + Slot
 
 Layer 2
 Movement
@@ -2804,10 +2500,13 @@ Everything else is built on top of that foundation.
 
 ---
 
+
 ## Change log
 
 | Version | Date       | Description |
 |---------|------------|-------------|
+| 005     | 2026-08-02 | DOC 23. Dropped sections 1-4 (What Matryoshka Is, Why It Exists, Problems It Solves, Core Concepts) — `matryoshka-concepts-001.md` owns that ground and says it in the current vocabulary. Kept the Hold States and Transfers subsections out of the old section 4, which existed nowhere else, as the new section 1. Remaining sections renumbered. `MayItem` renamed to `Slot` throughout, matching `src/polynode.zig` and every other doc. No change to any layer contract, decision or non-goal. |
+| 004     | (undated)  | Fourth version. |
 | 003     | 2026-07-09 | INTR 7: "Pool is storage"/"warehouse" framing replaced with "Pool is not storage — it is a backpressure signal for reuse" throughout (including the "Pool Storage vs Policy" heading → "Pool Reuse vs Policy"). No structural or technical changes. |
-| 002     | 2026-07-09 | New Mindset ownership-language pass: "ownership"/"owner"/"owns"/"owned" replaced with "hold"/"holder"/"holds"/"held" throughout (including the "Ownership" layer/section name → "Hold", matching the existing HELD state name); "execution context(s)"/"execution model(s)" replaced with "task(s)". No structural or technical changes. |
+| 002     | 2026-07-09 | New Mindset hold-language pass: the ownership family of words replaced with "hold"/"holder"/"holds"/"held" throughout (including the layer/section name, matching the existing HELD state name); "execution context(s)"/"execution model(s)" replaced with "task(s)". No structural or technical changes. |
 | 001     | (undated)  | First draft — twelve sections: what Matryoshka is, why it exists, problems solved, core concepts, four layers, concurrency contract, infrastructure as items, design decisions, non-goals, Zig addendum, architecture summary. |

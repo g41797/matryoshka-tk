@@ -1,0 +1,17 @@
+# Allowlist for kitchen/tools/check_design.sh, glossary gate only.
+#
+# One substring per line. A reported line containing any of these is not a
+# hit. Blank lines and # comments ignored.
+#
+# Only one thing belongs here: a line where a retired word is the SUBJECT of
+# the sentence rather than its voice — a change-log row or a version note
+# recording that a banned-word pass happened. Rewriting those would falsify
+# history. Anything else is real drift and must be fixed in the doc.
+
+# api-reference-033 change log — records the MayItem -> Slot rename itself.
+Proposal 27: `MayItem` → `Slot`
+
+# patterns-025 version note — records which section titles the pass renamed.
+"Slot and ownership idioms" → "Slot and transfer
+idioms", "Transfer clears ownership" → "Transfer clears the slot", "Cancellation
+preserves ownership" → "Cancellation keeps the item where it is"

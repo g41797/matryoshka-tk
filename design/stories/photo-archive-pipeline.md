@@ -141,7 +141,7 @@ The Item moves from one Master to the next.
 
 Each Master owns the Item while it performs its work.
 
-When finished, ownership moves to the next Master.
+When finished, hold moves to the next Master.
 
 No two Masters process the same Item at the same time.
 
@@ -274,7 +274,7 @@ Here is the end-to-end breakdown of the **Photo Archive Pipeline** flow, mapped 
 1. **Intake (`Receive Master`)**
 * Accepts the incoming upload containing the raw **PNG data** and request metadata.
 * Fetches an empty **Item** from the **Item Pool** to store the incoming payload.
-* Hands off ownership of the populated **Item** to the next stage via a **Mailbox**.
+* Hands off the populated **Item** to the next stage via a **Mailbox**.
 
 
 2. **Pixel Expansion (`Decode Master`)**
@@ -338,7 +338,7 @@ From an architectural standpoint, the system is a linear, thread-isolated proces
 ### Key Architectural Rules
 * **Masters (Active Units):** Dedicated OS threads or tasks. Each Master owns application state and executes a single responsibility.
 * **Mailboxes & Pools (Passive Channels):** 
-  * **Mailbox:** Thread-safe queue used strictly by Masters to pass struct ownership.
+  * **Mailbox:** Thread-safe queue used strictly by Masters to transfer hold of a struct.
   * **Pool:** Thread-safe pool used by Masters to request or recycle pre-allocated memory blocks.
   * *Mailboxes and Pools do not interact with each other directly; only Masters initiate operations on them.*
 

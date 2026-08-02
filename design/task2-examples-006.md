@@ -1,6 +1,5 @@
 # Task 2 — Example Scenarios for Layer 4 and Cross-Layer (006)
 
-Versioned doc. Replaces [task2-examples-005.md](task2-examples-005.md).
 
 Change from 005: DISPATCH 2 — scenario 63 added, two Masters and two tables.
 
@@ -10,11 +9,11 @@ in the barrel and in the site nav, but had never been listed in this catalog.
 Change from 003: EXMPL 5 — added scenario 62, the receive router.
 
 Index only. Full staccato description lives in each source file's `///` doc comment,  
-per "Description as code" in [rules-028.md](rules-028.md).
+per "Description as code" in [rules-041.md](rules-041.md).
 
 Pool items are empty containers on acquisition. Work input comes from outside the pool item:  
 a mailbox, a timer, a network source, spawn-time arguments, or the worker's own accumulated state.  
-See "Pool items are empty containers" in [matryoshka-model-005.md](matryoshka-model-005.md).
+See "Pool items are empty containers" in [matryoshka-concepts-001.md](matryoshka-concepts-001.md).
 
 All Layer 4 examples use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, real I/O.
 

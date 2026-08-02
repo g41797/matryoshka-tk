@@ -2,6 +2,227 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-02 — DOC 23: the two large docs split by audience
+
+**Participants**: human (owner), Claude (agent).
+
+**Why.** DOC 22 left two files untouched: `matryoshka-architecture-foundation-4-004.md`  
+(2813 lines) and `matryoshka-tk-0.16-implementation-guide-001.md` (2213 lines).  
+Together 5026 lines, 46% of `design/`. Owner asked who uses them, noted the Odin  
+material should be split out for a future backport, and suspected overlap with  
+`matryoshka-concepts-001.md`. Owner's instruction: analyse usage, think about the  
+different audiences, advise.
+
+**What the survey found.**
+
+- Inbound references: `foundation-4-004` had five (context, STATUS, concepts ×2,  
+  the guide ×3). `guide-001` had two — `context.md` and `STATUS.md`. No other  
+  design doc linked to it, nothing in `kitchen/docs/`, no code, no test. The  
+  owner reads neither.
+- The guide was a pre-implementation feasibility study, dated 2026-06-22, closing  
+  with "Verdict: this port is viable." The port shipped: 1391 LOC, 192 tests.
+- The guide taught an API that does not exist. It named `pool_get_wait`,  
+  `mailbox_receive`, `polynode_reset`, `MayItem`. The shipped names are  
+  `pool.get_wait`, `mailbox.receive`, `Slot`. `MayItem` has zero occurrences in  
+  `src/` — it survived in 41 places, 33 of them in the guide, 8 in the foundation.
+- Vocabulary drift between the two sources of truth. The foundation took the  
+  hold-language pass in its v002; the guide never did. The foundation said  
+  "Layer 1-4"; the guide said "Block 1-4" for the same four things.
+- Overlap: foundation sections 1-4 covered the same ground as concepts-001  
+  chapters 1, 2 and 4, in the older vocabulary. Sections 5-12 had no substitute  
+  anywhere.
+
+**Decisions.**
+
+- Split by audience rather than demote either file wholesale. Code generation  
+  needs current names; design reasoning needs the layer contracts and the  
+  decisions-with-reasons; the owner needs neither file.
+- Delete the guide's walkthroughs of shipped code rather than freeze them.  
+  Owner approved the deletion explicitly. Frozen-and-wrong is still wrong, and  
+  `src/` is 1391 readable lines.
+- Build a script instead of the "auditing context md" the owner had floated. A  
+  list someone must remember to read is not a control.
+
+**Work.**
+
+- `secondary/odin-to-zig-backport-001.md` — new, 794 lines. The guide's  
+  Appendix A (21 idioms plus the quick-reference table) and its Odin  
+  cancellation comparison. Header states the direction that matters and warns  
+  that its Zig column is the pre-implementation proposal, not the shipped API.
+- `matryoshka-zig-0.16-notes-002.md` — new, 455 lines. The guide's 0.16  
+  constraints, the cancellation contract, and the comptime opportunities. Each  
+  opportunity now marked REALIZED or NOT TAKEN, checked against `src/`: the  
+  generated tag identity shipped as `PolyHelper`, along with comptime field  
+  validation, two-level recovery, and the atomic pre-lock fast path; the typed  
+  slot wrapper, the closed-type pool, alignment validation and hook signature  
+  validation did not. Renamed off "implementation guide" — it no longer guides  
+  an implementation.
+- `matryoshka-tk-0.16-implementation-guide-001.md` deleted. Sections 3-6 and 8,  
+  roughly 700 lines paraphrasing shipped code, are gone with it.
+- `matryoshka-architecture-foundation-4-005.md` — 2512 lines, from 2813.  
+  Sections 1-4 dropped except Hold States and Transfers, which existed nowhere  
+  else and became the new section 1. Remaining sections renumbered 2-9.  
+  `MayItem` renamed to `Slot` throughout. No layer contract, decision or  
+  non-goal changed. `-004` deleted.
+- `rules-041.md` — new version. One rule added: the design gate (Part 6).  
+  Every reference across nine docs and the script repointed.
+- 23 dead backtick-style cross-references repaired. Seven were  
+  "Versioned doc. Replaces X.md" headers pointing at deleted predecessors;  
+  those were dropped. `rules-033`/`rules-034` citations retargeted to  
+  `rules-041.md`, where both rules survive. `patterns-020` to `patterns-025`,  
+  `matryoshka-new-mindset-001` to `matryoshka-concepts-001`,  
+  `task2-examples-001` to `task2-examples-006`, `plan-049` to `plan-054`.  
+  References to docs with no successor were reworded rather than pointed  
+  somewhere false.
+- Genuine ownership-word drift fixed outside the two big docs: nine lines in  
+  `matryoshka-Tk-diagram-style-guide-002.md`, nine across the three stories.
+- One reported-not-actioned item closed: the stale `helpers/`-path references  
+  in `kitchen/docs/`. Re-checked — `kitchen/docs/api/pool.md` does not exist,  
+  and the only `helpers/` mentions left are `@import` lines inside generated  
+  example pages, which are correct.
+- `context.md` orphan fixed: the photo-archive index line abbreviated the second  
+  PNG as `-002.png`, which no filename check could match.
+
+**New tooling.** `kitchen/tools/check_design.sh`, four gates, exit non-zero on  
+any hit:
+
+1. dead cross-references in both `[](x.md)` and `` `x.md` `` syntaxes
+2. orphans — every file under `design/` named in a `context.md`
+3. forward-looking prose in `design/*.md`
+4. glossary conformance — `MayItem`, `Block N`, the ownership family
+
+`secondary/` and `STATUS-LOG.md` are exempt from all but the orphan gate.  
+Change-log and ledger rows are exempt from the link and glossary gates — naming  
+the doc they replaced is the point of the row.  
+`kitchen/tools/.check_design_allow` carries two literal substrings for rows that record  
+a past banned-word pass; its header says what may go in it.
+
+Two false-positive classes were found and fixed while calibrating: `TODO`  
+without word boundaries matched "auTODOc" nine times in the rules, and `NNN` /  
+`0NN` filename templates were being resolved as if they were references.
+
+**Verification.**
+
+| Check | Baseline | After |
+|---|---|---|
+| `check_design.sh` gate 1 — dead refs | 23 | 0 |
+| gate 2 — orphans | 1 | 0 |
+| gate 3 — forward-looking prose | 0 | 0 |
+| gate 4 — glossary | 96 | 0 |
+| `check_design.sh` exit | 1 | **0** |
+| `fix_md_hardbreaks.sh` | — | exit 0 |
+| `build_and_test_debug.sh` | — | 192/192, exit 0 |
+| `mkdocs build --strict` | — | exit 0 |
+
+**Numbers.** The two docs went from 5026 lines to 2967 primary (455 + 2512),  
+plus 794 frozen. `design/` primary is 18 md files plus STATUS and STATUS-LOG;  
+`secondary/` is 10 files plus its index.
+
+**Not done, for the owner.** Nothing is committed — git is disabled and is the  
+owner's job. The photo-archive PNG staging situation is untouched.
+
+---
+
+### 2026-08-02 — DOC 22: design/ compacted to the current picture
+
+**Participants**: human (owner), Claude (agent).
+
+**Why.** `design/` held 35 markdown files, ~26,600 lines, mixing three unrelated  
+things: the current picture of the toolkit, historical residue, and future  
+intent. A reader could not tell which was which. Owner's framing: "files under  
+design should show real matryoshka picture, not drifts and future intents."
+
+**Baseline.** 50 dead markdown links under `design/`. Twelve files unreferenced  
+from `context.md`, including all of `stories/`.
+
+**The concept merge.** Five docs said overlapping things about the same four  
+concepts. Merged into `matryoshka-concepts-001.md`, 8 chapters, present tense:
+
+- `matryoshka-manifesto-005.md` — the constraint, four fundamental concepts, where Io fits.
+- `matryoshka-architecture-004.md` — why Matryoshka exists, the Step 1-6 concept progression.
+- `matryoshka-model-007.md` — the who-holds-it mantra, three-category model.
+- `matryoshka-new-mindset-001.md` — Master is an Io task.
+- `matryoshka-tk-model.md` — unversioned, fully subsumed by the manifesto's "Down to earth" section. Same table, same bullets.
+
+`new-mindset-001` said "Downstream docs get rewritten from this document, in  
+later stages. Rewrite happens later." DOC 22 performed that rewrite. The  
+sections describing the pending rewrite are gone, not carried forward.
+
+`matryoshka-model-007.md`'s "Story Structure" section moved to `rules-040.md`  
+Part 2 — file layout is a process rule, not a model claim.
+
+**The `secondary/` split.** New `design/secondary/`, indexed by its own  
+`context.md`, holding nine files. Frozen: not maintained, own links not  
+repaired, never a source of truth.
+
+- `matryoshka-cookbook-structure.md` — unbuilt cookbook, real plan.
+- `matryoshka-tk-docs-plan-015.md` — 1184 lines, almost entirely a DOC-stage session log.
+- `docs-tooling-approach-002.md` — process, not design.
+- `mtk-readme.md` — alternate README intro draft.
+- `llvm-pointer-switch-bug-001.md` + `llvm-pointer-switch-repro.zig` — a compiler-bug write-up, not Matryoshka design. Owner's call. Still live via the DISPATCH 1 leftover.
+- `video-transcoder-notations-001.md`, `-002.md` — input to the pending diagram-notation scan.
+- `print-server-analysis-001.md` — story-selection method.
+
+**Deleted**, owner-approved: the five merge sources above, plus  
+`collected-context-005.md` (a state snapshot; `STATUS.md` owns current state,  
+and all three of its outbound links were dead),  
+`matryoshka-real-world-scenario-001.md` and  
+`stories/video-transcoder-description-001.md` (both superseded by  
+`stories/video-transcoder-003.md`, the finished form).
+
+**Versioning.** Owner directed keeping the never-overwrite rule rather than  
+suspending it: a substantive change mints the next version, a pure link repair  
+does not. So `rules-039.md` → `rules-040.md` and `plan-052.md` → `-053.md`,  
+while `patterns-025.md` and the task files were corrected in place. Version  
+suffixes stay — they are the mechanical cause of most of the link rot, but that  
+is the owner's convention and this stage repaired links rather than changing it.
+
+**New in rules-040.** "Where a doc lives" (Part 6): `design/` is the current  
+picture, `design/secondary/` is frozen, every file is indexed in exactly one  
+`context.md`, docs in `design/` are written in present tense, and retiring a doc  
+by merge or move is not overwriting. This is the rule that keeps DOC 22 from  
+needing a repeat. Plus the story file layout in Part 2.
+
+**Links repaired.** All 50. Remaining dead links are inside `secondary/` (frozen  
+by rule) and one in this log at line ~3400 (`../examples/index.md`, historical).  
+Retargets included `rules-009/024/028/039` → `rules-040`,  
+`matryoshka-model-005/006` → `matryoshka-concepts-001`,  
+`matryoshka-api-reference-030/032` → `-033`, `item-list-006` → `-009`.  
+Dead "Replaces X-00N.md" headers were de-linked to plain text, keeping the  
+provenance without the broken link.
+
+Two live references outside `design/` also moved:  
+`kitchen/tools/build_repro_matrix.sh` (a working script — its default  
+`REPRO=` path pointed at the moved repro) and `kitchen/docs/patterns/dispatch.md`.  
+`design/secondary/llvm-pointer-switch-repro.zig`'s own header comments named its  
+old path and were updated.
+
+**A judgment call worth recording.** `design/context.md` pointed at  
+`../kitchen/docs/matryoshka-storytelling-001.md`, which does not exist — the doc  
+had moved to `kitchen/defer/matryoshka-storytelling-003.md`. Retargeted rather  
+than dropped.
+
+| Check | Result |
+|---|---|
+| Dead links in `design/` primary docs | zero (from 50) |
+| Orphans — file in neither index | zero; the two untracked photo-archive PNGs are now named in `context.md` |
+| Forward-looking prose in `design/*.md` | zero hits for "will be rewritten", "in later stages", "happens later" |
+| `kitchen/tools/fix_md_hardbreaks.sh` | 5 files fixed, exit 0 |
+| Banned-word + AI-sh scan on new docs | 1 real hit fixed ("ownership routing" → "transfer routing" in `context.md`); "mindset" and "Status file ownership" are filename and rule-title false positives |
+| `kitchen/build_and_test_debug.sh` | 192/192 pass, exit 0 |
+| `mkdocs build --strict` | exit 0, clean |
+| Post-stage cleanup | doc-only stage; no `src/` or `tests/` change. Obsolete-content removal *is* the stage. |
+
+**Result**: 35 md → 17 in `design/`, 3 in `design/stories/`, 8 in  
+`design/secondary/` (+ the repro `.zig`). No `src/` change.
+
+**Not done, for the owner.** Git is disabled; nothing is committed. The  
+photo-archive PNG situation is untouched: `photo-archive-pipeline.png` is staged  
+as deleted while `-001.png`/`-002.png` are untracked. The story narrative  
+references no image.
+
+---
+
 ### 2026-08-01 — CMPCT 2: rules restructured into rules-039
 
 **Participants**: human (owner), Claude (agent).

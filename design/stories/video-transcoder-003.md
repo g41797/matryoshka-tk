@@ -186,7 +186,7 @@ Where the architecture lives.
         │
         V
   ENCODING WORKERS (Io.Group)
-  ├── mailbox.receive(ready_queue) ──► StreamContext (exclusive ownership)
+  ├── mailbox.receive(ready_queue) ──► StreamContext (exclusive hold)
   │     encode frame (sequential, lock-free)
   │     pool.put buffer ──────────────────────────────────► [ buf_pool ]
   │     create EncodedSegment                                    │

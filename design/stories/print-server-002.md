@@ -155,7 +155,7 @@ Matryoshka:
 
 ---
 
-Requirement: Exclusive ownership during printing.
+Requirement: Exclusive hold during printing.
 
 Matryoshka:
 - Printer Master holds one job.
@@ -189,7 +189,7 @@ At any moment, whoever holds the job owns the problem.
 
 - No shared status table.
 - No polling.
-- No ownership ambiguity.
+- No ambiguity about who holds the job.
 - Responsibility follows location.
 
 Where the job is.
@@ -206,14 +206,14 @@ Where the job is.
 ```text
   [ Client A ]  [ Client B ]  [ Client C ]
        │               │               │
-       │ mailbox.send(job_queue, &job_slot)        ← non-blocking, ownership transferred
+       │ mailbox.send(job_queue, &job_slot)        ← non-blocking, hold transferred
        │ mailbox.send_oob(job_queue, &cancel_slot) ← OOB: arrives at queue front
        └───────────────┴───────────────┘
                        │
                        V
            SPOOL MASTER (mailbox.receive loop on job_queue)
            ├── on PrintJob:
-           │     mailbox.send(printer_inbox, &job_slot)   ← forward, ownership transferred
+           │     mailbox.send(printer_inbox, &job_slot)   ← forward, hold transferred
            │
            ├── on CancelSignal (OOB — arrives before regular jobs):
            │     job still in job_queue?
@@ -228,7 +228,7 @@ Where the job is.
                        V
            PRINTER MASTER (mailbox.receive loop on printer_inbox)
            ├── on PrintJob:
-           │     var slot: Slot = job           ← exclusive ownership, no locks
+           │     var slot: Slot = job           ← exclusive hold, no locks
            │     print(job)                     ← process pages
            │     send PrintResult{.ok} → job.reply_mbh
            │     destroy job
@@ -256,4 +256,4 @@ Where the job is.
 
 ---
 
-*Analysis and pattern coverage notes: [print-server-analysis-001.md](print-server-analysis-001.md)*
+*Analysis and pattern coverage notes: [print-server-analysis-001.md](../secondary/print-server-analysis-001.md)*

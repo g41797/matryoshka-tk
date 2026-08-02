@@ -1,11 +1,10 @@
-# Matryoshka Zig — Rules (039)
+# Matryoshka Zig — Rules (041)
 
 All coding, doc, and process rules for the project.  
-Versioned doc. Replaces [rules-038.md](rules-038.md).  
-Change from -038: CMPCT 2 — regrouped, one topic in one place, gates first.  
-No rule changed meaning. Which stage introduced which rule is Part 10.
+Change from -040: DOC 23 — one rule added, the design gate (Part 6).  
+No existing rule changed meaning. Which stage introduced which rule is Part 10.
 
-Companion: [matryoshka-model-007.md](matryoshka-model-007.md) — the thinking model.  
+Companion: [matryoshka-concepts-001.md](matryoshka-concepts-001.md) — the concepts and the thinking model.  
 Companion: [patterns-025.md](patterns-025.md) — reusable coding patterns.
 
 ---
@@ -303,7 +302,7 @@ Completeness.
 - Pool items are empty containers on acquisition. Work intent must come from
   outside the pool item.
 - See "Pool items are empty containers" in
-  [matryoshka-model-007.md](matryoshka-model-007.md).
+  [matryoshka-concepts-001.md](matryoshka-concepts-001.md).
 
 ### Stories
 
@@ -316,6 +315,28 @@ Completeness.
 - Stories always use the Master pattern. A story is never a flat function.
 - Story narrative uses the 4-part structure: architecture dialogue, SRS,
   matryoshka translation, flow diagram.
+
+Story file layout — MUST.
+
+Each story is a mini-project. Two artifacts plus one shared test file.
+
+- Narrative: `design/stories/name-NNN.md`.
+  - Part 1 — Arch Design. Domain problem. Architect dialogue: constraints,
+    tradeoffs, decisions. Result: bounded scope, defined boundaries.
+  - Part 2 — SRS. Numbered requirements, one per bullet. Domain language, not
+    Matryoshka language.
+  - Part 3 — Matryoshka Translation. Map each requirement to a concept.
+    Programmer dialogue preferred: it shows the reasoning, not just the result.
+  - Part 4 — Flow Diagram. Full system ASCII diagram. All layers, all transfer
+    flows, all event sources. Diagram only. No prose.
+- Code: `stories/name/name.zig`.
+  - ASCII transfer circuit diagram at the top of the file.
+  - Code is structured around Masters. See [patterns-025.md](patterns-025.md)
+    for the Master composition pattern.
+- Test wrapper: `tests/stories_test.zig`. Single file, all story wrappers.
+- What qualifies as a story: at least two layers composing, and a real domain
+  problem. See [matryoshka-concepts-001.md](matryoshka-concepts-001.md),  
+  "Three-category model".
 
 ---
 
@@ -626,6 +647,78 @@ Replacements for `ownership`. Name the action instead.
 
 ## Part 6 — Writing documents
 
+### Where a doc lives — MUST
+
+`design/` shows what Matryoshka is. Nothing else.
+
+A doc belongs in `design/` when it describes the current state of the toolkit:  
+the concepts, the API, the rules, the patterns, the architecture, the Zig  
+details, a design note behind a decision that is live in `src/`, or the tests  
+and examples index.
+
+A doc belongs in `design/secondary/` when it is any of these:
+- a state snapshot — `STATUS.md` already owns current state
+- a superseded draft of something that now exists in finished form
+- a session log of a past stage — `STATUS-LOG.md` already owns the narrative
+- a process or tooling note rather than a design statement
+- an intention nobody has started
+
+Rules for the split.
+- A doc in `design/` may link down into `design/secondary/`.
+- A doc in `design/secondary/` is frozen. It is not updated. Its own links are
+  not repaired.
+- Nothing in `design/secondary/` is a source of truth. If the two folders
+  disagree, `design/` is right.
+- Every file in either folder is listed in exactly one index: `design/context.md`
+  or `design/secondary/context.md`. A file in neither is an orphan and is a  
+  violation.
+
+Present tense — MUST.
+- A doc in `design/` describes what is, not what will be.
+- No "downstream docs get rewritten later". No "this will be replaced in a later
+  stage". No "planned for".
+- Forward-looking work belongs in the plan. Intentions nobody has started belong
+  in `design/secondary/`.
+- A doc that describes a future state of the documentation is drift. It is the
+  thing this rule exists to prevent.
+
+Retiring a doc.
+- Merging several docs into one, or moving a doc to `design/secondary/`, is not
+  overwriting. The never-overwrite rule in Part 0 does not apply.
+- Deleting a doc still needs owner approval, per the Part 0 hard gate.
+- Git history is the archive. A doc that has been merged into a successor does
+  not need a copy left behind.
+
+### The design gate — MUST
+
+`kitchen/tools/check_design.sh` gates any stage that touches `design/`, the way  
+`kitchen/build_and_test_debug.sh` gates a code stage. Exit 0 or the stage is not  
+done.
+
+Four checks:
+
+- **Dead cross-references, in both syntaxes.** The markdown-link form and the
+  backtick form. The backtick form is the one that rots unseen — DOC 22  
+  swept the folder by hand, checked only markdown links, and left 23 dead  
+  backtick refs behind.
+- **Orphans.** Every file under `design/` is named in `context.md` or in
+  `secondary/context.md`.
+- **Forward-looking prose.** `design/` says what is, not what will be.
+- **Glossary conformance.** Retired vocabulary must not come back. `MayItem` is
+  `Slot`. The four things are Layers, not Blocks. Hold and transfer, not the  
+  ownership family.
+
+Exemptions, all narrow:
+
+- `secondary/` is exempt from all but the orphan check. It is frozen.
+- `STATUS-LOG.md` is exempt from all but the orphan check. It is an append-only
+  historical narrative and legitimately names docs that no longer exist.
+- A change-log or ledger row may name the doc it replaced. That name is the
+  point of the row.
+- `kitchen/tools/.check_design_allow` holds literal substrings for the handful of rows
+  that record a past banned-word pass. Adding to it needs a reason written in  
+  the file. It is not a place to silence a real hit.
+
 ### Staccato — the one definition
 
 Applies everywhere text is written: documents, comments, doc comments, example  
@@ -653,7 +746,7 @@ Diagrams.
 Structure.
 - Cross-reference instead of duplicating.
 - When extending an existing document, match the heading levels already in use.
-- Link to [matryoshka-model-007.md](matryoshka-model-007.md),
+- Link to [matryoshka-concepts-001.md](matryoshka-concepts-001.md),
   [patterns-025.md](patterns-025.md), and this file.
 
 Markdown hard breaks — MUST.
@@ -751,7 +844,7 @@ wherever a compile-time value is required, including as a container-level `const
 does know.
 
 Detail, with the build matrix:
-[llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md).
+[llvm-pointer-switch-bug-001.md](secondary/llvm-pointer-switch-bug-001.md).
 
 ### The transfer rule for dispatch handlers — convention, not a MUST
 
@@ -881,5 +974,12 @@ the header. The full account of each stage is in
   `std.DoublyLinkedList.Node` inside `PolyNode`.
 - rules-038 (CMPCT 1) — status file ownership. One owner per fact across
   `STATUS.md`, the plan, `STATUS-LOG.md` and `context.md`.
-- rules-039 (CMPCT 2) — this restructure. Gates first, one topic in one place, the
+- rules-039 (CMPCT 2) — the restructure. Gates first, one topic in one place, the
   dated rationale moved to `STATUS-LOG.md`. No rule changed meaning.
+- rules-040 (DOC 22) — where a doc lives: `design/` is the current picture,
+  `design/secondary/` is frozen. Present tense in `design/`. Retiring a doc is  
+  not overwriting. Story file layout moved here from a retired model  
+  document.
+- rules-041 (DOC 23) — the design gate. `kitchen/tools/check_design.sh` must
+  exit 0 before a stage that touched `design/` is done. It is what makes the  
+  "where a doc lives" rule enforceable rather than remembered.

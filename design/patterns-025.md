@@ -1,6 +1,5 @@
 # Matryoshka Zig — Pattern and Idiom Catalog (025)
 
-Versioned doc. Replaces [patterns-024.md](patterns-024.md).
 
 Change from patterns-024: DISPATCH 2 — a third dispatch entry, "Polymorphic  
 dispatch — table". The handler belongs to the pair (receiver, tag), so the  
@@ -48,16 +47,16 @@ Change from patterns-013: staccato-style scan, prose paragraphs converted to bul
 
 Change from patterns-012:
 - `Thread.spawn` removed as an accepted task-creation option.
-- `io.concurrent()` is the only way a task starts (New Mindset, `matryoshka-new-mindset-001.md`).
+- `io.concurrent()` is the only way a task starts (`matryoshka-concepts-001.md`, chapter 3).
 
 Change from patterns-011:
 - API 4 renamed `NodeHandle` → `ItemHandle` — the old name leaked the intrusive-node implementation detail.
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-039.md](rules-039.md) — what is mandatory.  
-Companion: [matryoshka-model-006.md](matryoshka-model-006.md) — the thinking model.  
-Companion: [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md) — signatures and contracts.
+Companion: [rules-041.md](rules-041.md) — what is mandatory.  
+Companion: [matryoshka-concepts-001.md](matryoshka-concepts-001.md) — the thinking model.  
+Companion: [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -84,7 +83,7 @@ Order of this catalog.
 
 ## Slot and transfer idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-030.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-033.md).
 
 ### Empty Slot initialization
 
@@ -298,7 +297,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-030.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-033.md).
 
 ---
 
@@ -582,7 +581,7 @@ try log_table.dispatch(self, &slot);
   never left the Slot, so unlike the last branch of a chain, the caller frees  
   it — the caller knows its own type set.
 - The handler follows the transfer rule: on return the Slot is null if the
-  handler took the item, full if it did not. See rules-039.md.
+  handler took the item, full if it did not. See rules-041.md.
 - Not in `src/`: the handler's first parameter is the application's receiver
   type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
 
@@ -615,7 +614,7 @@ assigned by the linker. Zig accepts the source and the backend then fails.
 `isIt` and `==` need only to know which global the tag names, which the  
 compiler does know.
 
-Detail: `design/llvm-pointer-switch-bug-001.md`.
+Detail: `design/secondary/llvm-pointer-switch-bug-001.md`.
 
 ### Tag identifies the class
 
@@ -641,7 +640,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-030.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-033.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -696,7 +695,7 @@ Pattern.
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, by transferring the item.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-030.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-033.md).
 
 ### Pool-as-message
 
@@ -1530,7 +1529,7 @@ Example: `examples/layer2/062-shutdown_exit.zig`.
 
 ### Observable function shapes
 
-Concrete templates for the "Observable by human" MUST rule. See [rules-024.md](rules-024.md).
+Concrete templates for the "Observable by human" MUST rule. See [rules-041.md](rules-041.md).
 
 #### Coordinator / run
 

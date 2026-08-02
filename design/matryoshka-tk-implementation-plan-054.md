@@ -1,18 +1,15 @@
-# Matryoshka Zig — Implementation Plan (052)
+# Matryoshka Zig — Implementation Plan (054)
 
-Replaces [matryoshka-tk-implementation-plan-051.md](matryoshka-tk-implementation-plan-051.md).
-
-Change from -051: CMPCT 1. The per-stage prose that -051 shared with `STATUS.md`  
-is folded into a one-line ledger. The narrative lives in
-[STATUS-LOG.md](STATUS-LOG.md), by date, and nowhere else.
+Change from -053: DOC 23 ledger line, one reported item closed, and the stale  
+references this stage repaired.
 
 ## Status
 
 192/192 tests across Debug, ReleaseSafe, ReleaseFast and ReleaseSmall.  
 Cross-compile to x86_64-windows clean. `mkdocs build --strict` clean.
 
-Last completed stage: DISPATCH 2, 2026-07-31. The last two stages changed  
-nothing in `src/` — they document what the existing blocks already do.
+Last completed stage: DOC 23, 2026-08-02. The last six stages changed nothing  
+in `src/` — they document what the existing blocks already do.
 
 ---
 
@@ -64,15 +61,17 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - EXMPL 5a-5e — receive router: design note, example + test, pattern docs, catalog and nav, `cancelDiscard` audit over 15 sites with no defects. DONE 2026-07-27 (169/169). Design: [receive-router-001.md](receive-router-001.md).
 - API 6 — `identifyNodeAs`/`identifySlotAs` → `fromNode`/`fromSlot` (+ `must`), new `moveFromSlot`, ~222 call sites. DONE 2026-07-28 (170/170).
 - API 7a-7d — `toNode`, the outbound accessor; three `src/` hand-rolls self-hosted; `src/polynode.zig` doc comments fixed. DONE 2026-07-29 (171/171).
-- API 7e — closed as superseded: `ItemList.append` takes an `ItemHandle`, so the sites `toListNode` targeted are gone. See [item-list-006.md](item-list-006.md) Q22.
-- API 8a-8d — `ItemList` closes the `std.DoublyLinkedList` boundary; five public signatures moved; `popFirst` turns the reset trap into a type guarantee. DONE 2026-07-29 (175/175). Design: [item-list-006.md](item-list-006.md).
+- API 7e — closed as superseded: `ItemList.append` takes an `ItemHandle`, so the sites `toListNode` targeted are gone. See [item-list-009.md](item-list-009.md) Q22.
+- API 8a-8d — `ItemList` closes the `std.DoublyLinkedList` boundary; five public signatures moved; `popFirst` turns the reset trap into a type guarantee. DONE 2026-07-29 (175/175). Design: [item-list-009.md](item-list-009.md).
 - API 9 — intrusive safety: `appendFromSlot`/`prependFromSlot`, `tests/layer1_itemlist.zig`, the `_holds` walk, `concat` self-check. Misuse cases 1 and 5 stay open by decision (Q26 = D). DONE 2026-07-30 (177/177).
 - API 10 — `ItemList` completion: `remove`, `popLast`, `first`, `last`, `insertBefore`; `iterate` → `iterator`; `concat` self-concat leak fixed. DONE 2026-07-31 (182/182).
 - API 11 — `fromNode`/`mustFromNode`/`toNode` → `fromPoly`/`mustFromPoly`/`toPoly`, 164 call sites. Slot accessors keep their names. DONE 2026-07-31 (182/182).
-- DISPATCH 1 — tag-first dispatch documented; `switch (tag)` proven not to compile, recorded in [llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md) with a repro and a build matrix. DONE 2026-07-31 (185/185).
+- DISPATCH 1 — tag-first dispatch documented; `switch (tag)` proven not to compile, recorded in [llvm-pointer-switch-bug-001.md](secondary/llvm-pointer-switch-bug-001.md) with a repro and a build matrix. DONE 2026-07-31 (185/185).
 - DISPATCH 2 — table dispatch documented; the handler belongs to the pair (receiver, tag), so the choice moves into data. `examples/helpers/TagTable.zig`, scenarios 113-117. No `src/` change. DONE 2026-07-31 (192/192). Working doc: [table-dispatch-001.md](table-dispatch-001.md).
 - CMPCT 1 — STATUS/plan/log/context de-duplicated; rules-038 "Status file ownership". DONE 2026-08-01 (192/192, doc-only).
-- CMPCT 2 — rules regrouped into [rules-039.md](rules-039.md): gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
+- CMPCT 2 — rules regrouped into rules-039.md: gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
+- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-001.md](matryoshka-concepts-001.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-041.md](rules-041.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
+- DOC 23 — the two large docs split by audience. `matryoshka-tk-0.16-implementation-guide-001.md` retired: its Odin idiom mapping to [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md), its still-binding material to [matryoshka-zig-0.16-notes-002.md](matryoshka-zig-0.16-notes-002.md), its walkthroughs of shipped code deleted with owner approval. [matryoshka-architecture-foundation-4-005.md](matryoshka-architecture-foundation-4-005.md) drops the four sections `matryoshka-concepts-001.md` already owns and renames `MayItem` to `Slot`. New gate `kitchen/tools/check_design.sh`. DONE 2026-08-02 (192/192, doc-only).
 
 CANDIDATES was dropped, owner's decision. It carried from plan-043 through  
 plan-046 without starting, and `design/candidates/` does not exist on disk.
@@ -105,17 +104,17 @@ No stage is chosen. Deferred below is the candidate pool.
   the natural pair for any batch-receive work.
 - `src/pool.zig` carries an uncommitted owner edit made before API 6
   (`get_wait` doc comment now states "does not call on_get hook").
-- Stale `helpers/`-path references outside INTR 6's scope:
-  `design/patterns-012.md` (2), `design/matryoshka-api-reference-021.md` (3),  
-  `design/collected-context-005.md` (3, historical),  
-  `kitchen/docs/patterns/pool.md` (2), `kitchen/docs/api/pool.md` (1).  
-  These reference already-superseded doc versions.
+- **Closed by DOC 23.** The stale `helpers/`-path references reported outside
+  INTR 6's scope are gone. Re-checked 2026-08-02: the only `helpers/` mentions  
+  left under `kitchen/docs/` are `@import` lines inside generated example  
+  pages, which are correct. The `design/` side was closed by DOC 22.
 - **Closed by the 2026-07-30 banned-word pass.** The `patterns-017` section
-  titles carried from `-016`/`-015` are reworded in `patterns-020.md`, and the  
+  titles carried from `-016`/`-015` are reworded in `patterns-025.md`, and the  
   `022-ownership_transfer.zig` `//!` title and entry-point name are reworded  
   too. The **filename** still carries the word — owner's decision, since  
   renaming trips the examples-catalog nav-sync rule.
 - Working tree carries uncommitted owner edits to `README.md` and
-  `design/mtk-readme.md`, a deleted SPDX header in  
+  `design/secondary/mtk-readme.md`, a deleted SPDX header in  
   `src/internal/cond_timeout.zig`, and a deleted  
-  `design/stories/photo-archive-pipeline.png`. Left alone.
+  `design/stories/photo-archive-pipeline.png` alongside two untracked  
+  `-001.png`/`-002.png`. Left alone. The story narrative references no image.

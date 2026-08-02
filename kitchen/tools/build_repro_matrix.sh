@@ -2,7 +2,7 @@
 #
 # Build matrix for the pointer-switch bug.
 #
-# See design/llvm-pointer-switch-bug-001.md.
+# See design/secondary/llvm-pointer-switch-bug-001.md.
 #
 # Builds one source file across:
 # - both backends: -fllvm, -fno-llvm
@@ -18,7 +18,7 @@ cd "$(dirname "$0")/../.."
 # The compiler segfaults on some combinations. Do not write core dumps.
 ulimit -c 0
 
-REPRO="${1:-design/llvm-pointer-switch-repro.zig}"
+REPRO="${1:-design/secondary/llvm-pointer-switch-repro.zig}"
 # Seconds per build. Some combinations hang the compiler.
 TIMEOUT="${TIMEOUT:-60}"
 WORK="$(mktemp -d)"

@@ -1,6 +1,5 @@
 # ItemList (009)
 
-Versioned doc. Replaces [item-list-008.md](item-list-008.md).
 
 Change from -008: API 11 — `fromNode` and `toNode` renamed to `fromPoly` and  
 `toPoly` wherever this doc names them. No decision changed.
@@ -224,7 +223,7 @@ that delivers the pointer is the same edge that orders the writes to it.
 
 **This is owed to two other documents.** `rules-033.md:405` carries "an object  
 sits in exactly one place, in exactly one state, at any moment";  
-`matryoshka-model-005.md:30` carries the exclusive-access claim. Neither states  
+`matryoshka-concepts-001.md` carries the exclusive-access claim. Neither states  
 the happens-before consequence. Writing it down is independent of every open  
 decision in section 8.
 
@@ -768,7 +767,7 @@ Prevention was always immune, because it reads nothing.
 ## 8. Decisions — round 6
 
 Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
-are cited by number in `STATUS-LOG.md`, `plan-049.md` and `context.md`, so the  
+are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-054.md` and `context.md`, so the  
 labels stay even though these are no longer questions.
 
 Every full argument lives in sections 5-7. This section records what was decided  
@@ -781,8 +780,8 @@ and why, not the reasoning that produced it.
 The API 8 migration ran with three protections applied as written, and all three  
 held: `tests/layer1_polynode.zig` scenarios 6, 7 and 8 are still on raw links,  
 `polynode.reset` and `polynode.is_linked` are still public with unchanged  
-signatures, and the test count went 171 to 175, never down. Recorded in
-[item-list-004.md](item-list-004.md) §Q25.
+signatures, and the test count went 171 to 175, never down. Recorded in  
+§Q25 of an earlier version of this document.
 
 The second half of the question — is anything else off-limits — was asked again  
 against the stage this section defines. **Answer: nothing else off-limits.**
@@ -805,7 +804,7 @@ the conclusion is general: no state stored in an item can validate this class of
 mistake.
 
 **Reverses** the recommendation A that item-list-002 made twice. The reversal is  
-in [item-list-003.md](item-list-003.md).
+in an earlier version of this document.
 
 **What this costs, stated plainly.** The seven assert lines of 5.2 stay blind for  
 a list of one. `PolyHelper.destroy` keeps guarding a use-after-free with a check  
@@ -961,8 +960,8 @@ list is not reachable from `self`. Nothing outside safety builds.
 
 ## 9. Required follow-up — done
 
-- **The happens-before invariant of 3.2** — done 2026-07-30 in `rules-033.md`
-  ("Exclusive access, second half") and `matryoshka-model-005.md` ("The transfer  
+- **The happens-before invariant of 3.2** — done 2026-07-30, now in
+  `rules-041.md` ("Exclusive access, second half") and `matryoshka-concepts-001.md` ("The transfer  
   orders memory"). Step 0 of the ship order.
 - **`src/polynode.zig:67`** — the `is_linked` doc comment now claims only what
   the function computes: whether the node has neighbours.
@@ -1034,7 +1033,7 @@ destination list from inside `send` or `put` before the lock is taken.
 
 Name and signature unchanged. All seven `!is_linked` asserts kept. The doc  
 comment at `src/polynode.zig:67` now says "True if the node has neighbours" and  
-states the sole-member case outright. The rules entry is in `rules-034.md`  
+states the sole-member case outright. The rules entry is in `rules-041.md`  
 ("The neighbour check"), and the three test comments of Q33 are corrected.
 
 ### 11.4 Tests (Q29)

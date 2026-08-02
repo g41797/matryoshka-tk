@@ -1,6 +1,5 @@
 # Matryoshka API Reference — Zig 0.16
 
-Replaces [matryoshka-api-reference-032.md](matryoshka-api-reference-032.md).
 
 API 11 (accessor rename): `fromNode`, `mustFromNode` and `toNode` become `fromPoly`, `mustFromPoly` and `toPoly`. `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two things at once, and the field the helper reaches is `poly`. Hard rename, no aliases. The Slot accessors keep their names.
 
