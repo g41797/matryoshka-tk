@@ -50,6 +50,24 @@ Goal of Matryoshka:
 
 ---
 
+## NAQ (Never Asked Questions)
+
+---
+
+
+<details>  
+<summary>On the landing page, I saw the Matryoshka LOC count. How do you calculate it?</summary>
+
+- Only src/*.zig files
+- Comments, imports and empty lines are excluded 
+
+Today (11 Aug 2026) - **722** LOC
+
+</details>
+
+---
+
+
 
 ## Want to understand it?
 
@@ -60,36 +78,3 @@ Read this <a href="https://g41797.github.io/matryoshka-tk/" target="_blank" rel=
 
 ---
 
-
-## NAQ (Never Asked Questions)
-
----
-
-
-<details>  
-<summary>How do you calculate Matryoshka LOC?</summary>
-- only src/*.zig files
-- comments, imports and empty lines are excluded 
-</details>
-
----
-
-## Influencers
-
----
-
-
-B.Mills <a href="[url](https://drive.google.com/file/d/1nPdvhB0PutEJzdCq5ms6UI58dp50fcAN/view)" target="_blank" rel="noopener noreferrer">Rethinking Classical Concurrency Patterns</a>
-
-<a href="https://github.com/g41797/mailbox" target="_blank" rel="noopener noreferrer">Former Mailbox</a>
-
-<a href="https://github.com/g41797/tofu" target="_blank" rel="noopener noreferrer">Matryoshka ideas kindergarden</a>
-
-<a href="https://github.com/g41797/matryoshka/" target="_blank" rel="noopener noreferrer">Former Matryoshka</a>
-
-<a href="https://ziggit.dev/t/new-linkedlist-api-footgun/10853/" target="_blank" rel="noopener noreferrer">New LinkedList API footgun</a>
-
-\*?\*T
-
-
----
