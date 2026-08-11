@@ -1,6 +1,6 @@
 # Patterns — Slot and PolyNode Idioms
 
-Concepts: [Building Blocks — PolyNode](../building-blocks/polynode.md).  
+Concepts: [Tools — PolyNode](../tools/polynode.md).  
 API: [API Reference — PolyNode, ItemHandle, Slot](../api/polynode/index.md).
 
 The slot rule in full: [API Reference — Tag Identity and Slot Programming](../api/tags-and-slots/index.md).

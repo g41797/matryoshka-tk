@@ -1,6 +1,6 @@
 # Patterns — Dispatch
 
-Concepts: [Building Blocks — PolyNode](../building-blocks/polynode.md).  
+Concepts: [Tools — PolyNode](../tools/polynode.md).  
 API: [API Reference — PolyNode, ItemHandle, Slot](../api/polynode/index.md).
 
 One mailbox carries many types. One pool holds many types. The receiver has to  

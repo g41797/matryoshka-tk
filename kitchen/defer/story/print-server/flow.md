@@ -53,5 +53,5 @@
 
 ---
 
-Next: [Building Blocks](../../building-blocks/index.md) — see PolyNode, Mailbox, Pool,  
+Next: [Tools](../../tools/index.md) — see PolyNode, Mailbox, Pool,  
 and Master named individually, still no Zig syntax.

@@ -74,7 +74,7 @@ Every example path is under `examples/` or `stories/`.
 
 Order of this catalog.
 - Slot and transfer idioms first — they appear in every pattern below.
-- PolyNode, Mailbox, Pool next — the building blocks.
+- PolyNode, Mailbox, Pool next — the tools.
 - Topology patterns after Mailbox — recurring shapes built from mailboxes and workers.
 - Futures, Select, Group after — the Io integration.
 - Cancellation, shutdown, Master patterns last — whole-system shapes.

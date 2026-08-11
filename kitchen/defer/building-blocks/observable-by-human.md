@@ -109,5 +109,5 @@ resource, guard it with its own `errdefer`. Return `self` last.
 
 ## Next
 
-More Building Blocks topics — Select event loops, spawn/await coordination,  
+More Tools topics — Select event loops, spawn/await coordination,  
 Master composition, pool patterns — are planned for later stages.

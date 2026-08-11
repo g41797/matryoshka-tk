@@ -1,26 +1,29 @@
 
----
-
 ## Two Different Worlds
 
 Most software systems have two very different parts.
+
+---
 
 ### The I/O part
 
 This part deals with the outside world.
 
-* Sockets.
-* Files.
-* Timers.
-* Event loops.
-* Synchronization.
-* Operating system APIs.
+- Sockets.
+- Files.
+- Timers.
+- Event loops.
+- Synchronization.
+- Operating system APIs.
 
 The I/O part
 
-* requires low-level programming
-* requires understanding how the platform works
-* has its own specialists and its own way of thinking
+- requires low-level programming
+- requires understanding how the platform works
+- has its own specialists and its own way of thinking
+
+---
+
 
 ### The Process part
 
@@ -28,68 +31,76 @@ This is where the application does its real work.
 
 For example:
 
-* Image processing.
-* Video transcoding.
-* Financial calculations.
-* Business workflows.
-* Data analysis.
+- Image processing.
+- Video transcoding.
+- Financial calculations.
+- Business workflows.
+- Data analysis.
 
 Most developers specialize in this layer.
 
 They
 
-* understand their domain
-* want to solve domain problems
-* usually do not want to spend time learning unrelated
-
-  * APIs
-  * frameworks
-  * infrastructure
+- understand their domain 
+- want to solve domain problems
+- usually do not want to spend time learning unrelated
+    - APIs
+    - frameworks
+    - infrastructure
 
 I/O developers and Process developers often speak *different languages*.
+
+---
+
 
 ## What Matryoshka-Tk Is For
 
 Matryoshka-Tk
 
-* is designed for the Process part
-* does **not** replace an I/O library
-* does **not** solve
-
-  * networking
-  * polling
-  * file handling
-  * operating system integration
+- is designed for the Process part 
+- does **not** replace an I/O library
+- does **not** solve
+    - networking
+    - polling
+    - file handling
+    - operating system integration
 
 Instead, it provides
 
-* building blocks for the code that runs
-
-  * **after** data enters the system
-  * **before** data leaves the system
+- tools for the code that runs
+    - **after** data enters the system
+    - **before** data leaves the system
 
 Its goal is
 
-* to let developers think in terms of
-
-  * processing
-  * messages
-  * pools
-  * workflows
-* instead of low-level I/O details
+- to let developers think in terms of
+    - processing
+    - messages
+    - pools
+    - workflows
+- instead of low-level details
 
 The funny part is that Matryoshka-Tk was created by an I/O developer.
 
 Me.
 
-## Remember
+---
 
-* I/O moves data.
-* Matryoshka-Tk organizes work.
+
+## Remember
 
 ---
 
-## Four building blocks. One principle. Common language.
+
+- I/O _moves_ data.
+- Matryoshka-Tk organizes processing of data.
+
+---
+
+## Four tools. One principle. Common language.
+
+---
+
 
 Every Matryoshka-Tk system is built from _four building blocks_:
 
@@ -143,7 +154,7 @@ An **Item** is
     - RawBuffer
     - JobTicket
     -  ...
-- **allocated** (as all building blocks)
+- **allocated** (as all tools)
 - outlive the function that created them
 
 The one rule that matters:
@@ -217,6 +228,28 @@ An empty Pool is
 
 ---
 
+## Master is King
+
+---
+
+Master is YOUR CODE.
+
+Only Master
+
+- makes decisions
+- owns application state
+- uses tools
+  - Mailbox - for communication
+  - Pool - for storage/reuse
+
+---
+
+Be Master **of your** systems.
+
+---
+
+
+
 ##  Take it easy
 
 ---
@@ -243,30 +276,3 @@ If
 
 - **yes** - you are on the right way
 - no - [you still have the chance](https://github.com/g41797/matryoshka-tk){target="_blank" rel="noopener"}
-
----
-
-## Master is King
-
----
-
-Master is YOUR CODE.
-
-Only Master
-
-- makes decisions
-- owns application state
-- talks to building blocks
-
-Another building blocks are "slaves":
-
-- Mailbox - communication
-- Pool - storage/reuse
-- Item - "data"
-
----
-
-Be Master **of your** systems.
-
----
-

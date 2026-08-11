@@ -19,7 +19,7 @@ hide:
 <div class="hero-container">
 
 <div class="hero-image">  
-  <a href="laws_of_docs/">  
+  <a href="manifesto/">  
     <img src="assets/matryoshka-tk-logo.png" alt="Matryoshka-Tk — Start Building" />  
   </a>  
 </div>

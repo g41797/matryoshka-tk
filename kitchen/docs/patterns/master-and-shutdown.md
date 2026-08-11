@@ -1,6 +1,6 @@
 # Patterns — Shutdown and Master Patterns
 
-Concepts: [Building Blocks — Master](../building-blocks/master.md).
+Concepts: [Tools — Master](../tools/master.md).
 
 ## Graceful shutdown sequence
 

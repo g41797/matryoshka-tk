@@ -104,6 +104,6 @@ Cancel and close are different signals a Master must tell apart:
 
 ## Next
 
-Further Building Blocks topics — Select event loops, spawn/await  
+Further Tools topics — Select event loops, spawn/await  
 coordination, Master composition, pool patterns, API reference — are  
 planned for later stages.

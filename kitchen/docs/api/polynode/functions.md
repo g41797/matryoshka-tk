@@ -1,6 +1,6 @@
 # Control group
 
-New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md) first.
+New to the concepts? See [Tools — PolyNode](../../tools/polynode.md) first.
 
 ---
 

@@ -956,10 +956,10 @@ and `unlock()` as an API name.
 had changed. Git is disabled; that was a slip. Read-only, nothing written, and I  
 used a grep instead afterwards.
 
-### 2026-07-30 — kitchen docs: examples verified in sync, nav defects, ItemList in building-blocks
+### 2026-07-30 — kitchen docs: examples verified in sync, nav defects, ItemList in tools
 
 Owner asked for the same check over `kitchen/docs/examples` and  
-`kitchen/docs/building-blocks` that the previous round ran over `api/` and  
+`kitchen/docs/tools` that the previous round ran over `api/` and  
 `patterns/`. Cleaner: no wrong signatures, two nav defects, one gap.
 
 **`docs/examples/**` is generated — verified in sync, not audited by eye.**  
@@ -978,15 +978,15 @@ rendered in the sidebar of every page on the site. Now "Item transfer via Slot".
 The filename `022-ownership_transfer.zig` still carries it — owner's standing  
 decision, since renaming trips the examples-catalog nav-sync rule.
 
-**`building-blocks/index.md` was orphaned.** Absent from `mkdocs.yml`. Unlike  
+**`tools/index.md` was orphaned.** Absent from `mkdocs.yml`. Unlike  
 the five `api/` orphans deleted earlier the same day, this page has two real  
 inbound links — `the-shape.md:57` and `patterns/index.md:4`, both telling the  
-reader to read Building Blocks first. Readers arriving by link saw it; readers  
+reader to read Tools first. Readers arriving by link saw it; readers  
 using the sidebar never did. Added to nav as "Overview" rather than deleted.  
 The two cases took opposite fixes for the same symptom, which is the point:  
 orphan status alone does not decide it, inbound links do.
 
-**ItemList missing from the concept page.** `building-blocks/polynode.md` is  
+**ItemList missing from the concept page.** `tools/polynode.md` is  
 titled "Item/ItemHandle/PolyNode", has a Slot section, and never mentioned  
 `ItemList` — two-thirds of the trio, while the API page it links to  
 (`api/polynode/index.md:37`) carries all three. Added "ItemList — where many  
@@ -1026,7 +1026,7 @@ links, moveFromList).
 **Five orphan API pages deleted.** `api/polynode.md`, `api/mailbox.md`,  
 `api/pool.md`, `api/tags-and-slots.md`, `api/cleanup.md` — all superseded by the  
 split directories in nav, none referenced by `mkdocs.yml`, none linked from any  
-page (the apparent inbound links in `building-blocks/`, `examples/`, and  
+page (the apparent inbound links in `tools/`, `examples/`, and  
 `patterns/index.md` are same-directory siblings). They still built as orphan  
 pages and had been hand-maintained in parallel through API 8, which is how the  
 `on_put` fix reached the flat copy and not the live one. Owner approved deletion.
@@ -1410,7 +1410,7 @@ Live hits fixed, 6 files:
   bullets on the owner's instruction, then reworded off the two banned words.
 - `kitchen/docs/api/polynode/stdlib-compatibility.md` — the escape-hatch
   section, same rewording.
-- `kitchen/docs/building-blocks/polynode.md` — "the same kind of pointer
+- `kitchen/docs/tools/polynode.md` — "the same kind of pointer
   underneath" → "the same kind of pointer". The word carried nothing.
 - `kitchen/defer/deep-dive/video-transcoder.md` — "the pool runs dry on purpose"
   → "the pool runs dry". The sentence already said "deliberately smaller".
@@ -2141,16 +2141,16 @@ sentences, heavy bullets, no fixed opener template, plain words, "less is
 better"). Executor switched to Fable for corrective rewrite work.
 
 Owner then ran a manual, message-by-message micro-audit over the corrected  
-Building Blocks, API Reference, and Patterns files, catching what the  
+Tools, API Reference, and Patterns files, catching what the  
 automated correction missed: a shortened but still-templated opener pattern  
-("[Scenario]? That's a [X].") in `building-blocks/{pool,mailbox}.md`; a  
-factual error in `building-blocks/mailbox.md` claiming "no shared locks" when  
+("[Scenario]? That's a [X].") in `tools/{pool,mailbox}.md`; a  
+factual error in `tools/mailbox.md` claiming "no shared locks" when  
 `src/mailbox.zig` has an internal `Io.Mutex` (fixed, then simplified further  
 per "less is better" — cut the lock detail entirely, wrong tier for a  
-Building Blocks reader); an opener/heading mismatch in  
-`building-blocks/polynode.md` ("Everything is marked." opener left under a  
+Tools reader); an opener/heading mismatch in  
+`tools/polynode.md` ("Everything is marked." opener left under a  
 stale "## What is exchanged?" heading) plus the same stale phrase in  
-`building-blocks/index.md`'s cross-reference line; and two "object"-for-Item  
+`tools/index.md`'s cross-reference line; and two "object"-for-Item  
 banned-word violations in `api/cancel-and-lifecycle.md` and  
 `api/invariants.md` (not in `nav:`, but live on disk — fixed anyway).
 
@@ -2164,12 +2164,12 @@ and fixed the "object"-for-Item violation across five addendums files:
 `slot-vs-ref-counting.md`, `tag-vs-tagged-union.md`,  
 `typeErasedQueue-vs-mailbox.md`, `matryoshka-io-notation.md` — all now say  
 "item"/"Item" consistently. Confirmed two legitimate non-Item exceptions  
-stand as-is: `building-blocks/master.md:13` ("Not a special runtime  
+stand as-is: `tools/master.md:13` ("Not a special runtime  
 object" — refers to Master) and `patterns/slot-and-polynode.md:218` ("No  
 separate link object" — hypothetical link node, not an Item).
 
 **Changes**
-- `building-blocks/{pool,mailbox,polynode,index}.md` — template opener  
+- `tools/{pool,mailbox,polynode,index}.md` — template opener  
   removal, factual/lock-detail fix, opener/heading consistency
 - `api/{cancel-and-lifecycle,invariants}.md` — "object" → "item" for Item  
   lifecycle references
@@ -2201,14 +2201,14 @@ minimal." Passed over every hand-authored page reachable from
 (the concrete situation before the abstract definition) and one new  
 diagram, without rewriting what already worked.
 
-Pilot (Opus subagent): `api/polynode.md` + `building-blocks/pool.md`. First  
+Pilot (Opus subagent): `api/polynode.md` + `tools/pool.md`. First  
 attempt added a Mermaid flowchart to `pool.md` — owner corrected: use the  
 project's own ASCII notation vocabulary (`design/matryoshka-io-notation.md`  
 — `{ Master }`, `[ Pool ]`, `>>>`/`<<<` movement, `====`/`||` Mailbox)  
 instead of Mermaid wherever a diagram is warranted. Replaced with a  
 notation-based diagram; confirmed via `mkdocs build`.
 
-Batches after pilot approval: Building Blocks (3 remaining), Patterns (5,  
+Batches after pilot approval: Tools (3 remaining), Patterns (5,  
 page-level "lookup table, not a narrative" orientation lines only — entries  
 already use a When-to-use/Code-shape/Why cookbook format), API Reference (6  
 remaining, openers only, structure/signatures untouched per owner's call),  
@@ -2224,7 +2224,7 @@ flattened owner voice), `index.md` (pure hero image, no prose),
 
 **Changes** (16 files, `kitchen/docs/**` only):
 - `api/{polynode,polyhelper,mailbox,pool,tags-and-slots,cleanup,root-and-master}.md`
-- `building-blocks/{polynode,mailbox,master,pool}.md` (pool.md also gets the
+- `tools/{polynode,mailbox,master,pool}.md` (pool.md also gets the
   notation diagram)
 - `patterns/{pool,slot-and-polynode,mailbox-and-topology,async,master-and-shutdown}.md`
 - `design/STATUS.md` — this session log entry.
@@ -2259,7 +2259,7 @@ One pre-existing hit found and left alone, not introduced this session:
 `patterns/mailbox-and-topology.md`'s "Recurring shapes for wiring  
 mailboxes and workers together" (predates this pass). Also surfaced,  
 unrelated to the new word: pre-existing "ownership" language in  
-`building-blocks/polynode.md` and `patterns/{slot-and-polynode,async,  
+`tools/polynode.md` and `patterns/{slot-and-polynode,async,  
 master-and-shutdown}.md` — already flagged in the 2026-07-15 CANDIDATES  
 Pass 1 audit as mixed-language pages needing care, out of scope for this  
 check.
@@ -2289,7 +2289,7 @@ opener formula, plain words over abstract ones, less over more.
 
 Redid all 14 previously-templated files (the 2 pilot files were already  
 fixed and approved earlier this session) via Fable subagents, one batch  
-each: Building Blocks (3), Patterns (5), API Reference (6). Each agent  
+each: Tools (3), Patterns (5), API Reference (6). Each agent  
 read the reference files plus the target file fully before editing,  
 deleted the template, and only added page-specific framing where the page  
 genuinely needed one after the template's removal — most did not.
@@ -2308,7 +2308,7 @@ uses across the batch (`polynode.md`, `mailbox.md`, `root-and-master.md`,
 
 **Changes**:
 - `design/rules-026.md` — added the scoped "object"-for-Item ban.
-- `building-blocks/{polynode,mailbox,master,pool}.md`
+- `tools/{polynode,mailbox,master,pool}.md`
 - `patterns/{pool,slot-and-polynode,mailbox-and-topology,async,master-and-shutdown}.md`
 - `api/{polynode,mailbox,pool,tags-and-slots,cleanup,root-and-master}.md`
 - `design/STATUS.md` — this session log entry.
@@ -2499,9 +2499,9 @@ discarded/bulk-discarded (7 design/, 24 kitchen/docs — including the
   story, 3 occurrences) flagged as the corpus's strongest single insight  
   line.
 - Vocabulary conflict: several `kitchen/docs/misc/` drafts use "Item" as a
-  named concept where the live corpus (README, manifesto, building-blocks)  
+  named concept where the live corpus (README, manifesto, tools)  
   uses "PolyNode" — composition stage must resolve, not silently pick one.
-- Some currently-nav'd building-blocks pages (`mailbox.md`, `polynode.md`)
+- Some currently-nav'd tools pages (`mailbox.md`, `polynode.md`)
   still carry literal "ownership"/"owner" language despite being otherwise  
   New-Mindset — flagged mixed, not clean sources, needs care in Pass 3.
 - Richest sources for reuse: `matryoshka-manifesto-005.md`,
@@ -2519,7 +2519,7 @@ discarded/bulk-discarded (7 design/, 24 kitchen/docs — including the
 **Not done this pass**: Pass 2 (per-document requirements: audience, length  
 budget, tone, must-include points for README/landing-short/landing-long) and  
 Pass 3 (composition) not started. The vocabulary conflict (Item vs PolyNode)  
-and the mixed-language building-blocks pages are flagged, not resolved.
+and the mixed-language tools pages are flagged, not resolved.
 
 **Next**: owner's call — proceed to Pass 2 (per-document requirements), or  
 review the audit/corpus-index files first.
@@ -3110,7 +3110,7 @@ Step B (docs — "pool is not storage" + put semantics):
   call patterns carry no count/identity/ordering guarantee).
 - `kitchen/docs/api/pool.md` — same put-outcomes + caveat content, edited in
   place (mirrored/generated-adjacent page, existing convention).
-- `kitchen/docs/building-blocks/pool.md` — "Whatever the previous owner
+- `kitchen/docs/tools/pool.md` — "Whatever the previous owner
   wrote has already been consumed or reset by the time you get an item  
   back" overstated a guarantee matryoshka doesn't make; rewritten  
   policy-neutral, pointing at the four `put` outcomes.
@@ -3344,10 +3344,10 @@ sites (0 in `src/`, 16 in `examples/` across 9 files, 17 in `tests/` across
 pages. Found old "Master is a role" language in `README.md`,  
 `kitchen/docs/manifesto.md`, `design/matryoshka-manifesto-003.md`,  
 `design/matryoshka-api-reference-021.md`, and three  
-`kitchen/docs/building-blocks/*.md` pages (`master.md` worst — no  
+`kitchen/docs/tools/*.md` pages (`master.md` worst — no  
 `io.concurrent`/task mention at all). Found `Thread.spawn` presented as a  
 co-equal option to `io.concurrent()` in `design/patterns-012.md` and  
-`kitchen/docs/building-blocks/observable-by-human.md`.
+`kitchen/docs/tools/observable-by-human.md`.
 
 Owner confirmed continuing in auto mode. Phase C doc-level rewrite done this  
 pass: every flagged file corrected to state "a Master is an Io task that  
@@ -3357,13 +3357,13 @@ alternative.
 
 **Changes**:
 - `README.md` — Main concept section: Master connected to `io.concurrent()`.
-- `kitchen/docs/building-blocks/master.md` — task connection added, diagram
+- `kitchen/docs/tools/master.md` — task connection added, diagram
   replaced, "Why Master is not in the API" section gets the `io.concurrent()`  
   line.
-- `kitchen/docs/building-blocks/core-concepts.md`,
-  `kitchen/docs/building-blocks/index.md` — "Master — coordination, not a  
+- `kitchen/docs/tools/core-concepts.md`,
+  `kitchen/docs/tools/index.md` — "Master — coordination, not a  
   type" reworded to "an Io task, not a struct you must define."
-- `kitchen/docs/building-blocks/observable-by-human.md` — `Thread.spawn`
+- `kitchen/docs/tools/observable-by-human.md` — `Thread.spawn`
   dropped from the concurrent-call list.
 - `design/patterns-012.md` → `design/patterns-013.md` (new version) —
   `Thread.spawn` dropped from two pattern entries.
@@ -3420,7 +3420,7 @@ rules. Owner directed a two-phase plan (see plan file
 `read-design-status-md-related-md-transient-lark.md`): Phase A, write a  
 new authoritative reference doc capturing the new understanding; Phase B  
 (not started), audit README/manifesto/patterns/rules/API-reference/  
-building-blocks pages against it and report old-model language, banned-word  
+tools pages against it and report old-model language, banned-word  
 hits, and `std.Thread.spawn` usages, before any downstream rewrite.
 
 Confirmed in conversation: `std.Thread.spawn` is banned throughout this  
@@ -3458,7 +3458,7 @@ added separately — broadens the prior src/-only ownership-language rule
 **Next**: owner review/approval of `matryoshka-new-mindset-001.md` wording.  
 Once approved, Phase B audit (no rewrites yet) against README, manifesto,  
 architecture docs, patterns, rules, API reference, and  
-`kitchen/docs/building-blocks/*.md`. `std.Thread.spawn` → `io.concurrent()`  
+`kitchen/docs/tools/*.md`. `std.Thread.spawn` → `io.concurrent()`  
 migration in examples/tests is separate follow-up work, scoped after the  
 audit.
 
@@ -3517,7 +3517,7 @@ revisions:
 - `kitchen/docs/the-shape.md` (new) — "The Shape of a Real System" page,
   staccato/bulleted throughout (no prose paragraphs), both diagrams  
   embedded, three building-block bullets linking to  
-  `building-blocks/polynode.md`/`mailbox.md`/`pool.md`.
+  `tools/polynode.md`/`mailbox.md`/`pool.md`.
 - `kitchen/mkdocs.yml` — added "The Shape of a Real System" to `nav:`,
   directly after "The Manifesto".
 - `kitchen/notes.md` — new section documenting `kitchen/diagrams/` +
@@ -3575,7 +3575,7 @@ rather than a one-off manual pass.
 - `design/context.md` — Rules pointer → rules-023.md; Status pointer text
   updated.
 - Ran the script once against the whole `kitchen/docs/` tree — 18 files
-  fixed (`api/pool.md`, `api/mailbox.md`, `building-blocks/master.md`,  
+  fixed (`api/pool.md`, `api/mailbox.md`, `tools/master.md`,  
   `manifesto.md`, and 14 others).
 
 **Verification**:
@@ -3637,14 +3637,14 @@ pages superseded by a newer, nav-wired page but left in place as unlinked
 orphans — `matryoshka-based-systems.md` (superseded by `manifesto.md` +  
 `index.md`), `slot-vs-ref-counting.md`/`tag-vs-tagged-union.md`/  
 `typeErasedQueue-vs-mailbox.md` at root level (superseded by their shorter  
-`addendums/` counterparts), `building-blocks/core-concepts.md` (near-verbatim  
-duplicates split out into `building-blocks/polynode.md`/`mailbox.md`/  
+`addendums/` counterparts), `tools/core-concepts.md` (near-verbatim  
+duplicates split out into `tools/polynode.md`/`mailbox.md`/  
 `pool.md`/`master.md`), and `concepts/index.md` +  
 `print-server-the-system.md`/`print-server-with-matryoshka.md` (retells the  
 same print-server story already covered by the nav-wired  
 `story/print-server/*.md`, condensed to two pages instead of four).  
 Reported rather than auto-fixed — a content-editorial decision. Also flagged  
-non-duplicative orphans (`building-blocks/observable-by-human.md`, chat-log/  
+non-duplicative orphans (`tools/observable-by-human.md`, chat-log/  
 draft files already known from the DOC 5 audit) as separate from the  
 duplicate findings above.
 
@@ -3656,7 +3656,7 @@ these are the only sequential-reading aid between pages). Owner then asked to
 hide Story/Deep Dive and fix the resulting dangling references to match.
 
 **Changes**:
-- `kitchen/docs/building-blocks/master.md` — wrapped the "See also: Story —
+- `kitchen/docs/tools/master.md` — wrapped the "See also: Story —
   Print Server" line in an HTML comment (`<!-- -->`), same reversible-hide  
   treatment as the `mkdocs.yml` `#` comments.
 - `kitchen/docs/manifesto.md` — wrapped the "Story — Print Server" bullet in
@@ -3923,7 +3923,7 @@ example to `nav:` and adding a rule so future example changes stay synced.
 | Check | Result |
 |---|---|
 | `bash kitchen/tools/build_site.sh` | clean, zero warnings; "not included in nav" list no longer contains any `examples/*.md` path |
-| Pre-existing non-examples orphan pages (`matryoshka-based-systems.md`, `building-blocks/core-concepts.md`, `concepts/*`, `cookbook/index.md`, etc.) | unchanged, out of scope for this follow-up |
+| Pre-existing non-examples orphan pages (`matryoshka-based-systems.md`, `tools/core-concepts.md`, `concepts/*`, `cookbook/index.md`, etc.) | unchanged, out of scope for this follow-up |
 
 **Next**: Stage 9 continues. DOC 21+ TBD.
 
@@ -4234,14 +4234,14 @@ works correctly. Stage 9 continues, DOC 20+ TBD.
 Follow-up to API 4: owner asked to regenerate `kitchen/docs` and confirm  
 `NodeHandle` was gone from it. API 4 only touched `src/`, `examples/`,  
 `stories/`, and `design/*.md` — the hand-authored mkdocs content pages under  
-`kitchen/docs/api/`, `kitchen/docs/patterns/`, `kitchen/docs/building-blocks/`  
+`kitchen/docs/api/`, `kitchen/docs/patterns/`, `kitchen/docs/tools/`  
 (split out of the API reference in an earlier DOC stage) and  
 `kitchen/mkdocs.yml`'s nav title still said `NodeHandle`. These pages are  
 site content, not no-overwrite-versioned design docs, so edited in place  
 rather than creating new versions.
 
 **Changes**:
-- `kitchen/docs/building-blocks/polynode.md`, `kitchen/docs/api/pool.md`,
+- `kitchen/docs/tools/polynode.md`, `kitchen/docs/api/pool.md`,
   `kitchen/docs/patterns/slot-and-polynode.md`, `kitchen/docs/api/mailbox.md`,  
   `kitchen/docs/api/tags-and-slots.md`, `kitchen/docs/api/polyhelper.md`,  
   `kitchen/docs/api/polynode.md`, `kitchen/mkdocs.yml` — `NodeHandle` →  
@@ -5061,7 +5061,7 @@ block, no residual fact needed folding back in.
 `matryoshka-api-reference-018.md` into mkdocs Reference pages under  
 `kitchen/docs/reference/`. Open items carried: storytelling-001/-003 duplicate H1,  
 `test-example-story.md` split, `video-transcoder-003.md` as second Concepts story,  
-further Building Blocks topics, Cookbook stub still unpopulated.
+further Tools topics, Cookbook stub still unpopulated.
 
 ---
 
@@ -5138,15 +5138,15 @@ No violations found — no further changes needed.
 
 ---
 
-### 2026-07-04 — DOC 8 (populate Building Blocks with the four core concepts)
+### 2026-07-04 — DOC 8 (populate Tools with the four core concepts)
 
 **Participants**: human (owner), Claude (agent).
 
-**Summary**: DOC 7 populated Building Blocks with its first topic (Observable by  
+**Summary**: DOC 7 populated Tools with its first topic (Observable by  
 human). Owner picked the four core concepts — PolyNode / Mailbox / Pool / Master —  
 as DOC 8's topic: the vocabulary the whole toolkit is built on. Unlike the Concepts  
 doc-site section (DOC 6), which stays domain-first and defers these terms to a  
-second page, Building Blocks is exactly where these four terms get defined directly.
+second page, Tools is exactly where these four terms get defined directly.
 
 **Key findings**:
 - `design/matryoshka-model-003.md`'s "Core Principles" section already states all
@@ -5156,11 +5156,11 @@ second page, Building Blocks is exactly where these four terms get defined direc
   same four-concept framing and supplied the Master-as-role wording.
 
 **Changes**:
-- `kitchen/docs/building-blocks/core-concepts.md` (new) — PolyNode, Mailbox, Pool,
+- `kitchen/docs/tools/core-concepts.md` (new) — PolyNode, Mailbox, Pool,
   Master sub-sections plus the layering diagram, pointing back at  
   `matryoshka-model-003.md` and the Observable by Human page.
-- `kitchen/docs/building-blocks/index.md` — added a link to the new page.
-- `kitchen/mkdocs.yml` — "Building Blocks" nav entry gains the new page.
+- `kitchen/docs/tools/index.md` — added a link to the new page.
+- `kitchen/mkdocs.yml` — "Tools" nav entry gains the new page.
 - `design/matryoshka-io-docs-plan-005.md` → `-006.md` — new "Stage DOC 8" session
   log + Stages update.
 - `design/context.md` — docs plan pointer → -006.
@@ -5171,21 +5171,21 @@ second page, Building Blocks is exactly where these four terms get defined direc
 | Check | Result |
 |---|---|
 | `bash kitchen/tools/build_site.sh` (output → `zig-out/docs_build_site.log`) | succeeded, no mkdocs warnings |
-| New page renders in `kitchen/output/building-blocks/` | confirmed |
+| New page renders in `kitchen/output/tools/` | confirmed |
 | Banned-word scan on new content | CLEAN |
 | `.zig` files touched | none — doc-only stage |
 
 **Next**: DOC 9+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
 duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
-Concepts story, further Building Blocks topics (Select loops, spawn/await, Master  
+Concepts story, further Tools topics (Select loops, spawn/await, Master  
 composition, pool patterns, API reference), Cookbook stub still unpopulated.
 
-### 2026-07-04 — DOC 7 (populate Building Blocks with one topic)
+### 2026-07-04 — DOC 7 (populate Tools with one topic)
 
 **Participants**: human (owner), Claude (agent).
 
 **Summary**: DOC 6 populated Concepts with the print-server story. Owner confirmed no  
-second story for now and picked Building Blocks as DOC 7's scope. Chose "Observable by  
+second story for now and picked Tools as DOC 7's scope. Chose "Observable by  
 human" as the first topic: it is rules-010.md's headline MUST rule, and patterns-008.md's  
 first pattern section is its concrete template — the two source docs already  
 cross-reference each other as companions.
@@ -5196,14 +5196,14 @@ cross-reference each other as companions.
 - API reference (matryoshka-api-reference-016.md) is lookup content, not narrative —
   deferred to a later DOC stage rather than folded into this one.
 - Select-loop and spawn/await pattern variants in patterns-008.md left for a later
-  Building Blocks topic — one topic at a time, per the established discipline.
+  Tools topic — one topic at a time, per the established discipline.
 
 **Changes**:
-- `kitchen/docs/building-blocks/observable-by-human.md` (new) — rule + pattern
+- `kitchen/docs/tools/observable-by-human.md` (new) — rule + pattern
   (Coordinator, Step, Init shapes), pointing at `031-select_graceful_shutdown.zig` and  
   `018-master_with_pool.zig` as working examples.
-- `kitchen/docs/building-blocks/index.md` — rewritten from stub to landing page.
-- `kitchen/mkdocs.yml` — "Building Blocks" nav entry expanded to Overview + new page.
+- `kitchen/docs/tools/index.md` — rewritten from stub to landing page.
+- `kitchen/mkdocs.yml` — "Tools" nav entry expanded to Overview + new page.
 - `design/matryoshka-io-docs-plan-004.md` → `-005.md` — new "Stage DOC 7" session log +
   Stages update.
 - `design/context.md` — docs plan pointer → -005.
@@ -5214,13 +5214,13 @@ cross-reference each other as companions.
 | Check | Result |
 |---|---|
 | `bash kitchen/tools/build_site.sh` (output → `zig-out/docs_build_site.log`) | succeeded, no mkdocs warnings |
-| New pages render in `kitchen/output/building-blocks/` | confirmed |
+| New pages render in `kitchen/output/tools/` | confirmed |
 | Banned-word scan on new content | CLEAN |
 | `.zig` files touched | none — doc-only stage |
 
 **Next**: DOC 8+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
 duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
-Concepts story, further Building Blocks topics (Select loops, spawn/await, Master  
+Concepts story, further Tools topics (Select loops, spawn/await, Master  
 composition, pool patterns, API reference), Cookbook stub still unpopulated.
 
 ### 2026-07-04 — DOC 6 (populate Concepts with a story, top-down)
@@ -5267,7 +5267,7 @@ the same system built with Matryoshka.
 
 **Next**: DOC 7+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
 duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
-Concepts story, Building Blocks/Cookbook stubs still unpopulated.
+Concepts story, Tools/Cookbook stubs still unpopulated.
 
 ---
 
@@ -5299,7 +5299,7 @@ stub placeholders for future sections — not a full site design in one stage.
 
 **Changes**:
 - `kitchen/docs/matryoshka-based-systems.md` (new) — overview/pitch page.
-- `kitchen/docs/concepts/index.md`, `kitchen/docs/building-blocks/index.md`,
+- `kitchen/docs/concepts/index.md`, `kitchen/docs/tools/index.md`,
   `kitchen/docs/cookbook/index.md` (new) — stub placeholders naming future source material.
 - `kitchen/mkdocs.yml` — nav: added the 4 new entries after Home, before Reference;
   existing entries untouched.
@@ -5322,7 +5322,7 @@ stub placeholders for future sections — not a full site design in one stage.
 
 **Next**: DOC 6+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
 duplicate H1, `test-example-story.md` three-topics-in-one-file split, breaking `design/`  
-content into narrow topic pages to fill the Concepts/Building Blocks/Cookbook stubs.
+content into narrow topic pages to fill the Concepts/Tools/Cookbook stubs.
 
 ---
 

@@ -1,6 +1,6 @@
 # Event source helpers
 
-New to the concept? See [Building Blocks — Pool](../../building-blocks/pool.md) first.
+New to the concept? See [Tools — Pool](../../tools/pool.md) first.
 
 Pool as event source for `Io.Select` and `Io.Future`.
 

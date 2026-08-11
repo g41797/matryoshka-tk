@@ -1,6 +1,6 @@
 # Defining user types — manual step by step
 
-New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md) first.
+New to the concepts? See [Tools — PolyNode](../../tools/polynode.md) first.
 
 Every PolyNode-based type needs four things:
 

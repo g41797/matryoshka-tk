@@ -14,7 +14,7 @@ API 8: `ItemList` — the toolkit's list type. `mailbox.receive_batch`, `mailbox
 > Function descriptions in this reference serve as the source for `///` Zig doc comments in the implementation.
 
 Matryoshka is a small infrastructure toolkit.  
-It provides three independent building blocks:
+It provides three independent tools:
 
 - **polynode** — type identity
 - **mailbox** — message passing
@@ -1621,7 +1621,7 @@ const Pipeline = struct { stages: [3]mailbox.MailboxHandle, ... };
 fn main(init: std.process.Init) !void { ... }
 ```
 
-Matryoshka provides the building blocks.  
+Matryoshka provides the tools.  
 The application assembles them.
 
 ### Io backend for Layer 4 tests and examples

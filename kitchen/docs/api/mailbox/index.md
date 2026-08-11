@@ -1,6 +1,6 @@
 # Mailbox
 
-New to the concept? See [Building Blocks — Mailbox](../../building-blocks/mailbox.md) first.
+New to the concept? See [Tools — Mailbox](../../tools/mailbox.md) first.
 
 Moves handles between Masters.
 

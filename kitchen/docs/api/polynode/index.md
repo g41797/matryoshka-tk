@@ -1,6 +1,6 @@
 # Troika - PolyNode, ItemHandle, Slot
 
-New to the concepts? See [Building Blocks — PolyNode](../../building-blocks/polynode.md)  
+New to the concepts? See [Tools — PolyNode](../../tools/polynode.md)  
 first.
 
 This page covers the actual Zig types and functions.

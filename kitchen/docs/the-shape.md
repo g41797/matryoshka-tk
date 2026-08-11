@@ -39,13 +39,13 @@ Same system. Same boxes. Three small blocks added.
 
 The three pains now have names.
 
-* [**PolyNode**](building-blocks/polynode.md) identifies the Request.
+* [**PolyNode**](tools/polynode.md) identifies the Request.
   No interface. No virtual dispatch.
 
-* [**Mailbox**](building-blocks/mailbox.md) moves the Request across
+* [**Mailbox**](tools/mailbox.md) moves the Request across
   roles. The right to free it travels with it.
 
-* [**Pool**](building-blocks/pool.md) leases the Request. Takes it
+* [**Pool**](tools/pool.md) leases the Request. Takes it
   back. Reuse, not allocate-and-discard.
 
 * The `std.Io` box has not moved.
@@ -54,4 +54,4 @@ The three pains now have names.
 
 This page: three pains, three blocks. Not how each one works.
 
-For that: read [Building Blocks](building-blocks/index.md) in detail.
+For that: read [Tools](tools/index.md) in detail.

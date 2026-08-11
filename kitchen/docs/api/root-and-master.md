@@ -20,7 +20,7 @@ Io creates tasks through `io.concurrent()`.
 Master is an Io task that follows the Matryoshka rules — the coordination boundary.  
 It holds and composes the lower layers.
 
-See [Building Blocks — Master](../building-blocks/master.md) for the conceptual framing.
+See [Tools — Master](../tools/master.md) for the conceptual framing.
 
 Applications build Masters from:
 

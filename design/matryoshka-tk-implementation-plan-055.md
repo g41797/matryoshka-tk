@@ -39,7 +39,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - API 4/4b — `NodeHandle` → `ItemHandle`, propagated to kitchen docs. DONE (167/167).
 - EXMPL 4/4b/4c — description as code, descriptive entry-point names, `drain` eliminated. DONE.
 - Stage 9 — Layer 4 infrastructure: pool, mailbox, select, group. DONE.
-- DOC 1-8 — tofu audit, kitchen doc infra, site skeleton, first Concepts story, Building Blocks topics. DONE.
+- DOC 1-8 — tofu audit, kitchen doc infra, site skeleton, first Concepts story, Tools topics. DONE.
 - DOC 9/10 — API reference re-partitioned then dependency-ordered. DONE (167/167).
 - DOC 11/12 — manifesto written, then de-smarted to plain language. DONE.
 - DOC 13/14 — unified pattern catalog, then 7 entries from the Odin-docs audit. DONE.

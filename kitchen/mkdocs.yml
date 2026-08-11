@@ -1,7 +1,7 @@
 site_name: Be Master of your systems
 docs_dir: ./docs
 site_dir: ../docs
-site_description: Building Blocks for Modular Monoliths in Zig
+site_description: Tools for Modular Monoliths in Zig
 repo_url: https://github.com/g41797/Matryoshka-Tk/
 repo_name: Matryoshka-Tk on GitHub
 
@@ -34,15 +34,13 @@ theme:
     - navigation.footer
 nav:
   - Home: index.md
-  - The laws of documentation: laws_of_docs.md
   - The Manifesto: manifesto.md
   - History:  history.md
-  - Building Blocks:
-      - Overview: building-blocks/index.md
-      - Item: building-blocks/polynode.md
-      - Mailbox: building-blocks/mailbox.md
-      - Pool: building-blocks/pool.md
-      - Master: building-blocks/master.md
+  - Tools:
+      - Item: tools/polynode.md
+      - Mailbox: tools/mailbox.md
+      - Pool: tools/pool.md
+      - Master: tools/master.md
   - API Reference:
       - PolyNode & ItemHandle & Slot:
           - Overview: api/polynode/index.md
@@ -177,8 +175,9 @@ nav:
           - "Master batch collect: receive_batch → put_all": examples/layer4/040-master_batch_collect_receive_to_pool.md
           - Master pre-shutdown collect: examples/layer4/041-master_multi_mailbox_collect.md
   - Addendums:
+      - The laws of documentation: addendums/laws_of_docs.md
       - Io 101: addendums/io-101.md
-      - Installation: addendums/installation.md
+      - Intrusion and Type erasure:  addendums/intrusion-type-erasure.md
       - Slot-Based Programming: addendums/slot-based-programming.md
       - Slot vs Ref-Counting: addendums/slot-vs-ref-counting.md
       - Tag vs Tagged Union: addendums/tag-vs-tagged-union.md
@@ -186,6 +185,7 @@ nav:
       - Handle-Based Programming: addendums/handle-based-programming.md
       - Why Boring: addendums/why-boring.md
       - Notation: addendums/matryoshka-tk-notation.md
+      - Installation: addendums/installation.md
 
 hooks:
   - hooks/count_lines.py

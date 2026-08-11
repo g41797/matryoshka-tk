@@ -1,7 +1,7 @@
 # Patterns & Cookbook
 
 Reusable code shapes for Matryoshka code. Reference material for people already building —  
-read [Building Blocks](../building-blocks/index.md) first if the four concepts are new to you.
+read [Tools](../tools/index.md) first if the four concepts are new to you.
 
 - [Slot & PolyNode Idioms](slot-and-polynode.md)
 - [Dispatch](dispatch.md)
