@@ -2,6 +2,82 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-12 — FLOW 1-1: the usual flow, written once
+
+Owner's finding: `src/mailbox.zig` and `src/pool.zig` open with the edges —  
+what a refused `send` leaves behind, who releases the list `close` gives  
+back, that `destroy` panics on an open container — and never say how to  
+create one and use it. Confirmed, and wider than `src/`. The api reference  
+had the same shape. `kitchen/docs/api/pool/index.md` had tried: a flow  
+diagram running `new()` → get/put → `close()`, missing `init` and `destroy`,  
+the same two gaps as the header. `kitchen/docs/api/mailbox/index.md` had no  
+such section at all.
+
+The specific holes, all four confirmed against `src/`:
+
+| hole | where it bites |
+|------|----------------|
+| `new(io, alloc)` named in neither `//!` header | the entry point is undocumented |
+| `destroy` appears only as "panics on an open mailbox" | met as a hazard before being met as a step |
+| `Pool.init(hooks)` absent from the pool header | `new` leaves `hooks == null`; a reader following the header builds an unusable pool |
+| close-before-destroy implied by a panic, never stated | the rule is inferred from a crash |
+
+Owner's vocabulary ruling, same day: `lifecycle` is AI-sh — the section is  
+**Usual flow**. `hands` and `holds` are out of new text. The MBOX 1 framing  
+already shipped, "The mailbox holds. It never touches.", stays; rewriting it  
+is a much wider edit and was not in scope.
+
+Method: one canonical text, then a controlled copy. The api reference goes  
+first because it is the declared source of truth, it is versioned, and  
+`check_design.sh` gates it — the master copy sits where drift is caught.  
+1-2 copies it outward and 1-3 adds the page showing both containers in one  
+application. 1-2 is deliberately blocked on the owner reading the canonical  
+wording, because everything it writes is a copy of it.
+
+Written in [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md):
+
+- `### Usual flow` under `## mailbox` — four steps, with a runnable sketch:
+  `mailbox.new(io, alloc)`, send/receive from any number of tasks, `close`  
+  returning an `ItemList` the caller must release, `mailbox.destroy`.
+- `### Usual flow` under `## pool` — five steps. The extra one is
+  `init(hooks)`, with the reason stated: the hooks are the pool, and without  
+  them the first `get` has no way to make an item.
+- Both state close-before-destroy as a rule rather than a panic, and both
+  state that `destroy` is not optional — the items and the container are  
+  separate allocations, so releasing the items still leaks the container.
+- Both close on the teardown contrast: a mailbox returns its items to the
+  caller, a pool passes them to `on_close`.
+- The pool flow diagram gained `init(hooks)` at the top and `destroy` at the
+  bottom. Its heading used the newly banned word and collided with the  
+  section above it; it is `Flow diagram` now.
+- The item-state section was named for two things it should not have been:
+  the banned word, and the scoped ban on "object" for an Item. It is  
+  `## Item states`.
+- One sentence reworded in `pool`: a closed pool *gives* items back.
+- The new ban applies to the whole file, not only the new sections, so nine
+  other live uses went with it: the pool's one-line summary and the layer  
+  combination lists now say "item reuse", the `no_create_destroy` note says  
+  the two infrastructure types create and destroy themselves, and the Slot  
+  diagram is `Slot states`. Changelog rows predating the ban stay.
+
+[rules-044.md](rules-044.md) Part 5 gained both words, each with its
+replacement set and, for the second, the explicit carve-out for the shipped  
+MBOX 1 framing.
+
+Doc-only. No `src/`, `tests/`, `examples/` or `stories/` change — the two  
+`src/` headers are 1-2's work, and only after the wording is approved.
+
+**Post-stage cleanup.** No scratch files left in the repo; the one working  
+file for this entry lives in the session scratchpad, outside the tree. Three  
+predecessors deleted with absolute paths: api-reference -036, rules -043,  
+plan -064. Inbound references repaired in 7, 13 and 3 files respectively.
+
+Verification. `check_design.sh` exit 0. `build_and_test_debug.sh` 191/191 —  
+run despite the stage being doc-only, because `tests/layer2_mailbox.zig`  
+carries two rules-file references that the rename touched.  
+`fix_md_hardbreaks.sh` on the changed markdown. Banned-word scan over every  
+file this stage changed, including the new text itself.
+
 ### 2026-08-12 — PROSE 1: the banned-word list applied to the whole repo
 
 **Participants**: human (owner), Claude (agent).

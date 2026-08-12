@@ -11,7 +11,7 @@
 # Exit 0 when clean, 1 on any hit. Read-only — reports, never edits.
 #
 # design/secondary/ is exempt from checks 1, 3 and 4: it is frozen by the
-# "Where a doc lives" rule in rules-043.md and its links are not repaired.
+# "Where a doc lives" rule in rules-044.md and its links are not repaired.
 # STATUS-LOG.md is exempt from the same three: it is an append-only historical
 # narrative and legitimately names docs that no longer exist.
 set -uo pipefail
@@ -70,7 +70,7 @@ while IFS= read -r f; do
           done
 
     # Backtick refs: `target.md`. Same resolution, same failure.
-    # NNN / 0NN are filename templates in rules-043.md, not references.
+    # NNN / 0NN are filename templates in rules-044.md, not references.
     grep -o '`[A-Za-z0-9._/-]\{3,\}\.md`' /tmp/.cd_body.$$ 2>/dev/null \
         | tr -d '`' \
         | grep -vE '(NNN|0NN)' \
@@ -126,13 +126,13 @@ echo "== 4. glossary conformance =="
 #
 # Four exemptions, all cases where the retired word is the subject rather than
 # the voice of the sentence:
-#   - "Status file ownership" — the name of a rule in rules-043.md.
+#   - "Status file ownership" — the name of a rule in rules-044.md.
 #   - change-log and ledger rows — "| 020 | ... dropped ownership framing ..."
 #     and "- DOC 18 — ... DONE" record that a pass happened. Rewriting them
 #     would falsify history.
 #   - "Change from" notes at the head of a versioned doc, same reason.
 #   - `022-ownership_transfer.zig` — an example filename, owner's decision.
-# rules-043.md and language-of-matryoshka.md carry the banned-word table
+# rules-044.md and language-of-matryoshka.md carry the banned-word table
 # itself and are exempt from the ownership check.
 # Beyond those, kitchen/tools/.check_design_allow holds literal substrings for the
 # handful of change-log rows that record a banned-word pass. See its header.

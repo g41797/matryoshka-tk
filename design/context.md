@@ -10,24 +10,24 @@
 One line per doc: the link, then what the doc is.
 
 Not a changelog. How a doc reached its current version is narrative, and  
-narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-043.md,  
+narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-044.md,  
 "Status file ownership".
 
 `design/` holds the current picture of Matryoshka. Snapshots, superseded  
 drafts, session logs and unstarted intentions live in  
-[secondary/](secondary/context.md) and are frozen. See rules-043.md,  
+[secondary/](secondary/context.md) and are frozen. See rules-044.md,  
 "Where a doc lives".
 
 ## State
 
 - [STATUS.md](STATUS.md) — where we are and what is next. Read in full each session.
-- [matryoshka-tk-implementation-plan-064.md](matryoshka-tk-implementation-plan-064.md) — forward-looking work + one-line ledger of completed stages.
+- [matryoshka-tk-implementation-plan-065.md](matryoshka-tk-implementation-plan-065.md) — forward-looking work + one-line ledger of completed stages.
 - [STATUS-LOG.md](STATUS-LOG.md) — session narrative, by date. Do not read by default.
 
 ## Sources of truth
 
-- [matryoshka-api-reference-036.md](matryoshka-api-reference-036.md) — signatures, types, error sets, cancel contract, PolyHelper, ItemList, invariants, thread-safety, complexity. Dependency-ordered; generic `std.Io` material sits in a trailing Addendums/Io 101 section.
-- [rules-043.md](rules-043.md) — coding, doc, and process rules. Includes the banned-word list.
+- [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md) — signatures, types, error sets, cancel contract, PolyHelper, ItemList, invariants, thread-safety, complexity. Dependency-ordered; generic `std.Io` material sits in a trailing Addendums/Io 101 section.
+- [rules-044.md](rules-044.md) — coding, doc, and process rules. Includes the banned-word list.
 - [patterns-027.md](patterns-027.md) — unified pattern and idiom catalog.
 - [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md) — Zig 0.16 constraints, the cancellation contract, and what comptime bought.
 

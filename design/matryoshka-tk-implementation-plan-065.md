@@ -1,6 +1,7 @@
 # Matryoshka Zig — Implementation Plan (064)
 
-Change from -063: the FLOW 1 stage, in full detail.
+Change from -064: FLOW 1-1 done. The canonical text is written; 1-2 and 1-3  
+wait on the owner reading it.
 
 **Reconstructed 2026-08-12.** Versions -056 through -059 were lost: the agent  
 deleted -059 while the command meant to create -060 had already failed, and  
@@ -83,7 +84,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - DISPATCH 2 — table dispatch documented; the handler belongs to the pair (receiver, tag), so the choice moves into data. `examples/helpers/TagTable.zig`, scenarios 113-117. No `src/` change. DONE 2026-07-31 (192/192). Working doc: [table-dispatch-002.md](table-dispatch-002.md).
 - CMPCT 1 — STATUS/plan/log/context de-duplicated; rules-038 "Status file ownership". DONE 2026-08-01 (192/192, doc-only).
 - CMPCT 2 — rules regrouped into rules-039.md: gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
-- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-043.md](rules-043.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
+- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-044.md](rules-044.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
 - DOC 23 — the two large docs split by audience. `matryoshka-tk-0.16-implementation-guide-001.md` retired: its Odin idiom mapping to [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md), its still-binding material to [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md), its walkthroughs of shipped code deleted with owner approval. [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md) drops the four sections `matryoshka-concepts-002.md` already owns and renames `MayItem` to `Slot`. New gate `kitchen/tools/check_design.sh`. DONE 2026-08-02 (192/192, doc-only).
 - WEB 1 — the landing page reaches the API docs. `kitchen/docs/index.md`: the `XYZ Lines Of Code` badge is now the link to `apidocs/`, opening in a new tab; the API button above it, hidden by CSS since it was added, is deleted. `kitchen/docs/stylesheets/extra.css`: the badge gains link styling and a per-scheme hover, and the button styling it made dead — `.hero-button`, both `-primary` and `-secondary` scheme pairs, the `display: none` rule, the unused `.hero-buttons` selector — is removed. DONE 2026-08-02 (doc-only, no `src/` change).
 
@@ -148,7 +149,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   every item `tests/layer2_mailbox.zig` sends is now allocated, closing its  
   own violation of Part 8's "never send a stack-allocated item" — 33 sites,  
   no rule exemption needed. No `src/` behaviour change.  
-  DONE 2026-08-12 (191/191). Rules: [rules-043.md](rules-043.md).
+  DONE 2026-08-12 (191/191). Rules: [rules-044.md](rules-044.md).
 
 - AUDIT 1 — the give-back audit made repeatable. MBOX 1 and INTR 7 did the
   same kind of work a month apart and shared no method, so the method is now  
@@ -250,9 +251,23 @@ material. The per-container flow belongs there; the picture of a mailbox and
 a pool working together in one application is narrative and belongs in  
 `tools/`. That is 1-3, and it reads better once the per-container text exists.
 
-### FLOW 1-1 — the canonical text
+### FLOW 1-1 — the canonical text. DONE 2026-08-12
 
-Owner approves the wording here before it is copied anywhere.
+Written into [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md):  
+`### Usual flow` under `## mailbox` (four steps) and under `## pool` (five,  
+the extra one being `init`). Both carry the close-before-destroy rule, the  
+statement that `destroy` is not optional because the container is an  
+allocation separate from its items, and the teardown contrast. The pool flow  
+diagram gained `init` at the top and `destroy` at the bottom, and its heading  
+no longer collides with the section above it. The item-state section is  
+`## Item states`. [rules-044.md](rules-044.md) Part 5 gained the two words.
+
+Doc-only, as planned. No `src/`, `tests/`, `examples/` or `stories/` change.
+
+**Owner reads the wording before 1-2 copies it.** The two sections in the api  
+reference are the whole deliverable; everything downstream is a copy of them.
+
+Original scope, for the record:
 
 - Add `### Usual flow` to the `## mailbox` section of the api reference:
   `new` → send/receive → `close` and release the returned list → `destroy`.

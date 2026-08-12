@@ -26,7 +26,7 @@ It provides three independent tools:
 
 - **polynode** — type identity
 - **mailbox** — message passing
-- **pool** — object lifecycle
+- **pool** — reuse of items, through hooks
 
 Applications combine these blocks to create:
 - coordinators
@@ -709,7 +709,7 @@ const no_create_destroy = void{};
 If `T` declares this field, `PolyHelper(T)` generates only: `TAG`, `isIt`, `toPoly`, `fromPoly`, `mustFromPoly`, `fromSlot`, `mustFromSlot`, `moveFromSlot`, `init`.
 
 Infrastructure types (`_Mailbox`, `_Pool`) declare `no_create_destroy`.  
-They manage their own lifecycle.  
+They create and destroy themselves.  
 Generating `create`/`destroy` for them would be wrong.
 
 ```text
@@ -781,6 +781,43 @@ var slot: polynode.Slot = &event.poly;
 try inbox.send(&slot);              // slot is now null
 try inbox.receive(&slot, null);     // slot is now non-null
 ```
+
+### Usual flow
+
+A mailbox takes two steps to set up and two to take down.
+
+```zig
+const mbx = try mailbox.new(io, alloc);   // 1. create
+defer mailbox.destroy(mbx, alloc);        // 4. free the mailbox itself
+
+// 2. use it: send and receive, from any number of tasks
+try mbx.send(&slot);
+try mbx.receive(&slot, null);
+
+// 3. close it, and release what comes back
+var left = mbx.close();
+items.freeList(&left, alloc);
+```
+
+1. **Create.** `mailbox.new(io, alloc)` returns a `*Mbox`. It needs the `Io`
+   because receivers block on it.
+2. **Use.** Any task may send, any task may receive. The mailbox is the only
+   shared thing; the items passing through it are never shared.
+3. **Close.** `close` returns an `ItemList` of everything still queued,
+   regular and OOB together. That list is yours. Release it — free the items,  
+   or put them back into a pool. After `close` every other method returns  
+   `error.Closed` and the mailbox stays a valid object.
+4. **Destroy.** `mailbox.destroy(mbx, alloc)` frees the mailbox itself.
+
+Close before destroy, always. `destroy` makes closedness a precondition and  
+panics on an open mailbox.
+
+`destroy` is not optional. The items and the mailbox are two separate  
+allocations: releasing the list from `close` frees the items, and skipping  
+`destroy` still leaks the mailbox.
+
+Teardown is where `mailbox` and `pool` differ most. A mailbox returns its  
+items to the caller. A pool passes them to `on_close`.
 
 ### send — the handle moves out
 
@@ -1028,7 +1065,7 @@ receive → O2:             [R1, R2, R3]            oob=0
 
 ## pool
 
-Lifecycle management with user supplied hooks.
+Reuse of items, decided by user supplied hooks.
 
 Pool is not storage.
 
@@ -1040,7 +1077,7 @@ The pool touches items — through your hooks. It creates, resets, keeps or
 destroys, but every one of those is a hook doing it, never the pool deciding.  
 This is the difference from `mailbox`, which never touches an item at all.
 
-A closed pool hands items back:
+A closed pool gives items back:
 
 - `put` is a no-op and leaves the slot unchanged.
 - `put_all` stops at the first refusal and leaves the rest in the list.
@@ -1064,11 +1101,52 @@ try pl.get(EVENT_TAG, .available_or_new, &slot);   // slot is now non-null
 pl.put(&slot);                                      // slot is now null (if kept)
 ```
 
-### Lifecycle flow
+### Usual flow
+
+A pool takes three steps to set up and two to take down. The extra step is  
+`init` — a pool without hooks cannot create anything.
+
+```zig
+const pl = try pool.new(io, alloc);   // 1. create
+defer pool.destroy(pl, alloc);        // 5. free the pool itself
+try pl.init(my_hooks);                // 2. register hooks
+
+// 3. use it
+try pl.get(EVENT_TAG, .available_or_new, &slot);
+pl.put(&slot);
+
+pl.close();                           // 4. on_close releases what is left
+```
+
+1. **Create.** `pool.new(io, alloc)` returns a `*Pool` with no hooks. Nothing
+   works yet.
+2. **Register hooks.** `init(hooks)` once, right after `new`. The hooks are
+   the pool: `on_get` creates, `on_put` decides whether an item is kept,  
+   `on_close` releases. Skip this and the first `get` has no way to make an  
+   item.
+3. **Use.** `get` asks whether a reusable item is available right now; `put`
+   offers one back. Check the slot after `put` — a refusal leaves it  
+   non-null and you still hold the item.
+4. **Close.** `close` collects everything the pool holds and passes the list
+   to `on_close`. Nothing comes back to you. After `close`, `put` is a no-op  
+   that leaves your slot unchanged.
+5. **Destroy.** `pool.destroy(pl, alloc)` frees the pool itself.
+
+Close before destroy, always. `destroy` panics on an open pool.
+
+`destroy` is not optional. `on_close` releases the items; the pool struct is  
+a separate allocation and only `destroy` frees it.
+
+Teardown is where `pool` and `mailbox` differ most. A pool passes its items  
+to `on_close`. A mailbox returns them to the caller.
+
+### Flow diagram
 
 ```text
 new()
   ↓
+pool with no hooks
+  ↓ init(hooks)
 EMPTY pool
 
 get() [available_or_new, pool empty]     get() [available_or_new, pool has items]
@@ -1086,6 +1164,8 @@ IN_FLIGHT (with caller)
 close()
   ↓ on_close receives full list of HELD items → caller frees each
 FREE
+  ↓ destroy(pl, alloc)
+the pool itself is freed
 ```
 
 ### Types
@@ -1453,10 +1533,10 @@ if (slot.* == null) return;
 
 This makes defer-before-acquisition safe.
 
-### Slot lifecycle
+### Slot states
 
 ```text
-Slot lifecycle
+Slot states
 
   null ──── acquire ────► non-null
     ▲                        │
@@ -1650,7 +1730,7 @@ Applications build Masters from:
 | What | Where it comes from |
 |------|-------------------|
 | Transport | `*Mbox` — one or more mailboxes |
-| Lifecycle | `*Pool` + `Pool.Hooks` — handle reuse and policy |
+| Item reuse | `*Pool` + `Pool.Hooks` — reuse and policy |
 | Memory | `std.mem.Allocator` — who allocates and frees |
 | Scheduling | `std.Io` — passed to `mailbox.new` and `pool.new` |
 | Worker coordination | `io.concurrent()` → `Future`, or `Io.Group` |
@@ -1662,9 +1742,9 @@ Both mailbox and pool are optional. Valid combinations:
 ```text
 PolyNode only                        type identity without infrastructure
 PolyNode + Mailbox                   type identity + message passing
-PolyNode + Pool                      type identity + object lifecycle
-PolyNode + Pool + Io.Select          lifecycle + event sources (no mailbox)
-PolyNode + Mailbox + Pool            transport + lifecycle
+PolyNode + Pool                      type identity + item reuse
+PolyNode + Pool + Io.Select          item reuse + event sources (no mailbox)
+PolyNode + Mailbox + Pool            transport + item reuse
 PolyNode + Mailbox + Pool + Io.Select   full stack
 ```
 
@@ -1772,7 +1852,7 @@ The signature is the single source of truth.
 
 ---
 
-## Object lifecycle
+## Item states
 
 ```
 FREE       — allocated, not in any system
@@ -1901,8 +1981,8 @@ Dependencies:
 
 Valid combinations:
 - Layer 1 only — type identity without infrastructure
-- Layer 1 + Layer 2 — type identity + message passing, no lifecycle
-- Layer 1 + Layer 3 — type identity + object lifecycle, no message passing
+- Layer 1 + Layer 2 — type identity + message passing, no item reuse
+- Layer 1 + Layer 3 — type identity + item reuse, no message passing
 - Layer 1 + Layer 2 + Layer 3 + Io — full stack (Master)
 
 ---
@@ -1911,6 +1991,7 @@ Valid combinations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 037 | 2026-08-12 | FLOW 1-1. The canonical `Usual flow` text. `mailbox` gains a four-step account — create, use, close and release the returned list, destroy — and `pool` a five-step one, with `init(hooks)` as the step that was documented nowhere. Both state that close comes before destroy always, that `destroy` is not optional because the container is an allocation separate from the items, and that teardown is the sharpest difference between the two: a mailbox returns items to the caller, a pool passes them to `on_close`. The pool flow diagram gains `init` at the top and `destroy` at the bottom; its heading, which used the same word as the section below, is now `Flow diagram`. The section describing item states was named for two things it should not have been named for and is now `Item states`. One reworded sentence in `pool`: a closed pool *gives* items back. The new ban applies to the whole file, so nine other live uses went with it — the pool's one-line summary, the layer-combination table and both combination lists now say "item reuse", the `no_create_destroy` note says the two types create and destroy themselves, and the Slot diagram is `Slot states`. Older changelog rows are left as they are. |
 | 036 | 2026-08-12 | PROSE 1 banned-word pass. One live hit: the `@fieldParentPtr` walkthrough diagram said `dll_node_ptr` where the surrounding text and code already said `list_node_ptr`. `dll` is banned — it clashes with Windows DLL. Changelog rows that name a banned word to record its earlier removal are left as they are; rewriting them would erase the record. |
 | 035 | 2026-08-12 | MBOX 1. `mailbox` section opens with "The mailbox holds. It never touches." and the four edges that hand an item back to a caller; `close` documents the caller's release duty and bans `_ = mbx.close()`; `send`/`send_oob` document that `error.Closed` leaves the slot unchanged; `receive_batch` gets the same release duty. `pool` section gains the mirror statements: the pool touches items through hooks, a closed pool hands items back via `put`/`put_all`, and `close` releases through `on_close` rather than through the caller. Removed 15 documented asserts of the form `mailbox.is_it_you(mbx.*.tag)` / `pool.is_it_you(pl.*.tag)` — no such assert exists in `src/`, and neither struct has a `.tag` field. |
 | 027 | 2026-07-28 | API 6. Renamed `identifyNodeAs`→`fromNode`, `mustIdentifyNodeAs`→`mustFromNode`, `identifySlotAs`→`fromSlot`, `mustIdentifySlotAs`→`mustFromSlot` — the old names described the implementation, not the caller's action. Hard rename, no aliases. Added `moveFromSlot(slot: *Slot) ?*T`: checks the tag, returns the item, clears the Slot on success, leaves it unchanged on failure, asserts the item is not linked. No `must` variant — it mutates its argument. PolyHelper section gains the inspection-vs-extraction split; `no_create_destroy` lists and diagram updated. |

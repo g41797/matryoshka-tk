@@ -10,11 +10,11 @@
 - Plan approval is NOT code change approval.
 - Architectural changes need explicit owner approval.
 - Never overwrite any doc. New version with incremented suffix (-001, -002, etc.). Update cross-references. Applies to all docs, no exceptions.
-- Where a doc lives. `design/` is the current picture of Matryoshka, present tense. Snapshots, superseded drafts, session logs and unstarted intentions go to `design/secondary/` and are frozen. `kitchen/defer/` is frozen too — deferred material, absent from mkdocs nav, its snippets predate API 12. Every file is listed in `context.md` or `secondary/context.md`. Full entry in rules-043.md.
+- Where a doc lives. `design/` is the current picture of Matryoshka, present tense. Snapshots, superseded drafts, session logs and unstarted intentions go to `design/secondary/` and are frozen. `kitchen/defer/` is frozen too — deferred material, absent from mkdocs nav, its snippets predate API 12. Every file is listed in `context.md` or `secondary/context.md`. Full entry in rules-044.md.
 - Post-stage cleanup: after all kitchen scripts pass, revise all code for obsolete parts, wrong comments, repeated code extractable to reusable sources. Fix, re-run all three scripts. Session log must have a "Post-stage cleanup" row — its absence means the rule was skipped.
 - Plan versioning: after each completed stage, create new plan version. Collapse done stages to one-line summaries. Update context.md and STATUS.md to point to new version.
 - Tests before examples: examples cannot start until all tests pass all kitchen scripts. Stage N.a = impl + tests, Stage N.b = examples. No mixing.
-- Status file ownership. A fact lives in exactly one file; the others get a pointer, not a copy. STATUS.md = current state only, no stage narrative. Plan = forward-looking work + one ledger line per completed stage. STATUS-LOG.md = the narrative. context.md = one short line per doc, saying what it is. Full entry in rules-043.md.
+- Status file ownership. A fact lives in exactly one file; the others get a pointer, not a copy. STATUS.md = current state only, no stage narrative. Plan = forward-looking work + one ledger line per completed stage. STATUS-LOG.md = the narrative. context.md = one short line per doc, saying what it is. Full entry in rules-044.md.
 
 ## Constraints for Next Agent (MUST)
 - Git disabled. Do NOT run any git commands.
@@ -29,7 +29,7 @@
 ## Sources of Truth
 - Doc index: context.md — one line per doc. Start here.
 - Concepts and thinking model: matryoshka-concepts-002.md
-- API: matryoshka-api-reference-036.md
+- API: matryoshka-api-reference-037.md
 - Zig details: matryoshka-zig-0.16-notes-003.md
 - Architecture: matryoshka-architecture-foundation-4-006.md
 - Vocabulary: language-of-matryoshka.md
@@ -38,8 +38,8 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-064.md (slim, state-only)
-- Rules: rules-043.md
+- Plan: matryoshka-tk-implementation-plan-065.md (slim, state-only)
+- Rules: rules-044.md
 - Receive router design note: receive-router-002.md
 - Table dispatch design note: table-dispatch-002.md
 - API 12 (real pointers for Mbox/Pool) design note: api-12-real-pointers-005.md
@@ -48,7 +48,7 @@
 - Diagram style: matryoshka-Tk-diagram-style-guide-003.md
 - Session narrative: STATUS-LOG.md
 - Frozen material: secondary/context.md — snapshots, drafts, session logs, unstarted intentions. Includes the Odin idiom mapping and the pointer-switch compiler bug.
-- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-043.md
+- Markdown hard-break tooling: kitchen/tools/fix_md_hardbreaks.sh, rule documented in rules-044.md
 - design/ gate: kitchen/tools/check_design.sh — dead links in both syntaxes, orphans, forward-tense prose, glossary conformance. Run it after any stage that touches design/.
 - Give-back audit: audit-recipe-001.md + kitchen/tools/audit_edges.sh. Reports, not a gate. Run it before auditing a layer.
 
@@ -125,19 +125,27 @@ The give-back audit is repeatable: `kitchen/tools/audit_edges.sh` for the
 inventory, audit-recipe-001.md for the method.
 
 The banned-word list is enforced across every live file, not only changed  
-ones. Part 5 of rules-043.md carries the scan scope: `STATUS-LOG.md`,  
+ones. Part 5 of rules-044.md carries the scan scope: `STATUS-LOG.md`,  
 `design/secondary/` and `kitchen/defer/` are out, and a new changelog row may  
 not name the word it removed — `check_design.sh` rejects it.
 
-Last completed stage: PROSE 1, 2026-08-12.  
-Current plan: matryoshka-tk-implementation-plan-064.md.
+The usual flow of both containers is written down. `Usual flow` in the api  
+reference is the canonical text: create, use, close, destroy for a mailbox,  
+and the same with `init(hooks)` for a pool. Close before destroy, always;  
+`destroy` is not optional. `lifecycle` and `hands` are banned words.
+
+Last completed stage: FLOW 1-1, 2026-08-12.  
+Current plan: matryoshka-tk-implementation-plan-065.md.
 
 ## Next
 
-**FLOW 1** — the usual flow of a mailbox and a pool. Plan approved, not yet  
-started. Full detail in the plan; 1-1 writes the canonical text in the api  
-reference, 1-2 copies it to `src/` and the kitchen pages, 1-3 adds the page  
-showing both containers in one application.
+**FLOW 1-2** — copy the canonical text outward: the two `src/` `//!` headers,  
+the mailbox and pool index pages under `kitchen/docs/api/`, and both  
+`kitchen/docs/tools/` pages. Blocked  
+until the owner has read the two `Usual flow` sections in  
+matryoshka-api-reference-037.md; everything 1-2 writes is a copy of them.  
+**FLOW 1-3** — the page showing a mailbox and a pool in one application —  
+follows, and is scoped after 1-2.
 
 The list below is the remaining candidate pool, owner's call on order.
 

@@ -1,8 +1,8 @@
-# Matryoshka Zig — Rules (043)
+# Matryoshka Zig — Rules (044)
 
 All coding, doc, and process rules for the project.  
-Change from -041: MBOX 1 — the release rules in Part 8 strengthened, and one  
-rule added in Part 4, documented asserts must exist.  
+Change from -043: FLOW 1-1 — two words added to Part 5, and the name of the  
+section that describes how a container is created and taken down fixed.  
 Which stage introduced which rule is Part 10.
 
 Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the concepts and the thinking model.  
@@ -636,6 +636,14 @@ Words.
   reason, or state who does it.
 - `hatch`, including "escape hatch" — a metaphor where a plain description
   belongs. Name the field: "the `_list` field", "reaching through `_list`".
+- `lifecycle` — AI-sh, and it says nothing a reader can act on. When the
+  subject is how a mailbox or a pool is created, used and taken down, the  
+  section is called **Usual flow**. When the subject is what state an item is  
+  in, say **item states**.
+- `hands`, as in "a closed pool hands items back" — use `gives back`,
+  `returns`, `passes to`, or name the receiver. `holds` is discouraged in new  
+  text for the same reason; prefer `keeps` or `is left with`. The MBOX 1  
+  framing "The mailbox holds. It never touches." predates this and stays.
 
 AI-sh word list.
 - robust, seamlessly, comprehensive, leverage, efficient, powerful, facilitate,
@@ -1025,6 +1033,11 @@ the header. The full account of each stage is in
 - rules-041 (DOC 23) — the design gate. `kitchen/tools/check_design.sh` must
   exit 0 before a stage that touched `design/` is done. It is what makes the  
   "where a doc lives" rule enforceable rather than remembered.
+- rules-044 (FLOW 1-1) — two words added to Part 5, both from the owner's
+  ruling of 2026-08-12. The first named the create/use/close/destroy section  
+  in a way that told the reader nothing; that section is Usual flow  
+  everywhere now, and the item-state material keeps its own name. The second  
+  is the verb two shipped sentences used for giving an item back.
 - rules-043 (PROSE 1) — the full banned-word pass. `kitchen/defer/` declared
   frozen beside `design/secondary/`, and Part 5 gained a scan scope so the  
   next run does not re-derive which files are off-limits. The scope is what  
