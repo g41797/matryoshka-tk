@@ -3,7 +3,7 @@
 
 //! Backpressure pool.
 //!
-//! - 4 threads concurrently pool.get and pool.put, 8 iterations each.
+//! - 4 threads concurrently pl.get and pl.put, 8 iterations each.
 //! - on_put caps the pool at 2 items, destroys anything past the cap.
 //! - After all threads join, empty the pool and count what remains.
 //! - Verify the remaining count never exceeds the cap.
@@ -11,10 +11,10 @@
 //!
 //! ```
 //!  CappedPool (cap=2)
-//!       │ pool.get (available_or_new) — 4 threads concurrently
+//!       │ pl.get (available_or_new) — 4 threads concurrently
 //!       ▼
 //!  worker thread (processes)
-//!       │ pool.put (defer) — on_put destroys excess above cap
+//!       │ pl.put (defer) — on_put destroys excess above cap
 //!       ▼
 //!  CappedPool (≤ cap items retained)
 //! ```
@@ -25,18 +25,18 @@ pub fn backpressure_pool(allocator: std.mem.Allocator, io: std.Io) !void {
     var pool_ctx: hooks.CappedPoolHooks = .{ .alloc = allocator, .cap = cap, .io = io };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
 
-    const ph = try pool.new(io, allocator);
+    const pl = try pool.new(io, allocator);
     defer {
-        pool.close(ph);
-        pool.destroy(ph, allocator);
+        pl.close();
+        pool.destroy(pl, allocator);
     }
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
 
     var workers: [thread_count]WorkerCtx = undefined;
     var futures: [thread_count]std.Io.Future(void) = undefined;
 
     for (&workers, &futures) |*wctx, *f| {
-        wctx.* = .{ .ph = ph, .alloc = allocator };
+        wctx.* = .{ .pl = pl, .alloc = allocator };
         f.* = try io.concurrent(workerFn, .{wctx});
     }
 
@@ -47,7 +47,7 @@ pub fn backpressure_pool(allocator: std.mem.Allocator, io: std.Io) !void {
     while (true) {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
-        pool.get(ph, items.Event.EventPolyHelper.TAG, .available_only, &slot) catch break;
+        pl.get(items.Event.EventPolyHelper.TAG, .available_only, &slot) catch break;
         in_pool += 1;
     }
 
@@ -61,7 +61,7 @@ const thread_count = 4;
 const iterations = 8;
 
 const WorkerCtx = struct {
-    ph: PoolHandle,
+    pl: *Pool,
     alloc: std.mem.Allocator,
 };
 
@@ -69,8 +69,8 @@ fn workerFn(ctx: *WorkerCtx) void {
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         var slot: Slot = null;
-        defer pool.put(ctx.ph, &slot);
-        pool.get(ctx.ph, items.Event.EventPolyHelper.TAG, .available_or_new, &slot) catch return;
+        defer ctx.pl.put(&slot);
+        ctx.pl.get(items.Event.EventPolyHelper.TAG, .available_or_new, &slot) catch return;
         std.log.debug("worker: got item", .{});
     }
 }
@@ -81,6 +81,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const PoolHandle = pool.PoolHandle;

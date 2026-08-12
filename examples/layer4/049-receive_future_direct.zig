@@ -4,44 +4,44 @@
 //! receive_future awaited directly.
 //!
 //! - Send one Event into the mailbox.
-//! - mailbox.receive_future returns an Io.Future(ReceiveResult), no Select needed.
+//! - mbx.receive_future returns an Io.Future(Mbox.Result), no Select needed.
 //! - fut.await blocks until the item arrives, then it's freed.
 //!
 //!
 //! ```
 //!  master ──EventPolyHelper.create──► slot
-//!          ──mailbox.send──► mailbox
+//!          ──mbx.send──► mailbox
 //!          │
-//!  receive_future ──► Future(ReceiveResult)
-//!  fut.await ──► ReceiveResult .item ──► slot (master owns)
+//!  receive_future ──► Future(Mbox.Result)
+//!  fut.await ──► Mbox.Result .item ──► slot (master owns)
 //!          │
 //!  freeSlot
 //! ```
 //!
 
 pub fn receive_future_awaited_directly(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    try sendItem(mbh, allocator);
-    try receiveAndVerify(mbh, allocator, io);
+    try sendItem(mbx, allocator);
+    try receiveAndVerify(mbx, allocator, io);
 }
 
-fn sendItem(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendItem(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(alloc, &slot);
     try items.Event.EventPolyHelper.create(alloc, &slot);
     items.Event.EventPolyHelper.mustFromSlot(&slot).code = 42;
-    try mailbox.send(mbh, &slot);
+    try mbx.send(&slot);
 }
 
-fn receiveAndVerify(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io) !void {
-    var fut: std.Io.Future(mailbox.ReceiveResult) = try mailbox.receive_future(mbh, null);
-    const result: mailbox.ReceiveResult = fut.await(io);
+fn receiveAndVerify(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io) !void {
+    var fut: std.Io.Future(Mbox.Result) = try mbx.receive_future(null);
+    const result: Mbox.Result = fut.await(io);
 
     switch (result) {
         .item => |handle| {
@@ -60,6 +60,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

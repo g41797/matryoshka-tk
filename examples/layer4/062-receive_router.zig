@@ -14,7 +14,7 @@
 //!
 //! ```
 //!  pool (P items, pre-filled)
-//!  │ get_wait ──► producer fills ──► mailbox.send
+//!  │ get_wait ──► producer fills ──► mbx.send
 //!  ▼
 //!  mailbox
 //!  │ receiveResult
@@ -23,12 +23,12 @@
 //!         │ loops. one registration covers every item.
 //!         └──► returns .closed ──► Select wraps it ──► Select queue
 //!  │
-//!  Master: .inbox .item ──► read code ──► pool.put ──► pool
+//!  Master: .inbox .item ──► read code ──► pl.put ──► pool
 //!                       ──► no re-registration
 //!          .timer       ──► re-register the timer
 //!          .inbox .closed ──► leave the loop
 //!  │
-//!  shutdown: sel.cancel walk ──► pool.close ──► mailbox.close
+//!  shutdown: sel.cancel walk ──► pl.close ──► mbx.close
 //! ```
 //!
 //!  The timer branch re-registers. The router branch does not. That is the
@@ -62,7 +62,7 @@ const TIMER_NS: i96 = 100_000;
 const PRODUCE_NS: i96 = 300_000;
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
+    inbox: Mbox.Result,
     timer: void,
 };
 
@@ -75,21 +75,21 @@ const MasterEvent = union(enum) {
 /// throws it away if the queue is closed by then. Only the reason for
 /// stopping rides out on the return.
 fn receive_router(
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     timeout_ns: ?u64,
     sel: *std.Io.Select(MasterEvent),
-    ph: PoolHandle,
+    pl: *Pool,
     alloc: std.mem.Allocator,
-) mailbox.ReceiveResult {
+) Mbox.Result {
     while (true) {
-        const result: mailbox.ReceiveResult = mailbox.receiveResult(mbh, timeout_ns);
+        const result: Mbox.Result = mailbox.receiveResult(mbx, timeout_ns);
 
         var held: Slot = switch (result) {
             .item => |handle| handle,
             else => null,
         };
         defer {
-            pool.put(ph, &held); // back to the pool
+            pl.put(&held); // back to the pool
             items.freeSlot(&held, alloc); // pool closed — nowhere to put it back
         }
 
@@ -109,8 +109,8 @@ fn sleepFn(sleep_t: std.Io.Timeout, io: std.Io) void {
 }
 
 const ProducerCtx = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     io: std.Io,
 };
 
@@ -118,10 +118,10 @@ fn producerFn(ctx: *ProducerCtx) void {
     for (0..M) |i| {
         sleepFn(.{ .duration = .{ .raw = .{ .nanoseconds = PRODUCE_NS }, .clock = .real } }, ctx.io);
         var slot: Slot = null;
-        pool.get_wait(ctx.ph, items.Event.EventPolyHelper.TAG, &slot, null) catch return;
+        ctx.pl.get_wait(items.Event.EventPolyHelper.TAG, &slot, null) catch return;
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        mailbox.send(ctx.mbh, &slot) catch {
-            pool.put(ctx.ph, &slot);
+        ctx.mbx.send(&slot) catch {
+            ctx.pl.put(&slot);
             return;
         };
     }
@@ -150,23 +150,23 @@ const RouterMaster = struct {
     fn seedPool(self: *RouterMaster) !void {
         for (0..P) |_| {
             var slot: Slot = null;
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            pool.put(self.ph, &slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
+            self.pl.put(&slot);
         }
     }
 
     fn startProducer(self: *RouterMaster) !void {
-        self.producer_ctx = .{ .mbh = self.mbh, .ph = self.ph, .io = self.io };
+        self.producer_ctx = .{ .mbx = self.mbx, .pl = self.pl, .io = self.io };
         self.producer_fut = try self.io.concurrent(producerFn, .{&self.producer_ctx});
     }
 
     fn setupSelect(self: *RouterMaster) !void {
         self.sel = std.Io.Select(MasterEvent).init(self.io, &self.buf);
         try self.sel.concurrent(.inbox, receive_router, .{
-            self.mbh,
+            self.mbx,
             null,
             &self.sel,
-            self.ph,
+            self.pl,
             self.allocator,
         });
         self.registrations += 1;
@@ -195,7 +195,7 @@ const RouterMaster = struct {
     /// Reads the item, then puts it back. The pool slot frees the producer.
     fn acceptItem(self: *RouterMaster, handle: ItemHandle) void {
         var slot: Slot = handle;
-        defer pool.put(self.ph, &slot);
+        defer self.pl.put(&slot);
         const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         self.inbox_count += 1;
         std.log.info("master: item {d} of {d}, code={d}", .{ self.inbox_count, M, ev.code });
@@ -203,8 +203,8 @@ const RouterMaster = struct {
 
     /// Ends the stream. The router sees `.closed` and finishes.
     fn closeMailbox(self: *RouterMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
-        pool.put_all(self.ph, &rem);
+        var rem: polynode.ItemList = self.mbx.close();
+        self.pl.put_all(&rem);
         items.freeList(&rem, self.allocator);
     }
 
@@ -218,7 +218,7 @@ const RouterMaster = struct {
                 .inbox => |result| switch (result) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        pool.put(self.ph, &slot);
+                        self.pl.put(&slot);
                         items.freeSlot(&slot, self.allocator);
                     },
                     .closed, .canceled, .timeout, .wakeup => {},
@@ -231,8 +231,8 @@ const RouterMaster = struct {
 
     allocator: std.mem.Allocator,
     io: std.Io,
-    ph: PoolHandle,
-    mbh: MailboxHandle,
+    pl: *Pool,
+    mbx: *Mbox,
     pool_ctx: hooks.AlwaysCreateHooks,
     tags: [1]*const anyopaque,
     buf: [N]MasterEvent,
@@ -253,22 +253,22 @@ const RouterMaster = struct {
         self.registrations = 0;
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.ph = try pool.new(io, allocator);
+        self.pl = try pool.new(io, allocator);
         errdefer {
-            pool.close(self.ph);
-            pool.destroy(self.ph, allocator);
+            self.pl.close();
+            pool.destroy(self.pl, allocator);
         }
-        try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
-        self.mbh = try mailbox.new(io, allocator);
+        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
+        self.mbx = try mailbox.new(io, allocator);
         return self;
     }
 
     fn destroy(self: *RouterMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
-        pool.close(self.ph);
-        pool.destroy(self.ph, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
+        self.pl.close();
+        pool.destroy(self.pl, self.allocator);
         self.allocator.destroy(self);
     }
 };
@@ -279,9 +279,9 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
 const ItemHandle = polynode.ItemHandle;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

@@ -10,7 +10,7 @@
 //!
 //!
 //! ```
-//!  mbh1 (empty)    mbh2 (empty)
+//!  mbx1 (empty)    mbx2 (empty)
 //!  │ receiveResult  │ receiveResult
 //!  └────────┬───────┘
 //!           ▼
@@ -20,26 +20,26 @@
 //!             .inbox1 .canceled ──► log
 //!             .inbox2 .canceled ──► log
 //!  │
-//!  mailbox.close(mbh1) ──► freeList
-//!  mailbox.close(mbh2) ──► freeList
+//!  mbx1.close() ──► freeList
+//!  mbx2.close() ──► freeList
 //! ```
 //!
 
 pub fn timer_cancel_close_walk_remaining(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh1: MailboxHandle = try mailbox.new(io, allocator);
-    const mbh2: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx1: *Mbox = try mailbox.new(io, allocator);
+    const mbx2: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem1: polynode.ItemList = mailbox.close(mbh1);
+        var rem1: polynode.ItemList = mbx1.close();
         items.freeList(&rem1, allocator);
-        mailbox.destroy(mbh1, allocator);
-        var rem2: polynode.ItemList = mailbox.close(mbh2);
+        mailbox.destroy(mbx1, allocator);
+        var rem2: polynode.ItemList = mbx2.close();
         items.freeList(&rem2, allocator);
-        mailbox.destroy(mbh2, allocator);
+        mailbox.destroy(mbx2, allocator);
     }
 
     var buf: [8]MasterEvent = undefined;
     var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
-    var ctx: Ctx = .{ .mbh1 = mbh1, .mbh2 = mbh2, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx1 = mbx1, .mbx2 = mbx2, .alloc = allocator, .io = io };
     try ctx.setupSelect(&sel);
     try Ctx.awaitTimerFirst(&sel);
     ctx.clearCanceled(&sel);
@@ -51,8 +51,8 @@ pub fn timer_cancel_close_walk_remaining(allocator: std.mem.Allocator, io: std.I
 const TIMER_NS: i96 = 8_000_000; // 8 ms
 
 const MasterEvent = union(enum) {
-    inbox1: mailbox.ReceiveResult,
-    inbox2: mailbox.ReceiveResult,
+    inbox1: Mbox.Result,
+    inbox2: Mbox.Result,
     timer: void,
 };
 
@@ -61,8 +61,8 @@ fn sleepFn(sleep_t: std.Io.Timeout, io: std.Io) void {
 }
 
 const Ctx = struct {
-    mbh1: MailboxHandle,
-    mbh2: MailboxHandle,
+    mbx1: *Mbox,
+    mbx2: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
     canceled1: bool = false,
@@ -72,8 +72,8 @@ const Ctx = struct {
         const sleep_t: std.Io.Timeout = .{
             .duration = .{ .raw = .{ .nanoseconds = TIMER_NS }, .clock = .real },
         };
-        try sel.concurrent(.inbox1, mailbox.receiveResult, .{ self.mbh1, null });
-        try sel.concurrent(.inbox2, mailbox.receiveResult, .{ self.mbh2, null });
+        try sel.concurrent(.inbox1, mailbox.receiveResult, .{ self.mbx1, null });
+        try sel.concurrent(.inbox2, mailbox.receiveResult, .{ self.mbx2, null });
         try sel.concurrent(.timer, sleepFn, .{ sleep_t, self.io });
     }
 
@@ -121,6 +121,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

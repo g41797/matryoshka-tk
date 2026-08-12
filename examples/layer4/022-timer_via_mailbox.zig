@@ -18,21 +18,21 @@
 //!
 
 pub fn timer_via_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    try sendEvents(mbh, allocator, N_EVENTS);
+    try sendEvents(mbx, allocator, N_EVENTS);
 
     var worker_ctx: WorkerCtx = .{
-        .mbh = mbh,
+        .mbx = mbx,
         .alloc = allocator,
         .expected = N_EVENTS + N_TICKS,
     };
-    try spawnAndAwait(mbh, allocator, io, &worker_ctx);
+    try spawnAndAwait(mbx, allocator, io, &worker_ctx);
 
     try helpers.expect(error.TimerViaMailboxFailed, worker_ctx.event_count == N_EVENTS, "expected 2 Events");
     try helpers.expect(error.TimerViaMailboxFailed, worker_ctx.timer_count == N_TICKS, "expected 2 timer ticks");
@@ -48,7 +48,7 @@ const N_EVENTS: usize = 2;
 const N_TICKS: usize = 2;
 
 const TimerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 };
@@ -61,7 +61,7 @@ fn timerFn(ctx: *TimerCtx) anyerror!void {
         try std.Io.Timeout.sleep(sleep_t, ctx.io);
         var slot: Slot = null;
         try items.Timer.TimerPolyHelper.create(ctx.alloc, &slot);
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -69,7 +69,7 @@ fn timerFn(ctx: *TimerCtx) anyerror!void {
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     expected: usize,
     timer_count: usize = 0,
@@ -81,7 +81,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (received < ctx.expected) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        try mailbox.receive(ctx.mbh, &slot, null);
+        try ctx.mbx.receive(&slot, null);
         received += 1;
 
         if (items.Timer.TimerPolyHelper.fromSlot(&slot)) |_| {
@@ -94,18 +94,18 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     }
 }
 
-fn sendEvents(mbh: MailboxHandle, alloc: std.mem.Allocator, count: usize) !void {
+fn sendEvents(mbx: *Mbox, alloc: std.mem.Allocator, count: usize) !void {
     for (0..count) |i| {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 }
 
-fn spawnAndAwait(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, worker_ctx: *WorkerCtx) !void {
-    var timer_ctx: TimerCtx = .{ .mbh = mbh, .alloc = alloc, .io = io };
+fn spawnAndAwait(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, worker_ctx: *WorkerCtx) !void {
+    var timer_ctx: TimerCtx = .{ .mbx = mbx, .alloc = alloc, .io = io };
     var fut_timer = try io.concurrent(timerFn, .{&timer_ctx});
     var fut_worker = try io.concurrent(workerFn, .{worker_ctx});
     errdefer fut_worker.cancel(io) catch {};
@@ -118,6 +118,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

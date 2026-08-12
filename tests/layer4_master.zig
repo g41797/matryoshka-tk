@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
 fn workerFn(ctx: *WorkerCtx) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => return error.Canceled,
         error.Closed, error.Timeout, error.Wakeup => return,
     };
@@ -22,21 +22,21 @@ test "1 - single worker spawn and join" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(workerFn, .{&ctx});
 
     var slot: Slot = null;
     defer EventPolyHelper.destroy(testing.allocator, &slot);
     try EventPolyHelper.create(testing.allocator, &slot);
     EventPolyHelper.mustFromSlot(&slot).code = 42;
-    try mailbox.send(mbh, &slot);
+    try mbx.send(&slot);
     try testing.expect(slot == null);
 
     try fut.await(io);
@@ -49,16 +49,16 @@ test "2 - worker group spawn and join" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx1: WorkerCtx = .{ .mbh = mbh, .alloc = testing.allocator };
-    var ctx2: WorkerCtx = .{ .mbh = mbh, .alloc = testing.allocator };
-    var ctx3: WorkerCtx = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx1: WorkerCtx = .{ .mbx = mbx, .alloc = testing.allocator };
+    var ctx2: WorkerCtx = .{ .mbx = mbx, .alloc = testing.allocator };
+    var ctx3: WorkerCtx = .{ .mbx = mbx, .alloc = testing.allocator };
 
     var group: Io.Group = .init;
     defer group.cancel(io);
@@ -72,7 +72,7 @@ test "2 - worker group spawn and join" {
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
         EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     try group.await(io);
@@ -82,7 +82,7 @@ const matryoshka = @import("matryoshka");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
+const Mbox = matryoshka.Mbox;
 
 const items = @import("examples").items;
 const Event = items.Event;

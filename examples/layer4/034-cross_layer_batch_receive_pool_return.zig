@@ -4,74 +4,77 @@
 //! Batch receive + pool return.
 //!
 //! - fillMailbox sends 10 pool-sourced items into the mailbox.
-//! - batchCollectToPool: mailbox.receive_batch returns an ItemList,
-//!   passed straight into pool.put_all — no per-item walk needed.
+//! - batchCollectToPool: mbx.receive_batch returns an ItemList,
+//!   passed straight into pl.put_all — no per-item walk needed.
 //! - verifyPool confirms the pool has items again after the bulk return.
 //!
 //!
 //! ```
-//!  pool.get (×10, new_only) ──► mailbox.send (×10) ──► mailbox (10 items)
+//!  pl.get (×10, new_only) ──► mbx.send (×10) ──► mailbox (10 items)
 //!  │
-//!  mailbox.receive_batch ──► ItemList (10 items)
-//!  pool.put_all ──► pool free-list (10 items recycled)
+//!  mbx.receive_batch ──► ItemList (10 items)
+//!  pl.put_all ──► pool free-list (10 items recycled)
 //!  │
-//!  pool.get (.available_only) ×10 ──► verify count==10
-//!  pool.close ──► on_close ──► freeList
+//!  pl.get (.available_only) ×10 ──► verify count==10
+//!  pl.close ──► on_close ──► freeList
 //! ```
 //!
 
 pub fn batch_receive_pool_return(allocator: std.mem.Allocator, io: std.Io) !void {
-    const ph: PoolHandle = try pool.new(io, allocator);
+    const pl: *Pool = try pool.new(io, allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, allocator);
+        pl.close();
+        pool.destroy(pl, allocator);
     }
 
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: Ctx = .{ .ph = ph, .mbh = mbh, .alloc = allocator };
+    var ctx: Ctx = .{ .pl = pl, .mbx = mbx, .alloc = allocator };
     try ctx.fillMailbox();
     try ctx.batchCollectToPool();
     try ctx.verifyPool();
-    std.log.info("done: {d} items — mailbox.receive_batch → pool.put_all — stdlib list bridges layers", .{N_ITEMS});
+    std.log.info("done: {d} items — Mbox.receive_batch → Pool.put_all — stdlib list bridges layers", .{N_ITEMS});
 }
 
 const N_ITEMS: usize = 10;
 
 const Ctx = struct {
-    ph: PoolHandle,
-    mbh: MailboxHandle,
+    pl: *Pool,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
 
     fn fillMailbox(self: *Ctx) !void {
         for (0..N_ITEMS) |i| {
             var slot: Slot = null;
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
         std.log.info("sent {d} items to mailbox", .{N_ITEMS});
     }
 
     fn batchCollectToPool(self: *Ctx) !void {
-        var batch: polynode.ItemList = try mailbox.receive_batch(self.mbh);
-        pool.put_all(self.ph, &batch);
+        var batch: polynode.ItemList = try self.mbx.receive_batch();
+        self.pl.put_all(&batch);
+        // put_all stops at the first refusal and leaves the rest in the
+        // list. A closed pool means those items are still ours to free.
+        items.freeList(&batch, self.alloc);
         std.log.info("receive_batch → put_all: {d} items returned to pool", .{N_ITEMS});
     }
 
     fn verifyPool(self: *Ctx) !void {
         var slot: Slot = null;
-        defer pool.put(self.ph, &slot);
-        pool.get(self.ph, items.Event.EventPolyHelper.TAG, .available_only, &slot) catch {
+        defer self.pl.put(&slot);
+        self.pl.get(items.Event.EventPolyHelper.TAG, .available_only, &slot) catch {
             return error.CrossLayerBatchFailed;
         };
         std.log.info("verified: pool has items after put_all", .{});
@@ -83,8 +86,8 @@ const hooks = @import("../hooks/hooks.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

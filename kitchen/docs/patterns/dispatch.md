@@ -115,7 +115,7 @@ Example: `examples/layer1/026-tag_first_dispatch.zig`,
 
 ### Where there is no item
 
-`PoolHooks.on_get` is handed a tag and an empty Slot:
+`Pool.Hooks.on_get` is handed a tag and an empty Slot:
 
 ```zig
 on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,
@@ -124,7 +124,7 @@ on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize,
 The hook's job is to build the item. There is nothing to cast yet, so  
 using the item is not an option — only the tag exists.
 
-`PoolHooks.tags` is `[]const *const anyopaque`, the set the pool was  
+`Pool.Hooks.tags` is `[]const *const anyopaque`, the set the pool was  
 registered with. A hook that dispatches over the same set is answering the  
 question the registration already asked.
 
@@ -249,7 +249,7 @@ Notes on each part.
 
 - `T` is the application's own receiver type, which the toolkit cannot name.
   That is why the table is not in `src/`. A `*anyopaque` context and a cast in  
-  every handler — what `PoolHooks` does — is the price library code pays; an  
+  every handler — what `Pool.Hooks` does — is the price library code pays; an  
   application table does not have to.
 
 - `anyerror` and not an inferred error set. A function pointer type needs its
@@ -313,7 +313,7 @@ buffer, while a comptime table is shared by every receiver of that type.
 var slot: Slot = null;
 defer items.freeSlot(&slot, allocator);   // no-op when null
 
-if (!try mailbox.try_receive(mbh, &slot)) return;
+if (!try mbx.try_receive(&slot)) return;
 try table.dispatch(self, &slot);
 ```
 

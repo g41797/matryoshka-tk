@@ -2,7 +2,7 @@
 
 ---
 
-# Matryoshka-Tk — Toolkit for Building Multitasking Systems
+# Toolkit for Building Multitasking Systems
 
 ---
 

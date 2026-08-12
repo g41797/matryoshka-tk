@@ -10,15 +10,15 @@
 //!
 //! ```
 //!  alloc.create × (n_events + n_sensors) ──► mailbox
-//!       │ mailbox.close (no receive — all items returned)
+//!       │ mbx.close (no receive — all items returned)
 //!       ▼
 //!  ItemList ──► freeItem × N
 //! ```
 //!
 
 pub fn shutdown_with_remaining_item_cleanup(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
-    defer mailbox.destroy(mbh, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
+    defer mailbox.destroy(mbx, allocator);
 
     const n_events: usize = 5;
     const n_sensors: usize = 3;
@@ -29,7 +29,7 @@ pub fn shutdown_with_remaining_item_cleanup(allocator: std.mem.Allocator, io: st
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     i = 0;
@@ -38,11 +38,11 @@ pub fn shutdown_with_remaining_item_cleanup(allocator: std.mem.Allocator, io: st
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i)) * 1.1;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     // Close without receiving — all items come back in the returned list.
-    var remaining: polynode.ItemList = mailbox.close(mbh);
+    var remaining: polynode.ItemList = mbx.close();
     var freed: usize = 0;
     while (remaining.popFirst()) |ih| {
         items.freeItem(ih, allocator);
@@ -59,5 +59,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

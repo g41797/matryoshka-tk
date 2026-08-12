@@ -16,28 +16,28 @@ The signature is the single source of truth.
 
 | Function | Cancelable | Notes |
 |----------|-----------|-------|
-| `mailbox.send` | no | non-blocking |
-| `mailbox.send_oob` | no | non-blocking |
-| `mailbox.receive` | **yes** | waits for a handle |
-| `mailbox.try_receive` | no | non-blocking |
-| `mailbox.receive_batch` | no | non-blocking |
-| `mailbox.close` | no | non-blocking |
-| `pool.get` | no | non-blocking |
-| `pool.get_wait` | **yes** | waits for a handle |
-| `pool.put` | no | non-blocking |
-| `pool.put_all` | no | non-blocking |
-| `pool.close` | no | non-blocking |
+| `Mbox.send` | no | non-blocking |
+| `Mbox.send_oob` | no | non-blocking |
+| `Mbox.receive` | **yes** | waits for a handle |
+| `Mbox.try_receive` | no | non-blocking |
+| `Mbox.receive_batch` | no | non-blocking |
+| `Mbox.close` | no | non-blocking |
+| `Pool.get` | no | non-blocking |
+| `Pool.get_wait` | **yes** | waits for a handle |
+| `Pool.put` | no | non-blocking |
+| `Pool.put_all` | no | non-blocking |
+| `Pool.close` | no | non-blocking |
 | `mailbox.receiveResult` | **yes** | blocking; cancelable via task cancel |
-| `mailbox.receive_future` | **yes** | thin wrapper around `io.concurrent(receiveResult, ...)` |
+| `Mbox.receive_future` | **yes** | thin wrapper around `io.concurrent(receiveResult, ...)` |
 | `pool.getWaitResult` | **yes** | blocking; cancelable via task cancel |
-| `pool.get_wait_future` | **yes** | thin wrapper around `io.concurrent(getWaitResult, ...)` |
+| `Pool.get_wait_future` | **yes** | thin wrapper around `io.concurrent(getWaitResult, ...)` |
 
 ## What cancellation leaves behind
 
 When a cancellable operation returns `error.Canceled`:
 
-- `mailbox.receive`: slot is unchanged — `slot.*` was `null` on entry and remains `null`. The mailbox retains any queued items.
-- `pool.get_wait`: slot is unchanged — `slot.*` was `null` on entry and remains `null`. The pool retains all free-list items.
+- `Mbox.receive`: slot is unchanged — `slot.*` was `null` on entry and remains `null`. The mailbox retains any queued items.
+- `Pool.get_wait`: slot is unchanged — `slot.*` was `null` on entry and remains `null`. The pool retains all free-list items.
 
 Cancellation never closes the mailbox or pool. Closing is the caller's responsibility.
 
@@ -53,13 +53,13 @@ HELD       — with infrastructure (in mailbox queue or pool free-list)
 
 | Operation | Before → After |
 |-----------|---------------|
-| `mailbox.send` | IN_FLIGHT → HELD |
-| `mailbox.receive` | HELD → IN_FLIGHT |
-| `pool.get` | HELD → IN_FLIGHT |
-| `pool.put` (keep) | IN_FLIGHT → HELD |
-| `pool.put` (destroy) | IN_FLIGHT → FREE |
-| `mailbox.close` | HELD → returned to caller |
-| `pool.close` | HELD → passed to on_close |
+| `Mbox.send` | IN_FLIGHT → HELD |
+| `Mbox.receive` | HELD → IN_FLIGHT |
+| `Pool.get` | HELD → IN_FLIGHT |
+| `Pool.put` (keep) | IN_FLIGHT → HELD |
+| `Pool.put` (destroy) | IN_FLIGHT → FREE |
+| `Mbox.close` | HELD → returned to caller |
+| `Pool.close` | HELD → passed to on_close |
 
 ---
 

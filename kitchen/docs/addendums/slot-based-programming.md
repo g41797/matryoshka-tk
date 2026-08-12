@@ -28,7 +28,7 @@ Mailbox and Pool work mostly with Slots.
 ---
 
 
-Concurrent software is mostly about ownership.
+Concurrent software is mostly about who holds what.
 
 Who owns an Item now?
 
@@ -42,9 +42,9 @@ It should not call application methods.
 
 It should not depend on inheritance.
 
-It should only move ownership.
+It should only move the Item.
 
-Slots make ownership explicit.
+Slots make the holder explicit.
 
 ---
 
@@ -60,7 +60,7 @@ The ItemHandle is transferred.
 
 The Slot is the container used during the transfer.
 
-The Slot also represents ownership.
+The Slot also names the holder.
 
 A non-empty Slot means:
 
@@ -77,7 +77,7 @@ Only the ItemHandle moves.
 ---
 
 
-## Ownership Transfer
+## Item Transfer
 
 ---
 
@@ -87,7 +87,7 @@ Sending does not send a Slot.
 Sending uses a Slot.
 
 ```zig
-mailbox.send(&slot);
+mbx.send(&slot);
 ```
 
 The Mailbox takes the ItemHandle from the Slot.
@@ -106,14 +106,14 @@ Slot
  └── empty
 ```
 
-Ownership has moved to the Mailbox.
+The Mailbox now holds the Item.
 
 The sender no longer owns the ItemHandle.
 
 Receiving works the opposite way.
 
 ```zig
-mailbox.receive(&slot);
+mbx.receive(&slot);
 ```
 
 The Mailbox places a ItemHandle into the Slot.
@@ -147,19 +147,19 @@ It is only a temporary container.
 Most infrastructure API works with Slots.
 
 ```zig
-mailbox.send(&slot);
+mbx.send(&slot);
 ```
 
 ```zig
-mailbox.receive(&slot);
+mbx.receive(&slot);
 ```
 
 ```zig
-pool.get(&slot);
+pl.get(&slot);
 ```
 
 ```zig
-pool.put(&slot);
+pl.put(&slot);
 ```
 
 The infrastructure never sees application objects.
@@ -221,7 +221,7 @@ ItemHandle
 The request is sent.
 
 ```zig
-mailbox.send(&slot);
+mbx.send(&slot);
 ```
 
 The Slot becomes empty.
@@ -229,7 +229,7 @@ The Slot becomes empty.
 The worker receives the request.
 
 ```zig
-mailbox.receive(&slot);
+mbx.receive(&slot);
 ```
 
 The Slot now owns the Handle again.
@@ -248,7 +248,7 @@ RequestPolyHelper.fromSlot()
 
 The worker processes the request.
 
-When finished, ownership moves again.
+When finished, the Item moves again.
 
 The Handle may be:
 
@@ -266,12 +266,12 @@ The infrastructure never knows it was an HTTP request.
 ---
 
 
-### Explicit ownership
+### Explicit holding
 
 ---
 
 
-Ownership is visible.
+Who holds the Item is visible.
 
 A full Slot owns a Handle.
 
@@ -312,19 +312,19 @@ The same code works for every Item.
 Every transfer looks the same.
 
 ```zig
-mailbox.send(&slot);
+mbx.send(&slot);
 ```
 
 ```zig
-mailbox.receive(&slot);
+mbx.receive(&slot);
 ```
 
 ```zig
-pool.get(&slot);
+pl.get(&slot);
 ```
 
 ```zig
-pool.put(&slot);
+pl.put(&slot);
 ```
 
 ---
@@ -335,7 +335,7 @@ pool.put(&slot);
 ---
 
 
-The infrastructure moves ownership.
+The infrastructure moves Items.
 
 The application gives meaning to the Item.
 
@@ -344,7 +344,7 @@ Neither knows about the other's implementation.
 ---
 
 
-## Programming Model
+## How the two sides divide
 
 ---
 
@@ -384,7 +384,7 @@ This is one of the core ideas of Matryoshka.
 
 The infrastructure operates on Slots.
 
-Ownership moves by transferring Handles.
+Items move by transferring Handles.
 
 The application works with Items.
 

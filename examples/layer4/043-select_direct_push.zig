@@ -19,22 +19,22 @@
 //!
 
 pub fn select_direct_queue_push(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
     var buf: [4]MasterEvent = undefined;
     var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
-    var pusher_fut = try setupSourcesAndPusher(mbh, io, &sel);
+    var pusher_fut = try setupSourcesAndPusher(mbx, io, &sel);
     try awaitDirectPushAndShutdown(&sel, &pusher_fut, io);
     std.log.info("done: direct push bypassed concurrent fn path", .{});
 }
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
+    inbox: Mbox.Result,
     direct: u32,
 };
 
@@ -42,8 +42,8 @@ fn pusherFn(sel_ptr: *std.Io.Select(MasterEvent)) void {
     sel_ptr.queue.putOneUncancelable(sel_ptr.io, .{ .direct = 99 }) catch {};
 }
 
-fn setupSourcesAndPusher(mbh: MailboxHandle, io: std.Io, sel: *std.Io.Select(MasterEvent)) !std.Io.Future(void) {
-    try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
+fn setupSourcesAndPusher(mbx: *Mbox, io: std.Io, sel: *std.Io.Select(MasterEvent)) !std.Io.Future(void) {
+    try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
     return io.concurrent(pusherFn, .{sel});
 }
 
@@ -65,6 +65,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

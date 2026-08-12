@@ -16,15 +16,15 @@
 //!
 
 pub fn shutdown_via_shutdowncommand(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
 
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+    var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
     var fut = try io.concurrent(workerFn, .{&ctx});
 
     const codes = [_]i32{ 10, 20, 30 };
@@ -33,7 +33,7 @@ pub fn shutdown_via_shutdowncommand(allocator: std.mem.Allocator, io: std.Io) !v
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = code;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     // Send shutdown signal — mailbox stays open.
@@ -41,7 +41,7 @@ pub fn shutdown_via_shutdowncommand(allocator: std.mem.Allocator, io: std.Io) !v
         var slot: Slot = null;
         defer items.ShutdownCommand.ShutdownCommandPolyHelper.destroy(allocator, &slot);
         try items.ShutdownCommand.ShutdownCommandPolyHelper.create(allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     fut.await(io);
@@ -51,7 +51,7 @@ pub fn shutdown_via_shutdowncommand(allocator: std.mem.Allocator, io: std.Io) !v
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     processed: usize = 0,
 };
@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
         const poly: *PolyNode = slot.?;
         if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
             std.log.info("worker: ShutdownCommand received, exiting cleanly", .{});
@@ -81,6 +81,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

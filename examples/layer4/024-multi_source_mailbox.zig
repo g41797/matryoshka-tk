@@ -13,21 +13,21 @@
 //!  timerSenderFn ──Timer×2──►
 //!  eventSenderFn ──Event×3──► mailbox ──► workerFn (tag dispatch; close-based exit)
 //!  signalSenderFn ──ShutdownCommand──►
-//!  senders await → mailbox.close → workerFn exits → fut_worker.await
+//!  senders await → mbx.close → workerFn exits → fut_worker.await
 //! ```
 //!
 
 pub fn multiple_event_sources_one_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var sender_ctx: SenderCtx = .{ .mbh = mbh, .alloc = allocator, .io = io };
-    var worker_ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var sender_ctx: SenderCtx = .{ .mbx = mbx, .alloc = allocator, .io = io };
+    var worker_ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     var futs = try ctx.spawnSenders(&sender_ctx, &worker_ctx);
     ctx.awaitSendersAndClose(&futs);
 
@@ -43,7 +43,7 @@ const N_EVENTS: usize = 3;
 const N_TICKS: usize = 2;
 
 const SenderCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 };
@@ -56,7 +56,7 @@ fn timerSenderFn(ctx: *SenderCtx) anyerror!void {
         try std.Io.Timeout.sleep(sleep_t, ctx.io);
         var slot: Slot = null;
         try items.Timer.TimerPolyHelper.create(ctx.alloc, &slot);
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -68,7 +68,7 @@ fn eventSenderFn(ctx: *SenderCtx) anyerror!void {
         var slot: Slot = null;
         try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -78,11 +78,11 @@ fn eventSenderFn(ctx: *SenderCtx) anyerror!void {
 fn signalSenderFn(ctx: *SenderCtx) anyerror!void {
     var slot: Slot = null;
     try items.ShutdownCommand.ShutdownCommandPolyHelper.create(ctx.alloc, &slot);
-    mailbox.send(ctx.mbh, &slot) catch items.freeSlot(&slot, ctx.alloc);
+    ctx.mbx.send(&slot) catch items.freeSlot(&slot, ctx.alloc);
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     timer_count: usize = 0,
     event_count: usize = 0,
@@ -93,7 +93,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
 
         if (items.Timer.TimerPolyHelper.fromSlot(&slot)) |_| {
             ctx.timer_count += 1;
@@ -116,7 +116,7 @@ const Futs = struct {
 };
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 
@@ -134,7 +134,7 @@ const Ctx = struct {
         futs.events.await(self.io) catch {};
         futs.signal.await(self.io) catch {};
 
-        var remaining: polynode.ItemList = mailbox.close(self.mbh);
+        var remaining: polynode.ItemList = self.mbx.close();
         items.freeList(&remaining, self.alloc);
 
         futs.worker.await(self.io) catch {};
@@ -145,7 +145,7 @@ const items = @import("../items/items.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
 const Io = std.Io;

@@ -5,17 +5,17 @@
 //!
 //! - Master owns a pool (with hooks) and a mailbox.
 //! - sendItems fills 3 pool items with Event data, sends each into the mailbox.
-//! - Worker loops on mailbox.receive, returns each item to the pool via pool.put.
+//! - Worker loops on mbx.receive, returns each item to the pool via pl.put.
 //! - Shutdown cancels the worker future, then destroy releases pool and mailbox in order.
 //!
 //!
 //! ```
-//!  master ──pool.get──► slot ──mailbox.send──► mailbox
+//!  master ──pl.get──► slot ──mbx.send──► mailbox
 //!                                                 │ worker (io.concurrent)
-//!                                                 │ mailbox.receive ──► slot
-//!                                                 │ pool.put (defer) ──► pool (recycled)
-//!  fut.cancel ──► worker exits at next mailbox.receive
-//!  master.destroy ──► pool.close ──► mailbox.close ──► free remaining
+//!                                                 │ mbx.receive ──► slot
+//!                                                 │ pl.put (defer) ──► pool (recycled)
+//!  fut.cancel ──► worker exits at next mbx.receive
+//!  master.destroy ──► pl.close ──► mbx.close ──► free remaining
 //! ```
 //!
 
@@ -26,15 +26,15 @@ pub fn master_with_pool(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
 };
 
 fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
-        defer pool.put(ctx.ph, &slot);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        defer ctx.pl.put(&slot);
+        ctx.mbx.receive(&slot, null) catch return;
     }
 }
 
@@ -49,12 +49,12 @@ const MasterWithPool = struct {
     fn sendItems(self: *MasterWithPool) !void {
         for (0..3) |i| {
             var slot: Slot = null;
-            defer pool.put(self.ph, &slot);
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .available_or_new, &slot);
+            defer self.pl.put(&slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .available_or_new, &slot);
             const ev = items.Event.EventPolyHelper.mustFromSlot(&slot);
             ev.code = @intCast(i + 1);
             std.log.info("master: sending Event code={d}", .{ev.code});
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
     }
 
@@ -62,8 +62,8 @@ const MasterWithPool = struct {
     io: std.Io,
     pool_ctx: hooks.AlwaysCreateHooks,
     tags: [1]*const anyopaque,
-    ph: PoolHandle,
-    mbh: MailboxHandle,
+    pl: *Pool,
+    mbx: *Mbox,
     worker_ctx: WorkerCtx,
 
     fn init(allocator: std.mem.Allocator, io: std.Io) !*MasterWithPool {
@@ -73,23 +73,23 @@ const MasterWithPool = struct {
         self.io = io;
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.ph = try pool.new(io, allocator);
+        self.pl = try pool.new(io, allocator);
         errdefer {
-            pool.close(self.ph);
-            pool.destroy(self.ph, allocator);
+            self.pl.close();
+            pool.destroy(self.pl, allocator);
         }
-        try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
-        self.mbh = try mailbox.new(io, allocator);
-        self.worker_ctx = .{ .mbh = self.mbh, .ph = self.ph };
+        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
+        self.mbx = try mailbox.new(io, allocator);
+        self.worker_ctx = .{ .mbx = self.mbx, .pl = self.pl };
         return self;
     }
 
     fn destroy(self: *MasterWithPool) void {
-        pool.close(self.ph);
-        pool.destroy(self.ph, self.allocator);
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        self.pl.close();
+        pool.destroy(self.pl, self.allocator);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
         self.allocator.destroy(self);
     }
 };
@@ -99,8 +99,8 @@ const hooks = @import("../hooks/hooks.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

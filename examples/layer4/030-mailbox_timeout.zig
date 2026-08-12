@@ -3,7 +3,7 @@
 
 //! Timeout on mailbox.
 //!
-//! - receiveTimeouts calls mailbox.receive with a non-null timeout, twice, on an empty mailbox.
+//! - receiveTimeouts calls mbx.receive with a non-null timeout, twice, on an empty mailbox.
 //! - Each call returns error.Timeout; Io.sleep runs between retries.
 //! - sendAndReceive sends one Event, then receives it back within the same timeout.
 //!
@@ -14,21 +14,21 @@
 //!  master: receive(50ms) ──► error.Timeout ──► Io.sleep retry
 //!          receive(50ms) ──► error.Timeout ──► (second retry)
 //!  │
-//!  EventPolyHelper.create ──► slot ──mailbox.send──► mailbox
+//!  EventPolyHelper.create ──► slot ──mbx.send──► mailbox
 //!  │
 //!  master: receive(50ms) ──► slot ──► freeSlot
 //! ```
 //!
 
 pub fn timeout_on_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     const retries = try ctx.receiveTimeouts();
     try helpers.expect(error.MailboxTimeoutFailed, retries == 2, "expected 2 timeouts");
     try ctx.sendAndReceive();
@@ -39,7 +39,7 @@ const TIMEOUT_NS: u64 = 50_000_000; // 50 ms
 const SLEEP_NS: i96 = 10_000_000; // 10 ms between retries
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 
@@ -50,7 +50,7 @@ const Ctx = struct {
         var retries: usize = 0;
         while (retries < 2) {
             var slot: Slot = null;
-            mailbox.receive(self.mbh, &slot, TIMEOUT_NS) catch |err| switch (err) {
+            self.mbx.receive(&slot, TIMEOUT_NS) catch |err| switch (err) {
                 error.Timeout => {
                     retries += 1;
                     std.log.info("receive: .Timeout (retry {d})", .{retries});
@@ -71,11 +71,11 @@ const Ctx = struct {
         defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
         try items.Event.EventPolyHelper.create(self.alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 9;
-        try mailbox.send(self.mbh, &slot);
+        try self.mbx.send(&slot);
 
         var received: Slot = null;
         defer items.freeSlot(&received, self.alloc);
-        try mailbox.receive(self.mbh, &received, TIMEOUT_NS);
+        try self.mbx.receive(&received, TIMEOUT_NS);
         std.log.info("receive after send: code={d}", .{items.Event.EventPolyHelper.mustFromSlot(&received).code});
     }
 };
@@ -85,6 +85,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

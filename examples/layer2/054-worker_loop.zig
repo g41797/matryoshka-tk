@@ -4,30 +4,30 @@
 //! Worker loop pattern.
 //!
 //! - Main sends 3 Events and 2 Sensors into a mailbox.
-//! - Worker thread loops on mailbox.receive, dispatches on tag.
+//! - Worker thread loops on mbx.receive, dispatches on tag.
 //! - Worker exits on error.Closed.
 //! - Main closes the mailbox, frees any items left unreceived.
 //!
 //!
 //! ```
-//!  main ──alloc.create──► slot ──mailbox.send──► mailbox
+//!  main ──alloc.create──► slot ──mbx.send──► mailbox
 //!                                                    │
 //!                                              worker thread
-//!                                              mailbox.receive
+//!                                              mbx.receive
 //!                                                    │ freeSlot
-//!  mailbox.close ──► remaining list ──► freeList (main)
+//!  mbx.close ──► remaining list ──► freeList (main)
 //! ```
 //!
 
 pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+    var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
     var fut = try io.concurrent(workerFn, .{&ctx});
 
     const codes = [_]i32{ 1, 2, 3 };
@@ -36,7 +36,7 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = code;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     const values = [_]f64{ 1.5, 2.5 };
@@ -45,10 +45,10 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = value;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
-    var rem: polynode.ItemList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mbx.close();
     var remaining: usize = 0;
     while (rem.popFirst()) |ih| {
         items.freeItem(ih, allocator);
@@ -63,7 +63,7 @@ pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     event_sum: i32 = 0,
     sensor_sum: f64 = 0.0,
@@ -74,7 +74,7 @@ fn workerFn(ctx: *WorkerCtx) void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
         const poly: *PolyNode = slot.?;
         if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
             std.log.debug("worker: Event code={d}", .{ev.*.code});
@@ -94,6 +94,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

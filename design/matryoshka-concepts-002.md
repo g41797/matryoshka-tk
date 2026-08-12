@@ -1,4 +1,10 @@
-# Matryoshka Concepts (001)
+# Matryoshka Concepts (002)
+
+
+Change from -001: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 What Matryoshka is, why it exists, and how to think in it.
 
@@ -8,10 +14,10 @@ They said overlapping things about the same four concepts. This document
 replaces all of them. Their names are in the DOC 22 entry in `STATUS-LOG.md`.
 
 Companions:
-- [matryoshka-architecture-foundation-4-005.md](matryoshka-architecture-foundation-4-005.md) — the four-layer contract in full.
+- [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md) — the four-layer contract in full.
 - [language-of-matryoshka.md](language-of-matryoshka.md) — vocabulary. Where a term here differs, the glossary wins.
-- [rules-041.md](rules-041.md) — coding, doc, and process rules.
-- [patterns-025.md](patterns-025.md) — the pattern and idiom catalog.
+- [rules-043.md](rules-043.md) — coding, doc, and process rules.
+- [patterns-027.md](patterns-027.md) — the pattern and idiom catalog.
 
 ---
 
@@ -372,16 +378,16 @@ Check identity with `node.tag == EVENT_TAG`. Recover the concrete type with
   Event", not "which Event" or "what kind of Event".
 - For user-defined types, add a `kind` or `role` field for per-instance
   discrimination.
-- For infra handles (`MailboxHandle`, `PoolHandle`) the internal structs are
+- For infra handles (`*Mbox`, `*Pool`) the internal structs are
   private. No fields can be added. Tag identifies the class only.
   - Instance identity is resolved by pointer comparison against known handles.
   - Role is established by protocol: the channel the handle arrived on, message
     ordering, or prior agreement.
-- See [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md),
+- See [matryoshka-api-reference-036.md](matryoshka-api-reference-036.md),
   "Tag identity — class, not instance".
 
 `switch` over tags does not compile. The reason and the repro live in
-[table-dispatch-001.md](table-dispatch-001.md).
+[table-dispatch-002.md](table-dispatch-002.md).
 
 ### Step 3 — Place (Slot)
 
@@ -545,7 +551,7 @@ to know who holds an item, the design is wrong.
 - This is why the library can assert on an item's internal state at all.
 - It does not extend to an item two holders both believe they hold. That
   mistake breaks the premise the guarantee is built on.
-- See [rules-041.md](rules-041.md) for how to phrase this in `src/` comments.
+- See [rules-043.md](rules-043.md) for how to phrase this in `src/` comments.
 
 ### Pool availability = backpressure signal
 
@@ -560,13 +566,13 @@ to know who holds an item, the design is wrong.
 
 ### Pool items are empty containers
 
-- `pool.get` returns a resource — an empty, reusable container.
+- `Pool.get` returns a resource — an empty, reusable container.
 - The container carries no work intent on acquisition.
 - "Empty" means: whatever the previous owner wrote has been consumed or reset.
 - To do useful work, a worker needs at least one additional input:
   - External data: mailbox message, network read, timer tick, shared counter.
   - Worker's own accumulated state from previous cycles.
-- A worker that only calls `pool.get` and `pool.put` with no other input source
+- A worker that only calls `Pool.get` and `Pool.put` with no other input source
   does nothing useful.
 - This applies to examples and stories alike: a pool resource alone is never
   enough to define a complete pattern.
@@ -589,12 +595,12 @@ Master             who coordinates startup, shutdown, cancellation, policy?
 - The holding model never changes. Only capabilities are added.
 
 The full four-layer contract — Hold, Movement, Lifecycle, Coordination — lives  
-in [matryoshka-architecture-foundation-4-005.md](matryoshka-architecture-foundation-4-005.md).
+in [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md).
 
 ### Cancel is not close
 
 - `error.Canceled` — the Io scheduler says stop now. External signal.
-- `mailbox.close` / `pool.close` — the Master says this subsystem is shutting
+- `Mbox.close` / `Pool.close` — the Master says this subsystem is shutting
   down.
 - Cancel stops waiting.
 - Close signals end-of-stream.
@@ -665,7 +671,7 @@ To qualify as a story it must show at least two layers composing, and it must
 have a real domain problem.
 
 The file layout and signatures for a story are a process rule. They live in
-[rules-041.md](rules-041.md), "Story structure".
+[rules-043.md](rules-043.md), "Story structure".
 
 ---
 

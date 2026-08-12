@@ -19,7 +19,6 @@ test {
     _ = @import("layer4_cancel.zig");
     _ = @import("layer4_select.zig");
     _ = @import("layer4_cross.zig");
-    _ = @import("stories_test.zig");
 }
 
 const std = @import("std");

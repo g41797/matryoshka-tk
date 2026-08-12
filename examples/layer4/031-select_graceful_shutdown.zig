@@ -10,7 +10,7 @@
 //!
 //!
 //! ```
-//!  mbh (Event items + ShutdownCommand)    pool (Event items)
+//!  mbx (Event items + ShutdownCommand)    pool (Event items)
 //!  │ receiveResult                         │ getWaitResult
 //!  └──────────────────────┬───────────────┘
 //!                         ▼
@@ -21,8 +21,8 @@
 //!  .inbox .item (Shutdown)──► initiate graceful shutdown:
 //!                              sel.cancel() loop
 //!                              .inbox  .item ──► freeSlot   (no item lost)
-//!                              .pool_ev .item──► pool.put    (no item lost)
-//!  sel.cancelDiscard() ──► pool.close ──► mailbox.close
+//!                              .pool_ev .item──► pl.put    (no item lost)
+//!  sel.cancelDiscard() ──► pl.close ──► mbx.close
 //! ```
 //!
 
@@ -36,8 +36,8 @@ const TIMER_NS: i96 = 30_000_000; // 30 ms
 const N_EVENTS: usize = 2;
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
-    pool_ev: pool.PoolResult,
+    inbox: Mbox.Result,
+    pool_ev: Pool.Result,
     timer: void,
 };
 
@@ -61,19 +61,19 @@ const GracefulShutdownMaster = struct {
             defer items.Event.EventPolyHelper.destroy(self.allocator, &slot);
             try items.Event.EventPolyHelper.create(self.allocator, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
         {
             var slot: Slot = null;
             defer items.ShutdownCommand.ShutdownCommandPolyHelper.destroy(self.allocator, &slot);
             try items.ShutdownCommand.ShutdownCommandPolyHelper.create(self.allocator, &slot);
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
         {
             var slot: Slot = null;
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = 99;
-            pool.put(self.ph, &slot);
+            self.pl.put(&slot);
         }
     }
 
@@ -81,8 +81,8 @@ const GracefulShutdownMaster = struct {
         const sleep_t: std.Io.Timeout = .{
             .duration = .{ .raw = .{ .nanoseconds = TIMER_NS }, .clock = .real },
         };
-        try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
-        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Event.EventPolyHelper.TAG, null });
+        try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
+        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Event.EventPolyHelper.TAG, null });
         try self.sel.concurrent(.timer, sleepFn, .{ sleep_t, self.io });
 
         outer: while (true) {
@@ -95,7 +95,7 @@ const GracefulShutdownMaster = struct {
                             defer items.freeSlot(&slot, self.allocator);
                             self.events_processed += 1;
                             std.log.info("inbox: Event code={d}", .{ev.code});
-                            try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+                            try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
                         } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(handle)) |_| {
                             var slot: Slot = handle;
                             items.freeSlot(&slot, self.allocator);
@@ -112,9 +112,9 @@ const GracefulShutdownMaster = struct {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        defer pool.put(self.ph, &slot);
+                        defer self.pl.put(&slot);
                         std.log.info("pool_ev: item received", .{});
-                        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Event.EventPolyHelper.TAG, null });
+                        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Event.EventPolyHelper.TAG, null });
                     },
                     .closed, .canceled, .timeout, .not_created => {},
                 },
@@ -141,7 +141,7 @@ const GracefulShutdownMaster = struct {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        pool.put(self.ph, &slot);
+                        self.pl.put(&slot);
                         self.recycled_pool += 1;
                         std.log.info("graceful cancel: recycled pool item", .{});
                     },
@@ -154,8 +154,8 @@ const GracefulShutdownMaster = struct {
 
     allocator: std.mem.Allocator,
     io: std.Io,
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     pool_ctx: hooks.AlwaysCreateHooks,
     tags: [1]*const anyopaque,
     events_processed: usize,
@@ -174,30 +174,30 @@ const GracefulShutdownMaster = struct {
         self.shutdown_seen = false;
         self.freed_inbox = 0;
         self.recycled_pool = 0;
-        self.mbh = try mailbox.new(io, allocator);
+        self.mbx = try mailbox.new(io, allocator);
         errdefer {
-            var rem: polynode.ItemList = mailbox.close(self.mbh);
+            var rem: polynode.ItemList = self.mbx.close();
             items.freeList(&rem, allocator);
-            mailbox.destroy(self.mbh, allocator);
+            mailbox.destroy(self.mbx, allocator);
         }
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.ph = try pool.new(io, allocator);
+        self.pl = try pool.new(io, allocator);
         errdefer {
-            pool.close(self.ph);
-            pool.destroy(self.ph, allocator);
+            self.pl.close();
+            pool.destroy(self.pl, allocator);
         }
-        try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
+        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         self.sel = std.Io.Select(MasterEvent).init(self.io, &self.buf);
         return self;
     }
 
     fn destroy(self: *GracefulShutdownMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
-        pool.close(self.ph);
-        pool.destroy(self.ph, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
+        self.pl.close();
+        pool.destroy(self.pl, self.allocator);
         self.allocator.destroy(self);
     }
 };
@@ -208,8 +208,8 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

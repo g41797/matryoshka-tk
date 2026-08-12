@@ -3,12 +3,12 @@
 The four-layer contract: what each layer solves, what it refuses to solve, and  
 why each boundary sits where it does.
 
-Read [matryoshka-concepts-001.md](matryoshka-concepts-001.md) first. It covers  
+Read [matryoshka-concepts-002.md](matryoshka-concepts-002.md) first. It covers  
 what Matryoshka is, why it exists, and the four concepts. This document assumes  
 all of that and starts at the layer contracts.
 
-Companion: [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md) — the shipped surface.\  
-Companion: [matryoshka-zig-0.16-notes-002.md](matryoshka-zig-0.16-notes-002.md) — the Zig 0.16 constraints.
+Companion: [matryoshka-api-reference-036.md](matryoshka-api-reference-036.md) — the shipped surface.\  
+Companion: [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md) — the Zig 0.16 constraints.
 
 ---
 
@@ -2239,7 +2239,7 @@ Movement, lifecycle, and coordination are built on top of hold.
 
 ### Reason
 
-Hold is the common foundation underneath all higher-level behavior.
+Hold is the common foundation of all higher-level behavior.
 
 ---
 
@@ -2505,7 +2505,8 @@ Everything else is built on top of that foundation.
 
 | Version | Date       | Description |
 |---------|------------|-------------|
-| 005     | 2026-08-02 | DOC 23. Dropped sections 1-4 (What Matryoshka Is, Why It Exists, Problems It Solves, Core Concepts) — `matryoshka-concepts-001.md` owns that ground and says it in the current vocabulary. Kept the Hold States and Transfers subsections out of the old section 4, which existed nowhere else, as the new section 1. Remaining sections renumbered. `MayItem` renamed to `Slot` throughout, matching `src/polynode.zig` and every other doc. No change to any layer contract, decision or non-goal. |
+| 006     | 2026-08-12 | PROSE 1 banned-word pass. One hit: "the common foundation underneath all higher-level behavior" → "the common foundation of all higher-level behavior". No structural or technical changes. |
+| 005     | 2026-08-02 | DOC 23. Dropped sections 1-4 (What Matryoshka Is, Why It Exists, Problems It Solves, Core Concepts) — `matryoshka-concepts-002.md` owns that ground and says it in the current vocabulary. Kept the Hold States and Transfers subsections out of the old section 4, which existed nowhere else, as the new section 1. Remaining sections renumbered. `MayItem` renamed to `Slot` throughout, matching `src/polynode.zig` and every other doc. No change to any layer contract, decision or non-goal. |
 | 004     | (undated)  | Fourth version. |
 | 003     | 2026-07-09 | INTR 7: "Pool is storage"/"warehouse" framing replaced with "Pool is not storage — it is a backpressure signal for reuse" throughout (including the "Pool Storage vs Policy" heading → "Pool Reuse vs Policy"). No structural or technical changes. |
 | 002     | 2026-07-09 | New Mindset hold-language pass: the ownership family of words replaced with "hold"/"holder"/"holds"/"held" throughout (including the layer/section name, matching the existing HELD state name); "execution context(s)"/"execution model(s)" replaced with "task(s)". No structural or technical changes. |

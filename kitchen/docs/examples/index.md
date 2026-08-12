@@ -10,7 +10,7 @@ code:
   `ShutdownCommand`, `Timer`) for the examples to send and pool. Not  
   production code.
 
-- **[Hooks](hooks/AlwaysCreateHooks.md)** — sample `PoolHooks`
+- **[Hooks](hooks/AlwaysCreateHooks.md)** — sample `Pool.Hooks`
   implementations ([AlwaysCreateHooks](hooks/AlwaysCreateHooks.md),  
   [CappedPoolHooks](hooks/CappedPoolHooks.md)) used by the pool examples.
 

@@ -198,9 +198,9 @@ The same is for Matryoshka-Tk API
 A **Mailbox** moves an Item from one Master to another:
 
 - One Master places an Item in
-    - Mailbox ensures that it's only owner of Item
+    - Mailbox becomes the only holder of the Item
 - Another Master later receives it
-    - Mailbox ensures that receiver is only owner of Item
+    - The receiver becomes the only holder of the Item
 
 ---
 

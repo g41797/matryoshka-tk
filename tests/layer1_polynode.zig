@@ -47,8 +47,8 @@ test "6 - two-level fieldParentPtr chain" {
     var ev: Event = .{ .code = 99 };
     EventPolyHelper.init(&ev);
 
-    const dll_node: *std.DoublyLinkedList.Node = &ev.poly.node;
-    const poly: *PolyNode = @fieldParentPtr("node", dll_node);
+    const list_node: *std.DoublyLinkedList.Node = &ev.poly.node;
+    const poly: *PolyNode = @fieldParentPtr("node", list_node);
     const recovered: *Event = EventPolyHelper.mustFromPoly(poly);
     try testing.expectEqual(@as(i32, 99), recovered.*.code);
 }

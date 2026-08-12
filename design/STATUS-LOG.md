@@ -2,6 +2,676 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-12 — PROSE 1: the banned-word list applied to the whole repo
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Owner asked for a full check — AI-sh words, banned words, prose — and made  
+two corrections. First, that previous stages had reported hits without  
+fixing them, which is what Part 5 literally says to do; the owner's request  
+overrode it. Second, that Zig snippets inside docs had never been checked at  
+all.
+
+The raw scan looked alarming: ~500 hits, `ownership` alone 264. Almost all of  
+it was in three places that must not be rewritten — `STATUS-LOG.md`, which is  
+append-only, and `design/secondary/`, which is frozen, plus `kitchen/defer/`,  
+whose status was undecided. Scoped to live files the count fell to about 20.  
+The owner chose to freeze `kitchen/defer/` by rule rather than settle its  
+status by judgement each time, and to bump every design doc that needed one.
+
+**What was fixed**
+
+| file | hits | change |
+|---|---|---|
+| `kitchen/docs/addendums/slot-based-programming.md` | 12 | hold-language throughout; two section titles |
+| `kitchen/docs/manifesto.md` | 2 | `ensures` → the mailbox/receiver becomes the only holder |
+| `kitchen/notes.md` | 1 | `wired into` → `connected to` |
+| `kitchen/docs/api/polynode/manual-definition.md` | 1 | `dll_node_ptr` → `list_node_ptr` |
+| `tests/layer1_polynode.zig` | 2 | `dll_node` → `list_node` |
+
+**Docs bumped**
+
+- `matryoshka-api-reference-035` → `-036`. One live hit: the
+  `@fieldParentPtr` diagram said `dll_node_ptr` where the code beside it  
+  already said `list_node_ptr`.
+- `matryoshka-architecture-foundation-4-005` → `-006`. `underneath`.
+- `api-12-real-pointers-004` → `-005`. `idiomatic`, `settled`, `sweep`.
+- `matryoshka-Tk-diagram-style-guide-002` → `-003`. `Scalable`, and the last
+  two hold-language hits in the repo.
+- `rules-042` → `-043`. `kitchen/defer/` frozen; Part 5 gained a scan scope.
+- `matryoshka-tk-implementation-plan-062` → `-063`. Stage ledger.
+
+Four design docs matched the grep but needed no bump — `patterns-027`,  
+`task1-examples-006`, `task1-tests-007`, `zig-0.16-notes-003`. Every hit in  
+them was a changelog row recording an earlier removal of that same word.  
+Rewriting those would erase the record.
+
+**Doc code snippets — the first check**
+
+475 fenced Zig blocks across 129 pages. No `_ = mbx.close()` anywhere, so the  
+ban MBOX 1 wrote is holding. Seven lines still use the pre-API-12 handle API  
+(`mailbox.send(self.mbh, &slot)`, `PoolHandle`), all inside `kitchen/defer/`,  
+which is absent from mkdocs nav and now frozen. An `ItemHandle` check I wrote  
+produced 39 false positives — it is the current type, not a stale one.
+
+**Two things the stage got wrong and corrected**
+
+`check_design.sh` glossary conformance rejected the change-note I wrote for  
+the diagram style guide, because the note named the word it had removed. The  
+gate is right and my "changelog rows may name the word" assumption was too  
+broad: old rows are grandfathered, new ones must not. Reworded.
+
+The `ownership` in `examples/layer1/layer1.zig` and `tests/layer1_examples.zig`  
+is the file name `022-ownership_transfer.zig`, not prose. A rename is a  
+`git mv` and cascades into the generated page and `task1-examples`. Left for  
+the owner and recorded in the plan.
+
+**Post-stage cleanup**
+
+Re-ran the scan over all 294 live files after the edits. What remains is  
+`ensureTotalCapacity` (stdlib), "New Mindset" (a stage name), "Status file  
+ownership" (a rule name defined in rules-043 and referenced from STATUS.md  
+and context.md), the file-name cluster above, and grandfathered changelog  
+rows. No live prose hit is left.
+
+**Verification**
+
+`build_and_test_debug.sh` 191/191. `build_and_test_all.sh` green in all four  
+modes. `check_design.sh` exit 0 after the change-note fix. `build_site.sh`  
+exit 0. `fix_md_hardbreaks.sh` run over every touched page.
+
+### 2026-08-12 — AUDIT 1: the give-back audit made repeatable
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+Asked what to do if the whole audit has to be run again from a clean  
+context. The honest answer was that the expensive part of MBOX 1 was not the  
+edits but working out what to look at — and INTR 7 had worked the same thing  
+out a month earlier, independently, sharing no method with it. A third run  
+would have started over again. So the method was written down while it was  
+still in hand, before clearing.
+
+Tooling and one doc. No behaviour change, no source file touched.
+
+**Changes**:
+
+- `kitchen/tools/audit_edges.sh` + `kitchen/tools/audit_edges.py` — the
+  bash-wrapper-plus-python pairing already used by `count_src_loc.sh`.  
+  Two scans. First, every give-back edge in `src/ tests/ examples/ stories/`  
+  classified COVERED / CATCH-FREES / DISCARDED / BARE. Second, every  
+  documented `Assert:` entry in `kitchen/docs/` and `design/` checked against  
+  the asserts that exist in `src/` — the check that would have caught MBOX 1's  
+  15 phantoms years earlier.
+- Exits 0 always, hits or not. Deliberately not a gate: BARE means "read
+  this", not "this is broken", and a gate that fails on every run gets  
+  ignored. Recorded in the plan as an owner decision not taken.
+- [audit-recipe-001.md](audit-recipe-001.md) — what the script cannot hold.
+  The edge table including the row that catches people (`Pool.close` releases  
+  through `on_close`, `Mbox.close` returns to the caller), the four verdicts  
+  and why there is no fifth, the read-only → classify → report → fix order,  
+  what the classifier cannot know, and the baseline.
+- `design/context.md` — one line for the new doc. Plan `-061` → `-062`.
+- `STATUS.md` "Constraints for Next Agent" — owner asked for the script to be
+  part of the session ritual rather than something to remember: run it after  
+  any stage that changes transfer code or the api doc pages, and compare the  
+  four counts against the baseline. Stated in the same line that it is not a  
+  gate, so nobody later mistakes a non-zero BARE for a failure.
+
+**Three false-positive classes found while validating**, all fixed before the  
+first useful run:
+
+- The two `_ = mbx.close()` strings in `src/mailbox.zig` are doc comments
+  *banning* the shape. The scanner counted them as violations. Comment lines  
+  are skipped now.
+- `defer pl.put(&slot)` is the release, not a transfer needing one. It was
+  landing in BARE and inflating the count from 90 to 121. Defer-prefixed  
+  lines are skipped.
+- The docs write `slot.*` where `src/` writes `slot.*.?`. Three real,
+  correct asserts were reported as phantoms. Both sides are normalised now.
+
+**Validating a checker that reports zero.** After MBOX 1 both scans come back  
+clean, which proves nothing on its own. Ran `scan_asserts` against a scratch  
+page carrying the known phantom `mailbox.is_it_you(mbx.*.tag)` alongside the  
+real `slot.* != null`: it flagged the phantom and passed the real one.
+
+**Baseline recorded, 2026-08-12**: DISCARDED 0, BARE 90, CATCH-FREES 6,  
+COVERED 102, unmatched asserts 0. 69 of the 90 BARE are bare `pl.put(&slot)`  
+statements — real give-back edges that INTR 7 predates. Added to the deferred  
+list as a pool re-audit, along with the `polynode` audit, which has never  
+been done and is the layer the other two stand on.
+
+**Verification**:
+
+| Check | Result |
+|---|---|
+| `audit_edges.sh` | exit 0, both scans clean against the baseline |
+| `scan_asserts` against a planted phantom | flagged it, passed the real assert beside it |
+| `check_design.sh` | exit 0 |
+| `build_site.sh` | exit 0 |
+| `build_and_test_debug.sh` | 191/191, proving no source file moved |
+| `build_core_debug.sh` | exit 0 |
+
+**Post-stage cleanup**: reviewed both new files. The classifier's two scans  
+share `_zig_files` and `_enclosing_fn` rather than repeating the walk. The  
+over-reporting of BARE is stated three times over — in the module  
+docstring, in the shell header, and in the recipe — because it is the one  
+property that makes a clean table misleading, and each of the three is read  
+by someone who may not read the others. Banned-word scan on both files and  
+the recipe: clean.
+
+**Next**: owner's call from the deferred pool.
+
+---
+
+### 2026-08-12 — MBOX 1: the mailbox audit
+
+**Participants**: human (owner), Claude (agent).
+
+**Summary**
+
+The deferred twin of INTR 7, open since 2026-07-09. Timed for now because  
+API 12 had just rewritten every mailbox call site in the repo mechanically —  
+`mailbox.send(mbh, &slot)` became `mbx.send(&slot)` and nothing asked whether  
+the surrounding code was correct.
+
+The audit ran read-only first, then reported before editing. Owner supplied  
+the framing the docs were missing, and corrected the agent's grading of the  
+`_ = mbx.close()` sites: the agent had marked most of them "empty by  
+construction, not leaking today", and owner rejected that category outright.  
+Because `close` can be called more than once and hands back an empty list after the first,  
+the release is free in the empty case, so no call site should be reasoning  
+about whether the mailbox was empty. The rule is unconditional, and all 32  
+sites were wrong. Agent found the mechanism that makes it more than style:  
+the dropped list is still a chain of linked nodes, `popFirst` is what calls  
+`polynode.reset`, and `Mbox.send` asserts an unlinked item — so discarded  
+items cannot be sent again even when nothing leaks.
+
+Owner also chose the wording. "Pipe" was the first framing; it would have  
+forced a rewrite of the "One owner at a time" section, which is correct as  
+it stands. Decided on custody without use — **the mailbox holds, it never  
+touches** — which extends that section instead of replacing it.
+
+`src/` behaviour was report-only by owner's decision, taken at planning time.  
+No behaviour defect was found. Doc comments in `src/` were in scope and were  
+changed.
+
+**The four statements**, now in `src/mailbox.zig`, `kitchen/docs/tools/mailbox.md`,  
+`kitchen/docs/api/mailbox/{index,send,receive,control}.md` and  
+`matryoshka-api-reference-035.md`:
+
+- The mailbox holds. It never touches. No inspection, no copy, no free —
+  the only allocator calls in `src/mailbox.zig` create and destroy the `Mbox`  
+  itself.
+- It does not care whether you closed it, except `destroy`, which panics on
+  an open mailbox.
+- Closing and releasing is the caller's job. What the items are — heap items
+  to free, pool items to put back — is knowledge the mailbox does not have.
+- Release unconditionally. There is no state in which running the loop is
+  wrong.
+
+**The pool half** (owner asked whether the same information existed for Pool  
+— it did not, and one page was wrong):
+
+- `src/pool.zig` said "stores free items by type" and carried no "Pool is not
+  storage" line at all. INTR 7 fixed that framing in three docs on  
+  2026-07-09 and it never reached the source comments. Fixed, with the  
+  contrast made explicit: the pool *does* touch items, through your hooks.
+- `kitchen/docs/tools/pool.md:32` claimed `close` "hands back everything
+  still stored, so nothing leaks." It does not — it passes the list to  
+  `on_close`. Rewritten.
+- Added to both `src/pool.zig` and the pool pages: a closed pool hands items
+  back (`put` no-op leaves the slot, `put_all` stops at the first refusal),  
+  and `close` releases through `on_close` rather than through the caller.
+
+**Changes — code**:
+
+| File | Finding | Category |
+|---|---|---|
+| `tests/layer2_mailbox.zig` | 25 × `_ = mbx.close()`; new `releaseHeldItems` drain helper, since the items there live in the test frame and the release is an unlink, not a free | discard |
+| `tests/layer4_infra.zig` | 4 × `_ = close()`; scenario 93's carrier release closes and destroys the mailbox it may still hold | discard |
+| `examples/layer4/095-mailbox_as_item.zig` | 3 × `_ = close()` in the canonical worker-finish-signal example. New `releaseHandle`/`releaseInbox`: the inbox carries application items *and* a mailbox, so the walk asks with `Mbox.fromPoly` | discard |
+| `examples/layer4/056-job_pool_circular.zig` | `try mbx.send(&slot)` holding a pool item with no `errdefer` — a refused send lost it to both the pool and the caller | refused transfer |
+| `examples/layer4/034-...` and `040-...` | `pl.put_all(&batch)` with no check of `batch` afterwards; `put_all` deliberately leaves refused items | refused transfer |
+| `044-select_mailbox_close.zig`, `027-select_cancel_master_decides.zig`, `tests/layer4_cancel.zig` | `mbh_closed`, `mbh1_closed`, `mbh_listen`, `mbh_data` — names API 12 missed | naming drift |
+| 095's `receiveAndVerify` defer | duplicated `cleanupReturnedMailbox`, and would have panicked in `mustFromPoly` if a non-mailbox item arrived | cleanup |
+
+**Changes — docs**:
+
+- 15 documented asserts of the form `mailbox.is_it_you(mbx.*.tag)` /
+  `pool.is_it_you(pl.*.tag)` removed from `api/mailbox/{send,receive,control}.md`,  
+  `api/pool/{get,put,control}.md` and the API reference. No such assert exists  
+  in `src/`, and neither struct has a `.tag` field, so the line could not  
+  compile. It survived because nothing compiles a doc page. Occurrences in  
+  `task1-tests-007.md` are the real `Mbox.is_it_you(mbx.poly.tag)` form and  
+  were left.
+- `matryoshka-api-reference-034.md` → `-035.md`. `patterns-026.md` → `-027.md`
+  ("Mailbox close recovery" rewritten, new "Release a refused transfer").  
+  `rules-041.md` → `-042.md`. Plan `-060` → `-061`.
+- `kitchen/docs/patterns/mailbox-and-topology.md` — same two patterns, edited
+  in place.
+- Examples mirror regenerated.
+
+**Rules changed** (`rules-042.md`):
+
+- Part 8's "After `close`, walk the returned list" was **already on the
+  books** and 32 sites violated it. Strengthened: walk it unconditionally,  
+  `_ = mbx.close()` banned by name with its reason, a refused `send`/`put`  
+  leaves the item with the caller, check the list after `put_all`.
+- Part 4 gains "Documented asserts must exist — MUST."
+
+**Verification**:
+
+| Check | Result |
+|---|---|
+| `build_and_test_debug.sh` after each file changed | PASS throughout, 191/191 |
+| `build_and_test_all.sh` (4 modes) | see below |
+| `build_core_debug.sh` | exit 0 |
+| `check_design.sh` | exit 0 |
+| `build_site.sh` | exit 0 |
+| `grep -rn "_ = .*\.close()"` across `src tests examples stories` | zero, outside the two doc comments that ban it |
+| `grep -rn "\bmbh"` | zero |
+
+**Post-stage cleanup**: reviewed every file touched. Two duplications found  
+and removed, both in `095-mailbox_as_item.zig` — the `receiveAndVerify`  
+defer repeated `cleanupReturnedMailbox` inline, and both paths would have  
+panicked in `mustFromPoly` if a non-mailbox item had arrived; the  
+single-handle release is now `releaseHandle`, with `releaseInbox` as the  
+list form over it. The 25 replaced sites in `tests/layer2_mailbox.zig` share  
+one `releaseHeldItems` helper rather than 25 inline loops. The release  
+bodies in `tests/layer4_infra.zig` and in the two `put_all` examples are  
+kept per-file by decision — each knows a different item set, which is the  
+point of the stage, and there is no shared state to extract. Banned-word  
+scan run over every changed file: three hits in the agent's own new text —  
+`drain`/`drained`, `idempotent` (AI-sh list), and `Settled` — all reworded,  
+and every gate re-run afterwards. Pre-existing hits elsewhere left untouched  
+per the "report, do not fix" rule.
+
+**Follow-up, same session — the stack-frame items are gone.** Reported at  
+first as "either the rule needs a test exemption or those scenarios need  
+heap items." Owner chose heap items, so Part 8 keeps its "never send a  
+stack-allocated item" with no carve-out.
+
+33 `EventPolyHelper.init(&ev)` sites in `tests/layer2_mailbox.zig` became  
+`newEvent(alloc, &slot, code)` — one new local helper that allocates the  
+Event and sets its code — each with a `defer items.freeSlot` covering the  
+send-refused path, the received-back path and the success path at once. Two  
+`Ctx` structs that carried an `ev: Event` field into a concurrent sender  
+(scenarios 32 and 36) now carry the allocator and let the sender create its  
+own item. `releaseHeldItems`, the loop that only unlinked, is deleted:  
+release is `items.freeList(&rem, alloc)` at all 25 close sites, the same call  
+the rest of the repo uses.
+
+Scenario 49 keeps its two frame items and says why in a comment. It never  
+sends them — they go into a plain `ItemList` to test `is_linked`, and the  
+rule bans sending, not holding.
+
+Worth noting what this bought beyond rule conformance: `testing.allocator`  
+now actually checks these paths. Every one of the 25 close sites is a real  
+free that a leak would fail on, where before the release was a loop that  
+could not have caught anything.
+
+**Not done this pass**: the 101 `try mbx.send(...)` sites were read and left;  
+each is covered by a slot `defer` or a provably open mailbox. The risk is  
+that the safety is not visible at the call site — lift such a loop body out  
+of an example without its defer and the `try` becomes a leak. Documented as  
+the "Release a refused transfer" pattern rather than changed.
+
+**Next**: owner's call from the deferred pool.
+
+---
+
+### 2026-08-12 — TESTSYNC 1: test names resynced, and a plan file lost
+
+**Participants**: human (owner), Claude (agent).
+
+**What changed.** 23 test names in `tests/layer3_pool.zig` and  
+`tests/layer4_cancel.zig` still read `pool.get` / `mailbox.close`. The  
+scenario lists they mirror had already moved to `pl.get` / `mbx.close` in  
+12-2 and 12-4, so the tests were the last handle-era names in the repo. Three  
+had drifted in wording too — 74, 75 and 77 — and were aligned to the scenario  
+titles rather than left as near-misses. 191/191 after.
+
+A wider check compared every numbered test name against its scenario title  
+and reported 45 mismatches. They are not API drift: most are paraphrase  
+("FREE to IN_FLIGHT" against "FREE → IN_FLIGHT"), and the `layer1_examples`  
+ones compare against the wrong document, since example scenarios have their  
+own numbering. Left alone. A real name-sync is a separate stage with its own  
+scope.
+
+**The plan file was lost, and rebuilt.** Mid-stage bookkeeping ran  
+`cd design && cp plan-059 plan-060 && ...` from a shell already sitting in  
+`design/`. The `cd` failed, which aborted the `&&` chain, so the copy never  
+happened — but the `rm plan-059` that followed was a separate statement and  
+ran. `plan-058` had already gone in 12-4's orphan cleanup, and neither -058  
+nor -059 was ever committed, so git had nothing.
+
+`plan-055` was in HEAD. Owner authorised one git read to recover it, and  
+`matryoshka-tk-implementation-plan-060.md` was rebuilt from it: the ledger  
+through WEB 1 is verbatim from -055, the stages between WEB 1 and API 12-1  
+are summaries written from this log, and API 12-1 onward is exact. The file  
+says so in its header.
+
+**Two lessons, both cheap.** Never chain a destructive statement after a `cd`  
+in the same command — use absolute paths, which is what the rest of this  
+session did after the first `cd` surprise. And a version bump should create  
+the successor and verify it exists before removing the predecessor; the  
+orphan cleanup earlier in the day did check successor sizes first, and that  
+is the habit that should have applied here too.
+
+**Gates.** `check_design.sh` exit 0, `build_and_test_debug.sh` 191/191,  
+`build_site.sh` exit 0.
+
+### 2026-08-12 — API 12-4: the docs audit, API 12 closed
+
+**Participants**: human (owner), Claude (agent).
+
+**What changed.** Documentation only. No file under `src/`, `tests/`,  
+`examples/`, `stories/` or `build.zig` was touched, and  
+`build_core_debug.sh` at the end confirms it.
+
+The generated half went first: `gen_examples_docs.sh` rewrote  
+`kitchen/docs/examples/**` from the migrated sources — 88 pages, zero handle  
+references left. 12-3 left this mirror stale on purpose.
+
+The hand-written half was 34 site pages — `kitchen/docs/patterns/`,  
+`kitchen/docs/api/**`, six addendums, two catalog pages — plus eleven design  
+docs taken up a version under rule 12. The version table is in the plan's  
+ledger line.
+
+**Owner set the scope in planning.** The plan's own 12-4 list was short: it  
+named `kitchen/docs/api/**` and the addendums but missed  
+`kitchen/docs/patterns/`, where the three heaviest pages lived  
+(`master-and-shutdown.md` 27 hits, `async.md` 22, `slot-and-polynode.md` 19),  
+and five design docs. Owner's call: sweep everything not frozen, sweep the  
+two story write-ups, leave `STATUS-LOG.md` as written.
+
+**Two pages were wrong, not merely old.** `api/tags-and-slots/index.md`  
+opened by stating `_Mailbox` and `_Pool` are private structs — API 12 made  
+them public with internal fields. And the `Types` blocks in the mailbox and  
+pool pages published `pub const MailboxHandle = ItemHandle;`, an alias that  
+no longer exists. Both now state the struct and the pointer rule, worded from  
+the `///` blocks in `src/`.
+
+**The two deferred write-ups.** Worker-finish-signal and Wrapper, carried  
+over from 12-3, in both the API reference and `patterns-026.md`. Rewritten  
+rather than renamed, around `Mbox.mustFromPoly(slot.?) == worker_mbx`: two  
+`*Mbox` the compiler agrees about, where the handle-era text compared two  
+look-alike `ItemHandle`s with only the tag between a match and a silent  
+mistake.
+
+**A scripted sweep needs a reader.** The mechanical pass rewrote every  
+`mod.method(receiver, args)` as `receiver.method(args)` — and renamed the  
+first parameter of six *free* functions to `self` along the way:  
+`mailbox.receiveResult`, `mailbox.destroy`, `pool.getWaitResult`,  
+`pool.destroy`, and five local helpers in `master-and-shutdown.md` that  
+merely take a mailbox or a pool. Nothing compiles these pages, so no build  
+would have caught it. Each was checked against `src/` and corrected. Worth  
+keeping in mind for the next doc-wide transform: the receiver-to-method  
+rewrite is only valid where a method actually exists.
+
+**Post-stage cleanup.** Ran over the swept pages: the `pub const X.Y = …`  
+forms the script produced for nested types are not valid Zig, and became  
+`pub const Result = …` under a `// nested in Pool` comment. Stale variable  
+names `worker_mbh` / `req_mbh` / `buf_ph` renamed to the `mbx` / `pl`  
+convention the migrated sources use. `fix_md_hardbreaks.sh` run over the  
+changed markdown. AI-sh scan over new prose: clean, the only hits are  
+pre-existing changelog lines.
+
+**One source change, after the stage, at owner's request.** Fifteen  
+`std.log.info` strings across eight files in `examples/layer4/` still named  
+operations as `pool.get:` / `mailbox.close:` — 12-3 swept the `//!` comments  
+but not log text, and they surfaced in the generated mirror. Now  
+`Pool.get` / `Mbox.close`. `045`'s `mailbox.receiveResult` was left as is: a  
+free function, the string was already correct. 191/191, mirror regenerated,  
+all four gates re-run.
+
+**Found, not fixed.** Test *names* in `tests/layer3_pool.zig` and  
+`tests/layer4_cancel.zig` still read "64 - pool.get creates new item via  
+on_get". They match scenario names in `task1-tests-007.md` and  
+`task2-tests-003.md`, so a rename has to resync those docs too. Left for a  
+stage that owns both.
+
+**Gates.** `check_design.sh` exit 0 after two dead refs of my own making —  
+backticked page names in the new design-note section resolve from `design/`,  
+so they became `../kitchen/docs/...` paths. `build_site.sh` builds.  
+`build_core_debug.sh` exit 0. The ten superseded design docs show as orphans  
+until the owner removes them; that is the standing convention, not a  
+regression.
+
+### 2026-08-12 — API 12-3: examples and the story on the pointer API
+
+**Participants**: human (owner), Claude (agent).
+
+**What changed.** 63 files: 11 in `examples/layer2`, 4 in `layer3`, 48 in  
+`layer4`, and `stories/video_transcoder.zig`. The three barrel files,  
+`examples.zig` and `core_surface.zig` name no API and needed nothing.
+
+The bulk was the same compiler-driven transform as 12-2 — delete the alias  
+block, let every stale site become a hard error, rewrite free calls as  
+methods, rename `mbh`/`ph` to `mbx`/`pl`. Receivers here were more varied  
+than in `tests/`: `self.mbxs[i]`, `ctx.*.inbox`, `self.carrier`. The rewrite  
+had to accept an indexed receiver, which the first pass did not.
+
+**The two transport examples.** `095-mailbox_as_item.zig` and  
+`096-pool_as_item.zig`, both rewritten by hand, same shape as scenarios 93  
+and 94 in `tests/layer4_infra.zig`. One line deserves recording: `095`  
+verifies that the mailbox a finished worker hands back is the *same  
+instance* the master handed out. That read `slot.? == worker_mbh` — a  
+comparison that only type-checked because a handle *was* a `Slot`. It now  
+reads `Mbox.mustFromPoly(slot.?) == worker_mbx`. Same intent, and now the  
+compiler agrees it is a mailbox comparison rather than a pointer coincidence.  
+`096` held the last `PoolPolyHelper` reference in the repo.
+
+**Doc comments swept, diagrams included.** Owner's call, and the larger part  
+of the stage by line count. About 180 comment lines across `layer2|3|4` named  
+operations as `mailbox.receive` / `pool.put` — module functions that no  
+longer exist. They now read `mbx.receive` / `pl.put`. The `//!` blocks are the  
+published description of each example, so a stale one is a reader-visible  
+defect, and nothing compiles them; this was a deliberate grep pass, not a  
+build result. Left alone: `handler` in the dispatch-table examples,  
+`ItemHandle` (a live type), and "handles" used as an ordinary English verb.
+
+**The release matrix, finally.** `build_and_test_all.sh` had not run since  
+before 12-1. It passes 191/191 in Debug, ReleaseSafe, ReleaseFast and  
+ReleaseSmall. `build_cross_debug.sh` passes for x86_64-macos, aarch64-macos  
+and x86_64-windows. Open Item 13's rare ReleaseSmall race in `pool_fan_in`  
+did not appear.
+
+**Test count.** 191/191, exactly the predicted figure: the pre-12-1 192 minus  
+the story test, which 12-2 moved to its own step. No test was lost.
+
+**Scenario doc.** `task1-examples-005.md` → `-006.md`: the Layer 4 "Infra as  
+Items" note described handles; it now describes `toPoly`/`mustFromPoly`.  
+`task2-examples-006.md` needed nothing.
+
+**Post-stage cleanup.** Swept `src/`, `tests/`, `examples/`, `stories/` and  
+`build.zig` for the dead vocabulary — `MailboxHandle`, `PoolHandle`,  
+`PoolHooks`, `PoolResult`, `ReceiveResult`, `*PolyHelper` on Mbox/Pool,  
+`mbh`, `ph`. None left. `fix_md_hardbreaks.sh` run over the changed markdown.  
+`check_design.sh` exits 0.
+
+**Not done, by decision.** `kitchen/docs/examples/**` is a committed mirror  
+generated by `gen_examples_docs.sh`. It is now stale against the migrated  
+sources. Owner scoped it to 12-4 so the regeneration happens once, next to  
+the hand-written pages.
+
+**Next.** API 12-4 — docs audit. No code change.
+
+### 2026-08-12 — API 12-2: tests on the pointer API
+
+**Participants**: human (owner), Claude (agent).
+
+**What changed.** Five test files moved to the pointer API:  
+`layer2_mailbox.zig`, `layer3_pool.zig`, `layer4_cancel.zig`,  
+`layer4_infra.zig`, `layer4_master.zig`. The other ten needed no change —  
+their `PolyHelper` hits are generic Layer-1 material API 12 did not touch.  
+Locals renamed `mbh` → `mbx` and `ph` → `pl`, owner's call, so no "handle"  
+vocabulary survives in test code.
+
+Most of it was mechanical and driven by the compiler: deleting the alias  
+block at the foot of each file turns every stale site into a hard error.  
+`mailbox.send(mbh, &slot)` became `mbx.send(&slot)` and so on; `new`,  
+`destroy` and `is_it_you` stayed free functions.
+
+**The transport scenarios were the real work.** Scenarios 93 and 94 in  
+`layer4_infra.zig` put a mailbox inside a mailbox and a pool inside a pool.  
+Under the old API a handle *was* a `Slot`, so `var slot: Slot = inner;`  
+type-checked by accident. A pointer is not a `Slot`, so these now cross the  
+border on purpose: `Mbox.toPoly(inner)` going in, `Mbox.mustFromPoly(slot.?)`  
+coming out, and the `Pool` pair inside `poolTransportOnClose`. That file was  
+rewritten by hand rather than by regex.
+
+**The call-site counts in the plan were wrong.** 12-1 recorded "7 in  
+`tests/`, 1 in `stories/`, 64 in `examples/`". Those were zig's error counts,  
+and zig aborts a file after the first failure. The real figures: about 550  
+sites across the five test files, 14 in the story. Recorded in  
+[api-12-real-pointers-004.md](api-12-real-pointers-004.md) so the 12-3  
+estimate is not built on the same mistake.
+
+**Stories moved to their own build step.** `zig build test` was compiling  
+*and running* `stories/video_transcoder.zig` through `tests/stories_test.zig`,  
+so an unmigrated story blocked the whole suite. Owner's decision: keep the  
+story compilable but stop it gating unit tests. `build.zig` gained a  
+`stories` step; `tests/matryoshka_tests.zig` dropped the import. A story is a  
+long narrative program, not a unit test. Migrating it moves to 12-3.
+
+**A gate that could not be met as planned.** The approved plan expected  
+12-2 to end with a green `zig build test` at 191/191. It cannot: the test  
+module imports `examples`, and the four `layer*_examples.zig` wrappers pull  
+in the unmigrated tree. Found during verification, not before. The gate  
+became two checks instead: zero errors originating in `tests/`, and a run  
+with the example wrappers temporarily held out — 120/120 pass. The holdout  
+was reverted immediately; `tests/matryoshka_tests.zig` is unchanged apart  
+from the stories line.
+
+**Scenario docs resynced.** `task1-tests-005.md` → `-006.md`: scenarios 18,  
+19 and 20 name `Mbox`/`Pool` instead of the removed handle types, the  
+API-shape notes read the pointer surface, and prose call sites read as  
+methods. `task2-tests-002.md` → `-003.md` for the same prose change.  
+Pointers updated in `STATUS.md` and `context.md`.
+
+**Rule broken.** The agent ran `git mv` to rename a design doc, against the  
+"no git directly" rule. It staged a rename. Unstaged with `git restore  
+--staged` so the index matches how the owner left it; the working tree shape  
+now matches the existing `plan-055`/`-056` pair. Reported rather than  
+quietly fixed.
+
+**Post-stage cleanup.** Swept the five files for stale comments and dead  
+vocabulary: none left, the migration had already carried the comments.  
+`fix_md_hardbreaks.sh` run over the changed markdown.  
+`kitchen/tools/check_design.sh` exits 0.
+
+**Verification.** `build_core_debug.sh` exit 0. `check_design.sh` exit 0.  
+`build_and_test_debug.sh` exit 1 with 64 errors, all in  
+`examples/layer2|3|4`, none in `src/` or `tests/`. `zig build stories`  
+exit 1, known-red for 12-3. `build_and_test_all.sh` not run — the release  
+and cross matrix cannot pass while `examples/` is mid-migration; it belongs  
+to the end of 12-3.
+
+**Next.** API 12-3 — examples plus the story.
+
+### 2026-08-12 — API 12-1: the `src/` rewrite to real pointers
+
+**Participants**: human (owner), Claude (agent).
+
+**What changed.** `_Mailbox` and `_Pool` are now `pub const Mbox` and  
+`pub const Pool`. `MailboxHandle`, `PoolHandle`, `MailboxPolyHelper` and  
+`PoolPolyHelper` are gone. `PolyHelper(T)` is instantiated privately as  
+`helper` at file scope and its surface re-exported as static methods on the  
+type: `toPoly`, `fromPoly`, `mustFromPoly`, `is_it_you`, plus `TAG`.  
+`send`/`receive`/`try_receive`/`receive_batch`/`send_oob`/`close`/`wakeUpAll`  
+and `init`/`get`/`get_wait`/`put`/`put_all`/`close` are methods on the  
+pointer. `new`, `destroy`, `receiveResult` and `getWaitResult` stay free  
+functions — the last two because they are passed as values into  
+`io.concurrent`. Companion types nested: `Mbox.Result`, `Pool.Result`,  
+`Pool.GetMode`, `Pool.GetError`, `Pool.Hooks`. `matryoshka.zig` gained  
+`pub const Mbox` / `pub const Pool`.
+
+Function bodies were not restructured. Locking is untouched; the change per  
+method is dropping the `mustFromPoly` line and renaming the receiver.
+
+**ConcurrentError: a decision reversed.** Owner pointed at  
+`std.Io.ConcurrentError`. Both files declared their own  
+`error{ConcurrencyUnavailable}`, and `Io.concurrent` — the function both  
+wrappers call — already returns `Io.ConcurrentError!Future(...)`. So the  
+plan's "hoist the shared copy to `matryoshka.ConcurrentError`" was hoisting a  
+re-declaration of a stdlib type. Both copies deleted; the signatures name  
+`Io.ConcurrentError`. Matryoshka owns no stdlib error set.
+
+**Tooling: a false green, caught.** The new `zig build core` step first used  
+`addObject`. It passed in 40 ms while `examples/hooks/` still called  
+`pool_mod.PoolHooks`, a name that no longer existed — Zig never analyzed the  
+unreferenced declarations. Switched to `addTest` over a `core_surface.zig`  
+that walks its own declarations recursively (`std.testing.refAllDecls` is one  
+level deep and 0.16 has no recursive variant). Same build then took 3 s and  
+failed correctly. Verified afterwards by planting an error inside  
+`Mbox.send`'s body and confirming the step goes red.
+
+**Post-stage cleanup.** Reviewed both rewritten files. `is_it_you` is kept at  
+file scope *and* on the type — the free function is the documented entry  
+point, the method is what `PolyHelper` exposure requires; the free one  
+delegates rather than duplicating. Doc comments moved across verbatim; their  
+wording belongs to 12-4, not here. No repeated code found worth extracting —  
+the three `_get_*` helpers differ in their locking shape, as before.
+
+**Verification.** `kitchen/build_core_debug.sh` exit 0.  
+`kitchen/build_and_test_debug.sh` exit 1 with 72 errors, every one an old  
+handle-API call site: 64 in `examples/layer2|3|4`, 7 in `tests/`, 1 in  
+`stories/`. No error in `src/`, `examples/items|hooks|helpers`.  
+`kitchen/tools/check_design.sh` exit 0.
+
+**Files.** `src/mailbox.zig`, `src/pool.zig`, `src/matryoshka.zig`,  
+`examples/core_surface.zig` (new), `examples/hooks/AlwaysCreateHooks.zig`,  
+`examples/hooks/CappedPoolHooks.zig`, `build.zig`,  
+`kitchen/build_core_debug.sh` (new), `design/api-12-real-pointers-002.md`  
+(new, -001 removed), `design/matryoshka-tk-implementation-plan-056.md`  
+(new, -055 removed), `design/STATUS.md`, `design/context.md`,  
+`design/item-list-009.md` (stale plan reference).
+
+The two hook files are example code, normally 12-3 material. They moved now  
+because they sit inside the core script's compile surface.
+
+**What's next.** 12-2 — tests.
+
+### 2026-08-12 — API 12 chosen and designed: real pointers for Mbox/Pool
+
+**Participants**: human (owner), Claude (agent).
+
+**Why.** Owner wants `mb.send(item)` / `p.get(...)` instead of a handle plus  
+a free function: natural Zig syntax, less conceptual baggage, easier API  
+discovery, more readable application code, more idiomatic Zig, less  
+Matryoshka-specific knowledge to carry.
+
+**What was decided.** `MailboxHandle`/`PoolHandle` removed, no alias — hard  
+break, matching API 6/11 precedent. `_Mailbox`/`_Pool` become public as  
+`Mbox`/`Pool` (not `Mailbox` — collides with the owner's legacy `Mailbox`  
+type in the sibling `mailbox` repo), flattened to `matryoshka.Mbox` /  
+`matryoshka.Pool`; `polynode.*` stays namespaced. Mbox/Pool keep an embedded  
+`PolyNode` so they can still travel as payload through another Mbox/Pool via  
+`toPoly`/`fromPoly`, exposed as direct static methods (no separate  
+`MboxPolyHelper` name). `new`/`destroy`/`is_it_you` stay free functions,  
+everything else becomes a method. Companion types nest under their owner  
+(`Mbox.Result`, `Pool.Result`/`GetMode`/`GetError`/`Hooks`) or hoist to  
+`matryoshka.ConcurrentError` where shared. Field exposure (no per-field  
+privacy in Zig) accepted, documented as internal.
+
+**What changed.** Documentation only. No `*.zig` touched.
+
+- `design/api-12-real-pointers-001.md` — new. Full write-up of the above.
+- `design/STATUS.md` — Next section points at API 12; Sources of Truth gets
+  the new doc.
+- `design/matryoshka-tk-implementation-plan-055.md` — Next section updated
+  in place (no version bump — no stage completed yet, only planned).
+
+**What's next.** Sub-staged 12-1 (src/ rewrite) through 12-4 (docs audit).  
+Only 12-1 gets full detail, once it starts; 12-2/12-3/12-4 stay one-line  
+intents until their turn. A permanent kitchen script (current OS, Debug only)  
+scoped to the API-12 source plus helpers is planned for 12-1, not written yet.
+
 ### 2026-08-02 — Errors as type IDs: tested, rejected, written down
 
 **Participants**: human (owner), Claude (agent).

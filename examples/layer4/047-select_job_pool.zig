@@ -5,7 +5,7 @@
 //!
 //! - Master pre-loads a job queue, seeds the pool with N empty containers.
 //! - dispatchJobs: pool availability (getWaitResult) gates dispatch to N workers.
-//! - Each worker doubles its job's code, returns the container via pool.put.
+//! - Each worker doubles its job's code, returns the container via pl.put.
 //! - shutdown closes all worker mailboxes, awaits every worker future.
 //!
 //!
@@ -16,14 +16,14 @@
 //!  ▼
 //!  Select(MasterEvent)
 //!  │
-//!  .pool_ev .item ──► pop job from Master queue ──► fill container ──► mailbox.send ──► mbh[worker_i]
+//!  .pool_ev .item ──► pop job from Master queue ──► fill container ──► mbx.send ──► mbx[worker_i]
 //!                 ──► re-spawn getWaitResult (until queue exhausted)
 //!                 ──► break (queue empty — no more jobs to dispatch)
 //!  │
-//!  worker[i]: mailbox.receive ──► process (code *= 2) ──► pool.put ──► pool (triggers next pool_ev)
+//!  worker[i]: mbx.receive ──► process (code *= 2) ──► pl.put ──► pool (triggers next pool_ev)
 //!  │
-//!  master: mailbox.close (×N) ──► workers exit ──► futs.await
-//!  pool.close ──► on_close ──► freeList (returns all remaining containers)
+//!  master: mbx.close (×N) ──► workers exit ──► futs.await
+//!  pl.close ──► on_close ──► freeList (returns all remaining containers)
 //! ```
 //!
 //!  Pool availability gates job submission. Work input: Master's pre-loaded queue.
@@ -43,16 +43,16 @@ const N: usize = 3;
 const jobs = [N]i32{ 10, 20, 30 };
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     id: usize,
 };
 
 fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
-        defer pool.put(ctx.ph, &slot); // return container to pool — triggers next pool_ev
+        ctx.mbx.receive(&slot, null) catch return;
+        defer ctx.pl.put(&slot); // return container to pool — triggers next pool_ev
         const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
         ev.code *= 2; // process: double the job value
         std.log.info("worker {d}: processed job, result code={d}", .{ ctx.id, ev.code });
@@ -60,7 +60,7 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
 }
 
 const MasterEvent = union(enum) {
-    pool_ev: pool.PoolResult,
+    pool_ev: Pool.Result,
 };
 
 const JobPoolMaster = struct {
@@ -75,15 +75,15 @@ const JobPoolMaster = struct {
     fn seedPool(self: *JobPoolMaster) !void {
         for (0..N) |_| {
             var slot: Slot = null;
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
-            pool.put(self.ph, &slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
+            self.pl.put(&slot);
         }
     }
 
     fn dispatchJobs(self: *JobPoolMaster) !usize {
         var buf: [N + 1]MasterEvent = undefined;
         var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(self.io, &buf);
-        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Event.EventPolyHelper.TAG, null });
+        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Event.EventPolyHelper.TAG, null });
 
         var job_idx: usize = 0;
         var worker_i: usize = 0;
@@ -97,11 +97,11 @@ const JobPoolMaster = struct {
                         const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         ev.code = jobs[job_idx];
                         std.log.info("master: dispatching job {d} (code={d}) to worker {d}", .{ job_idx, ev.code, worker_i });
-                        try mailbox.send(self.mbhs[worker_i], &slot);
+                        try self.mbxs[worker_i].send(&slot);
                         job_idx += 1;
                         worker_i = (worker_i + 1) % N;
                         if (job_idx < N) {
-                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Event.EventPolyHelper.TAG, null });
+                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Event.EventPolyHelper.TAG, null });
                         }
                     },
                     .closed, .canceled, .timeout, .not_created => break,
@@ -114,7 +114,7 @@ const JobPoolMaster = struct {
 
     fn shutdown(self: *JobPoolMaster) !void {
         for (0..N) |i| {
-            var rem: polynode.ItemList = mailbox.close(self.mbhs[i]);
+            var rem: polynode.ItemList = self.mbxs[i].close();
             items.freeList(&rem, self.allocator);
         }
         for (0..N) |i| try self.futs[i].await(self.io);
@@ -122,10 +122,10 @@ const JobPoolMaster = struct {
 
     allocator: std.mem.Allocator,
     io: std.Io,
-    ph: PoolHandle,
+    pl: *Pool,
     pool_ctx: hooks.AlwaysCreateHooks,
     tags: [1]*const anyopaque,
-    mbhs: [N]MailboxHandle,
+    mbxs: [N]*Mbox,
     ctxs: [N]WorkerCtx,
     futs: [N]std.Io.Future(anyerror!void),
 
@@ -136,31 +136,31 @@ const JobPoolMaster = struct {
         self.io = io;
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.ph = try pool.new(io, allocator);
+        self.pl = try pool.new(io, allocator);
         errdefer {
-            pool.close(self.ph);
-            pool.destroy(self.ph, allocator);
+            self.pl.close();
+            pool.destroy(self.pl, allocator);
         }
-        try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
+        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         var created: usize = 0;
         errdefer for (0..created) |i| {
-            var rem: polynode.ItemList = mailbox.close(self.mbhs[i]);
+            var rem: polynode.ItemList = self.mbxs[i].close();
             items.freeList(&rem, allocator);
-            mailbox.destroy(self.mbhs[i], allocator);
+            mailbox.destroy(self.mbxs[i], allocator);
         };
         for (0..N) |i| {
-            self.mbhs[i] = try mailbox.new(io, allocator);
+            self.mbxs[i] = try mailbox.new(io, allocator);
             created += 1;
-            self.ctxs[i] = .{ .mbh = self.mbhs[i], .ph = self.ph, .id = i };
+            self.ctxs[i] = .{ .mbx = self.mbxs[i], .pl = self.pl, .id = i };
             self.futs[i] = try io.concurrent(workerFn, .{&self.ctxs[i]});
         }
         return self;
     }
 
     fn destroy(self: *JobPoolMaster) void {
-        pool.close(self.ph);
-        pool.destroy(self.ph, self.allocator);
-        for (0..N) |i| mailbox.destroy(self.mbhs[i], self.allocator);
+        self.pl.close();
+        pool.destroy(self.pl, self.allocator);
+        for (0..N) |i| mailbox.destroy(self.mbxs[i], self.allocator);
         self.allocator.destroy(self);
     }
 };
@@ -171,8 +171,8 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

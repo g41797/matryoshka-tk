@@ -4,8 +4,8 @@
 //! Batch processing.
 //!
 //! - Main sends 10 Events, then a ShutdownCommand sentinel.
-//! - Worker blocks on the first item via mailbox.receive.
-//! - Worker then empties the rest with mailbox.receive_batch.
+//! - Worker blocks on the first item via mbx.receive.
+//! - Worker then empties the rest with mbx.receive_batch.
 //! - Sentinel found in either place ends the worker.
 //!
 //!
@@ -19,14 +19,14 @@
 //!
 
 pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+    var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
     var fut = try io.concurrent(batchWorkerFn, .{&ctx});
 
     const n: usize = 10;
@@ -36,7 +36,7 @@ pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     // Signal worker to stop — all n items are already queued before this.
@@ -44,7 +44,7 @@ pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
         var slot: Slot = null;
         defer items.ShutdownCommand.ShutdownCommandPolyHelper.destroy(allocator, &slot);
         try items.ShutdownCommand.ShutdownCommandPolyHelper.create(allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     fut.await(io);
@@ -56,7 +56,7 @@ pub fn batch_processing(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     first_count: usize = 0,
     batch_count: usize = 0,
@@ -65,7 +65,7 @@ const WorkerCtx = struct {
 fn batchWorkerFn(ctx: *WorkerCtx) void {
     while (true) {
         var slot: Slot = null;
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
         if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
@@ -76,7 +76,7 @@ fn batchWorkerFn(ctx: *WorkerCtx) void {
         items.freeSlot(&slot, ctx.alloc);
         ctx.first_count += 1;
 
-        var batch: polynode.ItemList = mailbox.receive_batch(ctx.mbh) catch return;
+        var batch: polynode.ItemList = ctx.mbx.receive_batch() catch return;
         while (batch.popFirst()) |bpoly| {
             if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(bpoly)) |_| {
                 items.freeItem(bpoly, ctx.alloc);
@@ -94,6 +94,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

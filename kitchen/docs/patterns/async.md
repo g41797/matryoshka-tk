@@ -13,7 +13,7 @@ When to use.
 Code shape.  
 ```zig
 const future =
-    try mailbox.receive_future(mbh, null);
+    try mbx.receive_future(null);
 
 const result =
     try future.await(io);
@@ -50,8 +50,8 @@ Code shape.
 var buf: [8]MasterEvent = undefined;
 var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
 
-try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
-try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
+try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
 try sel.concurrent(.timer, sleepFn, .{ sleep_t, io });
 
 while (true) {
@@ -60,7 +60,7 @@ while (true) {
         .inbox => |r| switch (r) {
             .item => |handle| {
                 // process, then re-register the source
-                try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
+                try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
             },
             .closed, .canceled, .timeout => break,
         },
@@ -98,7 +98,7 @@ Code shape.
 try select.concurrent(
     .mailbox,
     mailbox.receiveResult,
-    .{ mbh, null },
+    .{ mbx, null },
 );
 ```
 
@@ -113,7 +113,7 @@ Code shape.
 try select.concurrent(
     .pool,
     pool.getWaitResult,
-    .{ ph, TAG, null },
+    .{ pl, TAG, null },
 );
 ```
 
@@ -146,14 +146,14 @@ When to use.
 
 Code shape.  
 ```zig
-try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_ph, VideoBufferPolyHelper.TAG, null });
+try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_pl, VideoBufferPolyHelper.TAG, null });
 // ...
 const ev = try sel.await();
 switch (ev) {
     .buf_ev => |r| switch (r) {
         .item => |handle| {
             // fill buffer, route it, then re-register for the next free buffer
-            try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_ph, VideoBufferPolyHelper.TAG, null });
+            try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_pl, VideoBufferPolyHelper.TAG, null });
         },
         .closed, .canceled, .timeout, .not_created => break,
     },
@@ -187,21 +187,21 @@ When to use.
 Code shape.  
 ```zig
 fn receive_router(
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     timeout_ns: ?u64,
     sel: *std.Io.Select(MasterEvent),
-    ph: PoolHandle,
+    pl: *Pool,
     alloc: std.mem.Allocator,
-) mailbox.ReceiveResult {
+) Mbox.Result {
     while (true) {
-        const result: mailbox.ReceiveResult = mailbox.receiveResult(mbh, timeout_ns);
+        const result: Mbox.Result = mailbox.receiveResult(mbx, timeout_ns);
 
         var held: Slot = switch (result) {
             .item => |handle| handle,
             else => null,
         };
         defer {
-            pool.put(ph, &held);            // back to the pool
+            pl.put(&held);            // back to the pool
             items.freeSlot(&held, alloc);   // pool closed — nowhere to put it back
         }
 
@@ -216,7 +216,7 @@ fn receive_router(
     }
 }
 
-try sel.concurrent(.inbox, receive_router, .{ mbh, null, &sel, ph, alloc });
+try sel.concurrent(.inbox, receive_router, .{ mbx, null, &sel, pl, alloc });
 ```
 
 Why.
@@ -228,7 +228,7 @@ Why.
 The return type is pinned.
 
 - `Select.concurrent` requires the function's return type to equal the field type.
-- The router returns `mailbox.ReceiveResult`, so `.inbox` is `mailbox.ReceiveResult`.
+- The router returns `Mbox.Result`, so `.inbox` is `Mbox.Result`.
 - In-loop puts and the final return land in the same field. `U` gains nothing.
 
 The router is application code, not toolkit code.
@@ -249,8 +249,8 @@ Two rules.
 Buffer size is a precondition.
 
 - `N >= P + T` — buffer length, items in flight, registered tasks.
-- Pre-fill a pool with `P` items and acquire with `pool.get_wait` to fix `P`.
-- `pool.get_wait` never creates, so the population stays put.
+- Pre-fill a pool with `P` items and acquire with `Pool.get_wait` to fix `P`.
+- `Pool.get_wait` never creates, so the population stays put.
 
 Example: `examples/layer4/062-receive_router.zig`.
 
@@ -274,7 +274,7 @@ while (sel.cancel()) |event| {
         .pool_ev => |r| switch (r) {
             .item => |handle| {
                 var slot: Slot = handle;
-                pool.put(ph, &slot);                   // recycle it
+                pl.put(&slot);                   // recycle it
             },
             .canceled, .closed, .timeout, .not_created => {},
         },
@@ -344,12 +344,12 @@ Why.
 
 When to use.
 
-- Stop a Group of workers that block on `mailbox.receive`.
+- Stop a Group of workers that block on `Mbox.receive`.
 
 Code shape.  
 ```zig
 // workers exit when receive returns error.Closed
-var rem: polynode.ItemList = mailbox.close(ready_queue);
+var rem: polynode.ItemList = ready_queue.close();
 // walk rem, recover any unreceived items
 try group.await(io);
 ```
@@ -362,7 +362,7 @@ Example: `stories/video_transcoder/video_transcoder.zig`.
 
 When to use.
 
-- Stop a Group of workers that block on `pool.get_wait`, with no mailbox to close.
+- Stop a Group of workers that block on `Pool.get_wait`, with no mailbox to close.
 
 Code shape.  
 ```zig
@@ -389,8 +389,8 @@ Only waiting operations are cancelable.
 
 Examples.
 
-- mailbox.receive
-- pool.get_wait
+- Mbox.receive
+- Pool.get_wait
 - receiveResult
 - getWaitResult
 
@@ -430,11 +430,11 @@ Never substitute one for the other.
 
 When to use.
 
-- A worker blocks on `mailbox.receive` or `pool.get_wait` and must react to each outcome.
+- A worker blocks on `Mbox.receive` or `Pool.get_wait` and must react to each outcome.
 
 Code shape.  
 ```zig
-mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+ctx.mbx.receive(&slot, null) catch |err| switch (err) {
     error.Canceled => return error.Canceled,   // report up — Master decides
     error.Closed, error.Timeout => return,      // end-of-stream — exit cleanly
     error.Wakeup => continue,                   // poke — re-check loop condition

@@ -7,7 +7,7 @@ directly instead of through a mailbox.
 - [Timer cancel → close → walk remaining](layer4/026-select_cancel_close.md)
 - [Cancel reports, Master decides](layer4/027-select_cancel_master_decides.md)
 - [Multiple event source types in one Select](layer4/028-select_mixed_sources.md)
-- [Cancel → Master close → pool.put_all](layer4/029-select_cancel_recycle.md)
+- [Cancel → Master close → Pool.put_all](layer4/029-select_cancel_recycle.md)
 - [Graceful shutdown with in-flight items](layer4/031-select_graceful_shutdown.md)
 - [Mailbox receive as Select event source](layer4/042-select_mailbox_event.md)
 - [Select direct queue push](layer4/043-select_direct_push.md)

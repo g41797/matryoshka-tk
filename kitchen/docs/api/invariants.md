@@ -18,35 +18,35 @@ These hold at all times, for every node in the system:
 
 | Function | Concurrent callers | Notes |
 |----------|--------------------|-------|
-| `mailbox.send` | yes | Multiple senders safe |
-| `mailbox.send_oob` | yes | Multiple senders safe |
-| `mailbox.receive` | yes | One handle per waiter; scheduling order is runtime-dependent |
-| `mailbox.try_receive` | yes | |
-| `mailbox.receive_batch` | yes | Transfers whole queue atomically |
-| `mailbox.close` | yes — once | Second call returns empty list |
+| `Mbox.send` | yes | Multiple senders safe |
+| `Mbox.send_oob` | yes | Multiple senders safe |
+| `Mbox.receive` | yes | One handle per waiter; scheduling order is runtime-dependent |
+| `Mbox.try_receive` | yes | |
+| `Mbox.receive_batch` | yes | Transfers whole queue atomically |
+| `Mbox.close` | yes — once | Second call returns empty list |
 | `mailbox.destroy` | no | Must happen after all users have stopped |
-| `pool.get` | yes | |
-| `pool.get_wait` | yes | One handle per waiter; scheduling order is runtime-dependent |
-| `pool.put` | yes | |
-| `pool.put_all` | yes | Thread-safe per item; batch is NOT atomic wrt close() — items transferred before close go to on_close; items not yet transferred stay in caller's list |
-| `pool.close` | yes — once | Second call is a no-op |
+| `Pool.get` | yes | |
+| `Pool.get_wait` | yes | One handle per waiter; scheduling order is runtime-dependent |
+| `Pool.put` | yes | |
+| `Pool.put_all` | yes | Thread-safe per item; batch is NOT atomic wrt close() — items transferred before close go to on_close; items not yet transferred stay in caller's list |
+| `Pool.close` | yes — once | Second call is a no-op |
 | `pool.destroy` | no | Must happen after all users have stopped |
 
 ## Complexity guarantees
 
 | Function | Time complexity |
 |----------|----------------|
-| `mailbox.send` | O(1) |
-| `mailbox.send_oob` | O(1) |
-| `mailbox.receive` | O(1) |
-| `mailbox.try_receive` | O(1) |
-| `mailbox.receive_batch` | O(1) — transfers whole queue atomically |
-| `mailbox.close` | O(n) — walks the queue |
-| `pool.get` | O(1) |
-| `pool.get_wait` | O(1) |
-| `pool.put` | O(1) |
-| `pool.put_all` | O(k) — k is the number of items in the list |
-| `pool.close` | O(n) — walks all per-tag free-lists |
+| `Mbox.send` | O(1) |
+| `Mbox.send_oob` | O(1) |
+| `Mbox.receive` | O(1) |
+| `Mbox.try_receive` | O(1) |
+| `Mbox.receive_batch` | O(1) — transfers whole queue atomically |
+| `Mbox.close` | O(n) — walks the queue |
+| `Pool.get` | O(1) |
+| `Pool.get_wait` | O(1) |
+| `Pool.put` | O(1) |
+| `Pool.put_all` | O(k) — k is the number of items in the list |
+| `Pool.close` | O(n) — walks all per-tag free-lists |
 
 ## Contract violations
 
@@ -56,7 +56,7 @@ Checked via `std.debug.assert`:
 - Active in Debug and ReleaseSafe.
 - Removed in ReleaseFast and ReleaseSmall.
 
-- **Wrong handle type** — passing a PoolHandle where MailboxHandle is expected, or vice versa.
+- **Wrong handle type** — passing a *Pool where *Mbox is expected, or vice versa.
   - Checked via `is_it_you` on every API call.
 - **Non-empty slot on receive/get** — slot must be null before receiving or getting a handle.
 - **Linked node on send/put** — node must not be linked into a list before transfer.

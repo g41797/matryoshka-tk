@@ -18,8 +18,8 @@ The slot rule:
   and clears the slot in one step, instead of hand-written `slot.?` + `slot = null`.
 
 **Exception — event-source helpers**: `receiveResult` and `getWaitResult` do not take a `*Slot`  
-parameter. They move the handle via the returned union value (`ReceiveResult.item`,  
-`PoolResult.item`) rather than a slot pointer. The caller extracts the handle from the union  
+parameter. They move the handle via the returned union value (`Mbox.Result.item`,  
+`Pool.Result.item`) rather than a slot pointer. The caller extracts the handle from the union  
 and holds it from that point. This is an intentional exception to the slot-pointer pattern.
 
 ---
@@ -39,7 +39,7 @@ The assert catches this immediately.
 
 ## Why cleanup operations accept null
 
-`pool.put` and `PolyHelper.destroy` check null and return early:
+`Pool.put` and `PolyHelper.destroy` check null and return early:
 
 ```zig
 if (slot.* == null) return;
@@ -58,10 +58,10 @@ Slot lifecycle
     ▲                        │  ▲
     │                        │  │
     ├──── transfer ──────────┤  └── inspect (fromSlot: slot unchanged)
-    │                        │      (mailbox.send, pool.put: slot.* = null)
+    │                        │      (Mbox.send, Pool.put: slot.* = null)
     ├──── extract ───────────┘
     │                            (moveFromSlot: caller takes the item)
-    └──── cleanup (no-op) ──────  (pool.put, PolyHelper.destroy: null → return)
+    └──── cleanup (no-op) ──────  (Pool.put, PolyHelper.destroy: null → return)
 ```
 
 Transfer and extract both leave the slot null. The difference is who ends up  
@@ -79,7 +79,7 @@ Before transfer                  After transfer
   │ ItemHandle  │                  │    null     │
   └─────────────┘                  └─────────────┘
                                            │
-  mailbox.send(mbh, &slot)                    │ slot.* = null
+  mbx.send(&slot)                    │ slot.* = null
                                            │
                      Mailbox ◄─────────────┘
                      now holds ItemHandle
@@ -102,15 +102,15 @@ list.append(&ev.*.poly.node);
 Code order:                      Execution when acquire fails:
 
   var slot: Slot = null;              slot = null
-  defer pool.put(ph, &slot);          acquire fails
-  try pool.get(..., &slot);           defer runs: pool.put sees null → no-op
+  defer pl.put(&slot);          acquire fails
+  try pl.get(..., &slot);           defer runs: Pool.put sees null → no-op
   // work                          ✓ nothing lost
 
                                  Execution when item is transferred:
 
                                    slot = null (after acquire: slot is non-null)
-                                   mailbox.send(mbh, &slot)  → slot = null
-                                   defer runs: pool.put sees null → no-op
+                                   mbx.send(&slot)  → slot = null
+                                   defer runs: Pool.put sees null → no-op
                                    ✓ item transferred, not double-recycled
 ```
 

@@ -2,6 +2,11 @@
 
 > A guide for communicating software architecture using Matryoshka-Tk notation.
 
+Change from -002: banned-word pass. `Scalable` replaced with a plain  
+statement of the requirement, and the hold-language pass finished here —  
+"Ownership moves." → "The holder changes.", and the section that carried the  
+same word in its title is now `# Holding`. No notation change.
+
 ---
 
 # Goal
@@ -77,7 +82,7 @@ Examples
 - Stores files.
 - Processes video.
 - Works with limited memory.
-- Scalable.
+- Handles growing load.
 - Fault tolerant.
 
 Never describe implementation.
@@ -344,7 +349,7 @@ through hold.
 
 Items move.
 
-Ownership moves.
+The holder changes.
 
 Items are never shared.
 
@@ -372,7 +377,7 @@ The diagram should feel alive.
 
 ---
 
-# Ownership
+# Holding
 
 Communication
 

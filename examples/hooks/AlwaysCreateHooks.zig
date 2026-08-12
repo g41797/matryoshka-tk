@@ -1,7 +1,7 @@
 //! Sample hook, for demo purposes only.
 alloc: std.mem.Allocator,
 
-pub fn poolHooks(self: *Self, tags: []const *const anyopaque) pool_mod.PoolHooks {
+pub fn poolHooks(self: *Self, tags: []const *const anyopaque) pool_mod.Pool.Hooks {
     return .{
         .ctx = self,
         .tags = tags,

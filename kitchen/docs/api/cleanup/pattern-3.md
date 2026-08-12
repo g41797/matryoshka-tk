@@ -7,7 +7,7 @@
 ```zig
 var slot: Slot = null;
 defer if (slot) |poly| helpers.freeItem(poly, allocator);
-try mailbox.receive(mbh, &slot, null);
+try mbx.receive(&slot, null);
 // dispatch on slot.?.*.tag, process item
 // item stays non-null until explicitly transferred or freed
 ```

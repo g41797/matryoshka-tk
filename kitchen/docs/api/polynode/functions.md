@@ -25,7 +25,7 @@ pub fn is_linked(n: *PolyNode) bool
 - Not a membership test. `std.DoublyLinkedList` never sets the links of a
   list's only member, so a list of exactly one reports false.
 
-- The `!is_linked` asserts inside `mailbox.send`, `pool.put`,
+- The `!is_linked` asserts inside `Mbox.send`, `Pool.put`,
   `PolyHelper.destroy` and `PolyHelper.moveFromSlot` catch the multi-element  
   case and are blind for a list of one.
 

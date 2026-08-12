@@ -3,15 +3,15 @@
 
 //! Pool seeding.
 //!
-//! - Seed the pool with 5 Sensor items via pool.get(new_only) + pool.put.
-//! - Consume all 5 with pool.get(available_only) — no allocation.
+//! - Seed the pool with 5 Sensor items via new_only.get() + pl.put.
+//! - Consume all 5 with available_only.get() — no allocation.
 //! - Free each consumed item, verify the count.
 //!
 //!
 //! ```
-//!  pool.get (new_only) × 5 ──► pool.put × 5
+//!  pl.get (new_only) × 5 ──► pl.put × 5
 //!  (pool holds 5 items)
-//!       │ pool.get (available_only) × 5
+//!       │ pl.get (available_only) × 5
 //!       ▼
 //!  slot ──► SensorPolyHelper.destroy per item
 //! ```
@@ -21,12 +21,12 @@ pub fn pool_seeding(allocator: std.mem.Allocator, io: std.Io) !void {
     var ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Sensor.SensorPolyHelper.TAG};
 
-    const ph = try pool.new(io, allocator);
+    const pl = try pool.new(io, allocator);
     defer {
-        pool.close(ph);
-        pool.destroy(ph, allocator);
+        pl.close();
+        pool.destroy(pl, allocator);
     }
-    try pool.init(ph, ctx.poolHooks(&tags));
+    try pl.init(ctx.poolHooks(&tags));
 
     const n: usize = 5;
 
@@ -34,8 +34,8 @@ pub fn pool_seeding(allocator: std.mem.Allocator, io: std.Io) !void {
     var i: usize = 0;
     while (i < n) : (i += 1) {
         var slot: Slot = null;
-        defer pool.put(ph, &slot);
-        try pool.get(ph, items.Sensor.SensorPolyHelper.TAG, .new_only, &slot);
+        defer pl.put(&slot);
+        try pl.get(items.Sensor.SensorPolyHelper.TAG, .new_only, &slot);
         const sn = items.Sensor.SensorPolyHelper.mustFromSlot(&slot);
         sn.value = @as(f64, @floatFromInt(i)) * 0.1;
     }
@@ -46,7 +46,7 @@ pub fn pool_seeding(allocator: std.mem.Allocator, io: std.Io) !void {
     while (true) {
         var slot: Slot = null;
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
-        pool.get(ph, items.Sensor.SensorPolyHelper.TAG, .available_only, &slot) catch break;
+        pl.get(items.Sensor.SensorPolyHelper.TAG, .available_only, &slot) catch break;
         const sn = items.Sensor.SensorPolyHelper.mustFromSlot(&slot);
         std.log.info("consumed Sensor value={d:.1}", .{sn.value});
         consumed += 1;
@@ -62,4 +62,3 @@ const std = @import("std");
 const pool = matryoshka.pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const PoolHandle = pool.PoolHandle;

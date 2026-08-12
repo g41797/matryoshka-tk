@@ -48,14 +48,14 @@ When to use.
 
 Code shape.  
 ```zig
-try mailbox.send(mbh, &slot);
+try mbx.send(&slot);
 // slot == null
 ```
 
 or
 
 ```zig
-pool.put(ph, &slot);
+pl.put(&slot);
 // slot == null if accepted by pool
 ```
 
@@ -107,7 +107,7 @@ Why.
 
 - `appendFromSlot` empties the Slot itself, so there is no line to forget.
 - The Slot must hold an item. An insert is not a `defer` target, so it follows
-  `mailbox.send` rather than `pool.put`.
+  `Mbox.send` rather than `Pool.put`.
 
 Do not.
 
@@ -124,7 +124,7 @@ When to use.
 
 Code shape.  
 ```zig
-defer pool.put(ph, &slot);
+defer pl.put(&slot);
 ```
 
 or
@@ -147,8 +147,8 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-defer pool.put(ph, &slot);              // no-op if slot == null
-try pool.get(ph, TAG, .available_or_new, &slot);
+defer pl.put(&slot);              // no-op if slot == null
+try pl.get(TAG, .available_or_new, &slot);
 // ... work ...
 // on transfer: slot = null → defer runs as no-op
 // on no transfer: defer recycles item
@@ -189,14 +189,14 @@ Code shape.
 ```zig
 var slot: Slot = null;
 defer if (slot) |poly| helpers.freeItem(poly, allocator);
-try mailbox.receive(mbh, &slot, null);
+try mbx.receive(&slot, null);
 // dispatch on slot.?.*.tag, process item
 // item stays non-null until explicitly transferred or freed
 ```
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`.
 
-### Fallback destroy after pool.put
+### Fallback destroy after Pool.put
 
 When to use.
 
@@ -204,9 +204,9 @@ When to use.
 
 Code shape.  
 ```zig
-defer EventPolyHelper.destroy(allocator, &slot);   // fallback: frees if pool.put left slot non-null
-defer pool.put(ph, &slot);                          // primary: recycles to pool (clears slot on success)
-// defers run LIFO: pool.put first, then destroy (no-op if pool.put cleared slot)
+defer EventPolyHelper.destroy(allocator, &slot);   // fallback: frees if Pool.put left slot non-null
+defer pl.put(&slot);                          // primary: recycles to pool (clears slot on success)
+// defers run LIFO: Pool.put first, then destroy (no-op if Pool.put cleared slot)
 ```
 
 Why.
@@ -279,7 +279,7 @@ When to use.
 
 Code shape.  
 ```zig
-var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+var batch: polynode.ItemList = try mbx.receive_batch();
 while (batch.popFirst()) |ih| {
     const msg = MessagePolyHelper.mustFromPoly(ih);
     // ... use msg
@@ -360,7 +360,7 @@ var slot: Slot = null;
 defer EventPolyHelper.destroy(allocator, &slot);
 try EventPolyHelper.create(allocator, &slot);
 EventPolyHelper.mustFromSlot(&slot).code = 42;
-try mailbox.send(mbh, &slot);
+try mbx.send(&slot);
 ```
 
 Code shape (optional — type may vary).  
@@ -422,15 +422,19 @@ Code shape.
 ```zig
 const WorkerInbox = struct {
     poly: PolyNode,
-    handle: mailbox.MailboxHandle,
+    mbx: *Mbox,
 };
 pub const WorkerInboxPolyHelper = polynode.PolyHelper(WorkerInbox);
 ```
 
 Why.
 
-- Wrapper has its own PolyHelper tag, distinct from `MailboxPolyHelper.TAG`.
-- Enables normal type dispatch. The receiver finds the embedded handle.
+- Wrapper has its own PolyHelper tag, distinct from `Mbox.TAG`.
+- Enables normal type dispatch. The receiver finds the embedded `*Mbox`.
+
+A mailbox can travel on its own — `mbx.toPoly()` in, `Mbox.mustFromPoly` out.  
+Wrap it only when the receiver needs more than the endpoint: a job id, a  
+deadline, a reply address alongside it.
 
 ### Mailbox-as-message
 
@@ -442,7 +446,7 @@ Pattern.
 ```
 Worker
     │
-returns MailboxHandle
+returns *Mbox
     │
 Master receives mailbox
 ```
@@ -461,16 +465,22 @@ When to use.
 
 Pattern.
 
-- Master creates `worker_mbh`, spawns a worker via `io.concurrent`, passes `worker_mbh` as parameter.
+- Master creates `worker_mbx: *Mbox`, spawns a worker via `io.concurrent`, passes `worker_mbx` as parameter.
 - Worker processes items until a shutdown signal.
-- Worker sends `worker_mbh` back to the Master's inbox (unclosed) as the finish signal, then exits.
-- Master confirms class: `mailbox.is_it_you(received.*.tag)`.
-- Master confirms instance: `received == worker_mbh` (pointer comparison).
-- Master closes and destroys `worker_mbh`, then awaits the worker's future.
+- Worker sends `worker_mbx.toPoly()` back to the Master's inbox (unclosed) as the finish signal, then exits.
+- Master confirms class and instance in one step: `Mbox.mustFromPoly(slot.?) == worker_mbx`.
+- Master closes and destroys `worker_mbx`, then awaits the worker's future.
 
 Why.
 
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, with handing the mailbox back.
+- The instance check is a real pointer comparison. Both sides are `*Mbox`, so
+  the compiler agrees the two values are the same kind of thing. Under the  
+  handle API this compared two look-alike `ItemHandle`s and only the tag  
+  stood between a match and a silent mistake.
+
+- `Mbox.fromPoly` is the checking form when a foreign node is possible; it
+  returns null instead of panicking.
 
 Details: [API Reference — Transporting infra handles](../api/tags-and-slots/index.md).
 
@@ -482,13 +492,13 @@ When to use.
 
 Pattern.  
 ```
-PoolHandle
+pl: *Pool
     ↓
-mailbox.send()
+mbx.send(&slot)
 ```
 
 Why.
 
-- PoolHandle is itself a PolyNode.
+- A pool is itself a PolyNode. `pl.toPoly()` in, `Pool.mustFromPoly` out.
 
 ---

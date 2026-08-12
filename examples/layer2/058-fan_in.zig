@@ -5,7 +5,7 @@
 //!
 //! - 3 concurrent senders: Events, Sensors, and a mixed sender.
 //! - All send into one shared mailbox.
-//! - Single receiver empties it with mailbox.receive_batch.
+//! - Single receiver empties it with mbx.receive_batch.
 //! - Counts events and sensors received, verifies the total.
 //!
 //!
@@ -18,16 +18,16 @@
 //!
 
 pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx_ev: SenderCtx = .{ .mbh = mbh, .alloc = allocator };
-    var ctx_sn: SenderCtx = .{ .mbh = mbh, .alloc = allocator };
-    var ctx_alt: SenderCtx = .{ .mbh = mbh, .alloc = allocator };
+    var ctx_ev: SenderCtx = .{ .mbx = mbx, .alloc = allocator };
+    var ctx_sn: SenderCtx = .{ .mbx = mbx, .alloc = allocator };
+    var ctx_alt: SenderCtx = .{ .mbx = mbx, .alloc = allocator };
 
     var f1 = try io.concurrent(eventSenderFn, .{&ctx_ev});
     var f2 = try io.concurrent(sensorSenderFn, .{&ctx_sn});
@@ -38,7 +38,7 @@ pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
     f3.await(io);
 
     const total_sent: usize = ctx_ev.sent + ctx_sn.sent + ctx_alt.sent;
-    var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+    var batch: polynode.ItemList = try mbx.receive_batch();
     var events_received: usize = 0;
     var sensors_received: usize = 0;
 
@@ -56,7 +56,7 @@ pub fn fan_in(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const SenderCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     sent: usize = 0,
 };
@@ -67,7 +67,7 @@ fn eventSenderFn(ctx: *SenderCtx) void {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -81,7 +81,7 @@ fn sensorSenderFn(ctx: *SenderCtx) void {
         var slot: Slot = null;
         items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch return;
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i)) * 0.1;
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -100,7 +100,7 @@ fn altSenderFn(ctx: *SenderCtx) void {
             items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch return;
             items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @as(f64, @floatFromInt(i));
         }
-        mailbox.send(ctx.mbh, &slot) catch {
+        ctx.mbx.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -114,5 +114,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

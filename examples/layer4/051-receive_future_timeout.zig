@@ -11,23 +11,23 @@
 //! ```
 //!  mailbox (empty)
 //!  │
-//!  receive_future(50ms) ──► Future(ReceiveResult)
-//!  fut.await ──► ReceiveResult .timeout
+//!  receive_future(50ms) ──► Future(Mbox.Result)
+//!  fut.await ──► Mbox.Result .timeout
 //!  │
-//!  EventPolyHelper.create ──► slot ──mailbox.send──► mailbox
-//!  receive_future(null) ──► fut.await ──► ReceiveResult .item ──► freeSlot
+//!  EventPolyHelper.create ──► slot ──mbx.send──► mailbox
+//!  receive_future(null) ──► fut.await ──► Mbox.Result .item ──► freeSlot
 //! ```
 //!
 
 pub fn receive_future_with_timeout(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     try ctx.receiveWithTimeout();
     try ctx.sendAndReceiveItem();
 }
@@ -35,13 +35,13 @@ pub fn receive_future_with_timeout(allocator: std.mem.Allocator, io: std.Io) !vo
 const TIMEOUT_NS: u64 = 50_000_000; // 50 ms
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 
     fn receiveWithTimeout(self: *Ctx) !void {
-        var fut_t: std.Io.Future(mailbox.ReceiveResult) = try mailbox.receive_future(self.mbh, TIMEOUT_NS);
-        const r_timeout: mailbox.ReceiveResult = fut_t.await(self.io);
+        var fut_t: std.Io.Future(Mbox.Result) = try self.mbx.receive_future(TIMEOUT_NS);
+        const r_timeout: Mbox.Result = fut_t.await(self.io);
         try helpers.expect(error.ReceiveFutureTimeoutFailed, r_timeout == .timeout, "expected .timeout");
         std.log.info("receive_future timeout: got .timeout as expected", .{});
     }
@@ -51,10 +51,10 @@ const Ctx = struct {
         defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
         try items.Event.EventPolyHelper.create(self.alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 5;
-        try mailbox.send(self.mbh, &slot);
+        try self.mbx.send(&slot);
 
-        var fut_item: std.Io.Future(mailbox.ReceiveResult) = try mailbox.receive_future(self.mbh, null);
-        const r_item: mailbox.ReceiveResult = fut_item.await(self.io);
+        var fut_item: std.Io.Future(Mbox.Result) = try self.mbx.receive_future(null);
+        const r_item: Mbox.Result = fut_item.await(self.io);
         switch (r_item) {
             .item => |handle| {
                 var received: Slot = handle;
@@ -71,6 +71,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

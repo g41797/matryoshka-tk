@@ -3,16 +3,16 @@
 
 //! OOB via send_oob.
 //!
-//! - Send 3 Events via mailbox.send, queued in order.
-//! - Send 1 Sensor via mailbox.send_oob, jumps to queue front.
+//! - Send 3 Events via mbx.send, queued in order.
+//! - Send 1 Sensor via mbx.send_oob, jumps to queue front.
 //! - Receive 4 items: OOB Sensor arrives first, then the 3 Events.
 //! - Free every received item.
 //!
 //!
 //! ```
-//!  mailbox.send (Event×3) ──► queue tail
-//!  mailbox.send_oob (Sensor) ──► queue front
-//!       │ mailbox.receive ×4
+//!  mbx.send (Event×3) ──► queue tail
+//!  mbx.send_oob (Sensor) ──► queue front
+//!       │ mbx.receive ×4
 //!       ▼
 //!  OOB Sensor arrives first, then Events in send order
 //!  freeSlot per item
@@ -20,11 +20,11 @@
 //!
 
 pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
     const codes = [_]i32{ 1, 2, 3 };
@@ -33,7 +33,7 @@ pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.Event.EventPolyHelper.destroy(allocator, &slot);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = code;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     {
@@ -41,7 +41,7 @@ pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.Sensor.SensorPolyHelper.destroy(allocator, &slot);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = -1.0;
-        try mailbox.send_oob(mbh, &slot);
+        try mbx.send_oob(&slot);
     }
 
     var received_oob: bool = false;
@@ -50,7 +50,7 @@ pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
     while (i < 4) : (i += 1) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
-        try mailbox.receive(mbh, &slot, 1_000_000_000);
+        try mbx.receive(&slot, 1_000_000_000);
         const poly: *PolyNode = slot.?;
         if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |oob_sn| {
             std.log.info("OOB signal value={d:.1}", .{oob_sn.value});
@@ -75,6 +75,6 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

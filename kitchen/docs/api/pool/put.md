@@ -7,7 +7,7 @@ New to the concept? See [Tools — Pool](../../tools/pool.md) first.
 ## put
 
 ```zig
-pub fn put(ph: PoolHandle, slot: *Slot) void
+pub fn put(self: *Pool, slot: *Slot) void
 ```
 
 - Returns handle to pool.
@@ -29,7 +29,6 @@ pub fn put(ph: PoolHandle, slot: *Slot) void
   - Returns immediately, no hook call.
   - `slot.*` stays non-null — caller keeps the handle.
 - Assert (when slot.* != null):
-  - `pool.is_it_you(ph.*.tag)`
   - `!polynode.is_linked(slot.*)`
 
 **No sequence guarantee.** A call pattern like "put three times, then get  
@@ -59,7 +58,7 @@ The pool does not distinguish between simple and composite items.
 ## put_all
 
 ```zig
-pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void
+pub fn put_all(self: *Pool, list: *polynode.ItemList) void
 ```
 
 - Returns batch of handles to pool.
@@ -68,8 +67,10 @@ pub fn put_all(ph: PoolHandle, list: *polynode.ItemList) void
 - If the pool closes mid-batch: items already transferred are passed to `on_close`; items not yet transferred stay in the caller's list.
 - Restoration order when closed mid-batch may differ from original order.
 - Assert:
-  - `pool.is_it_you(ph.*.tag)`
   - Each node's tag registered in pool's tag set.
+
+**So check the list after the call.** A non-empty list means the caller still  
+holds those items and must release them.
 
 ---
 

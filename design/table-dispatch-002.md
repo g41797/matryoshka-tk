@@ -1,4 +1,10 @@
-# Table dispatch (001)
+# Table dispatch (002)
+
+
+Change from -001: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 Working document for DISPATCH 2.
 
@@ -113,7 +119,7 @@ Full write-up: `secondary/llvm-pointer-switch-bug-001.md`.
 - `T` is a Master, a worker, an application struct. Matryoshka cannot name it.
 
 The alternative is a `*anyopaque` context pointer with a cast in every handler,  
-which is what `PoolHooks` does — because the pool is library code that runs  
+which is what `Pool.Hooks` does — because the pool is library code that runs  
 before the application type exists.
 
 A table has no such constraint. The receiver builds its own table and knows its  
@@ -127,7 +133,7 @@ provide the parts:
 - `Slot` carries the item and reports what the handler did with it.
 
 The table is composed from blocks that exist. Adding it to `src/` would add a  
-generic parameter to an API that is otherwise concrete — `MailboxHandle`,  
+generic parameter to an API that is otherwise concrete — `*Mbox`,  
 `Slot`, `ItemHandle` — for no capability the application cannot write itself.
 
 So it ships as an example plus pattern documentation.
@@ -217,7 +223,7 @@ An allocated buffer would be needed only if the entry count cannot be bounded
 at compile time — handlers registered by a plugin, or a table built from a  
 config file that names the types. Nothing in this toolkit works that way: a  
 Master's item types are known when the Master is written, which is what  
-`PoolHooks.tags` already assumes at pool registration. No example allocates,  
+`Pool.Hooks.tags` already assumes at pool registration. No example allocates,  
 and none should need to.
 
 Coverage: `027` and `063` both use comptime literals, which is the shape to  
@@ -253,7 +259,7 @@ The null-safe cleanup idiom covers every row:
 ```zig
 var slot: Slot = null;
 defer items.freeSlot(&slot, allocator);   // no-op when null
-try mailbox.receive(mbh, &slot, null);
+try mbx.receive(&slot, null);
 try master.table.dispatch(master, &slot);
 ```
 
@@ -314,7 +320,7 @@ an enum compiles — it is only tags that cannot be switched on.
 
 ## Precedent
 
-`PoolHooks` is the same idea with the set fixed:
+`Pool.Hooks` is the same idea with the set fixed:
 
 ```zig
 on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,
@@ -330,8 +336,8 @@ handler set opened up.
 
 ## Related
 
-- `patterns-025.md` — Polymorphic dispatch, all three forms
-- `rules-041.md` — the transfer rule as an author convention
+- `patterns-027.md` — Polymorphic dispatch, all three forms
+- `rules-043.md` — the transfer rule as an author convention
 - `secondary/llvm-pointer-switch-bug-001.md` — why a tag cannot be a `switch` prong
-- `receive-router-001.md` — the other example-plus-pattern that stayed out of
+- `receive-router-002.md` — the other example-plus-pattern that stayed out of
   `src/`, for the same reason

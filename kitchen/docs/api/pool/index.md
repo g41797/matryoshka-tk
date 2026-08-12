@@ -24,8 +24,8 @@ const pool = @import("matryoshka").pool;
 
 // typical usage:
 var slot: polynode.Slot = null;
-try pool.get(ph, EVENT_TAG, .available_or_new, &slot);   // slot is now non-null
-pool.put(ph, &slot);                                      // slot is now null (if kept)
+try pl.get(EVENT_TAG, .available_or_new, &slot);   // slot is now non-null
+pl.put(&slot);                                      // slot is now null (if kept)
 ```
 
 ---
@@ -59,18 +59,23 @@ FREE
 ## Types
 
 ```zig
-pub const PoolHandle = ItemHandle;
+pub const Pool = struct { ... };
 ```
 
-PoolHandle is itself a *PolyNode.  
-A pool can be:
+Application code holds `*Pool` and calls methods on it.
+
+A pool is also a PolyNode. `toPoly`/`fromPoly` carry it through a mailbox or  
+another pool. A pool can be:
 
 - sent through a mailbox
 - embedded into larger structures
 
 Same rules as application items.
 
+The struct fields are internal. Use the methods.
+
 ```zig
+// nested in Pool
 pub const GetMode = enum {
     available_or_new,    // use stored handle if available, otherwise call on_get to create
     new_only,            // always call on_get with slot.* == null to create fresh
@@ -86,10 +91,30 @@ pub const GetError = error{
 
 ---
 
-## PoolHooks
+## What a pool does that a mailbox does not
+
+A pool touches items — it creates, resets, keeps or destroys them. Every one  
+of those is your hook doing it, never the pool deciding on its own. A
+[Mailbox](../mailbox/index.md) never touches an item at all.
+
+A closed pool hands items back:
+
+- `put` is a no-op and leaves the slot unchanged.
+- `put_all` stops at the first refusal and leaves the rest in the list.
+
+Either way the caller still holds those items and must release them.
+
+`close` is the other difference. It collects everything held and passes the  
+list to `on_close`, so the hook releases it — where a mailbox returns the  
+list to the caller and leaves the releasing to them.
+
+---
+
+## Pool.Hooks
 
 ```zig
-pub const PoolHooks = struct {
+// nested in Pool
+pub const Hooks = struct {
     ctx:      *anyopaque,
     tags:     []const *const anyopaque,
     on_get:   *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *Slot) void,

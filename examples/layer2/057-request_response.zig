@@ -9,21 +9,21 @@
 //!
 //!
 //! ```
-//!  main ──Event(code=42)──► req_mbh ──► worker
+//!  main ──Event(code=42)──► req_mbx ──► worker
 //!                                          │ code += 1000
 //!                                          ▼
-//!  main ◄──Event(code=1042)── resp_mbh ◄── worker
+//!  main ◄──Event(code=1042)── resp_mbx ◄── worker
 //! ```
 //!
 
 pub fn request_response(allocator: std.mem.Allocator, io: std.Io) !void {
-    const req_mbh: MailboxHandle = try mailbox.new(io, allocator);
-    defer mailbox.destroy(req_mbh, allocator);
+    const req_mbx: *Mbox = try mailbox.new(io, allocator);
+    defer mailbox.destroy(req_mbx, allocator);
 
-    const resp_mbh: MailboxHandle = try mailbox.new(io, allocator);
-    defer mailbox.destroy(resp_mbh, allocator);
+    const resp_mbx: *Mbox = try mailbox.new(io, allocator);
+    defer mailbox.destroy(resp_mbx, allocator);
 
-    var ctx: WorkerCtx = .{ .req_mbh = req_mbh, .resp_mbh = resp_mbh, .alloc = allocator };
+    var ctx: WorkerCtx = .{ .req_mbx = req_mbx, .resp_mbx = resp_mbx, .alloc = allocator };
     var fut = try io.concurrent(workerFn, .{&ctx});
 
     {
@@ -31,29 +31,29 @@ pub fn request_response(allocator: std.mem.Allocator, io: std.Io) !void {
         defer items.freeSlot(&slot, allocator);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 42;
-        try mailbox.send(req_mbh, &slot);
+        try req_mbx.send(&slot);
     }
 
     {
         var slot: Slot = null;
         defer items.freeSlot(&slot, allocator);
-        try mailbox.receive(resp_mbh, &slot, 5_000_000_000);
+        try resp_mbx.receive(&slot, 5_000_000_000);
         const resp: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse return error.WrongTag;
         std.log.info("request_response: response code={d}", .{resp.*.code});
         try helpers.expect(error.RequestResponseFailed, resp.*.code == 1042, "wrong response code");
     }
 
-    var rem_req: polynode.ItemList = mailbox.close(req_mbh);
+    var rem_req: polynode.ItemList = req_mbx.close();
     items.freeList(&rem_req, allocator);
     fut.await(io);
 
-    var rem_resp: polynode.ItemList = mailbox.close(resp_mbh);
+    var rem_resp: polynode.ItemList = resp_mbx.close();
     items.freeList(&rem_resp, allocator);
 }
 
 const WorkerCtx = struct {
-    req_mbh: MailboxHandle,
-    resp_mbh: MailboxHandle,
+    req_mbx: *Mbox,
+    resp_mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -61,11 +61,11 @@ fn workerFn(ctx: *WorkerCtx) void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.req_mbh, &slot, null) catch return;
+        ctx.req_mbx.receive(&slot, null) catch return;
         const ev: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse continue;
         std.log.debug("worker: request code={d}", .{ev.*.code});
         ev.*.code += 1000;
-        mailbox.send(ctx.resp_mbh, &slot) catch {};
+        ctx.resp_mbx.send(&slot) catch {};
     }
 }
 
@@ -75,5 +75,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

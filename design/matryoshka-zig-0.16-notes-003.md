@@ -1,4 +1,10 @@
-# Matryoshka in Zig 0.16 — Notes
+# Matryoshka in Zig 0.16 — Notes (003)
+
+
+Change from -002: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 What Zig 0.16 provides, what it removed, and how cancellation works. The  
 constraints these impose are why `matryoshka-tk` is shaped the way it is.
@@ -8,8 +14,8 @@ The port shipped, so the block-by-block build instructions went with it; the
 Odin idiom mapping moved to
 [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md).
 
-Companion: [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md) — the API surface.\  
-Companion: [rules-041.md](rules-041.md) — the rules these constraints justify.
+Companion: [matryoshka-api-reference-036.md](matryoshka-api-reference-036.md) — the API surface.\  
+Companion: [rules-043.md](rules-043.md) — the rules these constraints justify.
 
 `.minimum_zig_version` is `0.16.0`.
 
@@ -71,7 +77,7 @@ This is not a recommendation. "Must not use" now means "does not exist."
 return `error.Canceled`. They never appear in `_Mailbox` or `_Pool`.
 
 This is the mechanical reason behind the `std.Thread.spawn` ban in
-[rules-041.md](rules-041.md): a thread spawned outside Io carries no
+[rules-043.md](rules-043.md): a thread spawned outside Io carries no
 cancellation token, so nothing can wake it but a close broadcast.
 
 # 3. Two backends
@@ -162,7 +168,7 @@ m.deinit(alloc);                // allocator required
 **No `Io.Condition.waitTimeout`** (open issue codeberg/zig#31278).
 
 `src/internal/cond_timeout.zig` supplies `condition_waitTimeout`, which calls  
-`io.futexWaitTimeout` directly. Both `mailbox.receive` and `pool.get_wait`  
+`io.futexWaitTimeout` directly. Both `Mbox.receive` and `Pool.get_wait`  
 depend on it.
 
 **`heap.ThreadSafeAllocator` removed** as an anti-pattern. Allocators are  
@@ -235,7 +241,7 @@ initiates the unblock.
 ```text
 Broadcast path              Future.cancel path
 ─────────────              ──────────────────
-mailbox.close / pool.close    future.cancel(io)
+Mbox.close / Pool.close    future.cancel(io)
      ↓                          ↓
 cond.broadcast             Io marks task canceled
      ↓                          ↓
@@ -246,13 +252,13 @@ error.Closed               error.Canceled
 worker exits loop          worker exits loop
 ```
 
-Broadcast path: `mailbox.close` / `pool.close` call `cond.broadcast(io)`  
+Broadcast path: `Mbox.close` / `Pool.close` call `cond.broadcast(io)`  
 internally.
 
 Future.cancel path: spawn the worker with `io.concurrent()` and call  
 `future.cancel(io)` on shutdown.
 
-Both require `mailbox.close` and `pool.close` afterward. `future.cancel` stops  
+Both require `Mbox.close` and `Pool.close` afterward. `future.cancel` stops  
 the worker. It does not close anything.
 
 ## 7.3 Cancel-protected vs cancelable operations
@@ -292,24 +298,24 @@ Use `lockUncancelable` when only the lock acquisition needs protection. Use
 `lockUncancelable` is simpler and more explicit than `swapCancelProtection`  
 plus `mutex.lock(io) catch unreachable`, which is why it won.
 
-`pool.put` MUST be cancel-protected.
+`Pool.put` MUST be cancel-protected.
 
-A worker that receives `error.Canceled` from `mailbox.receive` must return its  
-item reliably. If `pool.put` could itself fail with `error.Canceled`, the item  
-would be lost with nothing holding it. `pool.put` returns `void`.
+A worker that receives `error.Canceled` from `Mbox.receive` must return its  
+item reliably. If `Pool.put` could itself fail with `error.Canceled`, the item  
+would be lost with nothing holding it. `Pool.put` returns `void`.
 
 The per-function cancel contract lives in
-[matryoshka-api-reference-033.md](matryoshka-api-reference-033.md).
+[matryoshka-api-reference-036.md](matryoshka-api-reference-036.md).
 
 ## 7.4 `error.Canceled` is not `error.Closed`
 
 These are distinct. Do not remap one to the other.
 
-- `error.Closed` — `mailbox.close` or `pool.close` was called.
+- `error.Closed` — `Mbox.close` or `Pool.close` was called.
 - `error.Canceled` — the task was canceled while the mailbox or pool was still
   open.
 
-Different causes. Different meaning. `mailbox.receive` and `pool.get_wait`  
+Different causes. Different meaning. `Mbox.receive` and `Pool.get_wait`  
 propagate `error.Canceled` directly.
 
 Both cause the worker to exit its loop. The worker may handle them differently.
@@ -321,7 +327,7 @@ meaning.
 
 The scheduler resumed the task. What the code finds after waking is the event.
 
-In `mailbox.receive` the check sequence enforces this:
+In `Mbox.receive` the check sequence enforces this:
 
 ```zig
 while (mbx.len == 0) {
@@ -367,8 +373,8 @@ pub fn PolyHelper(comptime T: type) type {
 ```
 
 `usingnamespace` was removed in 0.16.0, so the generated namespace cannot live  
-inside the struct. It is a file-level `const` alongside it — `MailboxPolyHelper`,  
-`PoolPolyHelper`.
+inside the struct. It is a file-level `const` alongside it — `Mbox`,  
+`Pool`.
 
 Why `var _tag` and not `const`: a mutable global has a guaranteed unique runtime  
 address. `const` may be deduplicated by the linker.
@@ -441,7 +447,7 @@ at load. Not needed while the pool allocates per item rather than from a slab.
 
 ## Hook signature validation — NOT TAKEN, NOT NEEDED
 
-`PoolHooks` field types already enforce the signatures. A separate comptime  
+`Pool.Hooks` field types already enforce the signatures. A separate comptime  
 assertion would only matter for dynamically constructed hooks, which do not  
 exist here.
 

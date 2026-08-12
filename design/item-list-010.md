@@ -1,4 +1,10 @@
-# ItemList (009)
+# ItemList (010)
+
+
+Change from -009: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 
 Change from -008: API 11 — `fromNode` and `toNode` renamed to `fromPoly` and  
@@ -171,7 +177,7 @@ They shipped anyway. Section 12.1 says why the rule was wrong for this case.
 | `_Mailbox.list` | `ItemList` |
 | `_Mailbox.oob_last` | `?ItemHandle`, was `?*std.DoublyLinkedList.Node` |
 | `_Pool.lists` | map of `ItemList` |
-| `PoolHooks.on_put`, `PoolHooks.on_close` | `ItemList` |
+| `Pool.Hooks.on_put`, `Pool.Hooks.on_close` | `ItemList` |
 | `_concat` (was `pool.zig:415`) | deleted. `ItemList.concat` replaces it |
 | `_Mailbox.len`, `_Pool.counts` | unchanged. `len` never replaces them |
 
@@ -223,7 +229,7 @@ that delivers the pointer is the same edge that orders the writes to it.
 
 **This is owed to two other documents.** `rules-033.md:405` carries "an object  
 sits in exactly one place, in exactly one state, at any moment";  
-`matryoshka-concepts-001.md` carries the exclusive-access claim. Neither states  
+`matryoshka-concepts-002.md` carries the exclusive-access claim. Neither states  
 the happens-before consequence. Writing it down is independent of every open  
 decision in section 8.
 
@@ -381,7 +387,7 @@ assignment — is deleted rather than moved.
 
 **Why it is not a reuse argument.** Making `_Pool.lists` a map of `ItemList`  
 already forced this: `_concat` took two `*std.DoublyLinkedList`, and its one  
-caller inside `pool.close` now holds `ItemList` on both sides. The real choice  
+caller inside `Pool.close` now holds `ItemList` on both sides. The real choice  
 was between a method on the type and a private `_concat(dst, src)` that reaches  
 through `._list` twice — the same code with two reaches into the raw field added,  
 in a file that just named that field to discourage them.
@@ -421,8 +427,8 @@ the one caller still writing the builtin by hand.
 **Decision.** `src/` and every call site changed in the same compile. No  
 deprecation path, because the element type changed, not just the name.
 
-Five public signatures changed: `mailbox.receive_batch`, `mailbox.close`,  
-`pool.put_all`, `PoolHooks.on_put`, `PoolHooks.on_close`. The toolkit has no  
+Five public signatures changed: `Mbox.receive_batch`, `Mbox.close`,  
+`Pool.put_all`, `Pool.Hooks.on_put`, `Pool.Hooks.on_close`. The toolkit has no  
 external users yet, and a half-migrated tree is worse than a clean break.
 
 `toListNode` — the proposed outbound accessor, API 7e — is closed as superseded:  
@@ -478,9 +484,9 @@ share the same blind spot:
 
 | site | API | what it means to reject |
 |---|---|---|
-| `src/mailbox.zig:74` | `mailbox.send` | an item already queued elsewhere |
-| `src/mailbox.zig:102` | `mailbox.send_oob` | same, OOB path |
-| `src/pool.zig:240` | `pool.put` | double-put of a still-linked item |
+| `src/mailbox.zig:74` | `Mbox.send` | an item already queued elsewhere |
+| `src/mailbox.zig:102` | `Mbox.send_oob` | same, OOB path |
+| `src/pool.zig:240` | `Pool.put` | double-put of a still-linked item |
 | `src/pool.zig:287` | `_add_returned_item` | internal, last guard before `prepend` |
 | `src/polynode.zig:275`, `:392` | `PolyHelper.moveFromSlot` | extracting from under a live list. Two sites — the helper is generated twice |
 | `src/polynode.zig:315` | `PolyHelper.destroy` | **freeing memory a list still points at** |
@@ -493,9 +499,9 @@ because they read a `Slot`:
 | site | API | assert |
 |---|---|---|
 | `src/polynode.zig:297` | `PolyHelper.create` | `slot.* == null` |
-| `src/mailbox.zig:148` | `mailbox.receive` | `slot.* == null` |
+| `src/mailbox.zig:148` | `Mbox.receive` | `slot.* == null` |
 | `src/mailbox.zig:205` | `mailbox.receive_oob` | `slot.* == null` |
-| `src/pool.zig:157`, `:181` | `pool.get*` | `slot.* == null` |
+| `src/pool.zig:157`, `:181` | `Pool.get*` | `slot.* == null` |
 
 ### 5.3 Whose problem it is
 
@@ -508,9 +514,9 @@ follow the Slot Rule:
 
 | operation | signature | empties the slot |
 |---|---|---|
-| `mailbox.send` | `(mbh, slot: *Slot)` | yes |
-| `mailbox.send_oob` | `(mbh, slot: *Slot)` | yes |
-| `pool.put` | `(ph, slot: *Slot)` | yes |
+| `Mbox.send` | `(mbx, slot: *Slot)` | yes |
+| `Mbox.send_oob` | `(mbx, slot: *Slot)` | yes |
+| `Pool.put` | `(pl, slot: *Slot)` | yes |
 | `PolyHelper.moveFromSlot` | `(slot: *Slot)` | yes |
 | `ItemList.append` | `(ih: ItemHandle)` | no — it cannot |
 
@@ -551,7 +557,7 @@ The map. Every decision in section 8 refers to these numbers.
 | 2 | insert an item already in **this** list | `append` twice on the same handle | `len` counts a cycle; `iterate` never ends |
 | 3 | insert from a Slot and keep the Slot | `append(mustFromSlot(&slot))` then `destroy(&slot)` | free while linked — case 5 with a delay |
 | 4 | `insertAfter` with a foreign `existing` | `insertAfter` | items splice into the wrong list silently |
-| 5 | free a linked item | `PolyHelper.destroy` / `pool.put` / `mailbox.send` | the holding list keeps a pointer to freed memory |
+| 5 | free a linked item | `PolyHelper.destroy` / `Pool.put` / `Mbox.send` | the holding list keeps a pointer to freed memory |
 | 6 | take out through the raw field | `_list.popFirst` without `reset` | stale `prev`/`next`; the next reader walks a list the item left |
 | 7 | mutate during a walk | `iterate` + `append` / `popFirst` | the iterator's `_next` may already be freed or relinked |
 | 8 | copy an `ItemList` header | `const b = a;` | two headers alias one chain; the first `popFirst` corrupts the other |
@@ -716,10 +722,10 @@ insert holds a mutex:
 
 | site | API |
 |---|---|
-| `src/mailbox.zig:87` | `mailbox.send` |
-| `src/mailbox.zig:117`, `:119` | `mailbox.send_oob` |
-| `src/pool.zig:291` | `pool.put` via `_add_returned_item` |
-| `src/pool.zig:322` | `pool.close` |
+| `src/mailbox.zig:87` | `Mbox.send` |
+| `src/mailbox.zig:117`, `:119` | `Mbox.send_oob` |
+| `src/pool.zig:291` | `Pool.put` via `_add_returned_item` |
+| `src/pool.zig:322` | `Pool.close` |
 
 Under Debug, that walks the whole queue with the mailbox locked. Shipping builds  
 pay nothing, but the tests run in Debug and ReleaseSafe, and concurrency tests are  
@@ -746,7 +752,7 @@ pub fn appendFromSlot(self: *ItemList, slot: *Slot) void {
 }
 ```
 
-That is `mailbox.send` minus the mailbox. `slot.* = null` is what does the work;  
+That is `Mbox.send` minus the mailbox. `slot.* = null` is what does the work;  
 after it returns, the dangling slot of case 3 cannot exist, so there is nothing  
 left to detect. The `is_linked` line in the sketch is inherited habit, not  
 mechanism.
@@ -767,7 +773,7 @@ Prevention was always immune, because it reads nothing.
 ## 8. Decisions — round 6
 
 Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
-are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-055.md` and `context.md`, so the  
+are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-064.md` and `context.md`, so the  
 labels stay even though these are no longer questions.
 
 Every full argument lives in sections 5-7. This section records what was decided  
@@ -949,7 +955,7 @@ worse thing to document than an honest O(n) under safety builds. The argument
 against C is placement, not complexity: every internal insert already holds a  
 mutex, and Debug is where the concurrency tests run.
 
-**Also applies to `mailbox.send` and `pool.put`**, which hold their own lists  
+**Also applies to `Mbox.send` and `Pool.put`**, which hold their own lists  
 under their own locks. Same walk, same soundness, larger lists. This is the part  
 inherited from Q33.
 
@@ -961,7 +967,7 @@ list is not reachable from `self`. Nothing outside safety builds.
 ## 9. Required follow-up — done
 
 - **The happens-before invariant of 3.2** — done 2026-07-30, now in
-  `rules-041.md` ("Exclusive access, second half") and `matryoshka-concepts-001.md` ("The transfer  
+  `rules-043.md` ("Exclusive access, second half") and `matryoshka-concepts-002.md` ("The transfer  
   orders memory"). Step 0 of the ship order.
 - **`src/polynode.zig:67`** — the `is_linked` doc comment now claims only what
   the function computes: whether the node has neighbours.
@@ -1024,7 +1030,7 @@ a build where `unreachable` is undefined. The `if` also keeps the positive and
 negative forms looking the same, and puts the O(n) cost at the call site where  
 it can be seen.
 
-**Not applied to `mailbox.send` / `pool.put`.** Q34's closing paragraph extends  
+**Not applied to `Mbox.send` / `Pool.put`.** Q34's closing paragraph extends  
 the walk to those two. They reach `ItemList.append` and `ItemList.prepend`, so  
 they inherit it — no separate code. What was *not* added is a walk of the  
 destination list from inside `send` or `put` before the lock is taken.
@@ -1033,7 +1039,7 @@ destination list from inside `send` or `put` before the lock is taken.
 
 Name and signature unchanged. All seven `!is_linked` asserts kept. The doc  
 comment at `src/polynode.zig:67` now says "True if the node has neighbours" and  
-states the sole-member case outright. The rules entry is in `rules-041.md`  
+states the sole-member case outright. The rules entry is in `rules-043.md`  
 ("The neighbour check"), and the three test comments of Q33 are corrected.
 
 ### 11.4 Tests (Q29)

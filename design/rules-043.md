@@ -1,11 +1,12 @@
-# Matryoshka Zig — Rules (041)
+# Matryoshka Zig — Rules (043)
 
 All coding, doc, and process rules for the project.  
-Change from -040: DOC 23 — one rule added, the design gate (Part 6).  
-No existing rule changed meaning. Which stage introduced which rule is Part 10.
+Change from -041: MBOX 1 — the release rules in Part 8 strengthened, and one  
+rule added in Part 4, documented asserts must exist.  
+Which stage introduced which rule is Part 10.
 
-Companion: [matryoshka-concepts-001.md](matryoshka-concepts-001.md) — the concepts and the thinking model.  
-Companion: [patterns-025.md](patterns-025.md) — reusable coding patterns.
+Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the concepts and the thinking model.  
+Companion: [patterns-027.md](patterns-027.md) — reusable coding patterns.
 
 ---
 
@@ -69,7 +70,7 @@ Per-stage finish checklist.
    code that can be extracted.
 5. Re-run all three kitchen scripts after cleanup.
 6. Scan changed `.zig` files for patterns not yet in
-   [patterns-025.md](patterns-025.md). Report candidates to the owner. The owner
+   [patterns-027.md](patterns-027.md). Report candidates to the owner. The owner
    decides. Do not auto-document, do not auto-extract.
 7. Banned-word scan over changed `*.md` and `*.zig` — Part 5. Report to the
    owner. Do not fix without approval.
@@ -302,7 +303,7 @@ Completeness.
 - Pool items are empty containers on acquisition. Work intent must come from
   outside the pool item.
 - See "Pool items are empty containers" in
-  [matryoshka-concepts-001.md](matryoshka-concepts-001.md).
+  [matryoshka-concepts-002.md](matryoshka-concepts-002.md).
 
 ### Stories
 
@@ -331,11 +332,11 @@ Each story is a mini-project. Two artifacts plus one shared test file.
     flows, all event sources. Diagram only. No prose.
 - Code: `stories/name/name.zig`.
   - ASCII transfer circuit diagram at the top of the file.
-  - Code is structured around Masters. See [patterns-025.md](patterns-025.md)
+  - Code is structured around Masters. See [patterns-027.md](patterns-027.md)
     for the Master composition pattern.
 - Test wrapper: `tests/stories_test.zig`. Single file, all story wrappers.
 - What qualifies as a story: at least two layers composing, and a real domain
-  problem. See [matryoshka-concepts-001.md](matryoshka-concepts-001.md),  
+  problem. See [matryoshka-concepts-002.md](matryoshka-concepts-002.md),  
   "Three-category model".
 
 ---
@@ -451,6 +452,18 @@ First-declaration doc-stub rule.
   and `stories/` file, where the description lives entirely in `//!`.
 - Verify by rendering the page, not by reading the source. A source-level fix here
   is unverifiable without checking the actual rendered page.
+
+Documented asserts must exist — MUST.
+- A doc page or reference section that lists "Assert:" entries lists only
+  asserts present in `src/`. Copy them from the source, do not infer them  
+  from what the function ought to check.
+- MBOX 1 found 15 entries of the form `mailbox.is_it_you(mbx.*.tag)` /
+  `pool.is_it_you(pl.*.tag)` across the api pages and the API reference. No  
+  such assert exists, and neither struct has a `.tag` field, so the line  
+  could not compile as written. It survived because nothing compiles a doc  
+  page.
+- The check is a grep of the documented assert against `src/`, run by whoever
+  edits the page.
 
 ### Description as code — MUST
 
@@ -596,6 +609,13 @@ Verifying a doc target.
 Scan `.zig` and `.md` after any stage that changes them. Report hits to the owner.  
 Do not fix without approval.
 
+Scan scope. Skip `design/STATUS-LOG.md`, `design/secondary/` and  
+`kitchen/defer/` — all three are append-only or frozen, and rewriting them  
+destroys a record. In the files that remain, a changelog row that names a  
+banned word to record its earlier removal stays as it is; the row exists to  
+say the word is gone. Stdlib names such as `ensureTotalCapacity` are not  
+hits. A banned word inside a file name is an owner decision, not a fix.
+
 Scan this rules file against its own ban. The rule text has to name the banned  
 word to ban it, so a scan that skips `rules-0NN.md` misses the document most  
 likely to repeat it — which has happened. See `STATUS-LOG.md`, CMPCT 2 entry.
@@ -662,6 +682,12 @@ A doc belongs in `design/secondary/` when it is any of these:
 - a session log of a past stage — `STATUS-LOG.md` already owns the narrative
 - a process or tooling note rather than a design statement
 - an intention nobody has started
+
+`kitchen/defer/` is frozen too. It is deferred material: drafts and notes that  
+were never finished and are absent from `mkdocs.yml` nav, so nothing in it  
+ships. Treat it exactly like `design/secondary/` — not updated, links not  
+repaired, never a source of truth. Its code snippets predate API 12 and must  
+not be copied from.
 
 Rules for the split.
 - A doc in `design/` may link down into `design/secondary/`.
@@ -746,8 +772,8 @@ Diagrams.
 Structure.
 - Cross-reference instead of duplicating.
 - When extending an existing document, match the heading levels already in use.
-- Link to [matryoshka-concepts-001.md](matryoshka-concepts-001.md),
-  [patterns-025.md](patterns-025.md), and this file.
+- Link to [matryoshka-concepts-002.md](matryoshka-concepts-002.md),
+  [patterns-027.md](patterns-027.md), and this file.
 
 Markdown hard breaks — MUST.
 - CommonMark collapses two lines separated by a single newline into one rendered
@@ -813,7 +839,7 @@ It cannot free the item. `alloc.destroy` takes `*T`, and the allocator needs the
 size to release the memory. With no type there is no size. An unknown item can  
 only be dropped or reported; its memory belongs to whoever knows what it is.
 
-Catalog: [patterns-025.md](patterns-025.md), "The last branch of a dispatch chain".
+Catalog: [patterns-027.md](patterns-027.md), "The last branch of a dispatch chain".
 
 ### No switch over tags — MUST
 
@@ -871,9 +897,9 @@ questions, and a caller that frees on error without looking at the Slot
 double-frees.
 
 Where it is written: the doc comment on `TagTable.Handler`, and
-[patterns-025.md](patterns-025.md), "Polymorphic dispatch — table".
+[patterns-027.md](patterns-027.md), "Polymorphic dispatch — table".
 
-Detail: [table-dispatch-001.md](table-dispatch-001.md).
+Detail: [table-dispatch-002.md](table-dispatch-002.md).
 
 ---
 
@@ -884,7 +910,23 @@ General.
   wins over all other sources.
 - Never send a stack-allocated item. Use `alloc.create` or `pool.get`.
 - After transfer (`send`, `put`), `slot.* = null`.
+- A refused transfer gives the item back. `send`/`send_oob` returning
+  `error.Closed` leave `slot.*` unchanged, and `put` on a closed pool is a  
+  no-op that leaves it unchanged. The caller still holds the item. Handle  
+  that path — free the item, or put it somewhere that will.
 - After `close`, walk the returned list. Free heap items or return pool items.
+- Walk it **unconditionally** — MUST. `mailbox.close` can be called more than once and
+  returns an empty list on later calls, so the release loop is always safe:  
+  on a mailbox still holding items, on one already empty, on one closed  
+  twice. There is no state in which running it is wrong, which means no call  
+  site has to reason about which state it is in.
+- Never write `_ = mbx.close()`. It drops items the mailbox handed back. Even
+  where nothing leaks — items that live in the caller's frame — the dropped  
+  list is still a chain of linked nodes, and `send` asserts an unlinked item,  
+  so those items cannot be sent again. MBOX 1 found 32 sites doing this while  
+  this rule was already on the books.
+- After `put_all`, check the list. It stops at the first refusal and leaves
+  the rest with the caller.
 - `mailbox.close`, `pool.close`, `pool.put`, `pool.put_all` use `lockUncancelable`.
 - Never use `std.Thread.Mutex` / `std.Thread.Condition` in `_Mailbox` or `_Pool`.
 - `error.Canceled` is never remapped to `error.Closed`.
@@ -923,7 +965,7 @@ General.
 
 ## Part 9 — Patterns
 
-The pattern catalog lives in [patterns-025.md](patterns-025.md).
+The pattern catalog lives in [patterns-027.md](patterns-027.md).
 
 It covers:
 - Observable function shapes: coordinator / step / init / destroy / Select event
@@ -983,3 +1025,13 @@ the header. The full account of each stage is in
 - rules-041 (DOC 23) — the design gate. `kitchen/tools/check_design.sh` must
   exit 0 before a stage that touched `design/` is done. It is what makes the  
   "where a doc lives" rule enforceable rather than remembered.
+- rules-043 (PROSE 1) — the full banned-word pass. `kitchen/defer/` declared
+  frozen beside `design/secondary/`, and Part 5 gained a scan scope so the  
+  next run does not re-derive which files are off-limits. The scope is what  
+  turned a 500-hit raw count into the ~20 that were real.
+- rules-042 (MBOX 1) — the mailbox audit. Part 8's release rules made
+  unconditional and given their reason: the list `close` hands back must be  
+  walked every time, `_ = mbx.close()` is banned, a refused `send`/`put`  
+  leaves the item with the caller, and `put_all` must be checked for what it  
+  refused. Part 4 gains "documented asserts must exist" — the audit found 15  
+  documented asserts that were never in `src/`.

@@ -1,4 +1,10 @@
-# Receive router (001)
+# Receive router (002)
+
+
+Change from -001: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 Working document for EXMPL 5.
 
@@ -14,14 +20,14 @@ Every row is decided. Sections below give the reasoning.
 
 | decision | value |
 |---|---|
-| union shape | single field `inbox: mailbox.ReceiveResult` |
+| union shape | single field `inbox: Mbox.Result` |
 | spawn | `sel.concurrent(.inbox, ...)` — Select owns the router |
 | `.item` / `.timeout` / `.wakeup` | put to queue, continue |
-| `.closed` | terminal — return the last `ReceiveResult` |
+| `.closed` | terminal — return the last `Mbox.Result` |
 | `.canceled` | terminal |
 | queue closed | terminal, return `.canceled` (value unobservable) |
 | in-loop put | `putOneUncancelable` |
-| held item on failed put | `defer` → `pool.put`, then `items.freeSlot` |
+| held item on failed put | `defer` → `Pool.put`, then `items.freeSlot` |
 | mailbox | router never closes it, never clears it |
 | return value | never `.item` |
 | shutdown | `sel.cancel()` + walk. Never `cancelDiscard` |
@@ -45,7 +51,7 @@ So a Master must register the source again after every item.
 .inbox => |r| switch (r) {
     .item => |handle| {
         // process
-        try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
+        try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
     },
     ...
 }
@@ -78,11 +84,11 @@ The Master stops re-registering.
 - Matryoshka cannot name `U`.
 
 A `src/` function taking `Queue(U)` would put a generic parameter into an API  
-that is otherwise concrete: `MailboxHandle`, `Slot`, `ItemHandle`.
+that is otherwise concrete: `*Mbox`, `Slot`, `ItemHandle`.
 
 The existing code already stops at that line.
 
-- `mailbox.receiveResult` returns `ReceiveResult`, a Matryoshka type.
+- `mailbox.receiveResult` returns `Mbox.Result`, a Matryoshka type.
 - The wrapping into `U` is left to `select.concurrent`.
 
 The router adds no mailbox behaviour. It wraps and forwards.
@@ -97,7 +103,7 @@ Applications are free to write a different router, or none at all.
 
 ```zig
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
+    inbox: Mbox.Result,
     timer: void,
 };
 ```
@@ -107,8 +113,8 @@ One field for the mailbox source.
 The field type is pinned.
 
 - `Select.concurrent` requires the function's return type to equal the field type.
-- The router returns `mailbox.ReceiveResult`.
-- So `.inbox` is `mailbox.ReceiveResult`.
+- The router returns `Mbox.Result`.
+- So `.inbox` is `Mbox.Result`.
 
 This is what makes the single field work.
 
@@ -125,14 +131,14 @@ It simply never re-registers.
 
 ## Outcomes
 
-`ReceiveResult` has five variants. They split three ways.
+`Mbox.Result` has five variants. They split three ways.
 
 | variant | router action |
 |---|---|
 | `.item` | put to queue, continue |
 | `.timeout` | put to queue, continue |
 | `.wakeup` | put to queue, continue |
-| `.closed` | finished — return the last `ReceiveResult` |
+| `.closed` | finished — return the last `Mbox.Result` |
 | `.canceled` | finished |
 
 Notes.
@@ -237,7 +243,7 @@ finishes, and only then closes the queue. There is no such window.
 ```zig
 var held: polynode.Slot = if (result == .item) result.item else null;
 defer {
-    pool.put(ph, &held);            // back to the pool
+    pl.put(&held);            // back to the pool
     items.freeSlot(&held, alloc);   // pool closed — nowhere to put it back
 }
 ```
@@ -254,7 +260,7 @@ Three paths. One line. No branch that can be forgotten later.
 
 Why no `if`.
 
-- `pool.put` is a no-op on an empty slot — `src/pool.zig:246`.
+- `Pool.put` is a no-op on an empty slot — `src/pool.zig:246`.
 - `items.freeSlot` is a no-op on an empty slot — `examples/items/items.zig:20`.
 - Functions taking a `*Slot` absorb the empty case. The caller does not test.
 
@@ -293,7 +299,7 @@ uncancelably.
 
 ### How `P` is fixed
 
-Pre-fill the pool with exactly `P` items. Acquire with `pool.get_wait`.
+Pre-fill the pool with exactly `P` items. Acquire with `Pool.get_wait`.
 
 - `get_wait` is `available_only`. It never creates.
 - Population is fixed for the pool's life.

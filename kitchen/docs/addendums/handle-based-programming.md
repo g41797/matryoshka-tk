@@ -20,30 +20,6 @@ Different handle types may serve different purposes.
 ---
 
 
-## Infrastructure Handles
-
-Infrastructure handles hide implementation details.
-
-Examples:
-
-* `MailboxHandle`
-* `PoolHandle`
-
-Applications cannot access the internal structure of a mailbox or a pool.   
-All operations use handles.  
-All interaction happens through their public API.
-
-The handle is always the first argument:
-
-```zig
-mailbox.destroy(mbh, allocator);
-pool.get(ph, .available_or_new);
-```
-
-This allows the implementation to change without affecting application code.
-
----
-
 
 ## ItemHandle
 

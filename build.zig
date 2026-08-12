@@ -51,7 +51,6 @@ pub fn build(b: *std.Build) void {
 
     tmod.addImport("matryoshka", mod);
     tmod.addImport("examples", emod);
-    tmod.addImport("stories", smod);
 
     const lib_unit_tests: *std.Build.Step.Compile = b.addTest(.{
         .root_module = tmod,
@@ -65,6 +64,50 @@ pub fn build(b: *std.Build) void {
 
     const test_step: *std.Build.Step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
+
+    // Core surface: src/ plus the example code that calls Mbox/Pool directly.
+    // Skips the layer* example trees — fast inner-loop compile check.
+    const cmod: *std.Build.Module = b.createModule(.{
+        .root_source_file = b.path("examples/core_surface.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    cmod.addImport("matryoshka", mod);
+
+    const core_tests: *std.Build.Step.Compile = b.addTest(.{
+        .root_module = cmod,
+        .use_llvm = true,
+        .use_lld = use_lld,
+    });
+
+    const run_core_tests: *std.Build.Step.Run = b.addRunArtifact(core_tests);
+
+    const core_step: *std.Build.Step = b.step("core", "Build the core surface");
+    core_step.dependOn(&run_core_tests.step);
+
+    // Stories run on their own step, not as part of `test`. A story is a long
+    // narrative program; it does not gate the unit-test suite.
+    const stmod: *std.Build.Module = b.createModule(.{
+        .root_source_file = b.path("tests/stories_test.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    stmod.addImport("matryoshka", mod);
+    stmod.addImport("examples", emod);
+    stmod.addImport("stories", smod);
+
+    const stories_tests: *std.Build.Step.Compile = b.addTest(.{
+        .root_module = stmod,
+        .use_llvm = true,
+        .use_lld = use_lld,
+    });
+
+    const run_stories_tests: *std.Build.Step.Run = b.addRunArtifact(stories_tests);
+
+    const stories_step: *std.Build.Step = b.step("stories", "Run the stories");
+    stories_step.dependOn(&run_stories_tests.step);
 
     // Documentation generation step
     const docs_step: *std.Build.Step = b.step("docs", "Generate API documentation");

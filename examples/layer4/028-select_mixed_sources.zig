@@ -18,35 +18,35 @@
 //!                     │ sel.await() loop
 //!                     ▼
 //!  .inbox .item  ──► freeSlot             (count inbox)
-//!  .pool_ev .item──► pool.put             (count pool)
+//!  .pool_ev .item──► pl.put             (count pool)
 //!  .timer        ──► re-spawn timer       (count ticks)
 //!  exit when inbox_target + pool_target reached ──► sel.cancelDiscard()
 //! ```
 //!
 
 pub fn multiple_event_source_types_in_one_select(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    const ph: PoolHandle = try pool.new(io, allocator);
+    const pl: *Pool = try pool.new(io, allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Sensor.SensorPolyHelper.TAG};
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, allocator);
+        pl.close();
+        pool.destroy(pl, allocator);
     }
 
-    try seedMailbox(mbh, allocator, INBOX_TARGET);
-    try seedPool(ph, POOL_TARGET);
+    try seedMailbox(mbx, allocator, INBOX_TARGET);
+    try seedPool(pl, POOL_TARGET);
 
     var buf: [8]MasterEvent = undefined;
     var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
-    var ctx: Ctx = .{ .mbh = mbh, .ph = ph, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .pl = pl, .alloc = allocator, .io = io };
     try ctx.setupSelect(&sel);
     try ctx.runEventLoop(&sel);
 
@@ -60,8 +60,8 @@ const INBOX_TARGET: usize = 2;
 const POOL_TARGET: usize = 2;
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
-    pool_ev: pool.PoolResult,
+    inbox: Mbox.Result,
+    pool_ev: Pool.Result,
     timer: void,
 };
 
@@ -69,28 +69,28 @@ fn sleepFn(sleep_t: std.Io.Timeout, io: std.Io) void {
     std.Io.Timeout.sleep(sleep_t, io) catch {};
 }
 
-fn seedMailbox(mbh: MailboxHandle, alloc: std.mem.Allocator, count: usize) !void {
+fn seedMailbox(mbx: *Mbox, alloc: std.mem.Allocator, count: usize) !void {
     for (0..count) |i| {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 }
 
-fn seedPool(ph: PoolHandle, count: usize) !void {
+fn seedPool(pl: *Pool, count: usize) !void {
     for (0..count) |i| {
         var slot: Slot = null;
-        try pool.get(ph, items.Sensor.SensorPolyHelper.TAG, .new_only, &slot);
+        try pl.get(items.Sensor.SensorPolyHelper.TAG, .new_only, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @floatFromInt(i + 10);
-        pool.put(ph, &slot);
+        pl.put(&slot);
     }
 }
 
 const Ctx = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     alloc: std.mem.Allocator,
     io: std.Io,
     inbox_count: usize = 0,
@@ -101,8 +101,8 @@ const Ctx = struct {
         const sleep_t: std.Io.Timeout = .{
             .duration = .{ .raw = .{ .nanoseconds = TIMER_NS }, .clock = .real },
         };
-        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
-        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Sensor.SensorPolyHelper.TAG, null });
+        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
+        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Sensor.SensorPolyHelper.TAG, null });
         try sel.concurrent(.timer, sleepFn, .{ sleep_t, self.io });
     }
 
@@ -121,7 +121,7 @@ const Ctx = struct {
                             INBOX_TARGET,
                         });
                         if (self.inbox_count < INBOX_TARGET) {
-                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
                         }
                     },
                     .closed, .canceled, .timeout, .wakeup => break,
@@ -129,7 +129,7 @@ const Ctx = struct {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        defer pool.put(self.ph, &slot);
+                        defer self.pl.put(&slot);
                         self.pool_count += 1;
                         std.log.info("pool_ev: Sensor value={d} ({d}/{d})", .{
                             items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value,
@@ -137,7 +137,7 @@ const Ctx = struct {
                             POOL_TARGET,
                         });
                         if (self.pool_count < POOL_TARGET) {
-                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Sensor.SensorPolyHelper.TAG, null });
+                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Sensor.SensorPolyHelper.TAG, null });
                         }
                     },
                     .closed, .canceled, .timeout, .not_created => break,
@@ -162,8 +162,8 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

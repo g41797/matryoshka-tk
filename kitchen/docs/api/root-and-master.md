@@ -26,8 +26,8 @@ Applications build Masters from:
 
 | What | Where it comes from |
 |------|-------------------|
-| Transport | `mailbox.MailboxHandle` — one or more mailboxes |
-| Lifecycle | `pool.PoolHandle` + `pool.PoolHooks` — handle reuse and policy |
+| Transport | `*Mbox` — one or more mailboxes |
+| Lifecycle | `*Pool` + `Pool.Hooks` — handle reuse and policy |
 | Memory | `std.mem.Allocator` — who allocates and frees |
 | Scheduling | `std.Io` — passed to `mailbox.new` and `pool.new` |
 | Worker coordination | `io.concurrent()` → `Future`, or `Io.Group` |
@@ -47,9 +47,9 @@ PolyNode + Mailbox + Pool + Io.Select   full stack
 
 A Master may be:  
 ```zig
-const Server = struct { inbox: mailbox.MailboxHandle, pool: pool.PoolHandle, ... };
-const Scheduler = struct { pool: pool.PoolHandle, ... };  // no mailbox
-const Pipeline = struct { stages: [3]mailbox.MailboxHandle, ... };
+const Server = struct { inbox: *Mbox, pool: *Pool, ... };
+const Scheduler = struct { pool: *Pool, ... };  // no mailbox
+const Pipeline = struct { stages: [3]*Mbox, ... };
 fn main(init: std.process.Init) !void { ... }
 ```
 
@@ -112,7 +112,7 @@ Matryoshka plugs into the same pattern:
 
 - `mailbox.receiveResult` + `select.concurrent` — mailbox as Select event source.
 - `pool.getWaitResult` + `select.concurrent` — pool as Select event source.
-- `mailbox.receive_future` / `pool.get_wait_future` — Future wrappers for direct await or `Io.Group`.
+- `Mbox.receive_future` / `Pool.get_wait_future` — Future wrappers for direct await or `Io.Group`.
 - Master calls `select.await()`, handles the result, re-spawns the source.
 
 ---

@@ -4,7 +4,7 @@
 // --- Scenarios 3, 4, 6: shared loop worker ---
 
 const MbxCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -12,7 +12,7 @@ fn mbxLoopWorker(ctx: *MbxCtx) error{Canceled}!void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+        ctx.mbx.receive(&slot, null) catch |err| switch (err) {
             error.Canceled => return error.Canceled,
             error.Closed, error.Timeout, error.Wakeup => return,
         };
@@ -25,14 +25,14 @@ test "3 - Future.cancel stops blocked worker" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx: MbxCtx = .{ .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(mbxLoopWorker, .{&ctx});
     fut.cancel(io) catch {};
 }
@@ -43,16 +43,16 @@ test "4 - Group.cancel stops all workers" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx1: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
-    var ctx2: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
-    var ctx3: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx1: MbxCtx = .{ .mbx = mbx, .alloc = testing.allocator };
+    var ctx2: MbxCtx = .{ .mbx = mbx, .alloc = testing.allocator };
+    var ctx3: MbxCtx = .{ .mbx = mbx, .alloc = testing.allocator };
 
     var group: Io.Group = .init;
     defer group.cancel(io);
@@ -65,8 +65,8 @@ test "4 - Group.cancel stops all workers" {
 // --- Scenario 5: cancel deferred to next cancellation point ---
 
 const Ctx5 = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     alloc: std.mem.Allocator,
     received: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     canceled: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
@@ -75,8 +75,8 @@ const Ctx5 = struct {
 fn worker5(ctx: *Ctx5) error{Canceled}!void {
     while (true) {
         var slot: Slot = null;
-        defer pool.put(ctx.ph, &slot); // cancel-protected
-        mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+        defer ctx.pl.put(&slot); // cancel-protected
+        ctx.mbx.receive(&slot, null) catch |err| switch (err) {
             error.Canceled => {
                 ctx.canceled.store(true, .release);
                 return error.Canceled;
@@ -94,30 +94,30 @@ test "5 - Worker not blocked when cancel takes effect" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx5: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags5 = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx5.poolHooks(&tags5));
+    try pl.init(pool_ctx5.poolHooks(&tags5));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, testing.allocator);
+        pl.close();
+        pool.destroy(pl, testing.allocator);
     }
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
     {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
-    var ctx: Ctx5 = .{ .mbh = mbh, .ph = ph, .alloc = testing.allocator };
+    var ctx: Ctx5 = .{ .mbx = mbx, .pl = pl, .alloc = testing.allocator };
     var fut = try io.concurrent(worker5, .{&ctx});
 
     while (!ctx.received.load(.acquire)) std.Thread.yield() catch {};
@@ -128,23 +128,23 @@ test "5 - Worker not blocked when cancel takes effect" {
 
 // --- Scenario 6: broadcast shutdown via mailbox.close ---
 
-test "6 - Broadcast shutdown: mailbox.close before join" {
+test "6 - Broadcast shutdown: mbx.close before join" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: MbxCtx = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx: MbxCtx = .{ .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(mbxLoopWorker, .{&ctx});
 
-    var rem: polynode.ItemList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mbx.close();
     defer items.freeList(&rem, testing.allocator);
 
     try fut.await(io);
@@ -153,16 +153,16 @@ test "6 - Broadcast shutdown: mailbox.close before join" {
 // --- Scenario 7: cancel worker, then close pool and mailbox ---
 
 const Ctx7 = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     alloc: std.mem.Allocator,
 };
 
 fn worker7(ctx: *Ctx7) error{Canceled}!void {
     while (true) {
         var slot: Slot = null;
-        defer pool.put(ctx.ph, &slot);
-        mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+        defer ctx.pl.put(&slot);
+        ctx.mbx.receive(&slot, null) catch |err| switch (err) {
             error.Canceled => return error.Canceled,
             error.Closed, error.Timeout, error.Wakeup => return,
         };
@@ -175,69 +175,69 @@ test "7 - Cancel shutdown: future.cancel before close" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx7: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags7 = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx7.poolHooks(&tags7));
+    try pl.init(pool_ctx7.poolHooks(&tags7));
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
 
-    var ctx: Ctx7 = .{ .mbh = mbh, .ph = ph, .alloc = testing.allocator };
+    var ctx: Ctx7 = .{ .mbx = mbx, .pl = pl, .alloc = testing.allocator };
     var fut = try io.concurrent(worker7, .{&ctx});
 
     fut.cancel(io) catch {};
 
-    pool.close(ph);
-    pool.destroy(ph, testing.allocator);
+    pl.close();
+    pool.destroy(pl, testing.allocator);
 
-    var rem: polynode.ItemList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, testing.allocator);
-    mailbox.destroy(mbh, testing.allocator);
+    mailbox.destroy(mbx, testing.allocator);
 }
 
 // --- Scenario 8: pool.put on closed pool, caller keeps the item ---
 
 const Ctx8 = struct {
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     alloc: std.mem.Allocator,
 };
 
 fn worker8(ctx: *Ctx8) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc); // frees slot if pool.put left it non-null
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => return error.Canceled,
         error.Closed, error.Timeout, error.Wakeup => return,
     };
-    pool.put(ctx.ph, &slot); // pool closed: slot stays non-null, the caller keeps the item
+    ctx.pl.put(&slot); // pool closed: slot stays non-null, the caller keeps the item
 }
 
-test "8 - pool.put on closed pool" {
+test "8 - pl.put on closed pool" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
-    pool.close(ph); // close before init: put checks closed before any assertions
-    defer pool.destroy(ph, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
+    pl.close(); // close before init: put checks closed before any assertions
+    defer pool.destroy(pl, testing.allocator);
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
     {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
-    var ctx: Ctx8 = .{ .mbh = mbh, .ph = ph, .alloc = testing.allocator };
+    var ctx: Ctx8 = .{ .mbx = mbx, .pl = pl, .alloc = testing.allocator };
     var fut = try io.concurrent(worker8, .{&ctx});
     try fut.await(io);
 }
@@ -245,7 +245,7 @@ test "8 - pool.put on closed pool" {
 // --- Scenario 9: mailbox.close returns remaining items ---
 
 const Ctx9 = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -253,21 +253,21 @@ fn worker9(ctx: *Ctx9) error{Canceled}!void {
     for (0..3) |_| {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
     }
 }
 
-test "9 - mailbox.close returns remaining items" {
+test "9 - mbx.close returns remaining items" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
     for (0..10) |i| {
@@ -275,14 +275,14 @@ test "9 - mailbox.close returns remaining items" {
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
         EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
-    var ctx: Ctx9 = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx: Ctx9 = .{ .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(worker9, .{&ctx});
     try fut.await(io);
 
-    var rem: polynode.ItemList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mbx.close();
     defer items.freeList(&rem, testing.allocator);
 
     var count: usize = 0;
@@ -318,41 +318,41 @@ const Ctx10 = struct {
     }
 };
 
-test "10 - pool.close calls on_close with all items" {
+test "10 - pl.close calls on_close with all items" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var ctx10: Ctx10 = .{ .alloc = testing.allocator };
     const tags10 = [_]*const anyopaque{EventPolyHelper.TAG};
-    const hooks10: pool.PoolHooks = .{
+    const hooks10: Pool.Hooks = .{
         .ctx = &ctx10,
         .tags = &tags10,
         .on_get = Ctx10.onGet,
         .on_put = Ctx10.onPut,
         .on_close = Ctx10.onClose,
     };
-    try pool.init(ph, hooks10);
+    try pl.init(hooks10);
 
     for (0..5) |_| {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        pool.put(ph, &slot);
+        pl.put(&slot);
         try testing.expect(slot == null);
     }
 
-    pool.close(ph);
+    pl.close();
     try testing.expectEqual(@as(usize, 5), ctx10.item_count);
-    pool.destroy(ph, testing.allocator);
+    pool.destroy(pl, testing.allocator);
 }
 
 // --- Scenario 11: error.Canceled distinct from error.Closed in mailbox.receive ---
 
 const Ctx11 = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     got_canceled: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     got_closed: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
@@ -361,7 +361,7 @@ const Ctx11 = struct {
 fn worker11(ctx: *Ctx11) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => {
             ctx.got_canceled.store(true, .release);
             return error.Canceled;
@@ -374,37 +374,37 @@ fn worker11(ctx: *Ctx11) error{Canceled}!void {
     };
 }
 
-test "11 - error.Canceled distinct from error.Closed in mailbox.receive" {
+test "11 - error.Canceled distinct from error.Closed in mbx.receive" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: Ctx11 = .{ .mbh = mbh, .alloc = testing.allocator };
+    var ctx: Ctx11 = .{ .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(worker11, .{&ctx});
     fut.cancel(io) catch {};
 
     try testing.expect(ctx.got_canceled.load(.acquire));
     try testing.expect(!ctx.got_closed.load(.acquire));
 
-    var rem: polynode.ItemList = mailbox.close(mbh);
+    var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, testing.allocator);
 
     var slot: Slot = null;
-    try testing.expectError(error.Closed, mailbox.try_receive(mbh, &slot));
+    try testing.expectError(error.Closed, mbx.try_receive(&slot));
 }
 
 // --- Scenario 12: error.Canceled distinct from error.Closed in pool.get_wait ---
 
 const Ctx12 = struct {
-    ph: PoolHandle,
+    pl: *Pool,
     alloc: std.mem.Allocator,
     got_canceled: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
 };
@@ -412,7 +412,7 @@ const Ctx12 = struct {
 fn worker12(ctx: *Ctx12) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    pool.get_wait(ctx.ph, EventPolyHelper.TAG, &slot, null) catch |err| switch (err) {
+    ctx.pl.get_wait(EventPolyHelper.TAG, &slot, null) catch |err| switch (err) {
         error.Canceled => {
             ctx.got_canceled.store(true, .release);
             return error.Canceled;
@@ -421,51 +421,51 @@ fn worker12(ctx: *Ctx12) error{Canceled}!void {
     };
 }
 
-test "12 - error.Canceled distinct from error.Closed in pool.get_wait" {
+test "12 - error.Canceled distinct from error.Closed in pl.get_wait" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx12: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags12 = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx12.poolHooks(&tags12));
+    try pl.init(pool_ctx12.poolHooks(&tags12));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, testing.allocator);
+        pl.close();
+        pool.destroy(pl, testing.allocator);
     }
 
-    var ctx: Ctx12 = .{ .ph = ph, .alloc = testing.allocator };
+    var ctx: Ctx12 = .{ .pl = pl, .alloc = testing.allocator };
     var fut = try io.concurrent(worker12, .{&ctx});
     fut.cancel(io) catch {};
 
     try testing.expect(ctx.got_canceled.load(.acquire));
 
-    pool.close(ph);
+    pl.close();
     var slot: Slot = null;
-    try testing.expectError(error.Closed, pool.get(ph, EventPolyHelper.TAG, .available_only, &slot));
+    try testing.expectError(error.Closed, pl.get(EventPolyHelper.TAG, .available_only, &slot));
 }
 
 // --- Scenario 13: pool.put is cancel-protected ---
 
 const Ctx13 = struct {
     io: Io,
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     alloc: std.mem.Allocator,
 };
 
 fn worker13(ctx: *Ctx13) error{Canceled}!void {
     var pool_slot: Slot = null;
-    defer pool.put(ctx.ph, &pool_slot); // cancel-protected: must complete even with active cancel
+    defer ctx.pl.put(&pool_slot); // cancel-protected: must complete even with active cancel
 
-    pool.get(ctx.ph, EventPolyHelper.TAG, .available_or_new, &pool_slot) catch return;
+    ctx.pl.get(EventPolyHelper.TAG, .available_or_new, &pool_slot) catch return;
 
     var msg_slot: Slot = null;
     defer items.freeSlot(&msg_slot, ctx.alloc);
 
-    mailbox.receive(ctx.mbh, &msg_slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&msg_slot, null) catch |err| switch (err) {
         error.Canceled => {
             ctx.io.recancel(); // activate cancel again: pool.put must complete despite active cancel
             return error.Canceled;
@@ -475,29 +475,29 @@ fn worker13(ctx: *Ctx13) error{Canceled}!void {
     };
 }
 
-test "13 - pool.put is cancel-protected" {
+test "13 - pl.put is cancel-protected" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx13: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags13 = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx13.poolHooks(&tags13));
+    try pl.init(pool_ctx13.poolHooks(&tags13));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, testing.allocator);
+        pl.close();
+        pool.destroy(pl, testing.allocator);
     }
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: Ctx13 = .{ .io = io, .mbh = mbh, .ph = ph, .alloc = testing.allocator };
+    var ctx: Ctx13 = .{ .io = io, .mbx = mbx, .pl = pl, .alloc = testing.allocator };
     var fut = try io.concurrent(worker13, .{&ctx});
     fut.cancel(io) catch {};
     // If pool.put succeeded, item is in pool. pool.close (defer) frees it via on_close.
@@ -506,14 +506,14 @@ test "13 - pool.put is cancel-protected" {
 
 // --- Scenario 14: mailbox.close uses lockUncancelable ---
 //
-// Use two mailboxes: mbh_listen (empty) forces the worker to block before cancel
-// takes effect. mbh_data (3 items pre-loaded) is closed by the worker when canceled,
+// Use two mailboxes: mbx_listen (empty) forces the worker to block before cancel
+// takes effect. mbx_data (3 items pre-loaded) is closed by the worker when canceled,
 // exercising the lockUncancelable path with cancel active.
 
 const Ctx14 = struct {
     io: Io,
-    mbh_listen: MailboxHandle,
-    mbh_data: MailboxHandle,
+    mbx_listen: *Mbox,
+    mbx_data: *Mbox,
     alloc: std.mem.Allocator,
     close_count: usize = 0,
 };
@@ -521,11 +521,11 @@ const Ctx14 = struct {
 fn worker14(ctx: *Ctx14) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    mailbox.receive(ctx.mbh_listen, &slot, null) catch |err| switch (err) {
+    ctx.mbx_listen.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => {
             ctx.io.recancel(); // activate cancel again
             // mailbox.close uses lockUncancelable: completes despite active cancel
-            var rem: polynode.ItemList = mailbox.close(ctx.mbh_data);
+            var rem: polynode.ItemList = ctx.mbx_data.close();
             var it = rem.iterator();
             while (it.next()) |_| ctx.close_count += 1;
             items.freeList(&rem, ctx.alloc);
@@ -535,26 +535,26 @@ fn worker14(ctx: *Ctx14) error{Canceled}!void {
     };
 }
 
-test "14 - mailbox.close uses lockUncancelable" {
+test "14 - mbx.close uses lockUncancelable" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
     // Worker blocks here (always empty); cancel takes effect while blocked.
-    const mbh_listen: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx_listen: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh_listen);
+        var rem: polynode.ItemList = mbx_listen.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh_listen, testing.allocator);
+        mailbox.destroy(mbx_listen, testing.allocator);
     }
 
     // Worker closes this on cancel; second close in defer returns empty list.
-    const mbh_data: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx_data: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh_data);
+        var rem: polynode.ItemList = mbx_data.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh_data, testing.allocator);
+        mailbox.destroy(mbx_data, testing.allocator);
     }
 
     for (0..3) |i| {
@@ -562,10 +562,10 @@ test "14 - mailbox.close uses lockUncancelable" {
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
         EventPolyHelper.mustFromSlot(&slot).code = @intCast(i);
-        try mailbox.send(mbh_data, &slot);
+        try mbx_data.send(&slot);
     }
 
-    var ctx: Ctx14 = .{ .io = io, .mbh_listen = mbh_listen, .mbh_data = mbh_data, .alloc = testing.allocator };
+    var ctx: Ctx14 = .{ .io = io, .mbx_listen = mbx_listen, .mbx_data = mbx_data, .alloc = testing.allocator };
     var fut = try io.concurrent(worker14, .{&ctx});
     fut.cancel(io) catch {};
 
@@ -576,7 +576,7 @@ test "14 - mailbox.close uses lockUncancelable" {
 
 const Ctx15 = struct {
     io: Io,
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     second_canceled: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
 };
@@ -584,11 +584,11 @@ const Ctx15 = struct {
 fn worker15(ctx: *Ctx15) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => ctx.io.recancel(), // activate cancel again: next cancellation point returns error.Canceled
         error.Closed, error.Timeout, error.Wakeup => return,
     };
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+    ctx.mbx.receive(&slot, null) catch |err| switch (err) {
         error.Canceled => {
             ctx.second_canceled.store(true, .release);
             return error.Canceled;
@@ -603,14 +603,14 @@ test "15 - recancel propagation" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
-    var ctx: Ctx15 = .{ .io = io, .mbh = mbh, .alloc = testing.allocator };
+    var ctx: Ctx15 = .{ .io = io, .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(worker15, .{&ctx});
     fut.cancel(io) catch {};
 
@@ -621,7 +621,7 @@ test "15 - recancel propagation" {
 
 const Ctx16 = struct {
     io: Io,
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     in_loop: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     check_canceled: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
@@ -630,7 +630,7 @@ const Ctx16 = struct {
 fn worker16(ctx: *Ctx16) error{Canceled}!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    mailbox.receive(ctx.mbh, &slot, null) catch return;
+    ctx.mbx.receive(&slot, null) catch return;
 
     ctx.in_loop.store(true, .release);
     var i: usize = 0;
@@ -650,21 +650,21 @@ test "16 - checkCancel in CPU-bound work" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbh: MailboxHandle = try mailbox.new(io, testing.allocator);
+    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
-        mailbox.destroy(mbh, testing.allocator);
+        mailbox.destroy(mbx, testing.allocator);
     }
 
     {
         var slot: Slot = null;
         defer EventPolyHelper.destroy(testing.allocator, &slot);
         try EventPolyHelper.create(testing.allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
-    var ctx: Ctx16 = .{ .io = io, .mbh = mbh, .alloc = testing.allocator };
+    var ctx: Ctx16 = .{ .io = io, .mbx = mbx, .alloc = testing.allocator };
     var fut = try io.concurrent(worker16, .{&ctx});
 
     while (!ctx.in_loop.load(.acquire)) std.Thread.yield() catch {};
@@ -681,7 +681,7 @@ test "16 - checkCancel in CPU-bound work" {
 // Fix: use broadcast() in put() so all waiters check their own tag.
 
 const CtxGetter = struct {
-    ph: PoolHandle,
+    pl: *Pool,
     tag: *const anyopaque,
     started: *std.atomic.Value(u32),
     got_item: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
@@ -690,29 +690,29 @@ const CtxGetter = struct {
 fn multiTagGetter(ctx: *CtxGetter) anyerror!void {
     _ = ctx.started.fetchAdd(1, .monotonic);
     var slot: Slot = null;
-    pool.get_wait(ctx.ph, ctx.tag, &slot, null) catch return;
+    ctx.pl.get_wait(ctx.tag, &slot, null) catch return;
     ctx.got_item.store(slot != null, .release);
-    pool.put(ctx.ph, &slot);
+    ctx.pl.put(&slot);
 }
 
-test "INTR4-1 - pool.put broadcasts: multi-tag waiters each get correct item" {
+test "INTR4-1 - pl.put broadcasts: multi-tag waiters each get correct item" {
     std.testing.log_level = .debug;
     var threaded: Io.Threaded = Io.Threaded.init(testing.allocator, .{});
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags = [_]*const anyopaque{ EventPolyHelper.TAG, SensorPolyHelper.TAG };
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, testing.allocator);
+        pl.close();
+        pool.destroy(pl, testing.allocator);
     }
 
     var started = std.atomic.Value(u32).init(0);
-    var ctx_ev: CtxGetter = .{ .ph = ph, .tag = EventPolyHelper.TAG, .started = &started };
-    var ctx_sn: CtxGetter = .{ .ph = ph, .tag = SensorPolyHelper.TAG, .started = &started };
+    var ctx_ev: CtxGetter = .{ .pl = pl, .tag = EventPolyHelper.TAG, .started = &started };
+    var ctx_sn: CtxGetter = .{ .pl = pl, .tag = SensorPolyHelper.TAG, .started = &started };
 
     var fut_ev = try io.concurrent(multiTagGetter, .{&ctx_ev});
     var fut_sn = try io.concurrent(multiTagGetter, .{&ctx_sn});
@@ -727,13 +727,13 @@ test "INTR4-1 - pool.put broadcasts: multi-tag waiters each get correct item" {
     // Seed one item per tag. broadcast() in put() wakes all waiters; each checks its own tag.
     {
         var slot: Slot = null;
-        try pool.get(ph, EventPolyHelper.TAG, .new_only, &slot);
-        pool.put(ph, &slot);
+        try pl.get(EventPolyHelper.TAG, .new_only, &slot);
+        pl.put(&slot);
     }
     {
         var slot: Slot = null;
-        try pool.get(ph, SensorPolyHelper.TAG, .new_only, &slot);
-        pool.put(ph, &slot);
+        try pl.get(SensorPolyHelper.TAG, .new_only, &slot);
+        pl.put(&slot);
     }
 
     try fut_ev.await(io);
@@ -751,7 +751,7 @@ test "INTR4-1 - pool.put broadcasts: multi-tag waiters each get correct item" {
 // could leave the item unclaimed if another waiter starts after the put signal was lost.
 
 const CtxCancel = struct {
-    ph: PoolHandle,
+    pl: *Pool,
     started: *std.atomic.Value(bool),
     got_item: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
 };
@@ -759,8 +759,8 @@ const CtxCancel = struct {
 fn canceledGetter(ctx: *CtxCancel) anyerror!void {
     ctx.started.store(true, .release);
     var slot: Slot = null;
-    defer pool.put(ctx.ph, &slot);
-    pool.get_wait(ctx.ph, EventPolyHelper.TAG, &slot, null) catch return;
+    defer ctx.pl.put(&slot);
+    ctx.pl.get_wait(EventPolyHelper.TAG, &slot, null) catch return;
     ctx.got_item.store(true, .release);
 }
 
@@ -770,18 +770,18 @@ test "INTR4-2 - re-signal on cancel: second waiter gets item after first is canc
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const ph: PoolHandle = try pool.new(io, testing.allocator);
+    const pl: *Pool = try pool.new(io, testing.allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = testing.allocator };
     const tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, testing.allocator);
+        pl.close();
+        pool.destroy(pl, testing.allocator);
     }
 
     // Thread A: blocked in get_wait — will be canceled.
     var started_a = std.atomic.Value(bool).init(false);
-    var ctx_a: CtxCancel = .{ .ph = ph, .started = &started_a };
+    var ctx_a: CtxCancel = .{ .pl = pl, .started = &started_a };
     var fut_a = try io.concurrent(canceledGetter, .{&ctx_a});
     while (!started_a.load(.acquire)) std.Thread.yield() catch {};
     const sleep_t: Io.Timeout = .{
@@ -793,7 +793,7 @@ test "INTR4-2 - re-signal on cancel: second waiter gets item after first is canc
 
     // Thread B: gets the item seeded after A is canceled.
     var started_b = std.atomic.Value(bool).init(false);
-    var ctx_b: CtxCancel = .{ .ph = ph, .started = &started_b };
+    var ctx_b: CtxCancel = .{ .pl = pl, .started = &started_b };
     var fut_b = try io.concurrent(canceledGetter, .{&ctx_b});
     while (!started_b.load(.acquire)) std.Thread.yield() catch {};
     Io.Timeout.sleep(sleep_t, io) catch {};
@@ -801,8 +801,8 @@ test "INTR4-2 - re-signal on cancel: second waiter gets item after first is canc
     // Seed one item. B must get it (A is gone).
     {
         var slot: Slot = null;
-        try pool.get(ph, EventPolyHelper.TAG, .new_only, &slot);
-        pool.put(ph, &slot);
+        try pl.get(EventPolyHelper.TAG, .new_only, &slot);
+        pl.put(&slot);
     }
 
     try fut_b.await(io);
@@ -816,10 +816,10 @@ const SensorPolyHelper = items.Sensor.SensorPolyHelper;
 const matryoshka = @import("matryoshka");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;
 const std = @import("std");
 const testing = std.testing;
 const Io = std.Io;

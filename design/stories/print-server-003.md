@@ -1,4 +1,10 @@
-# Story: Network Print Server
+# Story: Network Print Server (003)
+
+
+Change from -002: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 A complete system design — from domain problem to Matryoshka implementation.
 
@@ -131,7 +137,7 @@ Requirement: Non-blocking submission.
 
 Matryoshka:
 - `PrintJob` — PolyNode-based struct.
-- `mailbox.send(job_queue, &job_slot)`.
+- `job_queue.send(&job_slot)`.
 - Ownership transferred immediately.
 - Client continues.
 
@@ -142,15 +148,15 @@ Requirement: Ordered dispatch.
 Matryoshka:
 - Spool Master.
 - `job_queue` mailbox.
-- `mailbox.receive` — FIFO preserved.
+- `Mbox.receive` — FIFO preserved.
 
 ---
 
 Requirement: Result notification.
 
 Matryoshka:
-- `reply_mbh: MailboxHandle` embedded in `PrintJob`.
-- Printer Master sends `PrintResult` directly to `job.reply_mbh`.
+- `reply_mbx: *Mbox` embedded in `PrintJob`.
+- Printer Master sends `PrintResult` directly to `job.reply_mbx`.
 - Spool Master not involved.
 
 ---
@@ -167,9 +173,9 @@ Matryoshka:
 Requirement: Cancellation with priority.
 
 Matryoshka:
-- `mailbox.send_oob(job_queue, &cancel_slot)`.
+- `job_queue.send_oob(&cancel_slot)`.
 - `CancelSignal` arrives at queue front.
-- If job already forwarded: `mailbox.send_oob(printer_inbox, &cancel_slot)`.
+- If job already forwarded: `printer_inbox.send_oob(&cancel_slot)`.
 
 ---
 
@@ -177,7 +183,7 @@ Requirement: Clean shutdown.
 
 Matryoshka:
 - Spool Master closes `job_queue`.
-- Remaining jobs in `printer_inbox` receive canceled result via `job.reply_mbh`.
+- Remaining jobs in `printer_inbox` receive canceled result via `job.reply_mbx`.
 - Closes `printer_inbox`.
 - Printer Master gets `error.Closed` on next receive. Exits.
 
@@ -197,7 +203,7 @@ Where the job is.
 - Job in `job_queue` — Spool Master owns it.
 - Job in `printer_inbox` — moving between Masters.
 - Job in Printer slot — Printer Master owns it.
-- Result in `reply_mbh` — client owns the outcome.
+- Result in `reply_mbx` — client owns the outcome.
 
 ---
 
@@ -206,48 +212,48 @@ Where the job is.
 ```text
   [ Client A ]  [ Client B ]  [ Client C ]
        │               │               │
-       │ mailbox.send(job_queue, &job_slot)        ← non-blocking, hold transferred
-       │ mailbox.send_oob(job_queue, &cancel_slot) ← OOB: arrives at queue front
+       │ job_queue.send(&job_slot)        ← non-blocking, hold transferred
+       │ job_queue.send_oob(&cancel_slot) ← OOB: arrives at queue front
        └───────────────┴───────────────┘
                        │
                        V
-           SPOOL MASTER (mailbox.receive loop on job_queue)
+           SPOOL MASTER (Mbox.receive loop on job_queue)
            ├── on PrintJob:
-           │     mailbox.send(printer_inbox, &job_slot)   ← forward, hold transferred
+           │     printer_inbox.send(&job_slot)   ← forward, hold transferred
            │
            ├── on CancelSignal (OOB — arrives before regular jobs):
            │     job still in job_queue?
-           │       yes → remove, send PrintResult{.canceled} → job.reply_mbh
+           │       yes → remove, send PrintResult{.canceled} → job.reply_mbx
            │     job already forwarded to printer_inbox?
-           │       yes → mailbox.send_oob(printer_inbox, &cancel_slot)
+           │       yes → printer_inbox.send_oob(&cancel_slot)
            │       no  → job already printing; Printer Master handles it
            │
            V
            [ printer_inbox ]
                        │
                        V
-           PRINTER MASTER (mailbox.receive loop on printer_inbox)
+           PRINTER MASTER (Mbox.receive loop on printer_inbox)
            ├── on PrintJob:
            │     var slot: Slot = job           ← exclusive hold, no locks
            │     print(job)                     ← process pages
-           │     send PrintResult{.ok} → job.reply_mbh
+           │     send PrintResult{.ok} → job.reply_mbx
            │     destroy job
            │
            ├── on CancelSignal (OOB — arrives before next regular job):
            │     if currently printing: abort
-           │     send PrintResult{.canceled} → current_job.reply_mbh
+           │     send PrintResult{.canceled} → current_job.reply_mbx
            │     destroy current job
            │
            V
-           [ reply_mbh — per client ]
+           [ reply_mbx — per client ]
                        │
                        V
-              Client calls mailbox.receive(reply_mbh, ...)
+              Client calls reply_mbx.receive(...)
               receives PrintResult{.ok} or PrintResult{.canceled} or PrintResult{.failed}
 
   Shutdown sequence:
   Spool Master closes job_queue
-    → walks printer_inbox close list: sends .canceled to each job.reply_mbh
+    → walks printer_inbox close list: sends .canceled to each job.reply_mbx
     → closes printer_inbox
   Printer Master finishes current job
     → gets error.Closed on next receive

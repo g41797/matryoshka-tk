@@ -14,17 +14,17 @@ sender Slot                      sender Slot
 |    ItemHandle     |            |       null        |
 +-------------------+            +-------------------+
 
-mailbox.send(mbh, &slot)  ───►      Mailbox holds ItemHandle
+mbx.send(&slot)  ───►      Mailbox holds ItemHandle
 ```
 
 ```zig
-pub fn send(mbh: MailboxHandle, slot: *Slot) error{Closed}!void
+pub fn send(self: *Mbox, slot: *Slot) error{Closed}!void
 ```
 
 - Appends handle to tail.
 - Moves the handle — `slot.*` set to null.
+- On `error.Closed` the slot is unchanged — the sender still holds the item.
 - Assert:
-  - `mailbox.is_it_you(mbh.*.tag)`
   - `slot.* != null`
   - `!polynode.is_linked(slot.*)`
 
@@ -35,14 +35,14 @@ pub fn send(mbh: MailboxHandle, slot: *Slot) error{Closed}!void
 Advanced: OOB (out of the box).
 
 ```zig
-pub fn send_oob(mbh: MailboxHandle, slot: *Slot) error{Closed}!void
+pub fn send_oob(self: *Mbox, slot: *Slot) error{Closed}!void
 ```
 
 - Inserts handle after last OOB handle.
 - FIFO among OOBs, all OOBs before regular handles.
 - Moves the handle — `slot.*` set to null.
+- On `error.Closed` the slot is unchanged — the sender still holds the item.
 - Assert:
-  - `mailbox.is_it_you(mbh.*.tag)`
   - `slot.* != null`
   - `!polynode.is_linked(slot.*)`
 

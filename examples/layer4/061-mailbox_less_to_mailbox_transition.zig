@@ -10,17 +10,17 @@
 //! Transfers (transition: mailbox-less → mailbox needed):
 //!
 //! ```
-//!  pool (seeded)       mock clients (io.concurrent ×N_CLIENTS → mailbox.send)
+//!  pool (seeded)       mock clients (io.concurrent ×N_CLIENTS → mbx.send)
 //!  │ getWaitResult      │ receiveResult
 //!  └────────┬───────────┘
 //!           ▼
 //!  Select(MasterEvent)
 //!  │
-//!  .pool_ev .item ──► process ──► pool.put ──► pool (re-spawn)
+//!  .pool_ev .item ──► process ──► pl.put ──► pool (re-spawn)
 //!  .inbox .item   ──► freeSlot               (re-spawn receiveResult)
 //!  │
-//!  clients finish → mailbox.close → inbox returns .closed
-//!  sel.cancelDiscard ──► pool.close ──► on_close ──► freed
+//!  clients finish → mbx.close → inbox returns .closed
+//!  sel.cancelDiscard ──► pl.close ──► on_close ──► freed
 //! ```
 //!
 //!  Transition: when senders are multiple and independent, fan-in via mailbox
@@ -28,29 +28,29 @@
 //!
 
 pub fn when_to_add_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
-    const ph: PoolHandle = try pool.new(io, allocator);
+    const pl: *Pool = try pool.new(io, allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
-    try pool.init(ph, pool_ctx.poolHooks(&tags));
+    try pl.init(pool_ctx.poolHooks(&tags));
     defer {
-        pool.close(ph);
-        pool.destroy(ph, allocator);
+        pl.close();
+        pool.destroy(pl, allocator);
     }
 
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
-    defer mailbox.destroy(mbh, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
+    defer mailbox.destroy(mbx, allocator);
 
-    try seedPool(ph);
+    try seedPool(pl);
 
     var ctxs: [N_CLIENTS]ClientCtx = undefined;
     var futs: [N_CLIENTS]Io.Future(anyerror!void) = undefined;
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     try ctx.spawnClients(&ctxs, &futs);
 
     var buf: [8]MasterEvent = undefined;
     var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
-    try ctx.setupSelect(ph, &sel);
-    try ctx.runEventLoop(ph, &sel);
+    try ctx.setupSelect(pl, &sel);
+    try ctx.runEventLoop(pl, &sel);
 
     ctx.awaitClients(&futs);
     ctx.closeMailboxAfterClients();
@@ -65,12 +65,12 @@ const N_CLIENTS: usize = 3;
 const N_POOL_ITEMS: usize = 2;
 
 const MasterEvent = union(enum) {
-    pool_ev: pool.PoolResult,
-    inbox: mailbox.ReceiveResult,
+    pool_ev: Pool.Result,
+    inbox: Mbox.Result,
 };
 
 const ClientCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     id: usize,
     delay: std.Io.Timeout,
@@ -83,11 +83,11 @@ fn clientFn(ctx: *ClientCtx, io: std.Io) anyerror!void {
     try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
     items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(ctx.id);
     std.log.info("client {d}: sending to mailbox", .{ctx.id});
-    mailbox.send(ctx.mbh, &slot) catch {};
+    ctx.mbx.send(&slot) catch {};
 }
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
     pool_done: usize = 0,
@@ -98,7 +98,7 @@ const Ctx = struct {
             .duration = .{ .raw = .{ .nanoseconds = NET_DELAY_NS }, .clock = .real },
         };
         for (0..N_CLIENTS) |i| {
-            ctxs[i] = .{ .mbh = self.mbh, .alloc = self.alloc, .id = i + 1, .delay = client_delay };
+            ctxs[i] = .{ .mbx = self.mbx, .alloc = self.alloc, .id = i + 1, .delay = client_delay };
             futs[i] = try self.io.concurrent(clientFn, .{ &ctxs[i], self.io });
         }
     }
@@ -110,29 +110,29 @@ const Ctx = struct {
     }
 
     fn closeMailboxAfterClients(self: *Ctx) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.alloc);
     }
 
-    fn setupSelect(self: *Ctx, ph: PoolHandle, sel: *std.Io.Select(MasterEvent)) !void {
-        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, items.Event.EventPolyHelper.TAG, null });
-        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+    fn setupSelect(self: *Ctx, pl: *Pool, sel: *std.Io.Select(MasterEvent)) !void {
+        try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, items.Event.EventPolyHelper.TAG, null });
+        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
     }
 
-    fn runEventLoop(self: *Ctx, ph: PoolHandle, sel: *std.Io.Select(MasterEvent)) !void {
+    fn runEventLoop(self: *Ctx, pl: *Pool, sel: *std.Io.Select(MasterEvent)) !void {
         while (self.pool_done < N_POOL_ITEMS or self.inbox_done < N_CLIENTS) {
             const event: MasterEvent = try sel.await();
             switch (event) {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        defer pool.put(ph, &slot);
+                        defer pl.put(&slot);
                         const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         ev.code += 1;
                         self.pool_done += 1;
                         std.log.info("pool_ev: processed code={d} ({d}/{d})", .{ ev.code, self.pool_done, N_POOL_ITEMS });
                         if (self.pool_done < N_POOL_ITEMS) {
-                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, items.Event.EventPolyHelper.TAG, null });
+                            try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, items.Event.EventPolyHelper.TAG, null });
                         }
                     },
                     .closed, .canceled, .timeout, .not_created => break,
@@ -145,7 +145,7 @@ const Ctx = struct {
                         self.inbox_done += 1;
                         std.log.info("inbox: client item code={d} ({d}/{d})", .{ ev.code, self.inbox_done, N_CLIENTS });
                         if (self.inbox_done < N_CLIENTS) {
-                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
                         }
                     },
                     .closed, .canceled, .timeout, .wakeup => break,
@@ -156,12 +156,12 @@ const Ctx = struct {
     }
 };
 
-fn seedPool(ph: PoolHandle) !void {
+fn seedPool(pl: *Pool) !void {
     for (0..N_POOL_ITEMS) |i| {
         var slot: Slot = null;
-        try pool.get(ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
+        try pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(100 + i);
-        pool.put(ph, &slot);
+        pl.put(&slot);
     }
 }
 
@@ -171,9 +171,9 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;
 const Io = std.Io;

@@ -17,10 +17,11 @@ When a handle becomes available, the Master can react. This is the job-pool patt
 
 ---
 
-## PoolResult
+## Pool.Result
 
 ```zig
-pub const PoolResult = union(enum) {
+// nested in Pool
+pub const Result = union(enum) {
     item: ItemHandle,
     closed: void,
     timeout: void,
@@ -37,13 +38,13 @@ pub const PoolResult = union(enum) {
 ## getWaitResult
 
 ```zig
-pub fn getWaitResult(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) PoolResult
+pub fn getWaitResult(pl: *Pool, tag: *const anyopaque, timeout_ns: ?u64) Pool.Result
 ```
 
-- Blocking function. No error return — maps all outcomes to `PoolResult` variants.
+- Blocking function. No error return — maps all outcomes to `Pool.Result` variants.
 - Primary building block for Select integration:
   ```zig
-  try select.concurrent(.pool, pool.getWaitResult, .{ph, TAG, null});
+  try select.concurrent(.pool, pool.getWaitResult, .{pl, TAG, null});
   ```
 
 - Also usable with `io.concurrent` or `group.concurrent`.
@@ -53,10 +54,10 @@ pub fn getWaitResult(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) Po
 ## get_wait_future
 
 ```zig
-pub fn get_wait_future(ph: PoolHandle, tag: *const anyopaque, timeout_ns: ?u64) ConcurrentError!Io.Future(PoolResult)
+pub fn get_wait_future(self: *Pool, tag: *const anyopaque, timeout_ns: ?u64) ConcurrentError!Io.Future(Pool.Result)
 ```
 
-- Thin wrapper: `return p.*.io.concurrent(getWaitResult, .{ph, tag, timeout_ns})`.
+- Thin wrapper: `return p.*.io.concurrent(getWaitResult, .{pl, tag, timeout_ns})`.
 - No heap allocation — args copied by the runtime before `concurrent` returns.
 - Returns a Future for direct await or `Io.Group` use.
 - Returns `error.ConcurrencyUnavailable` on single-threaded backends.

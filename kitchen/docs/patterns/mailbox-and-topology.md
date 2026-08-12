@@ -13,7 +13,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (try mailbox.try_receive(mbh, &slot)) {
+if (try mbx.try_receive(&slot)) {
     ...
 }
 ```
@@ -26,7 +26,7 @@ When to use.
 
 Code shape.  
 ```zig
-var list = try mailbox.receive_batch(mbh);
+var list = try mbx.receive_batch();
 
 while (list.popFirst()) |node| {
     ...
@@ -47,7 +47,7 @@ When to use.
 
 Code shape.  
 ```zig
-try mailbox.send_oob(mbh, &slot);
+try mbx.send_oob(&slot);
 ```
 
 Why.
@@ -59,22 +59,70 @@ Why.
 
 When to use.
 
-- Shutdown. Recover every queued item.
+- Every close. Not only the ones you expect to find something.
 
 Code shape.  
 ```zig
-var list = mailbox.close(mbh);
+var rem: polynode.ItemList = mbx.close();
 
-while (list.popFirst()) |node| {
-    ...
+while (rem.popFirst()) |ih| {
+    // release: free it, or put it back into a pool
 }
 ```
 
 Why.
 
+- The mailbox never touches an item, so everything it held comes back to
+  someone. At close that someone is you.
+
+- Which release applies — free, or return to a pool — is yours to know. The
+  mailbox does not know and never did.
+
+- Run it unconditionally. `close` can be called more than once and hands back
+  an empty list after the first, so the loop is always safe: on a mailbox still holding  
+  items, on one already empty, on one closed twice.
+
 - Nothing leaks.
 - Close is also the end-of-stream signal for blocked receivers (see Group shutdown in
   [Shutdown & Master Patterns](master-and-shutdown.md)).
+
+Do not.
+
+- Do not write `_ = mbx.close()`. It drops what the mailbox handed back, and
+  the items it drops keep their list links — `Mbox.send` asserts an unlinked  
+  item, so they cannot be sent again.
+
+- Do not reason about whether the mailbox is empty. The empty case costs
+  nothing, and the reasoning is what a later edit breaks.
+
+### Release a refused transfer
+
+When to use.
+
+- Every `send` that can meet a closed mailbox, and every `put` that can meet
+  a closed pool.
+
+Code shape.  
+```zig
+mbx.send(&slot) catch |err| {
+    pl.put(&slot);           // it came from the pool, it goes back there
+    return err;
+};
+```
+
+Why.
+
+- A refused transfer does not happen. `send`/`send_oob` return `error.Closed`
+  before clearing the slot, and `put` on a closed pool is a no-op — either  
+  way the item is still yours.
+
+- `put_all` is the list form: it stops at the first refusal and leaves the
+  rest in your list. Check the list after the call.
+
+- A `defer` on the slot covers this path already. A bare `try mbx.send(&slot)`
+  with no defer does not.
+
+Example: `examples/layer4/056-job_pool_circular.zig`.
 
 ### Wake blocked receivers without a message
 
@@ -86,11 +134,11 @@ When to use.
 Code shape.  
 ```zig
 shutdown.store(true, .release);
-try mailbox.wakeUpAll(mbh);
+try mbx.wakeUpAll();
 ```
 
 ```zig
-mailbox.receive(mbh, &slot, null) catch |err| switch (err) {
+mbx.receive(&slot, null) catch |err| switch (err) {
     error.Wakeup => {
         if (shutdown.load(.acquire)) return;
         continue; // spurious poke, re-check and keep waiting
@@ -123,16 +171,16 @@ When to use.
 
 Pattern.  
 ```
-main ──Event(request)──► req_mbh ──► worker
+main ──Event(request)──► req_mbx ──► worker
                                         │ process
                                         V
-main ◄──Event(response)── resp_mbh ◄── worker
+main ◄──Event(response)── resp_mbx ◄── worker
 ```
 
 Why.
 
 - Request and response never share a mailbox — no risk of the caller receiving its own request back.
-- Caller blocks on `resp_mbh` with a timeout; worker loops on `req_mbh` until closed.
+- Caller blocks on `resp_mbx` with a timeout; worker loops on `req_mbx` until closed.
 
 Example: `examples/layer2/057-request_response.zig`, `examples/layer4/021-request_response.zig`.
 
@@ -190,7 +238,7 @@ main ──items──► mailbox ──► worker A
 Why.
 
 - The mailbox does the load distribution. No round-robin logic in application code.
-- `mailbox.close` returns any item left unclaimed — the closer must free it.
+- `Mbox.close` returns any item left unclaimed — the closer must free it.
 
 Example: `examples/layer2/061-fan_out.zig`, `examples/layer4/054-pool_fan_out.zig`.
 

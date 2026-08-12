@@ -7,14 +7,13 @@ New to the concept? See [Tools — Pool](../../tools/pool.md) first.
 ## get
 
 ```zig
-pub fn get(ph: PoolHandle, tag: *const anyopaque, mode: GetMode, slot: *Slot) GetError!void
+pub fn get(self: *Pool, tag: *const anyopaque, mode: Pool.GetMode, slot: *Slot) Pool.GetError!void
 ```
 
 - Non-blocking acquisition.
 - Calls `on_get` hook.
 - Moves the handle — `slot.*` set to non-null on success.
 - Assert:
-  - `pool.is_it_you(ph.*.tag)`
   - `slot.* == null`
   - Pool initialized.
   - Tag registered.
@@ -24,7 +23,7 @@ pub fn get(ph: PoolHandle, tag: *const anyopaque, mode: GetMode, slot: *Slot) Ge
 ## get_wait
 
 ```zig
-pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *Slot, timeout_ns: ?u64) (GetError || Cancelable || error{Timeout})!void
+pub fn get_wait(self: *Pool, tag: *const anyopaque, slot: *Slot, timeout_ns: ?u64) (Pool.GetError || Cancelable || error{Timeout})!void
 ```
 
 - Blocking acquisition.
@@ -34,7 +33,6 @@ pub fn get_wait(ph: PoolHandle, tag: *const anyopaque, slot: *Slot, timeout_ns: 
 - Intentional: `get_wait` always uses the timeout error set, regardless of the timeout value.
 - Calls `on_get` hook.
 - Assert:
-  - `pool.is_it_you(ph.*.tag)`
   - `slot.* == null`
   - Pool initialized.
   - Tag registered.

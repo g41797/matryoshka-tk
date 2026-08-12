@@ -44,8 +44,8 @@ pub fn table_dispatch_two_masters(allocator: std.mem.Allocator, io: std.Io) !voi
     defer count_master.deinit();
 
     // The same items to both mailboxes.
-    try produce(allocator, log_master.mbh);
-    try produce(allocator, count_master.mbh);
+    try produce(allocator, log_master.mbx);
+    try produce(allocator, count_master.mbx);
 
     try log_master.run();
     try count_master.run();
@@ -62,13 +62,13 @@ pub fn table_dispatch_two_masters(allocator: std.mem.Allocator, io: std.Io) !voi
 }
 
 /// One Event, one Sensor, one Timer.
-fn produce(allocator: std.mem.Allocator, mbh: MailboxHandle) !void {
+fn produce(allocator: std.mem.Allocator, mbx: *Mbox) !void {
     {
         var slot: Slot = null;
         errdefer items.freeSlot(&slot, allocator);
         try items.Event.EventPolyHelper.create(allocator, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 7;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     {
@@ -76,14 +76,14 @@ fn produce(allocator: std.mem.Allocator, mbh: MailboxHandle) !void {
         errdefer items.freeSlot(&slot, allocator);
         try items.Sensor.SensorPolyHelper.create(allocator, &slot);
         items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 2.71;
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 
     {
         var slot: Slot = null;
         errdefer items.freeSlot(&slot, allocator);
         try items.Timer.TimerPolyHelper.create(allocator, &slot);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 }
 
@@ -100,17 +100,17 @@ const LogMaster = struct {
     } };
 
     allocator: std.mem.Allocator,
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     lines: usize = 0,
 
     fn init(allocator: std.mem.Allocator, io: std.Io) !LogMaster {
-        return .{ .allocator = allocator, .mbh = try mailbox.new(io, allocator) };
+        return .{ .allocator = allocator, .mbx = try mailbox.new(io, allocator) };
     }
 
     fn deinit(self: *LogMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
     }
 
     fn run(self: *LogMaster) !void {
@@ -120,7 +120,7 @@ const LogMaster = struct {
             // nothing when the handler emptied the Slot.
             defer items.freeSlot(&slot, self.allocator);
 
-            if (!try mailbox.try_receive(self.mbh, &slot)) return;
+            if (!try self.mbx.try_receive(&slot)) return;
             try table.dispatch(self, &slot);
         }
     }
@@ -158,19 +158,19 @@ const CountMaster = struct {
     } };
 
     allocator: std.mem.Allocator,
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     events: usize = 0,
     sensors: usize = 0,
     unhandled: usize = 0,
 
     fn init(allocator: std.mem.Allocator, io: std.Io) !CountMaster {
-        return .{ .allocator = allocator, .mbh = try mailbox.new(io, allocator) };
+        return .{ .allocator = allocator, .mbx = try mailbox.new(io, allocator) };
     }
 
     fn deinit(self: *CountMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
     }
 
     fn run(self: *CountMaster) !void {
@@ -178,7 +178,7 @@ const CountMaster = struct {
             var slot: Slot = null;
             defer items.freeSlot(&slot, self.allocator);
 
-            if (!try mailbox.try_receive(self.mbh, &slot)) return;
+            if (!try self.mbx.try_receive(&slot)) return;
 
             table.dispatch(self, &slot) catch |err| switch (err) {
                 // No entry matched, so nothing was called and the item
@@ -205,6 +205,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

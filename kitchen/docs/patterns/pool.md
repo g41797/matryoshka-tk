@@ -12,8 +12,8 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-defer pool.put(ph, &slot);
-try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
+defer pl.put(&slot);
+try pl.get(EventPolyHelper.TAG, .available_or_new, &slot);
 ```
 
 - `on_get` runs every call. If `slot.*` is non-null it was recycled — reinitialize. If null, create.
@@ -29,9 +29,9 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-try pool.get(ph, EventPolyHelper.TAG, .new_only, &slot);
+try pl.get(EventPolyHelper.TAG, .new_only, &slot);
 // fill the new item
-pool.put(ph, &slot);
+pl.put(&slot);
 ```
 
 Example: `examples/layer3/pool_seeding.zig`.
@@ -46,7 +46,7 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-pool.get(ph, EventPolyHelper.TAG, .available_only, &slot) catch |err| switch (err) {
+pl.get(EventPolyHelper.TAG, .available_only, &slot) catch |err| switch (err) {
     error.NotAvailable => break,
     else => return err,
 };
@@ -65,7 +65,7 @@ Code shape.
 for (0..N_BUFFERS) |_| {
     var slot: Slot = null;
     try VideoBufferPolyHelper.create(allocator, &slot);
-    pool.put(ph, &slot);
+    pl.put(&slot);
 }
 ```
 

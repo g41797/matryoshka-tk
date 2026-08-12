@@ -14,11 +14,11 @@ receiver Slot                    receiver Slot
 |       null        |            |    ItemHandle     |
 +-------------------+            +-------------------+
 
-mailbox.receive(mbh, &slot, null)   Receiver holds ItemHandle
+mbx.receive(&slot, null)   Receiver holds ItemHandle
 ```
 
 ```zig
-pub fn receive(mbh: MailboxHandle, slot: *Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Cancelable)!void
+pub fn receive(self: *Mbox, slot: *Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Cancelable)!void
 ```
 
 - Blocks until handle available.
@@ -31,7 +31,6 @@ pub fn receive(mbh: MailboxHandle, slot: *Slot, timeout_ns: ?u64) (error{ Closed
 - One receiver gets it.
 - Order among waiters depends on the Io runtime — not guaranteed FIFO.
 - Assert:
-  - `mailbox.is_it_you(mbh.*.tag)`
   - `slot.* == null`
 
 ---
@@ -39,13 +38,12 @@ pub fn receive(mbh: MailboxHandle, slot: *Slot, timeout_ns: ?u64) (error{ Closed
 ## try_receive
 
 ```zig
-pub fn try_receive(mbh: MailboxHandle, slot: *Slot) error{Closed}!bool
+pub fn try_receive(self: *Mbox, slot: *Slot) error{Closed}!bool
 ```
 
 - Non-blocking.
 - Returns true if handle received, false if queue empty.
 - Assert:
-  - `mailbox.is_it_you(mbh.*.tag)`
   - `slot.* == null`
 
 ---
@@ -53,15 +51,16 @@ pub fn try_receive(mbh: MailboxHandle, slot: *Slot) error{Closed}!bool
 ## receive_batch
 
 ```zig
-pub fn receive_batch(mbh: MailboxHandle) error{Closed}!polynode.ItemList
+pub fn receive_batch(self: *Mbox) error{Closed}!polynode.ItemList
 ```
 
 - Non-blocking.
 - Takes everything from the queue at once.
 - Returns an empty `ItemList` if queue is currently empty.
 - Does not wait. Does not return error for empty.
-- Assert:
-  - `mailbox.is_it_you(mbh.*.tag)`
+
+**The caller holds every item in that list** — same duty as after `close()`.  
+Free them, or put them back into a pool.
 
 ---
 

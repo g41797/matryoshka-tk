@@ -6,11 +6,11 @@
 
 ```zig
 var slot: Slot = null;
-defer pool.put(ph, &slot);
-try pool.get(ph, TAG, .new_only, &slot);
+defer pl.put(&slot);
+try pl.get(TAG, .new_only, &slot);
 // fill item ...
-try mailbox.send(mbh, &slot);   // send sets slot.* = null
-// defer runs: pool.put sees null → no-op
+try mbx.send(&slot);   // send sets slot.* = null
+// defer runs: Pool.put sees null → no-op
 // result: item is in mailbox, not recycled to pool
 ```
 

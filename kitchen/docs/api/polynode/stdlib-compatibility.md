@@ -15,15 +15,15 @@ PolyNode embeds `std.DoublyLinkedList.Node`.
 `ItemList` is the toolkit's list type. It holds the same std list inside and  
 speaks `ItemHandle` on the outside.
 
-- `mailbox.close()`
-- `mailbox.receive_batch()`
-- `pool.put_all()`
-- `PoolHooks.on_put`, `PoolHooks.on_close`
+- `Mbox.close()`
+- `Mbox.receive_batch()`
+- `Pool.put_all()`
+- `Pool.Hooks.on_put`, `Pool.Hooks.on_close`
 
 Walk results with `popFirst()`:
 
 ```zig
-var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+var batch: polynode.ItemList = try mbx.receive_batch();
 while (batch.popFirst()) |ih| {
     const ev: *Event = Event.EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
     // ...
@@ -124,7 +124,7 @@ neighbours. `ItemList.popFirst()` calls `polynode.reset` before it returns.
 
 - A popped `ItemHandle` is never linked.
 - `polynode.is_linked` on it is false.
-- It goes straight into a `Slot`, or into `mailbox.send`, with no extra step.
+- It goes straight into a `Slot`, or into `Mbox.send`, with no extra step.
 
 `polynode.reset` is still public. You need it only when you take items out  
 through `ItemList._list` — see below.

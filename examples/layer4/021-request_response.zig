@@ -16,16 +16,16 @@
 //!
 
 pub fn request_response_between_masters(allocator: std.mem.Allocator, io: std.Io) !void {
-    const a_inbox: MailboxHandle = try mailbox.new(io, allocator);
+    const a_inbox: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(a_inbox);
+        var rem: polynode.ItemList = a_inbox.close();
         items.freeList(&rem, allocator);
         mailbox.destroy(a_inbox, allocator);
     }
 
-    const b_inbox: MailboxHandle = try mailbox.new(io, allocator);
+    const b_inbox: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(b_inbox);
+        var rem: polynode.ItemList = b_inbox.close();
         items.freeList(&rem, allocator);
         mailbox.destroy(b_inbox, allocator);
     }
@@ -35,8 +35,8 @@ pub fn request_response_between_masters(allocator: std.mem.Allocator, io: std.Io
 }
 
 const MasterACtx = struct {
-    a_inbox: MailboxHandle,
-    b_inbox: MailboxHandle,
+    a_inbox: *Mbox,
+    b_inbox: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -46,13 +46,13 @@ fn masterAFn(ctx: *MasterACtx) anyerror!void {
         defer items.freeSlot(&slot, ctx.alloc);
         try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = 42;
-        try mailbox.send(ctx.b_inbox, &slot);
+        try ctx.b_inbox.send(&slot);
         std.log.info("master A: sent Event code=42 request to B", .{});
     }
 
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    try mailbox.receive(ctx.a_inbox, &slot, null);
+    try ctx.a_inbox.receive(&slot, null);
 
     if (items.Sensor.SensorPolyHelper.fromSlot(&slot)) |sn| {
         std.log.info("master A: received Sensor response value={d}", .{sn.value});
@@ -63,15 +63,15 @@ fn masterAFn(ctx: *MasterACtx) anyerror!void {
 }
 
 const MasterBCtx = struct {
-    a_inbox: MailboxHandle,
-    b_inbox: MailboxHandle,
+    a_inbox: *Mbox,
+    b_inbox: *Mbox,
     alloc: std.mem.Allocator,
 };
 
 fn masterBFn(ctx: *MasterBCtx) anyerror!void {
     var slot: Slot = null;
     defer items.freeSlot(&slot, ctx.alloc);
-    try mailbox.receive(ctx.b_inbox, &slot, null);
+    try ctx.b_inbox.receive(&slot, null);
 
     var response_value: f64 = 0.0;
     if (items.Event.EventPolyHelper.fromSlot(&slot)) |ev| {
@@ -84,11 +84,11 @@ fn masterBFn(ctx: *MasterBCtx) anyerror!void {
 
     try items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot);
     items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = response_value;
-    try mailbox.send(ctx.a_inbox, &slot);
+    try ctx.a_inbox.send(&slot);
     std.log.info("master B: sent Sensor response value={d}", .{response_value});
 }
 
-fn runMasters(a_inbox: MailboxHandle, b_inbox: MailboxHandle, alloc: std.mem.Allocator, io: std.Io) !void {
+fn runMasters(a_inbox: *Mbox, b_inbox: *Mbox, alloc: std.mem.Allocator, io: std.Io) !void {
     var ctx_a: MasterACtx = .{ .a_inbox = a_inbox, .b_inbox = b_inbox, .alloc = alloc };
     var ctx_b: MasterBCtx = .{ .a_inbox = a_inbox, .b_inbox = b_inbox, .alloc = alloc };
     var fut_a = try io.concurrent(masterAFn, .{&ctx_a});
@@ -101,6 +101,6 @@ const items = @import("../items/items.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

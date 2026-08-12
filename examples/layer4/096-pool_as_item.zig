@@ -3,26 +3,26 @@
 
 //! Pool holds pools at teardown.
 //!
-//! - A carrier pool's hooks accept PoolHandle items (PoolPolyHelper.TAG).
-//! - Two inner pools are stored in the carrier via pool.put.
-//! - pool.close on the carrier walks the returned list, closes and destroys each inner pool.
-//! - Shows uniform cleanup of infra handles — no per-instance role discrimination needed.
+//! - A carrier pool's hooks accept Pool items (Pool.TAG).
+//! - Two inner pools are stored in the carrier via put.
+//! - close on the carrier walks the returned list, closes and destroys each inner pool.
+//! - Shows uniform cleanup of infrastructure items — no per-instance role discrimination needed.
 //!
 //!
 //! ```
-//!  pool.new × 2 ──► pool.put ──► carrier pool (holds inner pools as items)
-//!       │ pool.close (carrier)
+//!  pool.new × 2 ──► carrier.put ──► carrier pool (holds inner pools as items)
+//!       │ carrier.close
 //!       ▼
-//!  on_close ──► pool.close + pool.destroy per inner pool
+//!  on_close ──► close + destroy per inner pool
 //! ```
 //!
 
 pub fn pool_holds_pools_at_teardown(allocator: std.mem.Allocator, io: std.Io) !void {
-    // Carrier pool — holds inner PoolHandles as items.
-    const carrier: PoolHandle = try pool.new(io, allocator);
+    // Carrier pool — holds inner pools as items.
+    const carrier: *Pool = try pool.new(io, allocator);
     var carrier_ctx: CarrierCtx = .{ .alloc = allocator };
-    const carrier_tags = [_]*const anyopaque{PoolPolyHelper.TAG};
-    try pool.init(carrier, .{
+    const carrier_tags = [_]*const anyopaque{Pool.TAG};
+    try carrier.init(.{
         .ctx = &carrier_ctx,
         .tags = &carrier_tags,
         .on_get = onGet,
@@ -43,7 +43,7 @@ const CarrierCtx = struct {
 
 fn onGet(_: *anyopaque, _: *const anyopaque, _: usize, _: *Slot) void {}
 
-fn resetOnPut(_: *Slot) void {} // PoolHandle items carry no resettable scalar state — kept for on_put-shape consistency
+fn resetOnPut(_: *Slot) void {} // Pool items carry no resettable scalar state — kept for on_put-shape consistency
 
 fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
     resetOnPut(slot);
@@ -53,33 +53,33 @@ fn onPut(_: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
 fn onClose(ctx_opaque: *anyopaque, list: *polynode.ItemList) void {
     const ctx: *CarrierCtx = @ptrCast(@alignCast(ctx_opaque));
     while (list.popFirst()) |poly| {
-        const ph: PoolHandle = poly;
-        pool.close(ph);
-        pool.destroy(ph, ctx.alloc);
+        const pl: *Pool = Pool.mustFromPoly(poly);
+        pl.close();
+        pool.destroy(pl, ctx.alloc);
         ctx.closed_count += 1;
     }
     std.log.info("on_close: closed and destroyed {d} inner pool(s)", .{ctx.closed_count});
 }
 
 const Ctx = struct {
-    carrier: PoolHandle,
+    carrier: *Pool,
     alloc: std.mem.Allocator,
     io: std.Io,
 
     fn createAndStoreInnerPools(self: *Ctx, n: usize) !void {
         var j: usize = 0;
         while (j < n) : (j += 1) {
-            const inner: PoolHandle = try pool.new(self.io, self.alloc);
-            var slot: Slot = inner;
-            pool.put(self.carrier, &slot);
+            const inner: *Pool = try pool.new(self.io, self.alloc);
+            var slot: Slot = Pool.toPoly(inner);
+            self.carrier.put(&slot);
             try helpers.expect(error.PoolAsItemFailed, slot == null, "carrier did not accept inner pool");
             std.log.info("stored inner pool {d} in carrier", .{j + 1});
         }
     }
 
     fn closeCarrier(self: *Ctx, carrier_ctx: *CarrierCtx, n: usize) !void {
-        // Tag dispatch is not needed here: all items are PoolHandles by construction.
-        pool.close(self.carrier);
+        // Tag dispatch is not needed here: all items are pools by construction.
+        self.carrier.close();
         try helpers.expect(error.PoolAsItemFailed, carrier_ctx.closed_count == n, "wrong number of inner pools cleaned up");
         std.log.info("carrier closed: {d} inner pool(s) cleaned up", .{carrier_ctx.closed_count});
         pool.destroy(self.carrier, self.alloc);
@@ -92,5 +92,4 @@ const std = @import("std");
 const pool = matryoshka.pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const PoolHandle = pool.PoolHandle;
-const PoolPolyHelper = pool.PoolPolyHelper;
+const Pool = matryoshka.Pool;

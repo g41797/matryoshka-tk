@@ -1,5 +1,15 @@
-# Task 1 — Test Scenarios for Layers 1–3 (005)
+# Task 1 — Test Scenarios for Layers 1–3 (007)
 
+
+Change from -006: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
+
+
+Change from -005: API 12 — scenarios 18, 19 and 20 name `Mbox` and `Pool`  
+pointers instead of the removed handle types, and the API-shape note reads  
+the pointer surface. Numbers and meanings unchanged.
 
 Change from -004: API 11 — scenario 100 names `PolyHelper.fromPoly`. Numbers  
 and meanings unchanged.
@@ -53,9 +63,9 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 
 ### Tests — Infrastructure as Items (Layer 1 level)
 
-18. **MailboxHandle is a PolyNode** — `MailboxHandle = *PolyNode`; verify `mailbox.is_it_you(mbh.tag)` returns true
-19. **PoolHandle is a PolyNode** — `PoolHandle = *PolyNode`; verify `pool.is_it_you(ph.tag)` returns true
-20. **Per-module destroy** — `mailbox.destroy(mbh, alloc)` frees a closed mailbox. `pool.destroy(ph, alloc)` frees a closed pool
+18. **Mbox is a PolyNode** — `Mbox` embeds `poly: PolyNode`; verify `Mbox.is_it_you(mbx.poly.tag)` returns true
+19. **Pool is a PolyNode** — `Pool` embeds `poly: PolyNode`; verify `Pool.is_it_you(pl.poly.tag)` returns true
+20. **Per-module destroy** — `mailbox.destroy(mbx, alloc)` frees a closed mailbox. `pool.destroy(pl, alloc)` frees a closed pool
 
 ### Tests — ItemList (API 8)
 
@@ -81,73 +91,73 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 
 ## Layer 2 — Movement (Mailbox)
 
-26. **mailbox.new and mailbox.destroy** — create mailbox, verify handle is non-null and `mailbox.is_it_you` returns true; close then destroy, verify freed
-27. **Send and receive single item** — `mailbox.send` one PolyNode, `mailbox.receive` it, verify tag and data intact
+26. **mailbox.new and mailbox.destroy** — create mailbox, verify `Mbox.is_it_you(mbx.poly.tag)` returns true; close then destroy, verify freed
+27. **Send and receive single item** — `mbx.send` one PolyNode, `mbx.receive` it, verify tag and data intact
 28. **FIFO ordering** — send 3 items, receive 3, verify order preserved
 29. **Send to closed mailbox returns error.Closed** — close first, then send, verify error
 30. **Receive from closed mailbox returns error.Closed** — close first, then receive, verify error
-31. **Receive timeout (non-null ?u64)** — `mailbox.receive` on empty open mailbox with `timeout_ns = 1000`, verify `error.Timeout`
-32. **Receive wait forever (null ?u64)** — `mailbox.receive` with `timeout_ns = null` on a mailbox that gets an item sent from another context; verify item received, no `error.Timeout`
-33. **Close returns remaining items as std.DoublyLinkedList** — send 3 items, `mailbox.close` without receiving, verify returned list has 3 items via `popFirst()` loop
-34. **Close is repeatable** — second `mailbox.close` returns empty `std.DoublyLinkedList`
-35. **send_oob delivers to front of queue** — send 3 normal items, then `mailbox.send_oob` 1 item; receive gets the OOB item first
-36. **send_oob wakes blocked receiver** — receiver blocked on empty mailbox, `mailbox.send_oob` delivers item, receiver gets it
-37. **Multiple send_oob items maintain FIFO among themselves** — `mailbox.send_oob` A then `mailbox.send_oob` B; receive gets A first, then B (OOBs inserted after previous OOBs)
+31. **Receive timeout (non-null ?u64)** — `mbx.receive` on empty open mailbox with `timeout_ns = 1000`, verify `error.Timeout`
+32. **Receive wait forever (null ?u64)** — `mbx.receive` with `timeout_ns = null` on a mailbox that gets an item sent from another context; verify item received, no `error.Timeout`
+33. **Close returns remaining items as std.DoublyLinkedList** — send 3 items, `mbx.close` without receiving, verify returned list has 3 items via `popFirst()` loop
+34. **Close is repeatable** — second `mbx.close` returns empty `std.DoublyLinkedList`
+35. **send_oob delivers to front of queue** — send 3 normal items, then `mbx.send_oob` 1 item; receive gets the OOB item first
+36. **send_oob wakes blocked receiver** — receiver blocked on empty mailbox, `mbx.send_oob` delivers item, receiver gets it
+37. **Multiple send_oob items maintain FIFO among themselves** — `mbx.send_oob` A then `mbx.send_oob` B; receive gets A first, then B (OOBs inserted after previous OOBs)
 38. **send_oob to closed mailbox returns error.Closed** — same as normal send
 39. **Data priority over closed** — send item then close; receive gets the item first (or close returns it in remaining list)
-40. **Batch receive (mailbox.receive_batch)** — send 5 items, `mailbox.receive_batch` gets all 5 as `std.DoublyLinkedList`, mailbox empty after
-41. **Batch receive on empty returns empty list** — no items, `mailbox.receive_batch` returns empty `std.DoublyLinkedList` (not error)
-42. **Batch items walkable via popFirst** — `mailbox.receive_batch` returns `std.DoublyLinkedList`; walk via `popFirst()`. `DoublyLinkedList` does NOT clear links on pop — caller must call `polynode.reset` before checking `is_linked`. Standard stdlib iteration pattern
-43. **Send transfers the item** — after `mailbox.send`, caller's Slot is null
-44. **Receive transfers the item** — after `mailbox.receive`, caller's Slot is non-null, mailbox no longer holds it
-45. **try_receive on empty returns false** — `mailbox.try_receive` on open empty mailbox returns false, Slot stays null
-46. **try_receive gets item** — send item, `mailbox.try_receive` returns true, Slot is non-null
+40. **Batch receive (mbx.receive_batch)** — send 5 items, `mbx.receive_batch` gets all 5 as `std.DoublyLinkedList`, mailbox empty after
+41. **Batch receive on empty returns empty list** — no items, `mbx.receive_batch` returns empty `std.DoublyLinkedList` (not error)
+42. **Batch items walkable via popFirst** — `mbx.receive_batch` returns `std.DoublyLinkedList`; walk via `popFirst()`. `DoublyLinkedList` does NOT clear links on pop — caller must call `polynode.reset` before checking `is_linked`. Standard stdlib iteration pattern
+43. **Send transfers the item** — after `mbx.send`, caller's Slot is null
+44. **Receive transfers the item** — after `mbx.receive`, caller's Slot is non-null, mailbox no longer holds it
+45. **try_receive on empty returns false** — `mbx.try_receive` on open empty mailbox returns false, Slot stays null
+46. **try_receive gets item** — send item, `mbx.try_receive` returns true, Slot is non-null
 
 ### Tests — Holding-state transitions (Mailbox)
 
-47. **IN_FLIGHT → HELD (mailbox.send)** — item owned by caller; `mailbox.send` transfers to mailbox; Slot is null; item is HELD
-48. **HELD → IN_FLIGHT (mailbox.receive)** — item in mailbox; `mailbox.receive` transfers to caller; Slot is non-null; item is IN_FLIGHT
-49. **Send linked item panics** — item already in a list; `mailbox.send` should detect `polynode.is_linked` and panic
+47. **IN_FLIGHT → HELD (mbx.send)** — item owned by caller; `mbx.send` transfers to mailbox; Slot is null; item is HELD
+48. **HELD → IN_FLIGHT (mbx.receive)** — item in mailbox; `mbx.receive` transfers to caller; Slot is non-null; item is IN_FLIGHT
+49. **Send linked item panics** — item already in a list; `mbx.send` should detect `polynode.is_linked` and panic
 
 ### Tests — Multi-threaded Scenarios
 
 50. **Fan-in (3+1)** — 3 sender threads (event sender, sensor sender, event sender), main receives all 3; heap alloc via `alloc.create`/`alloc.destroy`; mixed Event + Sensor types; tag dispatch via `EventPolyHelper.cast` / `SensorPolyHelper.cast`; verify received == 3
-51. **Fan-out (1+2)** — main sends 1 Event + 1 Sensor then closes; 2 receiver threads each call `mailbox.receive(null)` until `error.Closed`; tag dispatch + `alloc.destroy`; verify `items_a + items_b + remaining == 2`
-52. **Combined (3+2+main)** — 3 sender threads (event loop, sensor loop, alternating loop) + 2 receiver threads + main; senders loop `mailbox.send` until `error.Closed`; receivers loop `mailbox.receive(null)` until `error.Closed`; main sleeps 100ms via `Io.Timeout.sleep` then calls `mailbox.close`; main joins all 5 threads, walks close result; verify `total_sent == total_received + remaining_count`
+51. **Fan-out (1+2)** — main sends 1 Event + 1 Sensor then closes; 2 receiver threads each call `mbx.receive(&slot, null)` until `error.Closed`; tag dispatch + `alloc.destroy`; verify `items_a + items_b + remaining == 2`
+52. **Combined (3+2+main)** — 3 sender threads (event loop, sensor loop, alternating loop) + 2 receiver threads + main; senders loop `mbx.send` until `error.Closed`; receivers loop `mbx.receive(&slot, null)` until `error.Closed`; main sleeps 100ms via `Io.Timeout.sleep` then calls `mbx.close`; main joins all 5 threads, walks close result; verify `total_sent == total_received + remaining_count`
 
 ---
 
 ## Layer 3 — Lifecycle (Pool)
 
-63. **pool.new, pool.init, pool.destroy** — create pool, register hooks via `pool.init`, verify handle; close then destroy
-64. **pool.get creates new item via on_get** — empty pool, `.available_or_new` mode, on_get called with `m.* == null`, returns new item
-65. **pool.get reuses stored item** — put item back, get again, verify same pointer returned
+63. **pool.new, pl.init, pool.destroy** — create pool, register hooks via `pl.init`, verify handle; close then destroy
+64. **pl.get creates new item via on_get** — empty pool, `.available_or_new` mode, on_get called with `m.* == null`, returns new item
+65. **pl.get reuses stored item** — put item back, get again, verify same pointer returned
 66. **on_get reinitializes recycled item** — put item with data, get it back, verify fields were reset by on_get
-67. **pool.put calls on_put** — verify on_put hook is invoked with correct in_pool_count
+67. **pl.put calls on_put** — verify on_put hook is invoked with correct in_pool_count
 68. **on_put can destroy item** — on_put sets `m.* = null` (destroy policy), verify item not stored
 69. **on_put can keep item** — on_put leaves `m.*` non-null (keep policy), verify item stored in pool
 70. **GetMode.new_only always creates** — even with items available, `.new_only` calls on_get with null
 71. **GetMode.available_only returns error.NotAvailable** — empty pool, `.available_only` mode, returns `error.NotAvailable`
 72. **GetMode.available_only returns stored item** — pool has item, `.available_only` returns it
-73. **Per-tag free lists** — pool stores Event and Sensor separately, `pool.get` with EVENT_TAG returns Event, not Sensor
-74. **pool.close calls on_close with all items** — put 5 items, `pool.close`, on_close receives `*std.DoublyLinkedList` with 5 items
-75. **pool.close is repeatable** — second close is a no-op
-76. **pool.get on closed pool returns error.Closed** — close first, then get, verify error
-77. **pool.put on closed pool returns item to caller** — put after close, Slot stays non-null (the caller still holds it)
+73. **Per-tag free lists** — pool stores Event and Sensor separately, `pl.get` with EVENT_TAG returns Event, not Sensor
+74. **pl.close calls on_close with all items** — put 5 items, `pl.close`, on_close receives `*std.DoublyLinkedList` with 5 items
+75. **pl.close is repeatable** — second close is a no-op
+76. **pl.get on closed pool returns error.Closed** — close first, then get, verify error
+77. **pl.put on closed pool returns item to caller** — put after close, Slot stays non-null (the caller still holds it)
 78. **Backpressure policy** — on_put drops items when count exceeds threshold
-79. **Pool seeding** — pre-allocate N items with `.new_only` + `pool.put`, verify N available with `.available_only`
+79. **Pool seeding** — pre-allocate N items with `.new_only` + `pl.put`, verify N available with `.available_only`
 80. **in_pool_count accuracy** — track count across get/put cycles, verify on_get and on_put receive correct counts
 81. **Hooks run outside lock** — verify no deadlock when on_get/on_put call into pool (indirect test via successful operation)
-82. **pool.put_all** — return a batch of items via `*std.DoublyLinkedList`; callee pops from caller's list. Accepts a standard stdlib list — no conversion needed from `mailbox.receive_batch` or `mailbox.close` results
-83. **pool.get_wait timeout (non-null ?u64)** — `pool.get_wait` with `timeout_ns = 1000` on empty pool, verify `error.Timeout`
-84. **pool.get_wait forever (null ?u64)** — `pool.get_wait` with `timeout_ns = null` on pool that gets an item put from another context; verify item received
+82. **pl.put_all** — return a batch of items via `*std.DoublyLinkedList`; callee pops from caller's list. Accepts a standard stdlib list — no conversion needed from `mbx.receive_batch` or `mbx.close` results
+83. **pl.get_wait timeout (non-null ?u64)** — `pl.get_wait` with `timeout_ns = 1000` on empty pool, verify `error.Timeout`
+84. **pl.get_wait forever (null ?u64)** — `pl.get_wait` with `timeout_ns = null` on pool that gets an item put from another context; verify item received
 
 ### Tests — Holding-state transitions (Pool)
 
-85. **HELD → IN_FLIGHT (pool.get)** — item in pool free-list; `pool.get` transfers to caller; Slot non-null; item is IN_FLIGHT
-86. **IN_FLIGHT → HELD (pool.put, keep)** — item held by caller; `pool.put` with on_put that keeps; item back in pool; Slot null
-87. **IN_FLIGHT → FREE (pool.put, destroy)** — item held by caller; `pool.put` with on_put that destroys; item freed; Slot null
-88. **Double pool.put** — put same item twice without getting in between; expect panic or assertion failure
+85. **HELD → IN_FLIGHT (pl.get)** — item in pool free-list; `pl.get` transfers to caller; Slot non-null; item is IN_FLIGHT
+86. **IN_FLIGHT → HELD (pl.put, keep)** — item held by caller; `pl.put` with on_put that keeps; item back in pool; Slot null
+87. **IN_FLIGHT → FREE (pl.put, destroy)** — item held by caller; `pl.put` with on_put that destroys; item freed; Slot null
+88. **Double pl.put** — put same item twice without getting in between; expect panic or assertion failure
 
 ---
 
@@ -158,7 +168,7 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 - `io.concurrent()` / `Future` / `Io.Group` / `error.Canceled` reserved for Layer 4 (Task 2)
 - Builder/types are shared test infrastructure, not part of any layer's public API
 - Holding-state tests validate the architecture's core invariants, not implementation details
-- API uses module-function style: `mailbox.send(mb, &item)` not `mailbox_send(mb, &item)`
-- Handle types are already pointers: `mbh: MailboxHandle` (= `*PolyNode`), not `mbh: *MailboxHandle`
+- API uses method style on the receiver: `mbx.send(&slot)`, `pl.get(tag, mode, &slot)`. `new`, `destroy` and `is_it_you` stay module functions (API 12)
+- `Mbox` and `Pool` are structs; callers hold `*Mbox` / `*Pool`. Crossing to a `Slot` goes through `Mbox.toPoly` / `Mbox.fromPoly` (API 12)
 - Batch returns are `polynode.ItemList`, walked via `popFirst()` — `ItemList.popFirst` clears the links, so no caller-side `polynode.reset` (API 8)
 - Timeout is `?u64`: null = wait forever, value = nanoseconds

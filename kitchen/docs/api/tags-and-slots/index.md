@@ -17,12 +17,15 @@ For user-defined types (Event, Sensor, etc.):
 - Tag identifies the class.
 - Instance fields carry the role. The user adds a `kind` or `role` field to discriminate.
 
-For infra handles (MailboxHandle, PoolHandle):
+For infra handles (*Mbox, *Pool):
 
-- `_Mailbox` and `_Pool` are private structs. The user cannot add fields.
+- `Mbox` and `Pool` are public structs, but their fields are internal. The
+  user cannot add fields.
+
 - Tag identifies the class only. No per-instance role information is accessible.
-- **Instance identity**: resolved by pointer comparison against known handles.
-  E.g. `received == worker_mbh` identifies which specific mailbox arrived.
+- **Instance identity**: resolved by pointer comparison.
+  E.g. `Mbox.mustFromPoly(slot.?) == worker_mbx` identifies which specific  
+  mailbox arrived, comparing two `*Mbox`.
 
 - **Role**: established by protocol — the channel the handle arrived on, message
   ordering, or prior agreement between sender and receiver.
@@ -33,17 +36,21 @@ For infra handles (MailboxHandle, PoolHandle):
 
 ### Worker-finish-signal pattern
 
-Master creates `worker_mbh`, spawns a worker via `io.concurrent` and passes `worker_mbh` as parameter.  
+Master creates `worker_mbx`, spawns a worker via `io.concurrent` and passes `worker_mbx` as parameter.  
 Worker processes items until a shutdown signal, then:
 
-- Sends `worker_mbh` back to master's inbox (unclosed) as the finish signal.
+- Sends `worker_mbx.toPoly()` back to master's inbox (unclosed) as the finish signal.
 - Exits.
 
 Master receives a PolyNode from its inbox:
 
-- `mailbox.is_it_you(received.*.tag)` — confirms class (it is a mailbox).
-- `received == worker_mbh` — confirms instance (it is the expected worker mailbox).
-- Master closes and destroys `worker_mbh`.
+- `Mbox.mustFromPoly(slot.?)` — crosses the border, panics if the node is not
+  a mailbox. `Mbox.fromPoly` is the checking form, null on mismatch.
+
+- `Mbox.mustFromPoly(slot.?) == worker_mbx` — confirms instance (it is the
+  expected worker mailbox). Both sides are `*Mbox`.
+
+- Master closes and destroys `worker_mbx`.
 - Master awaits the worker's future (cleanup only — the mailbox return was the logical finish signal).
 
 This pattern replaces relying on the future await as a completion signal, or a separate shutdown message, with a handle handoff.
@@ -55,13 +62,13 @@ When tag dispatch must distinguish roles, wrap the handle in a user-defined Poly
 ```zig
 const WorkerInbox = struct {
     poly: PolyNode,
-    handle: mailbox.MailboxHandle,
+    mbx: *Mbox,
 };
 pub const WorkerInboxPolyHelper = polynode.PolyHelper(WorkerInbox);
 ```
 
-`WorkerInboxPolyHelper.TAG` is distinct from `MailboxPolyHelper.TAG`.  
-The receiver dispatches on `WorkerInboxPolyHelper.TAG` and finds the embedded handle.
+`WorkerInboxPolyHelper.TAG` is distinct from `Mbox.TAG`.  
+The receiver dispatches on `WorkerInboxPolyHelper.TAG` and finds the embedded `*Mbox`.
 
 ---
 

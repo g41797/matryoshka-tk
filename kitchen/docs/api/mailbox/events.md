@@ -11,10 +11,11 @@ Cancel and close in concurrent tasks:
 
 ---
 
-## ReceiveResult
+## Mbox.Result
 
 ```zig
-pub const ReceiveResult = union(enum) {
+// nested in Mbox
+pub const Result = union(enum) {
     item: ItemHandle,
     closed: void,
     timeout: void,
@@ -31,13 +32,13 @@ pub const ReceiveResult = union(enum) {
 ## receiveResult
 
 ```zig
-pub fn receiveResult(mbh: MailboxHandle, timeout_ns: ?u64) ReceiveResult
+pub fn receiveResult(mbx: *Mbox, timeout_ns: ?u64) Mbox.Result
 ```
 
-- Blocking function. No error return — maps all outcomes to `ReceiveResult` variants.
+- Blocking function. No error return — maps all outcomes to `Mbox.Result` variants.
 - Primary building block for Select integration:
   ```zig
-  try select.concurrent(.inbox, mailbox.receiveResult, .{mbh, null});
+  try select.concurrent(.inbox, mailbox.receiveResult, .{mbx, null});
   ```
 
 - Also usable with `io.concurrent` or `group.concurrent`.
@@ -47,10 +48,10 @@ pub fn receiveResult(mbh: MailboxHandle, timeout_ns: ?u64) ReceiveResult
 ## receive_future
 
 ```zig
-pub fn receive_future(mbh: MailboxHandle, timeout_ns: ?u64) ConcurrentError!Io.Future(ReceiveResult)
+pub fn receive_future(self: *Mbox, timeout_ns: ?u64) ConcurrentError!Io.Future(Mbox.Result)
 ```
 
-- Thin wrapper: `return mbx.*.io.concurrent(receiveResult, .{mbh, timeout_ns})`.
+- Thin wrapper: `return mbx.*.io.concurrent(receiveResult, .{mbx, timeout_ns})`.
 - No heap allocation — args copied by the runtime before `concurrent` returns.
 - Returns a Future for direct await or `Io.Group` use.
 - Returns `error.ConcurrencyUnavailable` on single-threaded backends.
@@ -68,7 +69,7 @@ pub fn receive_future(mbh: MailboxHandle, timeout_ns: ?u64) ConcurrentError!Io.F
 
 **`select.concurrent` pattern** (primary):  
 ```zig
-try select.concurrent(.inbox, mailbox.receiveResult, .{mbh, null});
+try select.concurrent(.inbox, mailbox.receiveResult, .{mbx, null});
 const event = try select.await();
 switch (event) {
     .inbox => |r| switch (r) { ... },
@@ -78,7 +79,7 @@ switch (event) {
 
 **`receive_future` pattern** (direct await or Group):  
 ```zig
-const fut = try mailbox.receive_future(mbh, null);
+const fut = try mbx.receive_future(null);
 const result = try fut.await(io);
 ```
 

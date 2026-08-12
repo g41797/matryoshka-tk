@@ -10,7 +10,7 @@ Zig's tagged union solves compile-time type selection:
 const Message = union(enum) {
     event: Event,
     sensor: Sensor,
-    mailbox: MailboxHandle,
+    mailbox: *Mbox,
 };
 
 switch (msg) {
@@ -43,7 +43,7 @@ Mailbox stores  →  *PolyNode
 Pool stores     →  *PolyNode
 ```
 
-Neither one knows what's behind the pointer — `Event`, `Sensor`, `MailboxHandle`,  
+Neither one knows what's behind the pointer — `Event`, `Sensor`, `*Mbox`,  
 anything. The type is gone the moment it becomes a `*PolyNode`.
 
 ```text
@@ -71,7 +71,7 @@ Everything stores Message
 ```
 
 Matryoshka chooses the opposite: `*PolyNode` for everything, so any type — `Event`,  
-`Sensor`, `MailboxHandle`, a type added next year — embeds directly, with:
+`Sensor`, `*Mbox`, a type added next year — embeds directly, with:
 
 - no wrapper allocation
 - no copying into a union
@@ -98,7 +98,7 @@ Adding `DatabaseConnection` next year:
 
 - **Matryoshka's own infrastructure** (Mailbox, Pool, anything that must move through
   them without the infrastructure knowing its type) — a `PolyNode` tag is required. There  
-  is no compile-time way to recover `*Event` / `*Sensor` / `*MailboxHandle` from the same  
+  is no compile-time way to recover `*Event` / `*Sensor` / `**Mbox` from the same  
   intrusive queue otherwise.
 
 Tagged unions answer *"which variant is this value?"*.  

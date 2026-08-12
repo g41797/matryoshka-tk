@@ -24,14 +24,14 @@
 //!
 
 pub fn mailbox_receive_as_select_event_source(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     try ctx.seedMailbox();
 
     var buf: [4]MasterEvent = undefined;
@@ -47,7 +47,7 @@ const TIMER_NS: i96 = 20_000_000; // 20 ms
 const N_ITEMS: usize = 3;
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
+    inbox: Mbox.Result,
     timer: void,
 };
 
@@ -56,7 +56,7 @@ fn sleepFn(sleep_t: std.Io.Timeout, io: std.Io) void {
 }
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
     received: usize = 0,
@@ -68,7 +68,7 @@ const Ctx = struct {
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try items.Event.EventPolyHelper.create(self.alloc, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
     }
 
@@ -76,7 +76,7 @@ const Ctx = struct {
         const sleep_t: std.Io.Timeout = .{
             .duration = .{ .raw = .{ .nanoseconds = TIMER_NS }, .clock = .real },
         };
-        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
         try sel.concurrent(.timer, sleepFn, .{ sleep_t, self.io });
     }
 
@@ -92,7 +92,7 @@ const Ctx = struct {
                         self.received += 1;
                         std.log.info("inbox: Event code={d} ({d}/{d})", .{ ev.code, self.received, N_ITEMS });
                         if (self.received < N_ITEMS) {
-                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+                            try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
                         }
                     },
                     .closed, .canceled, .timeout, .wakeup => break,
@@ -116,6 +116,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

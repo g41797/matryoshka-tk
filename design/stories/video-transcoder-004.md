@@ -1,4 +1,10 @@
-# Story: Video Transcoder Pipeline
+# Story: Video Transcoder Pipeline (004)
+
+
+Change from -003: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 A complete system design — from domain problem to Matryoshka implementation.
 
@@ -123,7 +129,7 @@ Requirement: Sequential processing per stream. Concurrent processing.
 Matryoshka:
 - `StreamContext` — PolyNode-based struct, carries per-camera encoder state.
 - `ready_queue` — Mailbox of `StreamContext`.
-- Worker receives `StreamContext` via `mailbox.receive`.
+- Worker receives `StreamContext` via `Mbox.receive`.
 - Worker owns it exclusively. No other worker can touch it.
 - `Io.Group` of encoding workers.
 
@@ -134,7 +140,7 @@ Requirement: Continuous ingest.
 Matryoshka:
 - Network Master: `Io.Select` loop.
 - Two sources: pool availability, incoming network data.
-- Fixed `Io.Group` of workers loops on `mailbox.receive(ready_queue)`.
+- Fixed `Io.Group` of workers loops on `ready_queue.receive()`.
 
 ---
 
@@ -145,7 +151,7 @@ Matryoshka:
 - Workers receive `error.Closed`. Exit.
 - `Io.Group.await` — all workers done.
 - Close storage mailbox.
-- `pool.close` — releases remaining buffers via `on_close`.
+- `Pool.close` — releases remaining buffers via `on_close`.
 
 ---
 
@@ -163,7 +169,7 @@ Where the architecture lives.
 - Worker returns buffer → pool signals → Network Master resumes.
 - `StreamContext` in Mailbox → sequential processing without thread-per-camera.
 - `Io.Group` → fixed concurrency, one exclusive owner per stream.
-- `mailbox.close` → shutdown cascades downstream.
+- `Mbox.close` → shutdown cascades downstream.
 
 ---
 
@@ -186,20 +192,20 @@ Where the architecture lives.
         │
         V
   ENCODING WORKERS (Io.Group)
-  ├── mailbox.receive(ready_queue) ──► StreamContext (exclusive hold)
+  ├── ready_queue.receive() ──► StreamContext (exclusive hold)
   │     encode frame (sequential, lock-free)
-  │     pool.put buffer ──────────────────────────────────► [ buf_pool ]
+  │     Pool.put buffer ──────────────────────────────────► [ buf_pool ]
   │     create EncodedSegment                                    │
-  │     mailbox.send to storage_mbh                         pool signals
+  │     Mbox.send to storage_mbx                         pool signals
   │     destroy StreamContext                                     │
   │     loop back to receive                              Network Master resumes
   │
   V
-  [ storage_mbh: Mailbox of EncodedSegment ]
+  [ storage_mbx: Mailbox of EncodedSegment ]
         │
         V
   STORAGE TASK (io.concurrent)
-  ├── mailbox.receive(storage_mbh) ──► EncodedSegment
+  ├── storage_mbx.receive() ──► EncodedSegment
   │     write to storage (simulated: log)
   │     release segment
   │     loop back to receive
@@ -210,8 +216,8 @@ Where the architecture lives.
   Network Master stops ──► closes ready_queue
   Workers get error.Closed ──► exit
   Io.Group.await ──► all workers done
-  close storage_mbh ──► storage task gets error.Closed ──► exit
-  pool.close ──► on_close ──► release remaining buffers
+  close storage_mbx ──► storage task gets error.Closed ──► exit
+  Pool.close ──► on_close ──► release remaining buffers
 ```
 
 ---

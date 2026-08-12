@@ -91,7 +91,7 @@ Every step is a move, never a share.
 Pool does not ask "is anyone still using this?" — it already knows:
 
 - Handle inside the Pool's free list → the Pool holds it.
-- Handle returned by `pool.get` → the caller holds it.
+- Handle returned by `Pool.get` → the caller holds it.
 
 Mailbox does not ask "how many threads reference this?" — it already knows:
 

@@ -115,7 +115,7 @@ construction — no name, no rule for a user to remember, no way to get it wrong
 
 Trading an impossible bug for an invisible one, to gain a `switch`, is a bad  
 trade for a toolkit whose subject is safe item transfer. `TagTable` already  
-does dispatch without it. See [../table-dispatch-001.md](../table-dispatch-001.md).
+does dispatch without it. See [../table-dispatch-002.md](../table-dispatch-002.md).
 
 ## Mitigations that were considered
 
@@ -148,6 +148,6 @@ a type meets this wall.
 
 - [llvm-pointer-switch-bug-001.md](llvm-pointer-switch-bug-001.md) — why a
   pointer tag cannot be a `switch` prong
-- [../table-dispatch-001.md](../table-dispatch-001.md) — the dispatch mechanism
+- [../table-dispatch-002.md](../table-dispatch-002.md) — the dispatch mechanism
   that made `switch` unnecessary
 - [../patterns-025.md](../patterns-025.md) — polymorphic dispatch, all three forms

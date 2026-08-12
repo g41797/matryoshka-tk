@@ -1,18 +1,29 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (025)
+# Matryoshka Zig — Pattern and Idiom Catalog (027)
 
+
+Change from patterns-026: MBOX 1 — "Mailbox close recovery" rewritten around  
+the unconditional release, with `_ = mbx.close()` named as the thing not to  
+do. New entry, "Release a refused transfer": a `send` or `put` that is  
+refused leaves the item with the caller.
+
+Change from patterns-025: API 12-4 — every pattern speaks the pointer API.  
+Methods on `*Mbox` / `*Pool`, free functions still module-level. The  
+Worker-finish-signal and Wrapper write-ups rewritten around  
+`Mbox.mustFromPoly`, which compares two `*Mbox` instead of two look-alike  
+handles.
 
 Change from patterns-024: DISPATCH 2 — a third dispatch entry, "Polymorphic  
 dispatch — table". The handler belongs to the pair (receiver, tag), so the  
 choice moves out of the chain and into data the receiver owns.
 
 Change from patterns-023: DISPATCH 1 — "Polymorphic dispatch" split into  
-item-first and tag-first, with the `PoolHooks.on_get` case that has no item at  
+item-first and tag-first, with the `Pool.Hooks.on_get` case that has no item at  
 all. Two new entries: the last branch of a dispatch chain, and why a `switch`  
 over tags does not compile.
 
 Change from patterns-022: API 11 — `fromNode`/`mustFromNode`/`toNode` renamed to  
 `fromPoly`/`mustFromPoly`/`toPoly`. Every idiom that names them is updated.  
-Companion cross-reference updated to matryoshka-api-reference-033.md.
+Companion cross-reference updated to matryoshka-api-reference-036.md.
 
 Change from patterns-021: API 10 — `list.iterate()` becomes `list.iterator()`.  
 "Walk a batch — ItemList" gains a "Take one item out" idiom for `remove` and  
@@ -47,16 +58,16 @@ Change from patterns-013: staccato-style scan, prose paragraphs converted to bul
 
 Change from patterns-012:
 - `Thread.spawn` removed as an accepted task-creation option.
-- `io.concurrent()` is the only way a task starts (`matryoshka-concepts-001.md`, chapter 3).
+- `io.concurrent()` is the only way a task starts (`matryoshka-concepts-002.md`, chapter 3).
 
 Change from patterns-011:
 - API 4 renamed `NodeHandle` → `ItemHandle` — the old name leaked the intrusive-node implementation detail.
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-041.md](rules-041.md) — what is mandatory.  
-Companion: [matryoshka-concepts-001.md](matryoshka-concepts-001.md) — the thinking model.  
-Companion: [matryoshka-api-reference-033.md](matryoshka-api-reference-033.md) — signatures and contracts.
+Companion: [rules-043.md](rules-043.md) — what is mandatory.  
+Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the thinking model.  
+Companion: [matryoshka-api-reference-036.md](matryoshka-api-reference-036.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -83,7 +94,7 @@ Order of this catalog.
 
 ## Slot and transfer idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-033.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-036.md).
 
 ### Empty Slot initialization
 
@@ -121,14 +132,14 @@ When to use.
 
 Code shape.  
 ```zig
-try mailbox.send(mbh, &slot);
+try mbx.send(&slot);
 // slot == null
 ```
 
 or
 
 ```zig
-pool.put(ph, &slot);
+pl.put(&slot);
 // slot == null if accepted by pool
 ```
 
@@ -181,7 +192,7 @@ Do not.
 
 Asserts.
 - The Slot must hold an item. An insert is not a `defer` target, so it follows
-  `mailbox.send` rather than `pool.put` and rejects a null Slot.
+  `Mbox.send` rather than `Pool.put` and rejects a null Slot.
 
 ### Null-safe cleanup
 
@@ -190,7 +201,7 @@ When to use.
 
 Code shape.  
 ```zig
-defer pool.put(ph, &slot);
+defer pl.put(&slot);
 ```
 
 or
@@ -211,8 +222,8 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-defer pool.put(ph, &slot);              // no-op if slot == null
-try pool.get(ph, TAG, .available_or_new, &slot);
+defer pl.put(&slot);              // no-op if slot == null
+try pl.get(TAG, .available_or_new, &slot);
 // ... work ...
 // on transfer: slot = null → defer runs as no-op
 // on no transfer: defer recycles item
@@ -250,23 +261,23 @@ Code shape.
 ```zig
 var slot: Slot = null;
 defer if (slot) |poly| helpers.freeItem(poly, allocator);
-try mailbox.receive(mbh, &slot, null);
+try mbx.receive(&slot, null);
 // dispatch on slot.?.*.tag, process item
 // item stays non-null until explicitly transferred or freed
 ```
 
 Example: `examples/layer4/031-select_graceful_shutdown.zig`.
 
-### Fallback destroy after pool.put
+### Fallback destroy after Pool.put
 
 When to use.
 - Pool may already be closed when the item comes back.
 
 Code shape.  
 ```zig
-defer EventPolyHelper.destroy(allocator, &slot);   // fallback: frees if pool.put left slot non-null
-defer pool.put(ph, &slot);                          // primary: recycles to pool (clears slot on success)
-// defers run LIFO: pool.put first, then destroy (no-op if pool.put cleared slot)
+defer EventPolyHelper.destroy(allocator, &slot);   // fallback: frees if Pool.put left slot non-null
+defer pl.put(&slot);                          // primary: recycles to pool (clears slot on success)
+// defers run LIFO: Pool.put first, then destroy (no-op if Pool.put cleared slot)
 ```
 
 Why.
@@ -297,7 +308,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-033.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-036.md).
 
 ---
 
@@ -361,7 +372,7 @@ Why.
 
 When to use.
 - An item lives on the stack, so there is no `create` and no Slot to start from.
-- Something needs an `ItemHandle`: `mailbox.send`, `pool.put`, a list, a Slot.
+- Something needs an `ItemHandle`: `Mbox.send`, `Pool.put`, a list, a Slot.
 
 Code shape.  
 ```zig
@@ -396,12 +407,12 @@ list.append(EventPolyHelper.toPoly(&ev));
 ### Walk a batch — ItemList
 
 When to use.
-- Anything hands back many items: `mailbox.receive_batch`, `mailbox.close`,
-  `pool.close`'s `on_close` hook, `on_put`'s returned list.
+- Anything hands back many items: `Mbox.receive_batch`, `Mbox.close`,
+  `Pool.close`'s `on_close` hook, `on_put`'s returned list.
 
 Code shape.  
 ```zig
-var batch: polynode.ItemList = try mailbox.receive_batch(mbh);
+var batch: polynode.ItemList = try mbx.receive_batch();
 while (batch.popFirst()) |ih| {
     const ev: *Event = EventPolyHelper.fromPoly(ih) orelse return error.WrongTag;
     // ...
@@ -412,7 +423,7 @@ Why.
 - `popFirst` yields an `ItemHandle`, not a list node. One step, no
   `@fieldParentPtr`.
 - `popFirst` calls `polynode.reset` before returning. A popped handle is never
-  linked, so it drops straight into a `Slot` or into `mailbox.send`.
+  linked, so it drops straight into a `Slot` or into `Mbox.send`.
 - Mixed types in one batch: `fromPoly` returns null on a tag mismatch, so the
   same loop dispatches — see "Polymorphic dispatch — item-first".
 
@@ -468,7 +479,7 @@ var slot: Slot = null;
 defer EventPolyHelper.destroy(allocator, &slot);
 try EventPolyHelper.create(allocator, &slot);
 EventPolyHelper.mustFromSlot(&slot).code = 42;
-try mailbox.send(mbh, &slot);
+try mbx.send(&slot);
 ```
 
 Code shape (optional — type may vary).  
@@ -514,7 +525,7 @@ Example: `examples/layer1/023-tag_dispatch.zig`,
 ### Polymorphic dispatch — tag-first
 
 When to use.
-- You have a tag and no item. `PoolHooks.on_get` is the clear case: it is
+- You have a tag and no item. `Pool.Hooks.on_get` is the clear case: it is
   handed `tag: *const anyopaque` and an empty Slot, so there is nothing to  
   cast.
 - Four or more types.
@@ -581,7 +592,7 @@ try log_table.dispatch(self, &slot);
   never left the Slot, so unlike the last branch of a chain, the caller frees  
   it — the caller knows its own type set.
 - The handler follows the transfer rule: on return the Slot is null if the
-  handler took the item, full if it did not. See rules-041.md.
+  handler took the item, full if it did not. See rules-043.md.
 - Not in `src/`: the handler's first parameter is the application's receiver
   type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
 
@@ -589,7 +600,7 @@ Example: `examples/layer1/027-table_dispatch.zig`,
 `examples/layer4/063-table_dispatch_masters.zig`,  
 `examples/helpers/TagTable.zig`.
 
-Detail: [table-dispatch-001.md](table-dispatch-001.md).
+Detail: [table-dispatch-002.md](table-dispatch-002.md).
 
 ### The last branch of a dispatch chain
 
@@ -640,7 +651,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-033.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-036.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -651,14 +662,17 @@ Code shape.
 ```zig
 const WorkerInbox = struct {
     poly: PolyNode,
-    handle: mailbox.MailboxHandle,
+    mbx: *Mbox,
 };
 pub const WorkerInboxPolyHelper = polynode.PolyHelper(WorkerInbox);
 ```
 
 Why.
-- Wrapper has its own PolyHelper tag, distinct from `MailboxPolyHelper.TAG`.
-- Enables normal type dispatch. The receiver finds the embedded handle.
+- Wrapper has its own PolyHelper tag, distinct from `Mbox.TAG`.
+- Enables normal type dispatch. The receiver finds the embedded `*Mbox`.
+- A mailbox travels on its own: `mbx.toPoly()` in, `Mbox.mustFromPoly` out.
+  Wrap it only when the receiver needs more than the endpoint — a job id, a  
+  deadline, a reply address alongside it.
 
 ### Mailbox-as-message
 
@@ -669,7 +683,7 @@ Pattern.
 ```
 Worker
     │
-returns MailboxHandle
+returns *Mbox
     │
 Master receives mailbox
 ```
@@ -685,17 +699,21 @@ When to use.
 - A worker signals completion by sending its own mailbox back to the Master.
 
 Pattern.
-- Master creates `worker_mbh`, spawns a worker via `io.concurrent`, passes `worker_mbh` as parameter.
+- Master creates `worker_mbx`, spawns a worker via `io.concurrent`, passes `worker_mbx` as parameter.
 - Worker processes items until a shutdown signal.
-- Worker sends `worker_mbh` back to the Master's inbox (unclosed) as the finish signal, then exits.
-- Master confirms class: `mailbox.is_it_you(received.*.tag)`.
-- Master confirms instance: `received == worker_mbh` (pointer comparison).
-- Master closes and destroys `worker_mbh`, then awaits the worker's future.
+- Worker sends `worker_mbx.toPoly()` back to the Master's inbox (unclosed) as the finish signal, then exits.
+- Master crosses the border: `Mbox.mustFromPoly(slot.?)`. `Mbox.fromPoly` is
+  the checking form, null when the node is not a mailbox.
+- Master confirms instance: `Mbox.mustFromPoly(slot.?) == worker_mbx`.
+- Master closes and destroys `worker_mbx`, then awaits the worker's future.
 
 Why.
 - Replaces relying on the future await as a completion signal, or a separate shutdown message, by transferring the item.
+- The instance check is a real pointer comparison — both sides are `*Mbox`.
+  Under the handle API it compared two look-alike `ItemHandle`s, and only the  
+  tag stood between a match and a silent mistake.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-033.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-036.md).
 
 ### Pool-as-message
 
@@ -704,13 +722,13 @@ When to use.
 
 Pattern.  
 ```
-PoolHandle
+pl: *Pool
     ↓
-mailbox.send()
+mbx.send(&slot)
 ```
 
 Why.
-- PoolHandle is itself a PolyNode.
+- A pool is itself a PolyNode. `pl.toPoly()` in, `Pool.mustFromPoly` out.
 
 ---
 
@@ -723,7 +741,7 @@ When to use.
 
 Code shape.  
 ```zig
-if (try mailbox.try_receive(mbh, &slot)) {
+if (try mbx.try_receive(&slot)) {
     ...
 }
 ```
@@ -735,7 +753,7 @@ When to use.
 
 Code shape.  
 ```zig
-var list = try mailbox.receive_batch(mbh);
+var list = try mbx.receive_batch();
 
 while (list.popFirst()) |node| {
     ...
@@ -754,7 +772,7 @@ When to use.
 
 Code shape.  
 ```zig
-try mailbox.send_oob(mbh, &slot);
+try mbx.send_oob(&slot);
 ```
 
 Why.
@@ -764,20 +782,76 @@ Why.
 ### Mailbox close recovery
 
 When to use.
-- Shutdown. Recover every queued object.
+- Every close. Not only the ones you expect to find something.
 
 Code shape.  
 ```zig
-var list = mailbox.close(mbh);
+var rem: polynode.ItemList = mbx.close();
 
-while (list.popFirst()) |node| {
-    ...
+while (rem.popFirst()) |ih| {
+    // release: free it, or put it back into a pool
 }
 ```
 
 Why.
+- The mailbox never touches an item, so everything it held comes back to
+  someone. At close that someone is you.
+
+- Which release applies — free, or return to a pool — is yours to know. The
+  mailbox does not know and never did.
+
+- Run it unconditionally. `close` can be called more than once and hands back
+  an empty list after the first, so the loop is always safe: on a mailbox still holding  
+  items, on one already empty, on one closed twice. Nothing has to work out  
+  which of those it is looking at.
+
 - Nothing leaks.
 - Close is also the end-of-stream signal for blocked receivers (see Group shutdown below).
+
+Do not.
+
+- Do not write `_ = mbx.close()`. It drops what the mailbox handed back.
+  Even where nothing leaks — items living in the caller's frame — the dropped  
+  list is still a chain of linked nodes, and `Mbox.send` asserts an unlinked  
+  item, so those items cannot be sent again.
+
+- Do not reason about whether the mailbox is empty. The empty case costs
+  nothing, and the reasoning is what a later edit breaks.
+
+### Release a refused transfer
+
+When to use.
+- Every `send` that can meet a closed mailbox, and every `put` that can meet
+  a closed pool.
+
+Code shape.  
+```zig
+mbx.send(&slot) catch |err| {
+    pl.put(&slot);           // it came from the pool, it goes back there
+    return err;
+};
+```
+
+or, for a heap item:
+
+```zig
+var slot: Slot = null;
+defer items.freeSlot(&slot, alloc);   // covers the refused path too
+try mbx.send(&slot);
+```
+
+Why.
+- A refused transfer does not happen. `send`/`send_oob` return
+  `error.Closed` before clearing the slot, and `put` on a closed pool is a  
+  no-op — either way the item is still yours.
+
+- `put_all` is the list form: it stops at the first refusal and leaves the
+  rest in your list. Check the list after the call.
+
+- The defer-before-acquire shapes above already cover this. A bare
+  `try mbx.send(&slot)` with no defer does not.
+
+Example: `examples/layer4/056-job_pool_circular.zig`.
 
 ### Wake blocked receivers without a message
 
@@ -788,11 +862,11 @@ When to use.
 Code shape.  
 ```zig
 shutdown.store(true, .release);
-try mailbox.wakeUpAll(mbh);
+try mbx.wakeUpAll();
 ```
 
 ```zig
-mailbox.receive(mbh, &slot, null) catch |err| switch (err) {
+mbx.receive(&slot, null) catch |err| switch (err) {
     error.Wakeup => {
         if (shutdown.load(.acquire)) return;
         continue; // spurious poke, re-check and keep waiting
@@ -823,15 +897,15 @@ When to use.
 
 Pattern.  
 ```
-main ──Event(request)──► req_mbh ──► worker
+main ──Event(request)──► req_mbx ──► worker
                                         │ process
                                         V
-main ◄──Event(response)── resp_mbh ◄── worker
+main ◄──Event(response)── resp_mbx ◄── worker
 ```
 
 Why.
 - Request and response never share a mailbox — no risk of the caller receiving its own request back.
-- Caller blocks on `resp_mbh` with a timeout; worker loops on `req_mbh` until closed.
+- Caller blocks on `resp_mbx` with a timeout; worker loops on `req_mbx` until closed.
 
 Example: `examples/layer2/057-request_response.zig`, `examples/layer4/021-request_response.zig`.
 
@@ -883,7 +957,8 @@ main ──items──► mailbox ──► worker A
 
 Why.
 - The mailbox does the load distribution. No round-robin logic in application code.
-- `mailbox.close` returns any item left unclaimed — the closer must free it.
+- `Mbox.close` returns any item left unclaimed — the closer must release it,
+  every time. See "Mailbox close recovery".
 
 Example: `examples/layer2/061-fan_out.zig`, `examples/layer4/054-pool_fan_out.zig`.
 
@@ -899,8 +974,8 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-defer pool.put(ph, &slot);
-try pool.get(ph, EventPolyHelper.TAG, .available_or_new, &slot);
+defer pl.put(&slot);
+try pl.get(EventPolyHelper.TAG, .available_or_new, &slot);
 ```
 
 - `on_get` runs every call. If `slot.*` is non-null it was recycled — reinitialize. If null, create.
@@ -915,9 +990,9 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-try pool.get(ph, EventPolyHelper.TAG, .new_only, &slot);
+try pl.get(EventPolyHelper.TAG, .new_only, &slot);
 // fill the new item
-pool.put(ph, &slot);
+pl.put(&slot);
 ```
 
 Example: `examples/layer3/pool_seeding.zig`.
@@ -931,7 +1006,7 @@ When to use.
 Code shape.  
 ```zig
 var slot: Slot = null;
-pool.get(ph, EventPolyHelper.TAG, .available_only, &slot) catch |err| switch (err) {
+pl.get(EventPolyHelper.TAG, .available_only, &slot) catch |err| switch (err) {
     error.NotAvailable => break,
     else => return err,
 };
@@ -949,7 +1024,7 @@ Code shape.
 for (0..N_BUFFERS) |_| {
     var slot: Slot = null;
     try VideoBufferPolyHelper.create(allocator, &slot);
-    pool.put(ph, &slot);
+    pl.put(&slot);
 }
 ```
 
@@ -1059,7 +1134,7 @@ When to use.
 Code shape.  
 ```zig
 const future =
-    try mailbox.receive_future(mbh, null);
+    try mbx.receive_future(null);
 
 const result =
     try future.await(io);
@@ -1093,8 +1168,8 @@ Code shape.
 var buf: [8]MasterEvent = undefined;
 var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
 
-try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
-try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
+try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
 try sel.concurrent(.timer, sleepFn, .{ sleep_t, io });
 
 while (true) {
@@ -1103,7 +1178,7 @@ while (true) {
         .inbox => |r| switch (r) {
             .item => |handle| {
                 // process, then re-register the source
-                try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbh, null });
+                try sel.concurrent(.inbox, mailbox.receiveResult, .{ mbx, null });
             },
             .closed, .canceled, .timeout => break,
         },
@@ -1139,7 +1214,7 @@ Code shape.
 try select.concurrent(
     .mailbox,
     mailbox.receiveResult,
-    .{ mbh, null },
+    .{ mbx, null },
 );
 ```
 
@@ -1153,7 +1228,7 @@ Code shape.
 try select.concurrent(
     .pool,
     pool.getWaitResult,
-    .{ ph, TAG, null },
+    .{ pl, TAG, null },
 );
 ```
 
@@ -1184,14 +1259,14 @@ When to use.
 
 Code shape.  
 ```zig
-try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_ph, VideoBufferPolyHelper.TAG, null });
+try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_pl, VideoBufferPolyHelper.TAG, null });
 // ...
 const ev = try sel.await();
 switch (ev) {
     .buf_ev => |r| switch (r) {
         .item => |handle| {
             // fill buffer, route it, then re-register for the next free buffer
-            try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_ph, VideoBufferPolyHelper.TAG, null });
+            try sel.concurrent(.buf_ev, pool.getWaitResult, .{ buf_pl, VideoBufferPolyHelper.TAG, null });
         },
         .closed, .canceled, .timeout, .not_created => break,
     },
@@ -1223,21 +1298,21 @@ When to use.
 Code shape.  
 ```zig
 fn receive_router(
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     timeout_ns: ?u64,
     sel: *std.Io.Select(MasterEvent),
-    ph: PoolHandle,
+    pl: *Pool,
     alloc: std.mem.Allocator,
-) mailbox.ReceiveResult {
+) Mbox.Result {
     while (true) {
-        const result: mailbox.ReceiveResult = mailbox.receiveResult(mbh, timeout_ns);
+        const result: Mbox.Result = mailbox.receiveResult(mbx, timeout_ns);
 
         var held: Slot = switch (result) {
             .item => |handle| handle,
             else => null,
         };
         defer {
-            pool.put(ph, &held);            // back to the pool
+            pl.put(&held);            // back to the pool
             items.freeSlot(&held, alloc);   // pool closed — nowhere to put it back
         }
 
@@ -1252,7 +1327,7 @@ fn receive_router(
     }
 }
 
-try sel.concurrent(.inbox, receive_router, .{ mbh, null, &sel, ph, alloc });
+try sel.concurrent(.inbox, receive_router, .{ mbx, null, &sel, pl, alloc });
 ```
 
 Why.
@@ -1262,7 +1337,7 @@ Why.
 
 The return type is pinned.
 - `Select.concurrent` requires the function's return type to equal the field type.
-- The router returns `mailbox.ReceiveResult`, so `.inbox` is `mailbox.ReceiveResult`.
+- The router returns `Mbox.Result`, so `.inbox` is `Mbox.Result`.
 - In-loop puts and the final return land in the same field. `U` gains nothing.
 
 The router is application code, not toolkit code.
@@ -1276,10 +1351,10 @@ Two rules.
 
 Buffer size is a precondition.
 - `N >= P + T` — buffer length, items in flight, registered tasks.
-- Pre-fill a pool with `P` items and acquire with `pool.get_wait` to fix `P`.
-- `pool.get_wait` never creates, so the population stays put.
+- Pre-fill a pool with `P` items and acquire with `Pool.get_wait` to fix `P`.
+- `Pool.get_wait` never creates, so the population stays put.
 
-Design note: [receive-router-001.md](receive-router-001.md).
+Design note: [receive-router-002.md](receive-router-002.md).
 
 Example: `examples/layer4/062-receive_router.zig`.
 
@@ -1302,7 +1377,7 @@ while (sel.cancel()) |event| {
         .pool_ev => |r| switch (r) {
             .item => |handle| {
                 var slot: Slot = handle;
-                pool.put(ph, &slot);                   // recycle it
+                pl.put(&slot);                   // recycle it
             },
             .canceled, .closed, .timeout, .not_created => {},
         },
@@ -1367,12 +1442,12 @@ Why.
 ### Shutdown signal — close the source mailbox
 
 When to use.
-- Stop a Group of workers that block on `mailbox.receive`.
+- Stop a Group of workers that block on `Mbox.receive`.
 
 Code shape.  
 ```zig
 // workers exit when receive returns error.Closed
-var rem: polynode.ItemList = mailbox.close(ready_queue);
+var rem: polynode.ItemList = ready_queue.close();
 // walk rem, recover any unreceived items
 try group.await(io);
 ```
@@ -1384,7 +1459,7 @@ Example: `stories/video_transcoder/video_transcoder.zig`.
 ### Shutdown signal — group.cancel
 
 When to use.
-- Stop a Group of workers that block on `pool.get_wait`, with no mailbox to close.
+- Stop a Group of workers that block on `Pool.get_wait`, with no mailbox to close.
 
 Code shape.  
 ```zig
@@ -1409,8 +1484,8 @@ Rule.
 Only waiting operations are cancelable.
 
 Examples.
-- mailbox.receive
-- pool.get_wait
+- Mbox.receive
+- Pool.get_wait
 - receiveResult
 - getWaitResult
 
@@ -1448,11 +1523,11 @@ Never substitute one for the other.
 ### Error handling on receive
 
 When to use.
-- A worker blocks on `mailbox.receive` or `pool.get_wait` and must react to each outcome.
+- A worker blocks on `Mbox.receive` or `Pool.get_wait` and must react to each outcome.
 
 Code shape.  
 ```zig
-mailbox.receive(ctx.mbh, &slot, null) catch |err| switch (err) {
+ctx.mbx.receive(&slot, null) catch |err| switch (err) {
     error.Canceled => return error.Canceled,   // report up — Master decides
     error.Closed, error.Timeout => return,      // end-of-stream — exit cleanly
     error.Wakeup => continue,                   // poke — re-check loop condition
@@ -1483,7 +1558,7 @@ Mandatory order.
 5. Destroy the worker mailbox.
 6. Close any downstream mailbox (e.g. storage). Its task exits on `error.Closed`.
 7. Await the downstream task. Destroy its mailbox.
-8. `pool.close` — `on_close` frees all stored items.
+8. `Pool.close` — `on_close` frees all stored items.
 9. `pool.destroy`.
 
 Why this order.
@@ -1493,7 +1568,7 @@ Why this order.
 
 Code shape (worker fallback for closed pool).  
 ```zig
-pool.put(ctx.buf_ph, &sc.buffer_slot);
+ctx.buf_pl.put(&sc.buffer_slot);
 if (sc.buffer_slot != null) {
     VideoBufferPolyHelper.destroy(ctx.alloc, &sc.buffer_slot);
 }
@@ -1516,7 +1591,7 @@ main ──ShutdownCommand──► mailbox ──► worker (recognizes tag, ex
 ```
 
 Why.
-- A tagged sentinel item flows through the normal mailbox instead of `mailbox.close`.
+- A tagged sentinel item flows through the normal mailbox instead of `Mbox.close`.
 - The mailbox can be reused for another worker afterward — closing it cannot be undone.
 - Use the mandatory 9-step sequence instead when a pool must also empty in lockstep with the
   mailbox (the sentinel alone does not coordinate pool shutdown).
@@ -1529,7 +1604,7 @@ Example: `examples/layer2/062-shutdown_exit.zig`.
 
 ### Observable function shapes
 
-Concrete templates for the "Observable by human" MUST rule. See [rules-041.md](rules-041.md).
+Concrete templates for the "Observable by human" MUST rule. See [rules-043.md](rules-043.md).
 
 #### Coordinator / run
 
@@ -1566,7 +1641,7 @@ fn seedResources(self: *Master) !void {
         defer types.EventPolyHelper.destroy(self.allocator, &slot);
         try types.EventPolyHelper.create(self.allocator, &slot);
         types.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(self.mbh, &slot);
+        try self.mbx.send(&slot);
     }
 }
 ```
@@ -1589,13 +1664,13 @@ fn init(allocator: std.mem.Allocator, io: std.Io) !*Master {
     errdefer allocator.destroy(self);
     self.allocator = allocator;
     self.io = io;
-    self.mbh = try mailbox.new(io, allocator);
+    self.mbx = try mailbox.new(io, allocator);
     errdefer {
-        var rem = mailbox.close(self.mbh);
+        var rem = self.mbx.close();
         helpers.freeList(&rem, allocator);
-        mailbox.destroy(self.mbh, allocator);
+        mailbox.destroy(self.mbx, allocator);
     }
-    self.ph = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
+    self.pl = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
     return self;
 }
 ```
@@ -1614,11 +1689,11 @@ When to use.
 Code shape.  
 ```zig
 fn destroy(self: *Master) void {
-    var rem: polynode.ItemList = mailbox.close(self.mbh);
+    var rem: polynode.ItemList = self.mbx.close();
     helpers.freeList(&rem, self.allocator);
-    mailbox.destroy(self.mbh, self.allocator);
-    pool.close(self.ph);
-    pool.destroy(self.ph, self.allocator);
+    mailbox.destroy(self.mbx, self.allocator);
+    self.pl.close();
+    pool.destroy(self.pl, self.allocator);
     self.allocator.destroy(self);
 }
 ```
@@ -1641,14 +1716,14 @@ Rule.
 
 Code shape.  
 ```zig
-var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
 var fut = try io.concurrent(workerFn, .{&ctx});
 ...
 fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer helpers.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
     }
 }
 ```
@@ -1672,35 +1747,35 @@ Code shape (explicit params, 1-2 shared values).
 const Sel = std.Io.Select(MasterEvent);
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const ph: PoolHandle = try pool.new(io, allocator, &pool_ctx, pool_hooks);
-    defer pool.destroy(ph, allocator);
+    const pl: *Pool = try pool.new(io, allocator, &pool_ctx, pool_hooks);
+    defer pool.destroy(pl, allocator);
 
-    try seedPool(ph, allocator);
+    try seedPool(pl, allocator);
 
     var buf: [8]MasterEvent = undefined;
     var sel: Sel = Sel.init(io, &buf);
-    try setupSelect(ph, io, &sel);
-    try runEventLoop(ph, io, &sel);
+    try setupSelect(pl, io, &sel);
+    try runEventLoop(pl, io, &sel);
 
     try helpers.expect(error.XFailed, ...);
     std.log.info("done", .{});
 }
 
-fn setupSelect(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
+fn setupSelect(pl: *Pool, io: std.Io, sel: *Sel) !void {
     const sleep_t: std.Io.Timeout = .{ .ns = 100_000_000 };
-    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
     try sel.concurrent(.timer, sleepFn, .{ sleep_t, io });
 }
 
-fn runEventLoop(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
+fn runEventLoop(pl: *Pool, io: std.Io, sel: *Sel) !void {
     while (true) {
         const event: MasterEvent = try sel.await();
         switch (event) {
             .pool_ev => |r| switch (r) {
                 .item => |handle| {
                     // process handle
-                    pool.put(ph, &(var s: Slot = handle; &s));
-                    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+                    pl.put(&(var s: Slot = handle; &s));
+                    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
                 },
                 .closed, .canceled, .not_created => break,
                 .timeout => {},
@@ -1715,7 +1790,7 @@ fn runEventLoop(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
 Code shape (3+ shared values — local Ctx struct, stack-allocated).  
 ```zig
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 
@@ -1724,10 +1799,10 @@ const Ctx = struct {
 };
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer { ... }
 
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
 
     var buf: [8]MasterEvent = undefined;
     var sel: Sel = Sel.init(io, &buf);
@@ -1753,19 +1828,19 @@ When to use.
 Code shape (single spawn+await step).  
 ```zig
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer { ... }
 
-    try seedMailbox(mbh, allocator);
-    try spawnAndAwaitWorkers(mbh, allocator, io);
+    try seedMailbox(mbx, allocator);
+    try spawnAndAwaitWorkers(mbx, allocator, io);
 
     try helpers.expect(error.XFailed, ...);
     std.log.info("done", .{});
 }
 
-fn spawnAndAwaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io) !void {
-    var ctx1: WorkerCtx = .{ .mbh = mbh, .alloc = alloc };
-    var ctx2: WorkerCtx = .{ .mbh = mbh, .alloc = alloc };
+fn spawnAndAwaitWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io) !void {
+    var ctx1: WorkerCtx = .{ .mbx = mbx, .alloc = alloc };
+    var ctx2: WorkerCtx = .{ .mbx = mbx, .alloc = alloc };
     var fut1 = try io.concurrent(workerFn, .{&ctx1});
     var fut2 = try io.concurrent(workerFn, .{&ctx2});
     try fut1.await(io);
@@ -1775,13 +1850,13 @@ fn spawnAndAwaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io
 
 Code shape (separate spawn and await steps).  
 ```zig
-fn spawnWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
+fn spawnWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
     for (0..N_WORKERS) |i| {
         group.concurrent(io, workerFn, .{ &worker_ctxs[i] }) catch return error.SpawnFailed;
     }
 }
 
-fn awaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
+fn awaitWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
     try group.await(io);
     // verify results
 }

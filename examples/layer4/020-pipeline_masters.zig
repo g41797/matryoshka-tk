@@ -10,10 +10,10 @@
 //!
 //!
 //! ```
-//!  producer ──Event──► transformer_mbh ──► transformer
+//!  producer ──Event──► transformer_mbx ──► transformer
 //!                                              │ Event→Sensor conversion
 //!                                              ▼
-//!  consumer ◄──Sensor── consumer_mbh ◄── transformer
+//!  consumer ◄──Sensor── consumer_mbx ◄── transformer
 //!  (ShutdownCommand sentinel propagates: producer→transformer→consumer)
 //!  fut_prod.await → fut_trans.await → fut_cons.await
 //! ```
@@ -26,7 +26,7 @@ pub fn pipeline_of_masters(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const ProducerCtx = struct {
-    out_mbh: MailboxHandle,
+    out_mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -36,21 +36,21 @@ fn producerFn(ctx: *ProducerCtx) anyerror!void {
         defer items.freeSlot(&slot, ctx.alloc);
         try items.Event.EventPolyHelper.create(ctx.alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(ctx.out_mbh, &slot);
+        try ctx.out_mbx.send(&slot);
         std.log.info("producer: sent Event code={d}", .{i + 1});
     }
     {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
         try items.ShutdownCommand.ShutdownCommandPolyHelper.create(ctx.alloc, &slot);
-        try mailbox.send(ctx.out_mbh, &slot);
+        try ctx.out_mbx.send(&slot);
         std.log.info("producer: sent ShutdownCommand sentinel", .{});
     }
 }
 
 const TransformerCtx = struct {
-    in_mbh: MailboxHandle,
-    out_mbh: MailboxHandle,
+    in_mbx: *Mbox,
+    out_mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -58,7 +58,7 @@ fn transformerFn(ctx: *TransformerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.in_mbh, &slot, null) catch return;
+        ctx.in_mbx.receive(&slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
         if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
@@ -66,12 +66,12 @@ fn transformerFn(ctx: *TransformerCtx) anyerror!void {
             items.freeSlot(&slot, ctx.alloc);
             items.Sensor.SensorPolyHelper.create(ctx.alloc, &slot) catch continue;
             items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = value;
-            mailbox.send(ctx.out_mbh, &slot) catch {
+            ctx.out_mbx.send(&slot) catch {
                 items.freeSlot(&slot, ctx.alloc);
             };
             std.log.info("transformer: Event→Sensor value={d}", .{value});
         } else if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
-            mailbox.send(ctx.out_mbh, &slot) catch {};
+            ctx.out_mbx.send(&slot) catch {};
             std.log.info("transformer: forwarded ShutdownCommand, done", .{});
             return;
         } else {
@@ -81,7 +81,7 @@ fn transformerFn(ctx: *TransformerCtx) anyerror!void {
 }
 
 const ConsumerCtx = struct {
-    in_mbh: MailboxHandle,
+    in_mbx: *Mbox,
     alloc: std.mem.Allocator,
     count: usize = 0,
 };
@@ -90,7 +90,7 @@ fn consumerFn(ctx: *ConsumerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.in_mbh, &slot, null) catch return;
+        ctx.in_mbx.receive(&slot, null) catch return;
         const poly: *PolyNode = slot.?;
 
         if (items.Sensor.SensorPolyHelper.fromPoly(poly)) |sn| {
@@ -125,8 +125,8 @@ const PipelineMaster = struct {
 
     allocator: std.mem.Allocator,
     io: std.Io,
-    transformer_mbh: MailboxHandle,
-    consumer_mbh: MailboxHandle,
+    transformer_mbx: *Mbox,
+    consumer_mbx: *Mbox,
     prod_ctx: ProducerCtx,
     trans_ctx: TransformerCtx,
     cons_ctx: ConsumerCtx,
@@ -136,26 +136,26 @@ const PipelineMaster = struct {
         errdefer allocator.destroy(self);
         self.allocator = allocator;
         self.io = io;
-        self.transformer_mbh = try mailbox.new(io, allocator);
+        self.transformer_mbx = try mailbox.new(io, allocator);
         errdefer {
-            var rem: polynode.ItemList = mailbox.close(self.transformer_mbh);
+            var rem: polynode.ItemList = self.transformer_mbx.close();
             items.freeList(&rem, allocator);
-            mailbox.destroy(self.transformer_mbh, allocator);
+            mailbox.destroy(self.transformer_mbx, allocator);
         }
-        self.consumer_mbh = try mailbox.new(io, allocator);
-        self.prod_ctx = .{ .out_mbh = self.transformer_mbh, .alloc = allocator };
-        self.trans_ctx = .{ .in_mbh = self.transformer_mbh, .out_mbh = self.consumer_mbh, .alloc = allocator };
-        self.cons_ctx = .{ .in_mbh = self.consumer_mbh, .alloc = allocator };
+        self.consumer_mbx = try mailbox.new(io, allocator);
+        self.prod_ctx = .{ .out_mbx = self.transformer_mbx, .alloc = allocator };
+        self.trans_ctx = .{ .in_mbx = self.transformer_mbx, .out_mbx = self.consumer_mbx, .alloc = allocator };
+        self.cons_ctx = .{ .in_mbx = self.consumer_mbx, .alloc = allocator };
         return self;
     }
 
     fn destroy(self: *PipelineMaster) void {
-        var rem1: polynode.ItemList = mailbox.close(self.transformer_mbh);
+        var rem1: polynode.ItemList = self.transformer_mbx.close();
         items.freeList(&rem1, self.allocator);
-        mailbox.destroy(self.transformer_mbh, self.allocator);
-        var rem2: polynode.ItemList = mailbox.close(self.consumer_mbh);
+        mailbox.destroy(self.transformer_mbx, self.allocator);
+        var rem2: polynode.ItemList = self.consumer_mbx.close();
         items.freeList(&rem2, self.allocator);
-        mailbox.destroy(self.consumer_mbh, self.allocator);
+        mailbox.destroy(self.consumer_mbx, self.allocator);
         self.allocator.destroy(self);
     }
 };
@@ -165,7 +165,7 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

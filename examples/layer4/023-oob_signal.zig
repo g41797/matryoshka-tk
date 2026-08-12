@@ -3,16 +3,16 @@
 
 //! OOB via send_oob.
 //!
-//! - Send 3 Events via mailbox.send, queued in order.
-//! - Send a ShutdownCommand via mailbox.send_oob, jumps to queue front.
+//! - Send 3 Events via mbx.send, queued in order.
+//! - Send a ShutdownCommand via mbx.send_oob, jumps to queue front.
 //! - processingLoop receives 4 items: OOB signal first, then the 3 Events.
 //! - Free every received item, verify the arrival order.
 //!
 //!
 //! ```
-//!  mailbox.send (Event×3) ──► queue tail
-//!  mailbox.send_oob (ShutdownCommand) ──► queue front
-//!       │ mailbox.receive ×4
+//!  mbx.send (Event×3) ──► queue tail
+//!  mbx.send_oob (ShutdownCommand) ──► queue front
+//!       │ mbx.receive ×4
 //!       ▼
 //!  OOB ShutdownCommand arrives first, then Events in send order
 //!  freeSlot per item
@@ -20,44 +20,44 @@
 //!
 
 pub fn oob_via_send_oob(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    try sendItems(mbh, allocator);
-    try sendOobItem(mbh, allocator);
+    try sendItems(mbx, allocator);
+    try sendOobItem(mbx, allocator);
     std.log.info("sent 3 Events (regular) + 1 ShutdownCommand (OOB)", .{});
-    try processingLoop(mbh, allocator);
+    try processingLoop(mbx, allocator);
 }
 
-fn sendItems(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendItems(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     for (0..3) |i| {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
     }
 }
 
-fn sendOobItem(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendOobItem(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.ShutdownCommand.ShutdownCommandPolyHelper.destroy(alloc, &slot);
     try items.ShutdownCommand.ShutdownCommandPolyHelper.create(alloc, &slot);
-    try mailbox.send_oob(mbh, &slot);
+    try mbx.send_oob(&slot);
 }
 
-fn processingLoop(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn processingLoop(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var shutdown_seen: bool = false;
     var event_count: usize = 0;
 
     for (0..4) |_| {
         var slot: Slot = null;
         defer items.freeSlot(&slot, alloc);
-        try mailbox.receive(mbh, &slot, null);
+        try mbx.receive(&slot, null);
         const poly: *PolyNode = slot.?;
 
         if (items.ShutdownCommand.ShutdownCommandPolyHelper.fromPoly(poly)) |_| {
@@ -86,7 +86,7 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const PolyNode = polynode.PolyNode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

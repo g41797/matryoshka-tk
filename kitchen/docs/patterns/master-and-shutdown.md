@@ -17,7 +17,7 @@ Mandatory order.
 5. Destroy the worker mailbox.
 6. Close any downstream mailbox (e.g. storage). Its task exits on `error.Closed`.
 7. Await the downstream task. Destroy its mailbox.
-8. `pool.close` — `on_close` frees all stored items.
+8. `Pool.close` — `on_close` frees all stored items.
 9. `pool.destroy`.
 
 Why this order.
@@ -28,7 +28,7 @@ Why this order.
 
 Code shape (worker fallback for closed pool).  
 ```zig
-pool.put(ctx.buf_ph, &sc.buffer_slot);
+ctx.buf_pl.put(&sc.buffer_slot);
 if (sc.buffer_slot != null) {
     VideoBufferPolyHelper.destroy(ctx.alloc, &sc.buffer_slot);
 }
@@ -53,7 +53,7 @@ main ──ShutdownCommand──► mailbox ──► worker (recognizes tag, ex
 
 Why.
 
-- A tagged sentinel item flows through the normal mailbox instead of `mailbox.close`.
+- A tagged sentinel item flows through the normal mailbox instead of `Mbox.close`.
 - The mailbox can be reused for another worker afterward — closing it cannot be undone.
 - Use the mandatory 9-step sequence instead when a pool must also empty in lockstep with the
   mailbox (the sentinel alone does not coordinate pool shutdown).
@@ -109,7 +109,7 @@ fn seedResources(self: *Master) !void {
         defer types.EventPolyHelper.destroy(self.allocator, &slot);
         try types.EventPolyHelper.create(self.allocator, &slot);
         types.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(self.mbh, &slot);
+        try self.mbx.send(&slot);
     }
 }
 ```
@@ -133,13 +133,13 @@ fn init(allocator: std.mem.Allocator, io: std.Io) !*Master {
     errdefer allocator.destroy(self);
     self.allocator = allocator;
     self.io = io;
-    self.mbh = try mailbox.new(io, allocator);
+    self.mbx = try mailbox.new(io, allocator);
     errdefer {
-        var rem = mailbox.close(self.mbh);
+        var rem = self.mbx.close();
         helpers.freeList(&rem, allocator);
-        mailbox.destroy(self.mbh, allocator);
+        mailbox.destroy(self.mbx, allocator);
     }
-    self.ph = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
+    self.pl = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
     return self;
 }
 ```
@@ -159,11 +159,11 @@ When to use.
 Code shape.  
 ```zig
 fn destroy(self: *Master) void {
-    var rem: polynode.ItemList = mailbox.close(self.mbh);
+    var rem: polynode.ItemList = self.mbx.close();
     helpers.freeList(&rem, self.allocator);
-    mailbox.destroy(self.mbh, self.allocator);
-    pool.close(self.ph);
-    pool.destroy(self.ph, self.allocator);
+    mailbox.destroy(self.mbx, self.allocator);
+    self.pl.close();
+    pool.destroy(self.pl, self.allocator);
     self.allocator.destroy(self);
 }
 ```
@@ -188,14 +188,14 @@ Rule.
 
 Code shape.  
 ```zig
-var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
 var fut = try io.concurrent(workerFn, .{&ctx});
 ...
 fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer helpers.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
     }
 }
 ```
@@ -221,35 +221,35 @@ Code shape (explicit params, 1-2 shared values).
 const Sel = std.Io.Select(MasterEvent);
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const ph: PoolHandle = try pool.new(io, allocator, &pool_ctx, pool_hooks);
-    defer pool.destroy(ph, allocator);
+    const pl: *Pool = try pool.new(io, allocator, &pool_ctx, pool_hooks);
+    defer pool.destroy(pl, allocator);
 
-    try seedPool(ph, allocator);
+    try seedPool(pl, allocator);
 
     var buf: [8]MasterEvent = undefined;
     var sel: Sel = Sel.init(io, &buf);
-    try setupSelect(ph, io, &sel);
-    try runEventLoop(ph, io, &sel);
+    try setupSelect(pl, io, &sel);
+    try runEventLoop(pl, io, &sel);
 
     try helpers.expect(error.XFailed, ...);
     std.log.info("done", .{});
 }
 
-fn setupSelect(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
+fn setupSelect(pl: *Pool, io: std.Io, sel: *Sel) !void {
     const sleep_t: std.Io.Timeout = .{ .ns = 100_000_000 };
-    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
     try sel.concurrent(.timer, sleepFn, .{ sleep_t, io });
 }
 
-fn runEventLoop(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
+fn runEventLoop(pl: *Pool, io: std.Io, sel: *Sel) !void {
     while (true) {
         const event: MasterEvent = try sel.await();
         switch (event) {
             .pool_ev => |r| switch (r) {
                 .item => |handle| {
                     // process handle
-                    pool.put(ph, &(var s: Slot = handle; &s));
-                    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ ph, TAG, null });
+                    pl.put(&(var s: Slot = handle; &s));
+                    try sel.concurrent(.pool_ev, pool.getWaitResult, .{ pl, TAG, null });
                 },
                 .closed, .canceled, .not_created => break,
                 .timeout => {},
@@ -264,7 +264,7 @@ fn runEventLoop(ph: PoolHandle, io: std.Io, sel: *Sel) !void {
 Code shape (3+ shared values — local Ctx struct, stack-allocated).  
 ```zig
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
 
@@ -273,10 +273,10 @@ const Ctx = struct {
 };
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer { ... }
 
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
 
     var buf: [8]MasterEvent = undefined;
     var sel: Sel = Sel.init(io, &buf);
@@ -303,19 +303,19 @@ When to use.
 Code shape (single spawn+await step).  
 ```zig
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer { ... }
 
-    try seedMailbox(mbh, allocator);
-    try spawnAndAwaitWorkers(mbh, allocator, io);
+    try seedMailbox(mbx, allocator);
+    try spawnAndAwaitWorkers(mbx, allocator, io);
 
     try helpers.expect(error.XFailed, ...);
     std.log.info("done", .{});
 }
 
-fn spawnAndAwaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io) !void {
-    var ctx1: WorkerCtx = .{ .mbh = mbh, .alloc = alloc };
-    var ctx2: WorkerCtx = .{ .mbh = mbh, .alloc = alloc };
+fn spawnAndAwaitWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io) !void {
+    var ctx1: WorkerCtx = .{ .mbx = mbx, .alloc = alloc };
+    var ctx2: WorkerCtx = .{ .mbx = mbx, .alloc = alloc };
     var fut1 = try io.concurrent(workerFn, .{&ctx1});
     var fut2 = try io.concurrent(workerFn, .{&ctx2});
     try fut1.await(io);
@@ -325,13 +325,13 @@ fn spawnAndAwaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io
 
 Code shape (separate spawn and await steps).  
 ```zig
-fn spawnWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
+fn spawnWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
     for (0..N_WORKERS) |i| {
         group.concurrent(io, workerFn, .{ &worker_ctxs[i] }) catch return error.SpawnFailed;
     }
 }
 
-fn awaitWorkers(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
+fn awaitWorkers(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, group: *std.Io.Group) !void {
     try group.await(io);
     // verify results
 }

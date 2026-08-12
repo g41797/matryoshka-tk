@@ -21,10 +21,10 @@
 //!
 
 pub fn master_pre_shutdown_collect(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh_a: MailboxHandle = try mailbox.new(io, allocator);
-    const mbh_b: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx_a: *Mbox = try mailbox.new(io, allocator);
+    const mbx_b: *Mbox = try mailbox.new(io, allocator);
 
-    var ctx: Ctx = .{ .mbh_a = mbh_a, .mbh_b = mbh_b, .alloc = allocator };
+    var ctx: Ctx = .{ .mbx_a = mbx_a, .mbx_b = mbx_b, .alloc = allocator };
     try ctx.fillMailboxA();
     try ctx.fillMailboxB();
     std.log.info("before collect: {d} in mailbox_a, {d} in mailbox_b", .{ N_A, N_B });
@@ -40,8 +40,8 @@ const N_A: usize = 2;
 const N_B: usize = 3;
 
 const Ctx = struct {
-    mbh_a: MailboxHandle,
-    mbh_b: MailboxHandle,
+    mbx_a: *Mbox,
+    mbx_b: *Mbox,
     alloc: std.mem.Allocator,
 
     fn fillMailboxA(self: *Ctx) !void {
@@ -50,7 +50,7 @@ const Ctx = struct {
             defer items.Event.EventPolyHelper.destroy(self.alloc, &slot);
             try items.Event.EventPolyHelper.create(self.alloc, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-            try mailbox.send(self.mbh_a, &slot);
+            try self.mbx_a.send(&slot);
         }
     }
 
@@ -60,15 +60,15 @@ const Ctx = struct {
             defer items.Sensor.SensorPolyHelper.destroy(self.alloc, &slot);
             try items.Sensor.SensorPolyHelper.create(self.alloc, &slot);
             items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = @floatFromInt(i + 10);
-            try mailbox.send(self.mbh_b, &slot);
+            try self.mbx_b.send(&slot);
         }
     }
 
     fn closeAndMerge(self: *Ctx) polynode.ItemList {
-        var list_a: polynode.ItemList = mailbox.close(self.mbh_a);
-        mailbox.destroy(self.mbh_a, self.alloc);
-        var list_b: polynode.ItemList = mailbox.close(self.mbh_b);
-        mailbox.destroy(self.mbh_b, self.alloc);
+        var list_a: polynode.ItemList = self.mbx_a.close();
+        mailbox.destroy(self.mbx_a, self.alloc);
+        var list_b: polynode.ItemList = self.mbx_b.close();
+        mailbox.destroy(self.mbx_b, self.alloc);
         list_a.concat(&list_b);
         std.log.info("concatByMoving: combined list has {d} items", .{N_A + N_B});
         return list_a;
@@ -89,6 +89,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

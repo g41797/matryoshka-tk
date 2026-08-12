@@ -222,7 +222,7 @@ list_node_ptr: *List.Node
 +---------------------------+
 ^           ^
 |           |
-|           poly: *PolyNode    (Step 1: @fieldParentPtr("node", dll_node_ptr))
+|           poly: *PolyNode    (Step 1: @fieldParentPtr("node", list_node_ptr))
 |
 ev: *Event                     (Step 2: @fieldParentPtr("poly", poly))
 ```

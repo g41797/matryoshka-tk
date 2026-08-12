@@ -83,8 +83,8 @@ architecture.
 The API reflects the real job:
 
 ```zig
-mailbox.send(...)
-mailbox.receive(...)
+mbx.send(...)
+mbx.receive(...)
 ```
 
 not

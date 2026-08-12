@@ -9,56 +9,56 @@
 //!
 //!
 //! ```
-//!  EventPolyHelper.create ──► slot ──► mailbox.send ──► mailbox
-//!  SensorPolyHelper.create ──► slot ──► mailbox.send ──► mailbox
+//!  EventPolyHelper.create ──► slot ──► mbx.send ──► mailbox
+//!  SensorPolyHelper.create ──► slot ──► mbx.send ──► mailbox
 //!  │
-//!  mailbox.receive ──► slot (Event or Sensor)
+//!  mbx.receive ──► slot (Event or Sensor)
 //!    dispatch on poly.tag:
 //!    == EventPolyHelper.TAG  ──► fromPoly ──► *Event  ──► verify code==10 ──► freeSlot
 //!    == SensorPolyHelper.TAG ──► fromPoly ──► *Sensor ──► verify value==3.14 ──► freeSlot
 //!  │
-//!  mailbox.close ──► freeList (empty: all received)
+//!  mbx.close ──► freeList (empty: all received)
 //! ```
 //!
 
 pub fn mixed_types_through_shared_mailbox(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    try sendEvent(mbh, allocator);
-    try sendSensor(mbh, allocator);
-    try receiveAndDispatch(mbh, allocator);
+    try sendEvent(mbx, allocator);
+    try sendSensor(mbx, allocator);
+    try receiveAndDispatch(mbx, allocator);
 }
 
-fn sendEvent(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendEvent(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.Event.EventPolyHelper.destroy(alloc, &slot);
     try items.Event.EventPolyHelper.create(alloc, &slot);
     items.Event.EventPolyHelper.mustFromSlot(&slot).code = 10;
     std.log.info("send: Event code={d}", .{10});
-    try mailbox.send(mbh, &slot);
+    try mbx.send(&slot);
 }
 
-fn sendSensor(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendSensor(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var slot: Slot = null;
     defer items.Sensor.SensorPolyHelper.destroy(alloc, &slot);
     try items.Sensor.SensorPolyHelper.create(alloc, &slot);
     items.Sensor.SensorPolyHelper.mustFromSlot(&slot).value = 3.14;
     std.log.info("send: Sensor value={d}", .{3.14});
-    try mailbox.send(mbh, &slot);
+    try mbx.send(&slot);
 }
 
-fn receiveAndDispatch(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn receiveAndDispatch(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     var event_ok: bool = false;
     var sensor_ok: bool = false;
 
     for (0..2) |_| {
         var slot: Slot = null;
-        try mailbox.receive(mbh, &slot, null);
+        try mbx.receive(&slot, null);
         defer items.freeSlot(&slot, alloc);
         const poly: *polynode.PolyNode = slot.?;
         if (items.Event.EventPolyHelper.fromPoly(poly)) |ev| {
@@ -84,6 +84,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

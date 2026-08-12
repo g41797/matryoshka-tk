@@ -29,7 +29,8 @@ close()
 
 - `get` hands a handle to the caller — reused if one is free, freshly made otherwise.
 - `put` returns the handle — the Pool decides whether to keep it or let it go.
-- `close` hands back everything still stored, so nothing leaks.
+- `close` collects everything still held and passes it to your `on_close`
+  hook, which releases it.
 
 ## A Pool resource is an empty container
 
@@ -47,6 +48,27 @@ A Pool is not storage.
 - A Pool resource alone never defines a complete pattern.
 - Useful work always needs at least one other input too: a Mailbox message, a
   network read, a timer tick, some shared state.
+
+## The Pool touches items — through your hooks
+
+This is the difference from a [Mailbox](mailbox.md), which never touches an  
+Item at all. A Pool creates, resets, keeps or destroys — but every one of  
+those is your hook doing it, never the Pool deciding on its own.
+
+## A closed Pool hands items back
+
+A Pool does not care whether you closed it either. Only `destroy` insists,  
+and panics on an open Pool.
+
+- `put` on a closed Pool is a no-op and leaves the Slot unchanged.
+- `put_all` stops at the first refusal and leaves the rest in your list.
+
+Either way you still hold those Items and must release them. So check the  
+Slot after `put`, and check the list after `put_all`.
+
+Closing releases through `on_close`, not through you — the other difference  
+from a Mailbox, which returns the list to the caller and leaves the  
+releasing to them.
 
 ## An empty Pool is a signal, not an error
 

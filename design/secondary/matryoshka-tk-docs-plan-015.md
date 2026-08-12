@@ -432,7 +432,7 @@ needed folding back in before dropping the block.
 
 **Next**: DOC 10+ — TBD, scoped when reached. Open items carried: whether the mkdocs  
 Reference-page split of `-018.md` is DOC 10 or later; storytelling-001/-003 duplicate  
-H1; `test-example-story.md` split; `video-transcoder-003.md` as second Concepts story;  
+H1; `test-example-story.md` split; `video-transcoder-004.md` as second Concepts story;  
 further Tools topics; Cookbook stub still unpopulated.
 
 ---
@@ -474,7 +474,7 @@ second page, Tools is exactly where these four terms get defined directly.
 | `.zig` files touched | none — doc-only stage |
 
 **Next**: DOC 9+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
-duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
+duplicate H1, `test-example-story.md` split, `video-transcoder-004.md` as a second  
 Concepts story, further Tools topics (Select loops, spawn/await, Master  
 composition, pool patterns, API reference), Cookbook stub still unpopulated.
 
@@ -523,7 +523,7 @@ other as companions.
 | `.zig` files touched | none — doc-only stage |
 
 **Next**: DOC 8+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
-duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
+duplicate H1, `test-example-story.md` split, `video-transcoder-004.md` as a second  
 Concepts story, further Tools topics (Select loops, spawn/await, Master  
 composition, pool patterns, API reference), Cookbook stub still unpopulated.
 
@@ -546,12 +546,12 @@ show the same system built with Matryoshka, still without deep implementation de
 - `design/stories/*.md` already use exactly this shape: Part 1 — Discussion (domain
   dialogue, zero Matryoshka vocabulary), Part 2 — SRS (numbered domain requirements),  
   Part 3 — Matryoshka Translation (requirements mapped to PolyNode/Mailbox/Pool/Master),  
-  Part 4 — Flow Diagram (ASCII, no prose). Confirmed against `print-server-002.md` (read  
-  in full) and `video-transcoder-003.md` (headings checked).
+  Part 4 — Flow Diagram (ASCII, no prose). Confirmed against `print-server-003.md` (read  
+  in full) and `video-transcoder-004.md` (headings checked).
 - `design/matryoshka-model-003.md`'s Three-Category Model already defines "Story" as this
   exact artifact type, distinct from Test and Example — confirms stories are the intended  
   docs-facing unit, not raw concept definitions.
-- Two stories exist. `print-server-002.md` used this stage; `video-transcoder-003.md`
+- Two stories exist. `print-server-003.md` used this stage; `video-transcoder-004.md`
   deferred to a later DOC stage (one story at a time, per the narrow-scoping rule).
 
 **Decision**: DOC 6 scoped to one story, split into two site pages (system, then  
@@ -561,10 +561,10 @@ and `.zig` files untouched.
 
 **Changes**:
 - `kitchen/docs/concepts/print-server-the-system.md` (new) — Parts 1-2 of
-  `print-server-002.md`, adapted: domain roles, requirements, ownership reasoning.  
+  `print-server-003.md`, adapted: domain roles, requirements, ownership reasoning.  
   No Matryoshka vocabulary (verified by grep).
 - `kitchen/docs/concepts/print-server-with-matryoshka.md` (new) — Parts 3-4 of
-  `print-server-002.md`, adapted: each requirement mapped to PolyNode/Mailbox/Pool/  
+  `print-server-003.md`, adapted: each requirement mapped to PolyNode/Mailbox/Pool/  
   Master, ending with the flow diagram.
 - `kitchen/docs/concepts/index.md` — rewritten from one-line stub to a landing page
   linking the two new pages.
@@ -585,7 +585,7 @@ and `.zig` files untouched.
 | `.zig` files touched | none — doc-only stage |
 
 **Next**: DOC 7+ — TBD, scoped when reached. Open items carried: storytelling-001/-003  
-duplicate H1, `test-example-story.md` split, `video-transcoder-003.md` as a second  
+duplicate H1, `test-example-story.md` split, `video-transcoder-004.md` as a second  
 Concepts story, Tools and Cookbook stub sections still unpopulated.
 
 ---

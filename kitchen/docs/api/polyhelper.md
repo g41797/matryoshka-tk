@@ -63,7 +63,7 @@ pub fn toPoly(self: *T) *PolyNode
 - Cannot fail. `T` is known at compile time, so there is no tag to check.
 - No `must` variant and no optional return, for the same reason.
 - Never modifies the item.
-- Use it wherever the toolkit wants an `ItemHandle`: `mailbox.send`, `pool.put`, a Slot assignment.
+- Use it wherever the toolkit wants an `ItemHandle`: `Mbox.send`, `Pool.put`, a Slot assignment.
 - `Slot` is `?ItemHandle`, so the result coerces into a Slot with no separate accessor.
 - Prefer it to a hand-written `&x.poly`. The field name stays inside `PolyHelper`.
 
@@ -123,7 +123,7 @@ pub fn moveFromSlot(slot: *Slot) ?*T
 - On success the Slot is left empty.
 - On failure the Slot is unchanged.
 - Asserts the item is not linked into a list, like every other consuming
-  operation (`mailbox.send`, `mailbox.receive`, `pool.put`, `destroy`).
+  operation (`Mbox.send`, `Mbox.receive`, `Pool.put`, `destroy`).
 
 - No `must` variant. It mutates its argument, and hiding failure behind
   `unreachable` would make the state change less obvious.

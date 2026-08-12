@@ -17,7 +17,7 @@
 //!                  │ sel.await()
 //!                  ▼
 //!  .inbox .item ──► freeSlot
-//!  .pool_ev .item ──► pool.put
+//!  .pool_ev .item ──► pl.put
 //!  .timer         ──► log tick, re-spawn
 //!  done when inbox×2 + pool×1 received ──► sel.cancelDiscard()
 //! ```
@@ -32,8 +32,8 @@ pub fn mixed_mailbox_pool_event_sources_in_select(allocator: std.mem.Allocator, 
 const TIMER_NS: i96 = 20_000_000; // 20 ms
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
-    pool_ev: pool.PoolResult,
+    inbox: Mbox.Result,
+    pool_ev: Pool.Result,
     timer: void,
 };
 
@@ -55,8 +55,8 @@ const MailboxPoolTimerMaster = struct {
     }
 
     fn setupSelect(self: *MailboxPoolTimerMaster) !void {
-        try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
-        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.ph, items.Event.EventPolyHelper.TAG, null });
+        try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
+        try self.sel.concurrent(.pool_ev, pool.getWaitResult, .{ self.pl, items.Event.EventPolyHelper.TAG, null });
         try self.sel.concurrent(.timer, sleepFn, .{ timerTimeout(), self.io });
     }
 
@@ -72,7 +72,7 @@ const MailboxPoolTimerMaster = struct {
                         self.inbox_count += 1;
                         std.log.info("inbox: Event code={d} ({d}/2)", .{ ev.code, self.inbox_count });
                         if (self.inbox_count < 2) {
-                            try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+                            try self.sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
                         }
                     },
                     .closed, .canceled, .timeout, .wakeup => break,
@@ -80,7 +80,7 @@ const MailboxPoolTimerMaster = struct {
                 .pool_ev => |r| switch (r) {
                     .item => |handle| {
                         var slot: Slot = handle;
-                        defer pool.put(self.ph, &slot);
+                        defer self.pl.put(&slot);
                         const ev: *items.Event = items.Event.EventPolyHelper.mustFromSlot(&slot);
                         self.pool_count += 1;
                         std.log.info("pool_ev: Event code={d} ({d}/1)", .{ ev.code, self.pool_count });
@@ -99,8 +99,8 @@ const MailboxPoolTimerMaster = struct {
 
     allocator: std.mem.Allocator,
     io: std.Io,
-    mbh: MailboxHandle,
-    ph: PoolHandle,
+    mbx: *Mbox,
+    pl: *Pool,
     pool_ctx: hooks.AlwaysCreateHooks,
     tags: [1]*const anyopaque,
     inbox_count: usize,
@@ -117,31 +117,31 @@ const MailboxPoolTimerMaster = struct {
         self.inbox_count = 0;
         self.pool_count = 0;
         self.ticks = 0;
-        self.mbh = try mailbox.new(io, allocator);
+        self.mbx = try mailbox.new(io, allocator);
         errdefer {
-            var rem: polynode.ItemList = mailbox.close(self.mbh);
+            var rem: polynode.ItemList = self.mbx.close();
             items.freeList(&rem, allocator);
-            mailbox.destroy(self.mbh, allocator);
+            mailbox.destroy(self.mbx, allocator);
         }
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.ph = try pool.new(io, allocator);
+        self.pl = try pool.new(io, allocator);
         errdefer {
-            pool.close(self.ph);
-            pool.destroy(self.ph, allocator);
+            self.pl.close();
+            pool.destroy(self.pl, allocator);
         }
-        try pool.init(self.ph, self.pool_ctx.poolHooks(&self.tags));
+        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         try self.seedResources();
         self.sel = std.Io.Select(MasterEvent).init(self.io, &self.buf);
         return self;
     }
 
     fn destroy(self: *MailboxPoolTimerMaster) void {
-        var rem: polynode.ItemList = mailbox.close(self.mbh);
+        var rem: polynode.ItemList = self.mbx.close();
         items.freeList(&rem, self.allocator);
-        mailbox.destroy(self.mbh, self.allocator);
-        pool.close(self.ph);
-        pool.destroy(self.ph, self.allocator);
+        mailbox.destroy(self.mbx, self.allocator);
+        self.pl.close();
+        pool.destroy(self.pl, self.allocator);
         self.allocator.destroy(self);
     }
 
@@ -151,13 +151,13 @@ const MailboxPoolTimerMaster = struct {
             defer items.Event.EventPolyHelper.destroy(self.allocator, &slot);
             try items.Event.EventPolyHelper.create(self.allocator, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-            try mailbox.send(self.mbh, &slot);
+            try self.mbx.send(&slot);
         }
         {
             var slot: Slot = null;
-            try pool.get(self.ph, items.Event.EventPolyHelper.TAG, .new_only, &slot);
+            try self.pl.get(items.Event.EventPolyHelper.TAG, .new_only, &slot);
             items.Event.EventPolyHelper.mustFromSlot(&slot).code = 10;
-            pool.put(self.ph, &slot);
+            self.pl.put(&slot);
         }
     }
 };
@@ -168,8 +168,8 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
-const PoolHandle = pool.PoolHandle;

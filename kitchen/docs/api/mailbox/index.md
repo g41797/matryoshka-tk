@@ -6,11 +6,12 @@ Moves handles between Masters.
 
 ```zig
 const mailbox = @import("matryoshka").mailbox;
+const Mbox = @import("matryoshka").Mbox;
 
 // typical usage:
 var slot: polynode.Slot = &event.poly;
-try mailbox.send(inbox, &slot);              // slot is now null
-try mailbox.receive(inbox, &slot, null);     // slot is now non-null
+try inbox.send(&slot);              // slot is now null
+try inbox.receive(&slot, null);     // slot is now non-null
 ```
 
 ---
@@ -18,11 +19,13 @@ try mailbox.receive(inbox, &slot, null);     // slot is now non-null
 ## Types
 
 ```zig
-pub const MailboxHandle = ItemHandle;
+pub const Mbox = struct { ... };
 ```
 
-MailboxHandle is itself a *PolyNode.  
-A mailbox can be:
+Application code holds `*Mbox` and calls methods on it.
+
+A mailbox is also a PolyNode. `toPoly`/`fromPoly` carry it through another  
+mailbox or pool. A mailbox can be:
 
 - sent through another mailbox
 - stored in pools
@@ -30,12 +33,36 @@ A mailbox can be:
 
 Same rules as application items.
 
+The struct fields are internal. Use the methods.
+
+---
+
+## What a mailbox never does
+
+The mailbox holds. It never touches. No inspection, no copy, no free — it  
+allocates and frees exactly one thing, itself.
+
+So every item it holds goes back to a caller:
+
+| edge | who ends up holding the item |
+| --- | --- |
+| `receive`, `try_receive` | the receiver |
+| `send`, `send_oob` returning `error.Closed` | the sender — the slot is unchanged |
+| `receive_batch` | the caller, as a list |
+| `close` | the caller, as a list |
+
+Releasing them is the caller's job. Free them, or put them back into a pool  
+— which one is knowledge the mailbox does not have and never had.
+
+Contrast with [Pool](../pool/index.md), which does touch items, through  
+your hooks.
+
 ---
 
 ## new
 
 ```zig
-pub fn new(io: Io, alloc: std.mem.Allocator) !MailboxHandle
+pub fn new(io: Io, alloc: std.mem.Allocator) !*Mbox
 ```
 
 - Creates a new mailbox.

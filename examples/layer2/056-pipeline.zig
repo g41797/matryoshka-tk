@@ -19,12 +19,12 @@
 //!
 
 pub fn pipeline(allocator: std.mem.Allocator, io: std.Io) !void {
-    const stage1: MailboxHandle = try mailbox.new(io, allocator);
-    const stage2: MailboxHandle = try mailbox.new(io, allocator);
+    const stage1: *Mbox = try mailbox.new(io, allocator);
+    const stage2: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var r1: polynode.ItemList = mailbox.close(stage1);
+        var r1: polynode.ItemList = stage1.close();
         items.freeList(&r1, allocator);
-        var r2: polynode.ItemList = mailbox.close(stage2);
+        var r2: polynode.ItemList = stage2.close();
         items.freeList(&r2, allocator);
         mailbox.destroy(stage1, allocator);
         mailbox.destroy(stage2, allocator);
@@ -32,7 +32,7 @@ pub fn pipeline(allocator: std.mem.Allocator, io: std.Io) !void {
 
     var prod_ctx: ProducerCtx = .{ .outbox = stage1, .alloc = allocator };
     var tran_ctx: StageCtx = .{ .inbox = stage1, .outbox = stage2, .alloc = allocator };
-    var cons_ctx: ConsumerCtx = .{ .mbh = stage2, .alloc = allocator };
+    var cons_ctx: ConsumerCtx = .{ .mbx = stage2, .alloc = allocator };
 
     var f_prod = try io.concurrent(producerFn, .{&prod_ctx});
     var f_tran = try io.concurrent(transformerFn, .{&tran_ctx});
@@ -49,7 +49,7 @@ pub fn pipeline(allocator: std.mem.Allocator, io: std.Io) !void {
 }
 
 const ProducerCtx = struct {
-    outbox: MailboxHandle,
+    outbox: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -59,7 +59,7 @@ fn producerFn(ctx: *ProducerCtx) void {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = i;
-        mailbox.send(ctx.outbox, &slot) catch {
+        ctx.outbox.send(&slot) catch {
             items.freeSlot(&slot, ctx.alloc);
             return;
         };
@@ -68,35 +68,35 @@ fn producerFn(ctx: *ProducerCtx) void {
         var slot: Slot = null;
         items.Event.EventPolyHelper.create(ctx.alloc, &slot) catch return;
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = -1;
-        mailbox.send(ctx.outbox, &slot) catch items.freeSlot(&slot, ctx.alloc);
+        ctx.outbox.send(&slot) catch items.freeSlot(&slot, ctx.alloc);
     }
 }
 
 const StageCtx = struct {
-    inbox: MailboxHandle,
-    outbox: MailboxHandle,
+    inbox: *Mbox,
+    outbox: *Mbox,
     alloc: std.mem.Allocator,
 };
 
 fn transformerFn(ctx: *StageCtx) void {
     while (true) {
         var slot: Slot = null;
-        mailbox.receive(ctx.inbox, &slot, null) catch return;
+        ctx.inbox.receive(&slot, null) catch return;
         const ev: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse {
             items.freeSlot(&slot, ctx.alloc);
             continue;
         };
         if (ev.code == -1) {
-            mailbox.send(ctx.outbox, &slot) catch items.freeSlot(&slot, ctx.alloc);
+            ctx.outbox.send(&slot) catch items.freeSlot(&slot, ctx.alloc);
             return;
         }
         ev.code = ev.code * ev.code;
-        mailbox.send(ctx.outbox, &slot) catch items.freeSlot(&slot, ctx.alloc);
+        ctx.outbox.send(&slot) catch items.freeSlot(&slot, ctx.alloc);
     }
 }
 
 const ConsumerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     sum: i32 = 0,
     count: usize = 0,
@@ -105,7 +105,7 @@ const ConsumerCtx = struct {
 fn consumerFn(ctx: *ConsumerCtx) void {
     while (true) {
         var slot: Slot = null;
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
         const ev: *items.Event = items.Event.EventPolyHelper.fromSlot(&slot) orelse {
             items.freeSlot(&slot, ctx.alloc);
             continue;
@@ -127,5 +127,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

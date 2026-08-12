@@ -1,4 +1,10 @@
-# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (006)
+# Task 2 — Example Scenarios for Layer 4 and Cross-Layer (007)
+
+
+Change from -006: API 12-4 — the doc speaks the pointer API. Methods on  
+`*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
+free functions on the module.
+
 
 
 Change from 005: DISPATCH 2 — scenario 63 added, two Masters and two tables.
@@ -9,11 +15,11 @@ in the barrel and in the site nav, but had never been listed in this catalog.
 Change from 003: EXMPL 5 — added scenario 62, the receive router.
 
 Index only. Full staccato description lives in each source file's `///` doc comment,  
-per "Description as code" in [rules-041.md](rules-041.md).
+per "Description as code" in [rules-043.md](rules-043.md).
 
 Pool items are empty containers on acquisition. Work input comes from outside the pool item:  
 a mailbox, a timer, a network source, spawn-time arguments, or the worker's own accumulated state.  
-See "Pool items are empty containers" in [matryoshka-concepts-001.md](matryoshka-concepts-001.md).
+See "Pool items are empty containers" in [matryoshka-concepts-002.md](matryoshka-concepts-002.md).
 
 All Layer 4 examples use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, real I/O.
 
@@ -45,7 +51,7 @@ Master is a concept, not a type. Each example may structure its coordination bou
 26. **Timer cancel → close → walk remaining** → [examples/layer4/026-select_cancel_close.zig](../examples/layer4/026-select_cancel_close.zig)
 27. **Cancel reports, Master decides** → [examples/layer4/027-select_cancel_master_decides.zig](../examples/layer4/027-select_cancel_master_decides.zig)
 28. **Multiple event source types in one Select** → [examples/layer4/028-select_mixed_sources.zig](../examples/layer4/028-select_mixed_sources.zig)
-29. **Cancel → Master close → pool.put_all** → [examples/layer4/029-select_cancel_recycle.zig](../examples/layer4/029-select_cancel_recycle.zig)
+29. **Cancel → Master close → Pool.put_all** → [examples/layer4/029-select_cancel_recycle.zig](../examples/layer4/029-select_cancel_recycle.zig)
 30. **Timeout on mailbox** → [examples/layer4/030-mailbox_timeout.zig](../examples/layer4/030-mailbox_timeout.zig)
 31. **Graceful shutdown with in-flight items** → [examples/layer4/031-select_graceful_shutdown.zig](../examples/layer4/031-select_graceful_shutdown.zig)
 

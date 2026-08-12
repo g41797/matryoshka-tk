@@ -10,31 +10,31 @@
 //!
 //!
 //! ```
-//!  master ──alloc.create──► slot ──mailbox.send──► mailbox
+//!  master ──alloc.create──► slot ──mbx.send──► mailbox
 //!                                                      │ worker (io.concurrent)
-//!                                                      │ mailbox.receive ──► freeSlot
-//!  mailbox.close ──► remaining list ──► freeList
+//!                                                      │ mbx.receive ──► freeSlot
+//!  mbx.close ──► remaining list ──► freeList
 //!  fut.await ──► worker done
 //! ```
 //!
 
 pub fn minimal_master(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh, .alloc = allocator };
+    var ctx: WorkerCtx = .{ .mbx = mbx, .alloc = allocator };
     var fut = try io.concurrent(workerFn, .{&ctx});
-    try sendItems(mbh, allocator);
-    try awaitWorker(mbh, allocator, io, &fut);
+    try sendItems(mbx, allocator);
+    try awaitWorker(mbx, allocator, io, &fut);
     std.log.info("master: worker done", .{});
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
 };
 
@@ -42,23 +42,23 @@ fn workerFn(ctx: *WorkerCtx) anyerror!void {
     while (true) {
         var slot: Slot = null;
         defer items.freeSlot(&slot, ctx.alloc);
-        mailbox.receive(ctx.mbh, &slot, null) catch return;
+        ctx.mbx.receive(&slot, null) catch return;
     }
 }
 
-fn sendItems(mbh: MailboxHandle, alloc: std.mem.Allocator) !void {
+fn sendItems(mbx: *Mbox, alloc: std.mem.Allocator) !void {
     for (0..3) |i| {
         var slot: Slot = null;
         defer items.Event.EventPolyHelper.destroy(alloc, &slot);
         try items.Event.EventPolyHelper.create(alloc, &slot);
         items.Event.EventPolyHelper.mustFromSlot(&slot).code = @intCast(i + 1);
-        try mailbox.send(mbh, &slot);
+        try mbx.send(&slot);
         std.log.info("master: sent Event code={d}", .{i + 1});
     }
 }
 
-fn awaitWorker(mbh: MailboxHandle, alloc: std.mem.Allocator, io: std.Io, fut: *Io.Future(anyerror!void)) !void {
-    var remaining: polynode.ItemList = mailbox.close(mbh);
+fn awaitWorker(mbx: *Mbox, alloc: std.mem.Allocator, io: std.Io, fut: *Io.Future(anyerror!void)) !void {
+    var remaining: polynode.ItemList = mbx.close();
     items.freeList(&remaining, alloc);
     try fut.await(io);
 }
@@ -67,7 +67,7 @@ const items = @import("../items/items.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
 const Io = std.Io;

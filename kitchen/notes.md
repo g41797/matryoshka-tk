@@ -41,7 +41,7 @@ everything else on this page — **committed to git, not gitignored**:
   alongside the source so hand-tweaks to a rendered image survive.
 
 `kitchen/tools/gen_diagrams.sh` renders `.dot` → `.svg`/`.png`. Manual-run  
-only — NOT wired into `build_site.sh`/`preview_site.sh`/CI, unlike every  
+only — NOT connected to `build_site.sh`/`preview_site.sh`/CI, unlike every  
 other generator on this page. Run it by hand after editing a `.dot` file,  
 review the diff, commit deliberately.
 

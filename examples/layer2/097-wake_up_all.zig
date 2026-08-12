@@ -3,17 +3,17 @@
 
 //! Wake blocked receiver without a message.
 //!
-//! - Worker thread blocks in mailbox.receive with no item ever sent.
-//! - Coordinator flips a shutdown flag, then calls mailbox.wakeUpAll —
+//! - Worker thread blocks in mbx.receive with no item ever sent.
+//! - Coordinator flips a shutdown flag, then calls mbx.wakeUpAll —
 //!   no item is sent, no message crosses the mailbox.
 //! - Worker wakes with error.Wakeup, re-checks the flag, exits.
 //!
 //!
 //! ```
 //!  worker thread
-//!  mailbox.receive (blocks — mailbox stays empty)
+//!  mbx.receive (blocks — mailbox stays empty)
 //!       │
-//!  coordinator: shutdown.store(true) ──► mailbox.wakeUpAll
+//!  coordinator: shutdown.store(true) ──► mbx.wakeUpAll
 //!       │ error.Wakeup
 //!       ▼
 //!  worker re-checks shutdown flag ──► exits
@@ -21,21 +21,21 @@
 //!
 
 pub fn wake_blocked_receiver_without_a_message(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
-    var ctx: WorkerCtx = .{ .mbh = mbh };
+    var ctx: WorkerCtx = .{ .mbx = mbx };
     var fut = try io.concurrent(workerFn, .{&ctx});
 
-    // Give the worker time to reach mailbox.receive and block.
+    // Give the worker time to reach mbx.receive and block.
     std.Io.Timeout.sleep(.{ .duration = .{ .raw = .{ .nanoseconds = 50_000_000 }, .clock = .real } }, io) catch {};
 
     ctx.shutdown.store(true, .release);
-    try mailbox.wakeUpAll(mbh);
+    try mbx.wakeUpAll();
 
     fut.await(io);
 
@@ -44,14 +44,14 @@ pub fn wake_blocked_receiver_without_a_message(allocator: std.mem.Allocator, io:
 }
 
 const WorkerCtx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     shutdown: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     woke_on_wakeup: bool = false,
 };
 
 fn workerFn(ctx: *WorkerCtx) void {
     var slot: Slot = null;
-    mailbox.receive(ctx.mbh, &slot, null) catch |err| {
+    ctx.mbx.receive(&slot, null) catch |err| {
         if (err == error.Wakeup and ctx.shutdown.load(.acquire)) {
             ctx.woke_on_wakeup = true;
         }
@@ -65,5 +65,5 @@ const matryoshka = @import("matryoshka");
 const std = @import("std");
 const polynode = matryoshka.polynode;
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;

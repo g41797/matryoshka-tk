@@ -17,21 +17,21 @@
 //!  .timer ──► sel.cancel() loop ──► .inbox .canceled
 //!             (group.cancel signals receiveResult to stop)
 //!  │
-//!  mailbox.close ──► freeList ──► mailbox.destroy
+//!  mbx.close ──► freeList ──► mailbox.destroy
 //! ```
 //!
 
 pub fn select_cancel_propagation(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbh: MailboxHandle = try mailbox.new(io, allocator);
+    const mbx: *Mbox = try mailbox.new(io, allocator);
     defer {
-        var rem: polynode.ItemList = mailbox.close(mbh);
+        var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);
-        mailbox.destroy(mbh, allocator);
+        mailbox.destroy(mbx, allocator);
     }
 
     var buf: [4]MasterEvent = undefined;
     var sel: std.Io.Select(MasterEvent) = std.Io.Select(MasterEvent).init(io, &buf);
-    var ctx: Ctx = .{ .mbh = mbh, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     try ctx.setupSelect(&sel);
     try Ctx.awaitTimerFirst(&sel);
     ctx.clearCanceled(&sel);
@@ -43,7 +43,7 @@ pub fn select_cancel_propagation(allocator: std.mem.Allocator, io: std.Io) !void
 const TIMER_NS: i96 = 10_000_000; // 10 ms
 
 const MasterEvent = union(enum) {
-    inbox: mailbox.ReceiveResult,
+    inbox: Mbox.Result,
     timer: void,
 };
 
@@ -52,7 +52,7 @@ fn sleepFn(sleep_t: std.Io.Timeout, io: std.Io) void {
 }
 
 const Ctx = struct {
-    mbh: MailboxHandle,
+    mbx: *Mbox,
     alloc: std.mem.Allocator,
     io: std.Io,
     got_canceled: bool = false,
@@ -61,7 +61,7 @@ const Ctx = struct {
         const sleep_t: std.Io.Timeout = .{
             .duration = .{ .raw = .{ .nanoseconds = TIMER_NS }, .clock = .real },
         };
-        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbh, null });
+        try sel.concurrent(.inbox, mailbox.receiveResult, .{ self.mbx, null });
         try sel.concurrent(.timer, sleepFn, .{ sleep_t, self.io });
     }
 
@@ -98,6 +98,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const mailbox = matryoshka.mailbox;
+const Mbox = matryoshka.Mbox;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;
-const MailboxHandle = mailbox.MailboxHandle;
