@@ -383,7 +383,7 @@ Check identity with `node.tag == EVENT_TAG`. Recover the concrete type with
   - Instance identity is resolved by pointer comparison against known handles.
   - Role is established by protocol: the channel the handle arrived on, message
     ordering, or prior agreement.
-- See [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md),
+- See [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md),
   "Tag identity — class, not instance".
 
 `switch` over tags does not compile. The reason and the repro live in

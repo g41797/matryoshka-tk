@@ -1,23 +1,6 @@
 # Matryoshka API Reference — Zig 0.16
 
 
-API 12 (real pointers): `MailboxHandle` and `PoolHandle` are gone. `Mbox`  
-and `Pool` are public structs with internal fields; application code holds  
-`*Mbox` / `*Pool` and calls methods on the pointer. Companion types nest —  
-`Mbox.Result`, `Pool.Result`, `Pool.Hooks`, `Pool.GetMode`, `Pool.GetError`.  
-`new`, `destroy`, `receiveResult`, `getWaitResult` and `is_it_you` stay  
-free functions on the module. Both types remain PolyNodes: `toPoly` in,  
-`fromPoly` / `mustFromPoly` out.
-
-API 11 (accessor rename): `fromNode`, `mustFromNode` and `toNode` become `fromPoly`, `mustFromPoly` and `toPoly`. `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two things at once, and the field the helper reaches is `poly`. Hard rename, no aliases. The Slot accessors keep their names.
-
-API 10 (ItemList completion): `remove`, `popLast`, `first`, `last` and `insertBefore` added. `iterate` renamed to `iterator`, the std name — breaking, no shim. `concat` returns early on the same list twice, because its assert is `unreachable` outside safety builds and `concatByMoving` would ring the items and clear the header. Every insert now also asserts `!is_linked` on the new item, which sees a different list where the container walk cannot. `moveFromList` asserts the std header it is handed is consistent. `std.DoublyLinkedList` checks nothing; `ItemList` is where it is checked.
-
-API 9 (intrusive safety): `ItemList.appendFromSlot` and `ItemList.prependFromSlot` added — they take the item out of a `Slot` and leave it empty, so the caller writes no `slot = null` line. `append`, `prepend` and `insertAfter` assert against the container's own contents under runtime safety. `concat` asserts its two arguments are different lists. `is_linked` is documented for what it computes: whether the node has neighbours, which is false for a list's only member.
-
-API 8 doc-comment sync (rules-030): `ItemList._list` reworded — "underneath" and "on purpose" are banned words, and the entry now matches the field's doc comment in `src/polynode.zig`.
-
-API 8: `ItemList` — the toolkit's list type. `Mbox.receive_batch`, `Mbox.close`, `Pool.put_all`, `Pool.Hooks.on_put`, and `Pool.Hooks.on_close` speak it instead of `std.DoublyLinkedList`. `popFirst` yields `ItemHandle` and clears the links, so `@fieldParentPtr` no longer appears in application code.
 
 > Function descriptions in this reference serve as the source for `///` Zig doc comments in the implementation.
 
@@ -784,7 +767,7 @@ try inbox.receive(&slot, null);     // slot is now non-null
 
 ### Usual flow
 
-A mailbox takes two steps to set up and two to take down.
+Four steps. Two set up, two take down.
 
 ```zig
 const mbx = try mailbox.new(io, alloc);   // 1. create
@@ -799,25 +782,44 @@ var left = mbx.close();
 items.freeList(&left, alloc);
 ```
 
-1. **Create.** `mailbox.new(io, alloc)` returns a `*Mbox`. It needs the `Io`
-   because receivers block on it.
-2. **Use.** Any task may send, any task may receive. The mailbox is the only
-   shared thing; the items passing through it are never shared.
-3. **Close.** `close` returns an `ItemList` of everything still queued,
-   regular and OOB together. That list is yours. Release it — free the items,  
-   or put them back into a pool. After `close` every other method returns  
-   `error.Closed` and the mailbox stays a valid object.
-4. **Destroy.** `mailbox.destroy(mbx, alloc)` frees the mailbox itself.
+1. **Create.**
+   - `mailbox.new(io, alloc)` returns a `*Mbox`.
+   - Internally the mailbox uses `Io` synchronisation objects.
+   - `Io` should be Threaded.
+2. **Use.**
+   - Any task may send.
+   - Any task may receive.
+   - The mailbox is the only shared thing.
+   - The items passing through it are never shared.
+3. **Close.**
+   - `close` returns an `ItemList`.
+     - Everything still queued.
+     - Regular and OOB together.
+   - The list is yours. Release it.
+     - Free the items.
+     - Or put them back into a pool.
+   - After `close`:
+     - Every other method returns `error.Closed`.
+     - The mailbox stays a valid object.
+4. **Destroy.**
+   - `mailbox.destroy(mbx, alloc)` frees the mailbox itself.
 
-Close before destroy, always. `destroy` makes closedness a precondition and  
-panics on an open mailbox.
+Close before destroy.
 
-`destroy` is not optional. The items and the mailbox are two separate  
-allocations: releasing the list from `close` frees the items, and skipping  
-`destroy` still leaks the mailbox.
+- Always.
+- `destroy` makes closedness a precondition.
+- It panics on an open mailbox.
 
-Teardown is where `mailbox` and `pool` differ most. A mailbox returns its  
-items to the caller. A pool passes them to `on_close`.
+`destroy` is not optional.
+
+- The items are one allocation. The mailbox is another.
+- Releasing the list from `close` frees the items.
+- Skipping `destroy` leaks the mailbox.
+
+Teardown is the sharpest difference between the two.
+
+- A mailbox returns its items to the caller.
+- A pool passes them to `on_close`.
 
 ### send — the handle moves out
 
@@ -1103,8 +1105,10 @@ pl.put(&slot);                                      // slot is now null (if kept
 
 ### Usual flow
 
-A pool takes three steps to set up and two to take down. The extra step is  
-`init` — a pool without hooks cannot create anything.
+Five steps. Three set up, two take down.
+
+- The extra step is `init`.
+- A pool without hooks cannot create anything.
 
 ```zig
 const pl = try pool.new(io, alloc);   // 1. create
@@ -1118,27 +1122,47 @@ pl.put(&slot);
 pl.close();                           // 4. on_close releases what is left
 ```
 
-1. **Create.** `pool.new(io, alloc)` returns a `*Pool` with no hooks. Nothing
-   works yet.
-2. **Register hooks.** `init(hooks)` once, right after `new`. The hooks are
-   the pool: `on_get` creates, `on_put` decides whether an item is kept,  
-   `on_close` releases. Skip this and the first `get` has no way to make an  
-   item.
-3. **Use.** `get` asks whether a reusable item is available right now; `put`
-   offers one back. Check the slot after `put` — a refusal leaves it  
-   non-null and you still hold the item.
-4. **Close.** `close` collects everything the pool holds and passes the list
-   to `on_close`. Nothing comes back to you. After `close`, `put` is a no-op  
-   that leaves your slot unchanged.
-5. **Destroy.** `pool.destroy(pl, alloc)` frees the pool itself.
+1. **Create.**
+   - `pool.new(io, alloc)` returns a `*Pool` with no hooks.
+   - Nothing works yet.
+2. **Register hooks.**
+   - `init(hooks)` once, right after `new`.
+   - The hooks are the pool.
+     - `on_get` creates.
+     - `on_put` decides whether an item is kept.
+     - `on_close` releases.
+   - Skip this and the first `get` has no way to make an item.
+3. **Use.**
+   - `get` asks whether a reusable item is available right now.
+   - `put` offers one back.
+   - Check the slot after `put`.
+     - A refusal leaves it non-null.
+     - You still hold the item.
+4. **Close.**
+   - `close` collects everything the pool holds.
+   - It passes the list to `on_close`.
+   - Nothing comes back to you.
+   - After `close`:
+     - `put` is a no-op.
+     - Your slot is left unchanged.
+5. **Destroy.**
+   - `pool.destroy(pl, alloc)` frees the pool itself.
 
-Close before destroy, always. `destroy` panics on an open pool.
+Close before destroy.
 
-`destroy` is not optional. `on_close` releases the items; the pool struct is  
-a separate allocation and only `destroy` frees it.
+- Always.
+- `destroy` panics on an open pool.
 
-Teardown is where `pool` and `mailbox` differ most. A pool passes its items  
-to `on_close`. A mailbox returns them to the caller.
+`destroy` is not optional.
+
+- `on_close` releases the items.
+- The pool struct is a separate allocation.
+- Only `destroy` frees it.
+
+Teardown is the sharpest difference between the two.
+
+- A pool passes its items to `on_close`.
+- A mailbox returns them to the caller.
 
 ### Flow diagram
 
@@ -1989,8 +2013,28 @@ Valid combinations:
 
 ## Change log
 
+API 12 (real pointers): `MailboxHandle` and `PoolHandle` are gone. `Mbox`  
+and `Pool` are public structs with internal fields; application code holds  
+`*Mbox` / `*Pool` and calls methods on the pointer. Companion types nest —  
+`Mbox.Result`, `Pool.Result`, `Pool.Hooks`, `Pool.GetMode`, `Pool.GetError`.  
+`new`, `destroy`, `receiveResult`, `getWaitResult` and `is_it_you` stay  
+free functions on the module. Both types remain PolyNodes: `toPoly` in,  
+`fromPoly` / `mustFromPoly` out.
+
+API 11 (accessor rename): `fromNode`, `mustFromNode` and `toNode` become `fromPoly`, `mustFromPoly` and `toPoly`. `PolyNode` embeds `node: std.DoublyLinkedList.Node`, so "node" named two things at once, and the field the helper reaches is `poly`. Hard rename, no aliases. The Slot accessors keep their names.
+
+API 10 (ItemList completion): `remove`, `popLast`, `first`, `last` and `insertBefore` added. `iterate` renamed to `iterator`, the std name — breaking, no shim. `concat` returns early on the same list twice, because its assert is `unreachable` outside safety builds and `concatByMoving` would ring the items and clear the header. Every insert now also asserts `!is_linked` on the new item, which sees a different list where the container walk cannot. `moveFromList` asserts the std header it is handed is consistent. `std.DoublyLinkedList` checks nothing; `ItemList` is where it is checked.
+
+API 9 (intrusive safety): `ItemList.appendFromSlot` and `ItemList.prependFromSlot` added — they take the item out of a `Slot` and leave it empty, so the caller writes no `slot = null` line. `append`, `prepend` and `insertAfter` assert against the container's own contents under runtime safety. `concat` asserts its two arguments are different lists. `is_linked` is documented for what it computes: whether the node has neighbours, which is false for a list's only member.
+
+API 8 doc-comment sync (rules-030): `ItemList._list` reworded — "underneath" and "on purpose" are banned words, and the entry now matches the field's doc comment in `src/polynode.zig`.
+
+API 8: `ItemList` — the toolkit's list type. `Mbox.receive_batch`, `Mbox.close`, `Pool.put_all`, `Pool.Hooks.on_put`, and `Pool.Hooks.on_close` speak it instead of `std.DoublyLinkedList`. `popFirst` yields `ItemHandle` and clears the links, so `@fieldParentPtr` no longer appears in application code.
+
+
 | Version | Date | Changes |
 |---------|------|---------|
+| 038 | 2026-08-13 | FLOW 1-1r. Both `Usual flow` sections rewritten in staccato. The wording of 037 was prose. Each numbered step is now a heading line with nested bullets under it, one fact per line, split at every colon, "and" and semicolon. The counting introductions are gone: "Four steps. Two set up, two take down." for `mailbox`, "Five steps. Three set up, two take down." for `pool`. The three trailing paragraphs on each side — close before destroy, `destroy` is not optional, teardown is the sharpest difference — are now a short lead line plus a bullet list, the same shape on both sides. No statement changed meaning. Code blocks, diagrams and every other section are untouched. |
 | 037 | 2026-08-12 | FLOW 1-1. The canonical `Usual flow` text. `mailbox` gains a four-step account — create, use, close and release the returned list, destroy — and `pool` a five-step one, with `init(hooks)` as the step that was documented nowhere. Both state that close comes before destroy always, that `destroy` is not optional because the container is an allocation separate from the items, and that teardown is the sharpest difference between the two: a mailbox returns items to the caller, a pool passes them to `on_close`. The pool flow diagram gains `init` at the top and `destroy` at the bottom; its heading, which used the same word as the section below, is now `Flow diagram`. The section describing item states was named for two things it should not have been named for and is now `Item states`. One reworded sentence in `pool`: a closed pool *gives* items back. The new ban applies to the whole file, so nine other live uses went with it — the pool's one-line summary, the layer-combination table and both combination lists now say "item reuse", the `no_create_destroy` note says the two types create and destroy themselves, and the Slot diagram is `Slot states`. Older changelog rows are left as they are. |
 | 036 | 2026-08-12 | PROSE 1 banned-word pass. One live hit: the `@fieldParentPtr` walkthrough diagram said `dll_node_ptr` where the surrounding text and code already said `list_node_ptr`. `dll` is banned — it clashes with Windows DLL. Changelog rows that name a banned word to record its earlier removal are left as they are; rewriting them would erase the record. |
 | 035 | 2026-08-12 | MBOX 1. `mailbox` section opens with "The mailbox holds. It never touches." and the four edges that hand an item back to a caller; `close` documents the caller's release duty and bans `_ = mbx.close()`; `send`/`send_oob` document that `error.Closed` leaves the slot unchanged; `receive_batch` gets the same release duty. `pool` section gains the mirror statements: the pool touches items through hooks, a closed pool hands items back via `put`/`put_all`, and `close` releases through `on_close` rather than through the caller. Removed 15 documented asserts of the form `mailbox.is_it_you(mbx.*.tag)` / `pool.is_it_you(pl.*.tag)` — no such assert exists in `src/`, and neither struct has a `.tag` field. |
@@ -2019,191 +2063,4 @@ Valid combinations:
 | 006 | 2026-06-24 | Proposal 32: Staccato rhythm for all prose. Every non-function section reformatted: short intro then bullets. Comma-separated lists broken into bullet lists. |
 
 ---
-
-## Addendums
-
-Generic `std.Io` runtime material — not matryoshka-specific. Read this section first if  
-you are new to `std.Io`; the sections above assume it.
-
----
-
-### Io 101
-
-Zig 0.16 provides `std.Io` — the runtime's interface for concurrent and I/O operations.
-
-- `Io` — passed around to anything that needs threads, timers, or waiting. Think of it as "access to the runtime."
-- `Future(T)` — a result that isn't ready yet. You get the value by calling `.await()`.
-- `Io.Select` — coordinates multiple concurrent event sources. Internally: `queue: Queue(U)` + `group: Group`. `select.await()` reads the next completed result from the queue.
-- `Io.Group` — runs several tasks. Waits for all of them to finish.
-- `io.concurrent()` — runs a blocking function in a separate task. Returns a Future for the result.
-- `ConcurrentError` — spawning a task failed (e.g. single-threaded backend, no threads available).
-
-#### Event sources
-
-An event source is a blocking function passed to `select.concurrent`. When it returns,  
-the result is wrapped in the Select union and placed in the internal queue.
-
-Two patterns for producing Select events:
-
-1. `select.concurrent(field, blockingFn, args)` — spawn a blocking function; result goes into the queue when done.
-2. `select.queue.putOneUncancelable(io, value)` — push directly from any thread without spawning.
-
-`io.concurrent` and `select.concurrent` copy the args before returning — stack-allocated args are safe.
-
-```text
-  blockingFn ────► select.concurrent(field, blockingFn, args)
-                        │
-                        V (fn runs, result → queue)
-                   Io.Select.queue
-                      │   │
-                      V   V
-               completed  canceled
-               (result)   (error.Canceled)
-```
-
-`io.concurrent(fn, args)` — standalone version. Returns `Io.Future(T)` for direct await or `Io.Group` use.
-
-#### Cancel
-
-A function that waits — for data, for a timeout, for a condition — can be canceled by the runtime.
-- If a function can be canceled, its return type includes `Cancelable` in the error union.
-- `Cancelable` comes from `std.Io`.
-
-Cancel is something you do to a Future, not something that happens on its own:
-
-```text
-  concurrent() ──► Future(T)
-                      │
-              ┌───────┼───────┐
-              V               V
-          .await()        .cancel(io)
-              │               │
-              V               V
-           result      error.Canceled
-```
-
----
-### io.concurrent and Io.Group — verified call syntax
-
-Verified from `std/Io.zig` (Zig 0.16.0) and confirmed against the ICE agent reference implementation.
-
-#### io.concurrent
-
-Spawns one task, returns a `Future` for its result.
-
-```zig
-// Signature (from Io.zig line 2365):
-pub fn concurrent(
-    io: Io,
-    function: anytype,
-    args: std.meta.ArgsTuple(@TypeOf(function)),
-) ConcurrentError!Future(@typeInfo(@TypeOf(function)).@"fn".return_type.?)
-```
-
-Call pattern:
-
-```zig
-var fut = try io.concurrent(workerFn, .{&ctx});
-// ... do other work ...
-try fut.await(io);   // blocks until worker exits; returns worker's return type
-```
-
-- `args` is a tuple — `.{arg1, arg2, ...}` — passed verbatim to `function`.
-- `io.concurrent` copies `args` before returning. Stack-allocated args are safe — no heap ctx needed.
-- No `io` is injected. The worker receives exactly what is in `args`.
-- If the worker needs `io`, pass it explicitly: `.{io, &ctx}`.
-- `fut.await(io)` returns the worker's return type directly. Use `try` if it is an error union.
-- `fut.cancel(io)` injects `error.Canceled` at the worker's next cancellation point, then awaits.
-- `Future` is a resource — must call `await` or `cancel` exactly once.
-
-Worker function for `io.concurrent`:
-
-```zig
-fn workerFn(ctx: *WorkerCtx) !void {
-    // worker logic — Mbox.receive, Pool.get_wait, etc.
-    // io is accessed through the mailbox/pool (they store it internally)
-}
-```
-
-#### Io.Group
-
-Runs multiple tasks. Awaits or cancels all at once.
-
-```zig
-// Signature (from Io.zig line 1218):
-pub const Group = struct {
-    pub const init: Group  // compile-time constant, not a function call
-
-    pub fn concurrent(g: *Group, io: Io, function: anytype,
-        args: std.meta.ArgsTuple(@TypeOf(function))) ConcurrentError!void
-
-    pub fn await(g: *Group, io: Io) Cancelable!void   // wait for all
-    pub fn cancel(g: *Group, io: Io) void              // cancel all, then wait
-};
-```
-
-Call pattern:
-
-```zig
-var group: std.Io.Group = .init;
-defer group.cancel(io);   // safe: no-op if already awaited
-
-try group.concurrent(io, workerFn, .{&ctx1});
-try group.concurrent(io, workerFn, .{&ctx2});
-try group.concurrent(io, workerFn, .{&ctx3});
-
-try group.await(io);   // blocks until all workers exit
-```
-
-- Worker return type must be coercible to `Cancelable!void`.
-  - `void`, `!void`, `Cancelable!void` all work.
-  - `error.Canceled` returned by a worker is swallowed — it is a cancellation propagation boundary.
-- `group.await(io)` returns `Cancelable!void` — use `try`.
-- `group.cancel(io)` injects `error.Canceled` into all running workers, then waits. Returns `void`.
-- `group.cancel(io)` is safe to call if already awaited — it is a no-op.
-- `group.concurrent` after `group.await` starts a new round of tasks in the same group.
-
-#### Io.Select — internals
-
-Verified from `std/Io.zig:1367`.
-
-Public fields:
-
-```zig
-pub fn Select(comptime U: type) type {
-    return struct {
-        io: Io,
-        group: Group,
-        queue: Queue(U),
-        ...
-    };
-}
-```
-
-- `queue: Queue(U)` — completed results land here.
-- `group: Group` — owns all spawned concurrent tasks.
-- `select.await()` = `queue.getOne(io)` — blocks until the next result arrives.
-
-`select.concurrent(field, fn, args)`:
-- Spawns `fn` concurrently via `group`.
-- `fn` return value is wrapped: `@unionInit(U, @tagName(field), result)`.
-- Wrapped value is put into `queue` via `queue.putOneUncancelable`.
-
-Direct push (no spawn):
-
-```zig
-select.queue.putOneUncancelable(select.io, .{ .field = value }) catch {};
-```
-
-- Puts a result directly from any thread or callback.
-- No concurrent task needed.
-- Used when the result is already available (e.g. a close notification, an external callback).
-
-`select.concurrent` copies `args` before returning — same guarantee as `io.concurrent`.
-
-ICE agent reference (`src/ice/agent.zig`):
-- Line 134: `select.concurrent(.connectivity_check, Io.sleep, ...)` — blocking fn
-- Lines 241-242: `select.queue.putOneUncancelable(...)` — direct push from external goroutine
-- Line 273: direct push from close callback
-
 

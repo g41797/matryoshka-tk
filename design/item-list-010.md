@@ -773,7 +773,7 @@ Prevention was always immune, because it reads nothing.
 ## 8. Decisions — round 6
 
 Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
-are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-065.md` and `context.md`, so the  
+are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-066.md` and `context.md`, so the  
 labels stay even though these are no longer questions.
 
 Every full argument lives in sections 5-7. This section records what was decided  

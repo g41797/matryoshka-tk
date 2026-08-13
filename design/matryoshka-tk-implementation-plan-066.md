@@ -1,7 +1,7 @@
-# Matryoshka Zig — Implementation Plan (064)
+# Matryoshka Zig — Implementation Plan (066)
 
-Change from -064: FLOW 1-1 done. The canonical text is written; 1-2 and 1-3  
-wait on the owner reading it.
+Change from -065: FLOW 1-1r done. The canonical text is unchanged in meaning  
+and rewritten in staccato; 1-2 and 1-3 wait on the owner approving it.
 
 **Reconstructed 2026-08-12.** Versions -056 through -059 were lost: the agent  
 deleted -059 while the command meant to create -060 had already failed, and  
@@ -253,7 +253,7 @@ a pool working together in one application is narrative and belongs in
 
 ### FLOW 1-1 — the canonical text. DONE 2026-08-12
 
-Written into [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md):  
+Written into [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):  
 `### Usual flow` under `## mailbox` (four steps) and under `## pool` (five,  
 the extra one being `init`). Both carry the close-before-destroy rule, the  
 statement that `destroy` is not optional because the container is an  
@@ -266,6 +266,8 @@ Doc-only, as planned. No `src/`, `tests/`, `examples/` or `stories/` change.
 
 **Owner reads the wording before 1-2 copies it.** The two sections in the api  
 reference are the whole deliverable; everything downstream is a copy of them.
+
+Wording rejected on 2026-08-13. Reworked in FLOW 1-1r, below.
 
 Original scope, for the record:
 
@@ -283,6 +285,28 @@ Original scope, for the record:
 
 Bumps: api reference, rules, plan. Gate: `check_design.sh` exit 0.  
 No `src/`, `tests/`, `examples/` or `stories/` change. Doc-only.
+
+### FLOW 1-1r — the same text, in staccato. DONE 2026-08-13
+
+Owner rejected the 1-1 wording. It was prose, and  
+[rules-044.md](rules-044.md) Part 6 forbids prose.
+
+What changed in [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):
+
+- Every numbered step is a heading line. Its facts are nested bullets below
+  it, one per line.
+- Every colon, "and" and semicolon that carried a second fact became a
+  nested bullet.
+- The counting introductions became counts: "Four steps. Two set up, two
+  take down." and the pool equivalent.
+- The three trailing statements became a short lead line plus a bullet list,
+  the same shape on both sides.
+
+No statement changed meaning. Code blocks and diagrams untouched.
+
+Doc-only. Bumps: api reference, plan. Gate: `check_design.sh` exit 0.
+
+**Owner approves the new wording before 1-2 starts.**
 
 ### FLOW 1-2 — propagate
 

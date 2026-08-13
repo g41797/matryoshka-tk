@@ -23,7 +23,7 @@ over tags does not compile.
 
 Change from patterns-022: API 11 — `fromNode`/`mustFromNode`/`toNode` renamed to  
 `fromPoly`/`mustFromPoly`/`toPoly`. Every idiom that names them is updated.  
-Companion cross-reference updated to matryoshka-api-reference-037.md.
+Companion cross-reference updated to matryoshka-api-reference-038.md.
 
 Change from patterns-021: API 10 — `list.iterate()` becomes `list.iterator()`.  
 "Walk a batch — ItemList" gains a "Take one item out" idiom for `remove` and  
@@ -67,7 +67,7 @@ Change from patterns-011:
 One unified catalog. Every pattern and idiom appears once, in logical order.  
 Companion: [rules-044.md](rules-044.md) — what is mandatory.  
 Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the thinking model.  
-Companion: [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -94,7 +94,7 @@ Order of this catalog.
 
 ## Slot and transfer idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-037.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-038.md).
 
 ### Empty Slot initialization
 
@@ -308,7 +308,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-037.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-038.md).
 
 ---
 
@@ -651,7 +651,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-037.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-038.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -713,7 +713,7 @@ Why.
   Under the handle API it compared two look-alike `ItemHandle`s, and only the  
   tag stood between a match and a silent mistake.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-037.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-038.md).
 
 ### Pool-as-message
 

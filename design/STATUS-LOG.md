@@ -2,6 +2,103 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-13 — API 13 scoped: the reference becomes a book
+
+FLOW postponed by the owner. 1-2 and 1-3 keep their scope and wait.
+
+Owner edited `matryoshka-api-reference-038.md` directly, same day. The  
+`## Addendums` / `### Io 101` section removed. The `API 8` through `API 12`  
+narrative blocks moved from the top of the file into `## Change log`, above  
+the version table. File went 2210 to 2066 lines. Two pointers did not follow  
+the edit — `context.md` still promises a trailing Addendums/Io 101 section,  
+and line 1827 of the reference still says "See **Addendums → Io 101**".  
+Recorded, not fixed; they are 13-1 deliverables.
+
+The finding, owner's: the reference is not a book. Mixed styles, part prose.  
+Wrong order — `ItemHandle` at line 24, `Slot` at line 30, before Matryoshka  
+is introduced. Written from the implementer's mindset. Flat, 22 `##` in a  
+row with nothing above them. No introduction at all. The foundation —  
+intrusion and type erasure — absent, though it is what everything stands on.  
+Signature lists that repeat the signatures they precede. Too much detail.
+
+The mindset change behind all of it. At the start the reference was the  
+source: `src/` doc comments were written from it, code was created by  
+iterating against it. The code is working now and the flow reversed —  
+change the API, then update the doc. So the reference is not a design  
+document any more. It is a book for the user. If the user needs a deep dive  
+they visit the source or an example.
+
+Owner's ruling, confirmed in session: **detail moves into the code.** Edge  
+cases become `///` and `//!` comments in `src/*.zig`, in human form — a  
+sentence a person reads, not a spec clause. The `>` note at the top of the  
+reference, which still declares the old direction, goes.
+
+Two findings from reading the ground.
+
+| finding | consequence |
+|---------|-------------|
+| reference lines 233-707 already exist near-verbatim as `kitchen/docs/api/polynode/manual-definition.md` and `kitchen/docs/api/polyhelper.md`, both hand-maintained, both in the mkdocs nav | 475 lines drop for a pointer, zero risk |
+| `src/` already carries 439 `///` lines across the three modules, and `is_linked` and `Mbox.send` already read in human form | 13-2 is gap-filling, not writing from scratch |
+
+Naming advice given and accepted: keep the file name, bump `-038` to `-039`,  
+change the `# H1` only. Seven design docs link to it, the version suffix is  
+how this repo records change, and `check_design.sh` gates the links.
+
+Written: [api-13-book-001.md](api-13-book-001.md). Twelve sections plus a  
+`## 0` callout. Registered in `context.md` under Design notes.
+
+Process correction from the owner: a plan this size is design material and  
+belongs in `design/` as a versioned note, not only in Claude's plan file.  
+The first draft went to the plan file and was rejected for that reason.
+
+Gotcha recorded for the next agent: `check_design.sh` reads a bare `x.md` in  
+prose as a cross-reference and fails on files that do not exist yet. Name  
+planned files without the suffix. `.check_design_allow` does not help — it  
+is scoped to the glossary gate only.
+
+Open, and blocking Part 6 only: the owner rules on the Part 6 section list  
+before its body is written. Parts 1-5 do not depend on it.
+
+`check_design.sh` exit 0. No `*.zig` change. No code touched.
+
+### 2026-08-13 — FLOW 1-1r: the same flow, in staccato
+
+Owner read the two `Usual flow` sections and did not approve the wording.  
+The finding: prose where the rules call for bullets. rules-044.md Part 6 is  
+explicit — a document is not a novel, long sentences disabled, and a bullet  
+that splits at a colon or at "and" is demoted to a nested bullet, one item  
+per line. 037 broke all three.
+
+Where it broke, both sides symmetrically:
+
+| offender | fault |
+|----------|-------|
+| the counting introduction | a sentence doing a heading's job |
+| mailbox step 3, pool step 4 | four facts in one bullet |
+| pool step 2 | a colon, then a three-item comma list on one line |
+| the three trailing paragraphs | chained at colons, semicolons and "and" |
+
+FLOW 1-2 stays blocked, and stayed blocked correctly — it copies this text  
+outward, so approving it before the wording was settled would have spread  
+the prose into `src/` headers and six mkdocs pages.
+
+Rewritten in [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):
+
+- Each numbered step is a heading line. The facts hang under it as nested
+  bullets, one per line.
+- The introductions are counts, not sentences: "Four steps. Two set up, two
+  take down." and "Five steps. Three set up, two take down."
+- The three trailing statements — close before destroy, `destroy` is not
+  optional, teardown is the sharpest difference — are a short lead line plus  
+  a bullet list.
+- The mailbox and the pool side have the same shape, bullet for bullet.
+
+No statement changed meaning. Code blocks, diagrams and every other section  
+untouched. 037 is superseded and gone; all cross-references moved to 038.
+
+`check_design.sh` exit 0 — dead links, orphans, forward tense and glossary  
+all clean. No `*.zig` change, so no build script was required.
+
 ### 2026-08-12 — FLOW 1-1: the usual flow, written once
 
 Owner's finding: `src/mailbox.zig` and `src/pool.zig` open with the edges —  
@@ -34,7 +131,7 @@ first because it is the declared source of truth, it is versioned, and
 application. 1-2 is deliberately blocked on the owner reading the canonical  
 wording, because everything it writes is a copy of it.
 
-Written in [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md):
+Written in [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):
 
 - `### Usual flow` under `## mailbox` — four steps, with a runnable sketch:
   `mailbox.new(io, alloc)`, send/receive from any number of tasks, `close`  

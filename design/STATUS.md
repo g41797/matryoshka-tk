@@ -29,7 +29,7 @@
 ## Sources of Truth
 - Doc index: context.md — one line per doc. Start here.
 - Concepts and thinking model: matryoshka-concepts-002.md
-- API: matryoshka-api-reference-037.md
+- API: matryoshka-api-reference-038.md
 - Zig details: matryoshka-zig-0.16-notes-003.md
 - Architecture: matryoshka-architecture-foundation-4-006.md
 - Vocabulary: language-of-matryoshka.md
@@ -38,7 +38,7 @@
 - Legacy mailbox: /home/g41797/dev/root/github.com/g41797/mailbox/
 - Odin proto: /home/g41797/dev/root/github.com/g41797/matryoshka/
 - tofu (build infra): /home/g41797/dev/root/github.com/g41797/tofu/
-- Plan: matryoshka-tk-implementation-plan-065.md (slim, state-only)
+- Plan: matryoshka-tk-implementation-plan-066.md (slim, state-only)
 - Rules: rules-044.md
 - Receive router design note: receive-router-002.md
 - Table dispatch design note: table-dispatch-002.md
@@ -134,18 +134,41 @@ reference is the canonical text: create, use, close, destroy for a mailbox,
 and the same with `init(hooks)` for a pool. Close before destroy, always;  
 `destroy` is not optional. `lifecycle` and `hands` are banned words.
 
-Last completed stage: FLOW 1-1, 2026-08-12.  
-Current plan: matryoshka-tk-implementation-plan-065.md.
+Both sections are staccato. Every numbered step is a heading line with nested  
+bullets under it, one fact per line. The trailing paragraphs are bullet lists  
+with a short lead line, the same shape on the mailbox and the pool side.
+
+The api reference was edited by the owner on 2026-08-13. The `## Addendums` /  
+`### Io 101` section is gone. The `API 8` through `API 12` narrative blocks  
+moved from the top of the file into `## Change log`, above the version table.  
+Two stale pointers survive that edit and are listed in api-13-book-001.md.
+
+Last completed stage: FLOW 1-1r, 2026-08-13.  
+Current plan: matryoshka-tk-implementation-plan-066.md.
 
 ## Next
 
-**FLOW 1-2** — copy the canonical text outward: the two `src/` `//!` headers,  
-the mailbox and pool index pages under `kitchen/docs/api/`, and both  
-`kitchen/docs/tools/` pages. Blocked  
-until the owner has read the two `Usual flow` sections in  
-matryoshka-api-reference-037.md; everything 1-2 writes is a copy of them.  
-**FLOW 1-3** — the page showing a mailbox and a pool in one application —  
-follows, and is scoped after 1-2.
+**API 13-1** — the api reference becomes a standalone book for the user.
+
+Plan: [api-13-book-001.md](api-13-book-001.md). Read it before anything else.  
+It carries the reason, the eight findings, the seven-part structure, the  
+displacement table, and the deliverables.
+
+The mindset changed. The reference is no longer the source for `src/` doc  
+comments; the code is working and the flow reversed. Detail — asserts, edge  
+cases — moves out of the book and into `src/*.zig` doc comments in human  
+form. Nothing leaves the book before it exists in the code or in a kitchen  
+page.
+
+**Owner rules on Part 6 first.** Section 9 of the design note. Part 6 folds  
+ten flat sections into one part; it is the largest judgment call in the  
+stage. Parts 1-5 can be built while waiting.
+
+Later stages, sketched in Section 10: 13-2 the code takes the detail, 13-3  
+the book sheds it, 13-4 the book governs every other doc.
+
+**FLOW is postponed.** FLOW 1-2 and FLOW 1-3 are not the next work. Owner's  
+call, 2026-08-13. Their scope is unchanged and still in the plan.
 
 The list below is the remaining candidate pool, owner's call on order.
 

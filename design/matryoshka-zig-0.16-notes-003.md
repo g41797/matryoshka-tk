@@ -14,7 +14,7 @@ The port shipped, so the block-by-block build instructions went with it; the
 Odin idiom mapping moved to
 [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md).
 
-Companion: [matryoshka-api-reference-037.md](matryoshka-api-reference-037.md) — the API surface.\  
+Companion: [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md) — the API surface.\  
 Companion: [rules-044.md](rules-044.md) — the rules these constraints justify.
 
 `.minimum_zig_version` is `0.16.0`.
@@ -305,7 +305,7 @@ item reliably. If `Pool.put` could itself fail with `error.Canceled`, the item
 would be lost with nothing holding it. `Pool.put` returns `void`.
 
 The per-function cancel contract lives in
-[matryoshka-api-reference-037.md](matryoshka-api-reference-037.md).
+[matryoshka-api-reference-038.md](matryoshka-api-reference-038.md).
 
 ## 7.4 `error.Canceled` is not `error.Closed`
 
