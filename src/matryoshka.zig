@@ -6,10 +6,16 @@
 //! Components:
 //! - polynode: runtime type identification and intrusion
 //! - mailbox: item passing
-//! - pool: item lifecycle management
+//! - pool: item reuse through your hooks
 //!
 //! Full documentation:
 //! https://g41797.github.io/matryoshka-tk/
+//!
+//! Examples:
+//! https://g41797.github.io/matryoshka-tk/examples/
+//!
+//! The three together:
+//! https://g41797.github.io/matryoshka-tk/examples/flow/
 //!
 pub const polynode = @import("polynode.zig");
 pub const mailbox = @import("mailbox.zig");

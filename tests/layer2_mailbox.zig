@@ -1,7 +1,7 @@
 /// Create an Event on the heap, in `slot`, with `code` set.
 ///
 /// Every item these scenarios send is allocated. Sending an item that lives
-/// in the test frame would break the rule in rules-044.md Part 8, and the
+/// in the test frame would break the rule in rules-046.md Part 8, and the
 /// mailbox would hand back a pointer the allocator never made.
 fn newEvent(alloc: std.mem.Allocator, slot: *Slot, code: i32) !void {
     try EventPolyHelper.create(alloc, slot);
@@ -613,7 +613,7 @@ test "48 - receive: HELD to IN_FLIGHT, slot is non-null" {
 // a list of one it would not fire — is_linked reads neighbours, not membership.
 //
 // The only scenario in this file that keeps its items in the test frame. The
-// rule in rules-044.md Part 8 bans *sending* a stack item; nothing here is
+// rule in rules-046.md Part 8 bans *sending* a stack item; nothing here is
 // sent. The items go into a plain ItemList and are checked for links, so no
 // allocator is involved and none is needed.
 test "49 - send linked item: is_linked detection (assert documented)" {

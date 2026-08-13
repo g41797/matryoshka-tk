@@ -2,6 +2,389 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+### 2026-08-13 — rules-046: a bulk repoint excludes STATUS-LOG.md
+
+Owner's instruction, straight after 13-3 reported the slip that earned it.
+
+The rule, in Part 0 under Documents, next to the doc link rule it qualifies: a
+bulk repoint excludes `design/STATUS-LOG.md`. A past entry names the version that
+was current when it was written, and that is the fact it records. Name the files,
+or exclude the log.
+
+The log already had two exemptions, both about reading it — the banned-word scan
+and three of the four design-gate checks. This is the first about writing to it.
+
+Repointing this one cost more than the rule text. Fifteen files named `rules-045`,
+and two of them are not documents: `kitchen/tools/check_design.sh`, which names
+the rules file in four comments, and `tests/layer2_mailbox.zig`, which cites Part
+8 in two. Both were updated. The doc link rule speaks only of "every other doc",
+so a stale name in a script or a test comment is outside it — worth widening in
+13-4, since these two were found only by grepping past `*.md`.
+
+`STATUS-LOG.md` itself was excluded from the repoint, by the rule being added.
+
+Gates: `check_design.sh` exit 0, `build_and_test_debug.sh` 195/195.
+
+### 2026-08-13 — api-13-book-001.md: the owner deleted it, references removed
+
+The owner deleted `design/api-13-book-001.md` and confirmed it. Both references
+to it are gone: the `context.md` line, and the related-documents entry in
+`api-13-book-002.md`. The prose mentions of `-001` inside `-002` stay — they say
+what the first version said and what the owner answered, which is history and
+reads fine without a link.
+
+`check_design.sh` is at **exit 0**, clean on all four checks, for the first time
+since 13-1 started.
+
+The instruction that made this take three stages: 13-1 was told `-001` "is the
+annotated record and stays on disk". When the file went missing mid-session, an
+agent cannot tell a deliberate deletion from an accident, and git is owner-only,
+so the dangling references were left as the visible marker and reported instead
+of quietly removed. That was the right default, and the cost was two gate hits
+carried across 13-1, 13-2 and 13-3.
+
+### 2026-08-13 — API 13-3: the book sheds the detail
+
+The book is now matryoshka-api-reference-040.md. 2062 lines down to 2022.
+
+The line the stage cut on, agreed with the owner before any edit: a precondition
+the caller has to satisfy stays in the book, because a reader needs it to write
+the call. The assert that enforces it goes, along with which build mode it fires
+in, what it is blind to, and what the check costs. A row landing in `src/` in
+13-2 made removal possible, not mandatory — that distinction is the whole stage.
+
+All nine `Assert:` blocks are gone. Where the surrounding bullets did not already
+carry the precondition, one line of prose does: "The Slot must be empty", "the
+tag list must not be empty". Two of the nine collapsed to "same preconditions as
+`send`" and "same three preconditions as `get`" rather than repeating.
+
+Also out of Parts 3 to 5: the two-checks-per-insert reasoning with its
+`_holds`-versus-`is_linked` argument, the O(n) cost of the safety checks, the
+`concatByMoving`-would-ring-the-items explanation, the `moveFromList` header
+assert, the `!is_linked` assert site list, the `in_pool_count` lock mechanics,
+the pool's internal lock order, and the three-bullet reentrancy list with its
+not-deadlock reasoning.
+
+One row was deleted rather than moved. The book said `init` asserts each tag is
+not null. No such assert exists, and `hooks.tags` holds non-optional pointers, so
+none can. 13-2 refused to write the clause into the code; 13-3 removed it from
+the book. Section 5 of the carry-over note records both halves.
+
+The `!is_linked` site list is worth naming separately. It named five sites. The
+code has seven distinct ones, eight textually. Removing it closed a wrong
+statement, not just a redundant one.
+
+Three things stayed against their carry-over row, on the owner's ruling asked for
+before the build: the OOB ordering diagram, because Part 4 is where a reader
+learns the ordering and six lines teach the whole model; the two-`popFirst`
+warning, trimmed from five bullets to two, because a book reader never opens
+`polynode.zig` to find it; and two behavioural contracts that are not asserts at
+all — waiter order is not FIFO, and put-then-get promises no count, identity or
+order.
+
+Parts 1, 2, 6 and 7 were not touched. None of their material is a carry-over row.
+
+A slip, caught and undone. Repointing the eleven documents that name the book was
+done with `grep -rl ... design/ | xargs sed`, and `design/STATUS-LOG.md` is in
+`design/`. It rewrote one historical line in the Part 6 entry from `-039` to
+`-040`. Restored. The log is append-only and its past entries name the version
+that was current when they were written — a bulk repoint must exclude it. The
+banned-word rule already excludes it for the same class of reason; the repoint
+rule should say so too.
+
+Gates. `build_and_test_debug.sh` exit 0, 195/195 — no `src/` file changed this
+stage. `check_design.sh` exit 1 with the same two hits and no others, both the
+missing `design/api-13-book-001.md`. One transient hit of my own along the way:
+the plan sentence "`matryoshka-api-reference-039.md` → `-040.md`" tripped the
+backtick reference check, correctly — the old file is gone. Reworded to a link to
+the new one. `audit_edges.sh` re-run because the api page changed.
+
+Post-stage cleanup: nothing to clean. No code changed, and the stage removes
+text rather than adding it. The next stage is the cleanup, at the owner's
+direction — 13-4 is now a full prose pass over `src/` and the documents, and
+"the book governs" moved to 13-5.
+
+Docs. Book `-039` → `-040`, eleven documents repointed. Carry-over note `-002` →
+`-003`: Section 2 discharged from both ends, with what 13-3 kept against its row
+and why. Plan `-068` → `-069`, 13-3 collapsed to a done entry, 13-4 written up
+with the owner's reasoning for its position in the order. `STATUS.md` and
+`context.md` follow.
+
+### 2026-08-13 — API 13-2: the code takes the detail
+
+All 43 carry-over rows are now `///` or `//!` comments in `src/`. Doc comments
+only. No behaviour change, no new declaration, no snippet in `src/`.
+
+Where they landed. `src/polynode.zig` 15, `src/mailbox.zig` 11, `src/pool.zig`
+17. Every row had an existing `pub` declaration to attach to — nothing needed a
+home invented for it. Four `Pool.Hooks` fields took their rows as `///` on the
+field. The insert-check facts went on the `ItemList` type rather than repeated
+on six insert functions, because the rules forbid the repetition more than they
+demand the placement.
+
+Numbers were deliberately not written into doc comments. The `is_linked` blind
+spot is stated as a property every `!is_linked` assert inherits, with no count,
+because a count in a `///` goes stale on the next assert added and nothing
+checks it. This is not a small point: the carry-over note said five such
+asserts, `rules-045.md` says seven, and a live count found eight textual sites
+across seven distinct ones. Both written numbers were wrong. Recorded in Section
+5 of the carry-over note.
+
+The documented-asserts MUST earned its place. Rules Part 4 says a documented
+assert must exist in `src/`, copied not inferred. Checking the rows against the
+source found one that cannot exist: the book says `init` asserts each tag is not
+null, but `hooks.tags` is `[]const *const anyopaque` and its elements are not
+optional. The clause was not written into the code. The book still carries it,
+and 13-3 deletes it rather than moving it.
+
+The two owner-approved changes. `src/matryoshka.zig` line 9 no longer says
+"pool: item lifecycle management" — it says "pool: item reuse through your
+hooks", and one of the seven banned-word sites is closed. `polynode.zig`'s
+header no longer ends with "No clue how to get rid of them. Be patient."; it
+says the second variant omits `create()` and `destroy()` and how a type opts in.
+
+Module-head links, Section 6.6 of the design note. Four files, each pointing at
+its own examples root on the published site plus `/examples/flow/`. Roots only,
+never a file path — one file rename is already queued and a root survives it.
+
+`hands` remains in two module headers, `mailbox.zig:33` and `pool.zig:31`.
+Banned, both predate this stage, neither touched. The rules entry quotes the
+pool one as its own example of the ban. Reported, owner's call.
+
+Post-stage cleanup: one real find. The hook discipline text I had put in
+`pool.zig`'s `//!` header repeated what the `Hooks` doc comment already said.
+Removed from the header; the `Hooks` doc keeps it, which is where it renders
+beside the fields it governs. Also reworded five new lines that used `holds`,
+discouraged in new text — they say "is not empty" now. Nothing else was
+obsolete or extractable; the stage added no code.
+
+Docs verification. `zig build docs` exit 0, and the step is named `docs`, not
+`apidocs` — the rules text names the target, the step is something else.
+`tar tf kitchen/docs/apidocs/sources.tar` lists five non-`std` files, all of them
+under `matryoshka/`. Nothing leaked from a sibling target. The browser console
+check the rules also require was not run; no headless browser here, and it needs
+the owner's environment.
+
+Gates. `build_and_test_debug.sh` exit 0, 195/195. `check_design.sh` exit 1 with
+the same two hits it had before the stage, both the missing
+`design/api-13-book-001.md` — no new ones. `audit_edges.sh` matches the MBOX 1
+baseline exactly: DISCARDED 0, BARE 90, CATCH-FREES 6, COVERED 102, 0 unmatched
+asserts. Its second section, documented asserts with no assert in `src/`, is
+clean. Banned-word scan run live over `src/*.zig` against the full list: the two
+`hands` hits, nothing else.
+
+Docs. `api-13-carryover-001.md` → `-002.md`: Section 2 marked landed and kept
+for 13-3, new Section 5 for the three findings. Plan `-067` → `-068`, 13-1 and
+13-2 collapsed to a line each, 13-3 written up with the deletion row called out.
+`STATUS.md` and `context.md` follow.
+
+### 2026-08-13 — API 13-1, Part 6: the grouping the owner ruled on
+
+The owner approved the four-section proposal as written and said to build it.
+Part 6 of `matryoshka-api-reference-039.md` now has four `###` sections:
+identity across the tools, the slot rule, concurrency and cancel, what the
+toolkit assumes.
+
+The eleven sections it groups were moved, not rewritten. Each dropped one
+heading level — `###` to `####`, and so on down to `######` under "No raw
+allocator calls" — and moved into its group. Fence-aware: a `#` inside a code
+block is left alone. Two reorderings inside a group: `Item states` moved up
+ahead of the cleanup patterns, because the patterns are read against it, and
+`Thread-safety contract` moved ahead of the three cancel sections, because the
+cancel model assumes it.
+
+Each group heading gets one line saying what the group is for. That is the only
+new prose. The Part 6 lead-in now names the four sections instead of four loose
+themes, and the blockquote that pointed at `STATUS.md` for an undecided grouping
+is gone — there is nothing left to decide.
+
+Gates: `build_and_test_debug.sh` exit 0, 195/195. `check_design.sh` exit 1,
+with the same two hits as before this work and no others — both are the missing
+`design/api-13-book-001.md`, which is the owner's to restore. Orphans,
+forward-looking prose and glossary conformance all ok. `audit_edges.sh` was not
+re-run: no transfer code changed, and the api page change is a heading move
+inside a part the audit does not read. Banned-word scan clean on the new prose.
+
+Post-stage cleanup: nothing to clean. The change is a heading move plus five
+lines of new prose; no code, no duplication, no obsolete comment. The two open
+findings from the first half of the stage — the slogan register and the
+`lifecycle` footprint — are still the owner's, still recorded in Section 3 of
+`api-13-carryover-001.md`.
+
+### 2026-08-13 — API 13-1: the reference becomes a book
+
+`matryoshka-api-reference-038.md` → `-039.md`. 22 flat `##` headings became 8.
+2066 lines became 2024, and about 500 of the old lines are gone while three new
+parts were written.
+
+Parts 3, 4 and 5 now carry the same five pieces in the same order: what this
+is, participants, usual flow, the API in named groups, where to go deeper. The
+shape is learned once.
+
+Part 2 was the interesting one. The owner's correction to `-001` governs it:
+the handle mechanism is Zig's — a `*Node` plus `@fieldParentPtr` — and only the
+term `ParentHandle` is ours. So Part 2 claims no invention, `ItemHandle` was
+moved out of it into Part 3 as the same idea with a tag added, and the analogy
+between the two is the bridge that makes Part 3 cheap to read.
+
+Part 2's specimen is a new test file, `tests/zig_mechanisms.zig`, four
+scenarios, 195/195. It imports nothing from Matryoshka. Its header says it
+exists for the book, because without that line someone deletes it later as a
+test that asserts nothing about the toolkit. Scenario B3 is the load-bearing
+one: it casts one struct as two different parent types, both compile, both run,
+and only one is right. That is the gap polynode closes, and Part 3 opens there.
+
+`-001` said 13-1 changes no `*.zig`. `-002` replaced that with this narrow
+exception, and it earned itself: the snippet is extracted from a file a kitchen
+script builds, not from the stdlib, whose path moves when the toolchain moves.
+
+Every snippet in Parts 2 through 5 now names its source file, and every source
+is a file `build_and_test_debug.sh` compiles — `examples/layer1/021`, `023`,
+`layer2/053`, `layer3/089`, and the new test.
+
+475 lines of manual type definition and `PolyHelper` walkthrough left the book
+for two pointers. Both target pages are hand-maintained, both were already in
+the mkdocs nav, and no generator writes them — so the delete cost nothing. The
+complexity table went with no replacement; it was never for the reader.
+
+Part 5's `Hooks` section sits one level above Get and Put, last in the part.
+Get and Put are what you call; hooks are what you write. Different act,
+different reader, so not the same list. The group name is `Create and destroy`,
+and hooks get two sentences there with a link down.
+
+**Part 6 was not decided.** The owner rules on it. The eleven cross-tool
+sections sit under a placeholder heading in their old text and old order, and a
+four-section grouping is proposed in `STATUS.md` for the owner to accept or
+reject. Nothing was rewritten.
+
+The detail did not move. Asserts and edge cases are still in the book, and all
+43 of them are now rows in `api-13-carryover-001.md`, one table per `src/` file.
+13-2 writes them into the code, 13-3 removes them from the book. Nothing leaves
+the book before it exists somewhere else.
+
+Two stale pointers from the owner's 2026-08-13 edit are closed: the note
+claiming the file is the source for `///` comments, and the dead
+`Addendums → Io 101` reference, which now links to the page that still exists.
+
+`ParentHandle` got a glossary entry, and the entry says what it is not — it
+carries no type information, where `ItemHandle` carries a tag.
+
+Two banned-word findings, recorded and not fixed. The slogan register survives
+in five places outside this stage's scope, and `lifecycle` has 40 live hits
+under `design/` and `src/`, 26 of them in the architecture document. Both are
+in Section 3 of the carry-over note. One of the `lifecycle` hits is
+`STATUS.md` line 60, and one is `src/matryoshka.zig` line 9.
+
+`tests/zig_mechanisms.zig` was deliberately **not** registered in
+`task1-tests-007.md`. That document is the scenario list for Layers 1-3, and
+this file asserts nothing about any layer. Its registration is Part 2 of the
+book plus its own header. Owner may disagree; it is one bump if so.
+
+**`design/api-13-book-001.md` went missing during this session.** It was on
+disk at session start. No command in this session removed it, and `git` is
+off-limits here, so it was not recovered. Two references to it are live and
+correct — `api-13-book-002.md` §12 and `design/context.md` — and both were left
+as they are, because the owner decided to keep `-001` as the annotated record.
+`check_design.sh` reports exactly those two dead links and nothing else.
+
+Post-stage cleanup: no code was written beyond the new test, so there was
+nothing obsolete to remove. The test was read back for repeated code and has
+none; the four scenarios share `parentOf` and the two parent structs.
+
+Verification: `build_and_test_debug.sh` exit 0, 195/195.
+`check_design.sh` exit 1 — the two dead links above, both caused by the missing
+file, orphans/forward-tense/glossary all clean.
+`audit_edges.sh` matches the MBOX 1 baseline exactly: DISCARDED 0, BARE 90,
+CATCH-FREES 6, COVERED 102, unmatched asserts 0. The api page changed, so the
+rule required the run; nothing regressed.
+
+### 2026-08-13 — the word is banned, and the gate enforces it
+
+Owner's ruling: add it to Part 5, enforce it in `check_design.sh`, record the  
+live hits for later. `rules-044.md` → `rules-045.md`, sixteen files repointed,  
+`-044` removed per the version practice.
+
+Three things were found while doing it, and two changed the shape of the job.
+
+The gate does **not** read Part 5. The glossary check hard-codes its patterns —  
+it was `MayItem`, `Block N`, `ownership`, now plus this word. Adding a word to  
+the rules file alone changes nothing automatic. `-002` §13 claimed otherwise  
+and is corrected: the gate covers `design/*.md` only, so `src/`, `tests/` and  
+`examples/` stay with the manual scan. Part 5 of `-045` now says which four  
+words are automatic and which are not.
+
+The rules file used the word three times itself — twice as instruction, once  
+as a gate exemption. Those were rewritten in `-045`. A rules file may not be  
+born breaking its own new rule, and the glossary check excludes `rules-0NN.md`  
+so nothing would have caught it.
+
+Nine live hits, and the owner's "record for later" met the gate turning red.  
+Resolved by splitting them. Four were one-word swaps in `STATUS.md`,  
+`context.md`, the plan and `api-12-real-pointers-005.md`, all naming the plan's  
+per-stage line — fixed in place, because the allow file's own header says  
+anything that is not history must be fixed in the doc, and adding real drift to  
+it would have hollowed out the file. Five are in `api-13-book-001.md`, where  
+the owner wrote the ban *using* the word; those are allow-listed with the  
+reason, the same case as `STATUS-LOG.md`. Deviation from "record for later",  
+and the reason is written here.
+
+Verification: `check_design.sh` exit 0, `build_and_test_debug.sh` exit 0, no  
+occurrence left in `src/`, `tests/`, `examples/` or `stories/`.
+
+### 2026-08-13 — API 13 answered: `-001` becomes `-002`
+
+Owner read `api-13-book-001.md` and answered it in place, marking notes  
+`[Owner]`. The answers were worked through one at a time, in conversation,  
+each confirmed before the next was asked. Result:  
+[api-13-book-002.md](api-13-book-002.md). No `[Owner]` marker survives — a  
+ruling that has been given is prose in the section it governs.
+
+What the owner decided.
+
+| ruling | consequence in `-002` |
+|--------|-----------------------|
+| Part 2 is named "Zig, interesting parts", and is short — not an academy document | §6.2 rewritten. It says why it exists in its first lines: these are the parts of Zig that Matryoshka is built out of |
+| `Handle` / `ParentHandle` is **part of Zig**. Only the term is ours | no invention is claimed. `*Node` plus `@fieldParentPtr` is the mechanism; the book supplies vocabulary |
+| `ItemHandle` is **part of Matryoshka**, so it belongs to polynode | it moves out of Part 2 into Part 3, named there as the analog. The analogy is the bridge, and is why Part 2 comes first and stays short |
+| "The one rule — one place, one state" reads as advertising | removed, not relocated. The same register elsewhere is recorded, not edited |
+| the Part 2 specimen goes in `tests/`, not `examples/` | new `tests/zig_mechanisms.zig`. It demonstrates a Zig mechanism, not a way to use Matryoshka. Permanent — its header says it exists for the book |
+| pool hooks are not a sibling of Get and Put | Get and Put are called; hooks are implemented. Hooks becomes its own section, one level up, last in Part 5. "register hooks" leaves the group name |
+| snippets come from real working code | extracted from `examples/`, `stories/` or `tests/`, verbatim or trimmed by whole lines. Each names its source |
+| no snippets in `src/` — too messy | a `///` snippet cannot be compiled, so it rots while the example beside it stays green. Module heads get example roots instead |
+
+Corrected in session: the example roots are **per module, not per layer**.  
+The site groups by module — `/examples/polynode/`, `/examples/mailbox/`,  
+`/examples/pool/` — and `layerN/` is storage the reader never sees. There is  
+no layer4 root; `/examples/flow/` is where the three run together, and every  
+module head links to it. The module-head work is 13-2, not 13-1.
+
+`-001` named the displacement record with a word the owner banned in the same  
+session. `-002` does not use it anywhere. The record is `api-13-carryover`,  
+first version — one file, two sections, with a reference chain so it does not  
+orphan, and a retirement path to `design/secondary/` once discharged.
+
+Scope change to 13-1: it now touches one `*.zig` file. `-001` said none.  
+`tests/zig_mechanisms.zig` is book work — its only reader is the book — so  
+`build_and_test_debug.sh` joins the stage's verification.
+
+`ParentHandle` gets a `language-of-matryoshka.md` entry, landing with 13-1.  
+`check_design.sh` gates glossary conformance, so a term used in the book with  
+no entry would fail the stage's own gate.
+
+The gotcha from the previous entry repeated itself, exactly as recorded: three  
+`DEAD ref` hits on first run, all from naming files that do not exist yet or  
+that live under `kitchen/`. Fixed by dropping the suffix on the planned file  
+and using repo-root-relative paths for kitchen pages. `check_design.sh` then  
+exits 0.
+
+Still open, both stated in `-002` §13: Part 6, after Parts 1-5 exist; and  
+whether the banned word joins Part 5 of `rules-044.md`. `-002` recommends it —  
+a ban nothing enforces decays — and leaves the call to the owner.
+
+Not done, owner's call: `-001` is still on disk. The repo's practice is that a  
+superseded version goes, but that is a delete, and git is owner-only.  
+`context.md` lists it as superseded and kept.
+
 ### 2026-08-13 — API 13 scoped: the reference becomes a book
 
 FLOW postponed by the owner. 1-2 and 1-3 keep their scope and wait.

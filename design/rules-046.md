@@ -1,8 +1,8 @@
-# Matryoshka Zig — Rules (044)
+# Matryoshka Zig — Rules (046)
 
 All coding, doc, and process rules for the project.  
-Change from -043: FLOW 1-1 — two words added to Part 5, and the name of the  
-section that describes how a container is created and taken down fixed.  
+Change from -045: API 13-3 — a bulk repoint of doc references must exclude  
+`design/STATUS-LOG.md`. One bullet in Part 0, Documents.  
 Which stage introduced which rule is Part 10.
 
 Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the concepts and the thinking model.  
@@ -29,6 +29,11 @@ Documents.
   (-001, -002, ...). All docs require one. No exceptions.
 - Doc link rule: after creating a new version, update every cross-reference to
   the old version in every other doc. The owner never does this by hand.
+- A bulk repoint excludes `design/STATUS-LOG.md`. A past entry names the version
+  that was current when it was written, and that is the fact it records. A
+  `grep -rl ... design/ | xargs sed` rewrites it silently — API 13-3 did exactly
+  that, changing `-039` to `-040` inside a finished entry from earlier the same
+  day. Name the files, or exclude the log.
 - Two files are updated in place instead: `design/STATUS.md` and
   `design/context.md`, the stable entry points.
 - Read `design/STATUS.md` first. It is current state, not history.
@@ -47,7 +52,7 @@ Status file ownership.
 - `design/STATUS.md` — current state only. Rules, constraints, sources of truth,
   decisions, open items, test count, next stage. No narrative, no history. It  
   holds steady across stages; it never grows by accretion.
-- The plan — forward-looking work, plus one ledger line per completed stage.
+- The plan — forward-looking work, plus one line per completed stage.
   "Collapse done stages to one-line summaries" means one line, not one paragraph.
 - `design/STATUS-LOG.md` — the narrative. A stage's full account is written here
   and nowhere else. Append-only, newest at top. Not read by default, so its size  
@@ -77,7 +82,7 @@ Per-stage finish checklist.
 8. Close the stage across the three status files, per Status file ownership above.
    - Append the narrative to `design/STATUS-LOG.md`, newest at top. Include a
      "Post-stage cleanup" row. Absence of that row means the rule was skipped.
-   - Add one ledger line to the plan's "Completed stages".
+   - Add one line to the plan's "Completed stages".
    - Update `design/STATUS.md` "Current state" and "Next". Nothing else.
 9. Sync `README.md` and any touched per-module README.
 10. Rules audit: audit every changed `.zig`/`.md` file against every rule in this
@@ -609,6 +614,11 @@ Verifying a doc target.
 Scan `.zig` and `.md` after any stage that changes them. Report hits to the owner.  
 Do not fix without approval.
 
+Four words are also enforced automatically, by the glossary gate in  
+`check_design.sh`: `MayItem`, `Block N`, `ownership`, `ledger`. The rest of  
+this list is the manual scan. A word in the automatic set still belongs here —  
+the gate covers `design/*.md` only, not `src/`, `tests/` or `examples/`.
+
 Scan scope. Skip `design/STATUS-LOG.md`, `design/secondary/` and  
 `kitchen/defer/` — all three are append-only or frozen, and rewriting them  
 destroys a record. In the files that remain, a changelog row that names a  
@@ -640,6 +650,13 @@ Words.
   subject is how a mailbox or a pool is created, used and taken down, the  
   section is called **Usual flow**. When the subject is what state an item is  
   in, say **item states**.
+- `ledger` — a book-keeping metaphor for a plain list. Say what the list is.
+  - The plan's per-stage line: "one line per completed stage".
+  - A record of what moved and where: "carry-over note", or name the two  
+    places.
+  - Owner's ban, API 13, 2026-08-13.
+  - Enforced by the glossary gate in `check_design.sh`, not by the manual scan  
+    alone.
 - `hands`, as in "a closed pool hands items back" — use `gives back`,
   `returns`, `passes to`, or name the receiver. `holds` is discouraged in new  
   text for the same reason; prefer `keeps` or `is left with`. The MBOX 1  
@@ -747,7 +764,7 @@ Exemptions, all narrow:
 - `secondary/` is exempt from all but the orphan check. It is frozen.
 - `STATUS-LOG.md` is exempt from all but the orphan check. It is an append-only
   historical narrative and legitimately names docs that no longer exist.
-- A change-log or ledger row may name the doc it replaced. That name is the
+- A change-log row may name the doc it replaced. That name is the
   point of the row.
 - `kitchen/tools/.check_design_allow` holds literal substrings for the handful of rows
   that record a past banned-word pass. Adding to it needs a reason written in  
@@ -1033,6 +1050,18 @@ the header. The full account of each stage is in
 - rules-041 (DOC 23) — the design gate. `kitchen/tools/check_design.sh` must
   exit 0 before a stage that touched `design/` is done. It is what makes the  
   "where a doc lives" rule enforceable rather than remembered.
+- rules-046 (API 13-3) — a bulk repoint excludes `STATUS-LOG.md`. The log
+  already had two exemptions, both for reading it — the banned-word scan and  
+  three of the four design-gate checks. This is the first for writing to it.  
+  Earned the hard way: a `grep -rl ... design/ | xargs sed` renaming the api  
+  reference rewrote a version number inside a finished log entry from earlier  
+  the same day.
+- rules-046 (API 13) — one word added to Part 5, from the owner's ruling of
+  2026-08-13. It was this repo's name for the plan's per-stage line and for  
+  any record of what moved where. A book-keeping metaphor standing in for a  
+  plain list. This is the first banned word the glossary gate enforces from  
+  the day it is banned; the three before it were added to the gate later.  
+  The three uses inside this document were rewritten in the same pass.
 - rules-044 (FLOW 1-1) — two words added to Part 5, both from the owner's
   ruling of 2026-08-12. The first named the create/use/close/destroy section  
   in a way that told the reader nothing; that section is Usual flow  

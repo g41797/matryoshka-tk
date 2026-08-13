@@ -222,7 +222,7 @@ pages, zero handle references left. 34 hand-written site pages were swept:
 `kitchen/docs/patterns/`, `kitchen/docs/api/**`, six addendums, and the two  
 example catalog pages.
 
-Eleven design docs went up a version, listed in the plan's ledger line.
+Eleven design docs went up a version, listed in the plan's stage line.
 
 **Two pages needed more than renaming.** `../kitchen/docs/api/tags-and-slots/index.md` opened  
 by saying `_Mailbox` and `_Pool` are private structs — API 12 made them  
@@ -254,4 +254,4 @@ stage left them. Small follow-up.
 ## See also
 
 - [handle-based-programming.md](../kitchen/docs/addendums/handle-based-programming.md) — the pointer/handle idiom this extends.
-- [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md) — the API surface, rewritten to real pointers across 12-2 through 12-4.
+- [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the API surface, rewritten to real pointers across 12-2 through 12-4.

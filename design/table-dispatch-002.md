@@ -337,7 +337,7 @@ handler set opened up.
 ## Related
 
 - `patterns-027.md` — Polymorphic dispatch, all three forms
-- `rules-044.md` — the transfer rule as an author convention
+- `rules-046.md` — the transfer rule as an author convention
 - `secondary/llvm-pointer-switch-bug-001.md` — why a tag cannot be a `switch` prong
 - `receive-router-002.md` — the other example-plus-pattern that stayed out of
   `src/`, for the same reason

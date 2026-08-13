@@ -62,3 +62,8 @@ formatting only — no wording changes, safe to run repeatedly.
 - Mailbox → communication port / transfer station.
 - Pool → storage rack / warehouse of reusable items.
 
+## mkdocs plugins
+
+
+[MkDocs PDF Export](https://github.com/zhaoterryy/mkdocs-pdf-export-plugin)
+

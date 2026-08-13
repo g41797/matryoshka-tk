@@ -1,29 +1,31 @@
-# Matryoshka Zig — Implementation Plan (066)
+# Matryoshka Zig — Implementation Plan (069)
 
-Change from -065: FLOW 1-1r done. The canonical text is unchanged in meaning  
-and rewritten in staccato; 1-2 and 1-3 wait on the owner approving it.
+Change from -068: API 13-3 done. The book shed the assert mechanism; the  
+carry-over note's Section 2 is discharged from both ends. 13-4 is now the prose  
+pass over `src/` and the documents, owner's decision 2026-08-13, and "the book  
+governs" moves to 13-5.
 
 **Reconstructed 2026-08-12.** Versions -056 through -059 were lost: the agent  
 deleted -059 while the command meant to create -060 had already failed, and  
 -058 had never been committed. Rebuilt from -055 in HEAD, which carries the  
-ledger through WEB 1 verbatim, plus `STATUS-LOG.md` for everything after it.  
-Ledger lines for the stages between WEB 1 and API 12-1 are summaries written  
-from the log, not the originals. Everything from API 12-1 on is exact.
+stage list through WEB 1 verbatim, plus `STATUS-LOG.md` for everything after it.  
+Summary lines for the stages between WEB 1 and API 12-1 are written from the  
+log, not the originals. Everything from API 12-1 on is exact.
 
 ## Status
 
-Green across the board. `zig build test` passes **191/191** — the pre-12-1  
-figure of 192 minus the story test, which has its own step since 12-2.  
+Green across the board. `zig build test` passes **195/195** — 191 plus the  
+four scenarios of `tests/zig_mechanisms.zig`, added by API 13-1.  
 `zig build stories` passes and runs the transcoder narrative end to end.
 
-`build_and_test_all.sh` passes 191/191 in Debug, ReleaseSafe, ReleaseFast and  
+`build_and_test_all.sh` passes in Debug, ReleaseSafe, ReleaseFast and  
 ReleaseSmall. `build_cross_debug.sh` passes for x86_64-macos, aarch64-macos  
 and x86_64-windows. `build_core_debug.sh` and `check_design.sh` exit 0.
 
 `src/`, `tests/`, `examples/`, `stories/`, `kitchen/docs/` and `design/` all  
 speak the pointer API. API 12 is closed.
 
-Last completed stage: PROSE 1, 2026-08-12.
+Last completed stage: API 13-1, 2026-08-13.
 
 ---
 
@@ -84,7 +86,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - DISPATCH 2 — table dispatch documented; the handler belongs to the pair (receiver, tag), so the choice moves into data. `examples/helpers/TagTable.zig`, scenarios 113-117. No `src/` change. DONE 2026-07-31 (192/192). Working doc: [table-dispatch-002.md](table-dispatch-002.md).
 - CMPCT 1 — STATUS/plan/log/context de-duplicated; rules-038 "Status file ownership". DONE 2026-08-01 (192/192, doc-only).
 - CMPCT 2 — rules regrouped into rules-039.md: gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
-- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-044.md](rules-044.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
+- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-046.md](rules-046.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
 - DOC 23 — the two large docs split by audience. `matryoshka-tk-0.16-implementation-guide-001.md` retired: its Odin idiom mapping to [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md), its still-binding material to [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md), its walkthroughs of shipped code deleted with owner approval. [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md) drops the four sections `matryoshka-concepts-002.md` already owns and renames `MayItem` to `Slot`. New gate `kitchen/tools/check_design.sh`. DONE 2026-08-02 (192/192, doc-only).
 - WEB 1 — the landing page reaches the API docs. `kitchen/docs/index.md`: the `XYZ Lines Of Code` badge is now the link to `apidocs/`, opening in a new tab; the API button above it, hidden by CSS since it was added, is deleted. `kitchen/docs/stylesheets/extra.css`: the badge gains link styling and a per-scheme hover, and the button styling it made dead — `.hero-button`, both `-primary` and `-secondary` scheme pairs, the `display: none` rule, the unused `.hero-buttons` selector — is removed. DONE 2026-08-02 (doc-only, no `src/` change).
 
@@ -149,7 +151,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   every item `tests/layer2_mailbox.zig` sends is now allocated, closing its  
   own violation of Part 8's "never send a stack-allocated item" — 33 sites,  
   no rule exemption needed. No `src/` behaviour change.  
-  DONE 2026-08-12 (191/191). Rules: [rules-044.md](rules-044.md).
+  DONE 2026-08-12 (191/191). Rules: [rules-046.md](rules-046.md).
 
 - AUDIT 1 — the give-back audit made repeatable. MBOX 1 and INTR 7 did the
   same kind of work a month apart and shared no method, so the method is now  
@@ -178,6 +180,27 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   pre-API-12 lines confined to the now-frozen `kitchen/defer/`.  
   DONE 2026-08-12 (191/191).
 
+- **FLOW 1-1 / 1-1r** — the canonical `Usual flow` text for a mailbox (four
+  steps) and a pool (five, the extra one being `init`), in staccato.  
+  DONE 2026-08-13 (191/191, doc-only).
+
+- **API 13-1** — the api reference becomes a book. Seven parts from 22 flat
+  `##` headings; Parts 3, 4 and 5 share one five-piece shape. New Part 1  
+  (introduction) and Part 2 (intrusion, type erasure, `ParentHandle`), whose  
+  snippets come from a new permanent test, `tests/zig_mechanisms.zig`. Every  
+  snippet in Parts 2-5 is extracted from a file a kitchen script builds, and  
+  names its source. Pool gains a `Hooks` section one level above Get and Put.  
+  475 lines of manual definition and `PolyHelper` walkthrough replaced by  
+  pointers to the two kitchen pages that already carry them; the complexity  
+  table deleted; bare signature lists replaced by grouped signatures with  
+  descriptions. The stale "this file is the source for `///` comments" note  
+  and the dead `Addendums → Io 101` pointer both fixed. Part 6 groups  
+  the eleven cross-tool sections into four, by the owner's ruling. Detail stays in  
+  the book and is recorded in  
+  [api-13-carryover-003.md](api-13-carryover-003.md) — 43 rows.  
+  `ParentHandle` added to the glossary.  
+  DONE 2026-08-13 (195/195).
+
 CANDIDATES was dropped, owner's decision. It carried from plan-043 through  
 plan-046 without starting, and `design/candidates/` does not exist on disk.
 
@@ -185,128 +208,32 @@ plan-046 without starting, and `design/candidates/` does not exist on disk.
 
 ## Next
 
-**FLOW 1** is in flight. Detail below.
+**API 13-4**, the prose pass, is next. Detail below.
 
 ---
 
 ## FLOW 1 — the usual flow of a mailbox and a pool
 
-### The gap
+The gap FLOW 1 closed: every doc described the edges, none described the
+ordinary path. `new`, `init(hooks)`, `destroy` and close-before-destroy were
+documented only as hazards, or not at all.
 
-Every doc describes the edges. None describes the ordinary path.
+- **FLOW 1-1** — the canonical text, written into the api reference.
+  DONE 2026-08-12. Wording rejected by the owner on 2026-08-13.
+- **FLOW 1-1r** — the same text in staccato, approved. DONE 2026-08-13.
+  Every numbered step is a heading line with nested bullets under it.
 
-A reader of `src/mailbox.zig` or `src/pool.zig` learns what a refused `send`  
-leaves behind, who releases the list `close` gives back, and that `destroy`  
-panics on an open container. They cannot learn how to create one and use it.
+The canonical text now lives in Parts 4 and 5 of
+[matryoshka-api-reference-040.md](matryoshka-api-reference-040.md), carried
+into the book unchanged by API 13-1.
 
-What no page states:
+**1-2 and 1-3 are postponed.** Owner's call, 2026-08-13. Their scope is below
+and unchanged.
 
-- `new(io, alloc)` is the entry point. It is named in neither `//!` header.
-- `destroy(x, alloc)` appears only in the negative — "panics on an open
-  mailbox". A reader meets it as a hazard before meeting it as a step.
-- `Pool.init(hooks)` is missing entirely from the pool header, which discusses
-  hooks three times without saying how they arrive. `new` leaves  
-  `hooks == null`, so a reader following the header alone builds an unusable  
-  pool.
-- Close before destroy is implied by the panic, never stated as the rule.
-- Mbox takes two steps to set up, Pool three. Nothing says so.
-
-Where the docs already tried and stopped short:
-
-- `kitchen/docs/api/pool/index.md` has a `## Lifecycle flow` diagram. It runs
-  `new()` → `EMPTY pool` → get/put → `close()`. It omits `init` and  
-  `destroy` — the same two gaps as the header.
-- `kitchen/docs/api/mailbox/index.md` has no equivalent section. The two
-  containers are documented asymmetrically and nothing explains why.
-- The api reference's `## Object lifecycle` is about item states, not
-  container flow. It does not fill this gap and its title breaks two rules:  
-  `lifecycle`, and the scoped ban on "object" for an Item.
-
-### Vocabulary — owner's ruling, 2026-08-12
-
-`lifecycle` is AI-sh. The section is called **Usual flow** in every file.
-
-`hands` and `holds` are out of the new text. Use *returns*, *gives back*,  
-*passes to*, *keeps*, *is left with*.
-
-This ruling governs new writing. The MBOX 1 framing already in `src/` and the  
-docs — "The mailbox holds. It never touches." — stays as it is. Rewriting it  
-is a separate and much wider edit, not scoped here.
-
-Two shipped sentences do break the `hands` ban and are in scope, because they  
-are the exact sentences FLOW 1 rewrites anyway:
-
-- `src/pool.zig` — "A closed pool hands items back"
-- `kitchen/docs/tools/pool.md:58` — "A closed Pool hands items back"
-
-### Why the api reference goes first
-
-One canonical text, then a controlled copy. The api reference is the declared  
-source of truth, it is versioned, and `check_design.sh` gates it — so the  
-master copy sits where drift is caught. The kitchen api pages and the `src/`  
-headers are already downstream of it in practice.
-
-It cannot hold all of it. The api reference is dependency-ordered lookup  
-material. The per-container flow belongs there; the picture of a mailbox and  
-a pool working together in one application is narrative and belongs in  
-`tools/`. That is 1-3, and it reads better once the per-container text exists.
-
-### FLOW 1-1 — the canonical text. DONE 2026-08-12
-
-Written into [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):  
-`### Usual flow` under `## mailbox` (four steps) and under `## pool` (five,  
-the extra one being `init`). Both carry the close-before-destroy rule, the  
-statement that `destroy` is not optional because the container is an  
-allocation separate from its items, and the teardown contrast. The pool flow  
-diagram gained `init` at the top and `destroy` at the bottom, and its heading  
-no longer collides with the section above it. The item-state section is  
-`## Item states`. [rules-044.md](rules-044.md) Part 5 gained the two words.
-
-Doc-only, as planned. No `src/`, `tests/`, `examples/` or `stories/` change.
-
-**Owner reads the wording before 1-2 copies it.** The two sections in the api  
-reference are the whole deliverable; everything downstream is a copy of them.
-
-Wording rejected on 2026-08-13. Reworked in FLOW 1-1r, below.
-
-Original scope, for the record:
-
-- Add `### Usual flow` to the `## mailbox` section of the api reference:
-  `new` → send/receive → `close` and release the returned list → `destroy`.
-- Add `### Usual flow` to the `## pool` section: `new` → `init(hooks)` →
-  get/put → `close`, which passes everything to `on_close` → `destroy`.
-- State once, in both: close before destroy, always; `destroy` is not
-  optional, skipping it leaks the container itself, separate from the items.
-- State the teardown contrast in one sentence: Mbox returns the items to the
-  caller, Pool passes them to `on_close`.
-- Rename `## Object lifecycle` — it describes item states. `## Item states`
-  or similar. Two rule violations closed with the rename.
-- Add `lifecycle` and `hands` to Part 5 of the rules.
-
-Bumps: api reference, rules, plan. Gate: `check_design.sh` exit 0.  
-No `src/`, `tests/`, `examples/` or `stories/` change. Doc-only.
-
-### FLOW 1-1r — the same text, in staccato. DONE 2026-08-13
-
-Owner rejected the 1-1 wording. It was prose, and  
-[rules-044.md](rules-044.md) Part 6 forbids prose.
-
-What changed in [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md):
-
-- Every numbered step is a heading line. Its facts are nested bullets below
-  it, one per line.
-- Every colon, "and" and semicolon that carried a second fact became a
-  nested bullet.
-- The counting introductions became counts: "Four steps. Two set up, two
-  take down." and the pool equivalent.
-- The three trailing statements became a short lead line plus a bullet list,
-  the same shape on both sides.
-
-No statement changed meaning. Code blocks and diagrams untouched.
-
-Doc-only. Bumps: api reference, plan. Gate: `check_design.sh` exit 0.
-
-**Owner approves the new wording before 1-2 starts.**
+Vocabulary, owner's ruling 2026-08-12: `lifecycle` is AI-sh, and the section is
+called **Usual flow** everywhere. `hands` and `holds` stay out of new text. The
+MBOX 1 framing already in `src/` — "The mailbox holds. It never touches." —
+stays as it is.
 
 ### FLOW 1-2 — propagate
 
@@ -339,6 +266,99 @@ Scope it when 1-1 and 1-2 are done, not now.
 
 The pool re-audit, the `polynode` audit, and everything else on the deferred  
 list. Renaming Layer 1 example 022 — still owner-only, still a `git mv`.
+
+---
+
+## API 13 — the reference becomes a book
+
+Design note: [api-13-book-002.md](api-13-book-002.md). It carries the reason,
+the eight findings, the seven-part structure, the displacement table and the
+deliverables, with the owner's rulings on `-001` folded into the sections they
+govern.
+
+The direction reversed. The reference was the source for `src/` doc comments;
+the code is working now, so the code takes the detail and the book keeps what a
+reader learning Matryoshka needs.
+
+### API 13-1 — the restructure. DONE 2026-08-13
+
+Summary in Completed stages. Verified with `check_design.sh` exit 0 and
+`build_and_test_debug.sh` 195/195.
+
+### Part 6 — grouped, DONE 2026-08-13
+
+The owner approved the four-section grouping: identity across the tools, the
+slot rule, concurrency and cancel, what the toolkit assumes. The eleven
+cross-tool sections dropped one heading level and moved into their group. No
+body text was rewritten. `build_and_test_debug.sh` 195/195.
+
+### API 13-2 — the code takes the detail. DONE 2026-08-13
+
+All 43 rows are `///` or `//!` comments in `src/polynode.zig`,
+`src/mailbox.zig` and `src/pool.zig`. Doc comments only, no behaviour change.
+Each of the four modules points at its own examples root plus `/examples/flow/`,
+roots only. No snippet in `src/`. `src/matryoshka.zig` lost its one banned word,
+and `polynode.zig`'s header says what the second helper variant omits instead of
+apologising for it. Three things the code did not back are in Section 5 of
+[api-13-carryover-003.md](api-13-carryover-003.md). 195/195, docs target clean.
+
+### API 13-3 — the book sheds the detail. DONE 2026-08-13
+
+The book is now
+[matryoshka-api-reference-040.md](matryoshka-api-reference-040.md), 2062 lines
+down to 2022. The line it
+cut on: a precondition the caller satisfies stays, the assert mechanism goes.
+All nine `Assert:` blocks are gone. Also out: the two-checks-per-insert
+reasoning, the safety-build cost, the `concatByMoving` and header-consistency
+explanations, the `!is_linked` site list, the `in_pool_count` lock mechanics and
+the reentrancy reasoning. The `init` null-tag clause was deleted, not moved — no
+such assert exists. Kept against their row by the owner's ruling: the OOB
+diagram, the trimmed `popFirst` warning, and the two behavioural contracts.
+Parts 1, 2, 6 and 7 untouched.
+
+### API 13-4 — the prose pass
+
+Owner's decision, 2026-08-13: `src/*.zig` and the documents both read as prose
+in places. This is its own stage, not a post-stage cleanup row — that rule is
+shallow by design and already missed this.
+
+Why here and not earlier or last.
+
+- After 13-3, because 13-3 decides which facts the code is now the only home
+  for. Those doc comments have to carry them alone.
+- Before "the book governs", because that stage reconciles other documents
+  against `src/` and the book. Reconciling against text that then changes means
+  doing it twice.
+
+Scope.
+
+- The four `//!` headers. Rules Part 4 says model them on `std.Io`'s.
+  `mailbox.zig`'s is 50 lines of five `#` sections; `pool.zig`'s is similar.
+- `///` blocks that name more than one fact in a sentence, or run to several
+  paragraphs. `Pool.put`'s is about thirty lines after 13-2.
+- Voice. "Be careful - your code will run in the heart of Matryoshka!!!",
+  "Fix laziness of std.DoubleLinkedList", "Don't touch". Some is character worth
+  keeping. The list goes to the owner; the agent does not decide it.
+- The two `hands` hits, once the owner has ruled.
+- The documents, same pass.
+- Verification is the rendered autodoc page, not the source. The splice rules
+  make a source-level read unverifiable.
+
+### API 13-5 — the book governs
+
+### API 13-5 — the book governs, continued
+
+- The book dictates the content of every other doc.
+- Read the neighbours for material that belongs in the book:
+  [matryoshka-concepts-002.md](matryoshka-concepts-002.md) and
+  [patterns-027.md](patterns-027.md) overlap it most.
+- Reconcile `kitchen/docs/api/pool/hooks-discipline.md`. The book's Hooks
+  section states the same rules. Decide whether the page keeps its own text or
+  becomes a pointer.
+- The carry-over note's "to remove later" section is discharged here or by an
+  owner decision — the slogan register, and the banned word Section 3 of that
+  note counts.
+- Move material in, move material out, record both.
 
 ---
 

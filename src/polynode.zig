@@ -15,7 +15,14 @@
 //!
 //! Several types/functions are shown twice, because the helper has 2 variants.
 //!
-//! No clue how to get rid of them. Be patient.
+//! The second variant omits create() and destroy(). A type opts into it with
+//! `no_create_destroy`. Everything else is identical.
+//!
+//! Examples:
+//! https://g41797.github.io/matryoshka-tk/examples/polynode/
+//!
+//! The three together:
+//! https://g41797.github.io/matryoshka-tk/examples/flow/
 const _doc_stub = void;
 
 /// Runtime type marker.
@@ -57,6 +64,9 @@ pub const Slot = ?ItemHandle;
 /// Call after removing a node from a list.
 ///
 /// Fix laziness of std.DoubleLinkedList
+///
+/// By hand only after reaching through ItemList._list.\
+/// popFirst, popLast and remove call it for you.
 pub inline fn reset(node: *PolyNode) void {
     node.node.prev = null;
     node.node.next = null;
@@ -66,6 +76,12 @@ pub inline fn reset(node: *PolyNode) void {
 ///
 /// Not a membership test. The only member of a list has no neighbours,
 /// so this returns false for it.
+///
+/// Every `!is_linked` assert in the toolkit inherits that blind spot.
+///
+/// - It catches the multi-element case.
+/// - That is where most double-sends land.
+/// - Nothing repairs it. State kept in an item cannot validate this.
 pub inline fn is_linked(node: *PolyNode) bool {
     return node.node.prev != null or node.node.next != null;
 }
@@ -158,6 +174,9 @@ pub fn PolyHelper(comptime T: type) type {
             /// Returns null if the Slot is empty or holds another type.\
             /// On success the Slot is left empty.\
             /// On failure the Slot is unchanged.
+            ///
+            /// Asserts the item has no neighbours. Take it out of its list
+            /// first.
             pub inline fn moveFromSlot(slot: *Slot) ?*T {
                 const node = slot.* orelse return null;
                 const item = fromPoly(node) orelse return null;
@@ -195,7 +214,13 @@ pub fn PolyHelper(comptime T: type) type {
 
             /// Destroys the item stored in the Slot.
             ///
-            /// Does nothing if the Slot is empty.
+            /// Does nothing if the Slot is empty. Safe as a defer target
+            /// placed before the item exists.
+            ///
+            /// Asserts the item has no neighbours.
+            ///
+            /// The Slot is emptied before the item is released. A second
+            /// destroy on the same Slot then does nothing.
             pub fn destroy(
                 allocator: std.mem.Allocator,
                 slot: *Slot,
@@ -275,6 +300,9 @@ pub fn PolyHelper(comptime T: type) type {
             /// Returns null if the Slot is empty or holds another type.\
             /// On success the Slot is left empty.\
             /// On failure the Slot is unchanged.
+            ///
+            /// Asserts the item has no neighbours. Take it out of its list
+            /// first.
             pub inline fn moveFromSlot(slot: *Slot) ?*T {
                 const node = slot.* orelse return null;
                 const item = fromPoly(node) orelse return null;
@@ -307,6 +335,18 @@ fn validatePolyType(comptime T: type) void {
 
 /// Relatively safe double linked list of ItemHandle
 ///
+/// Under runtime safety every insert asserts twice on the new item.
+///
+/// - This list does not already hold it. A walk, comparing addresses.
+/// - The item has no neighbours. A read of the item.
+///
+/// Neither check alone is enough.
+///
+/// - The walk sees the list of one that is_linked cannot.
+/// - is_linked sees a *different* list that the walk cannot.
+/// - Together they cover more.
+///
+/// The walk makes an insert O(n) under safety builds. Nothing outside them.
 pub const ItemList = struct {
     /// Takes the first item out.
     ///
@@ -332,7 +372,7 @@ pub const ItemList = struct {
 
     /// Takes one item out, wherever it sits.
     ///
-    /// This list must hold it.\
+    /// Asserts the item is in this list.\
     /// The removed item is never linked — reset() is called for you.
     pub inline fn remove(self: *ItemList, ih: ItemHandle) void {
         if (std.debug.runtime_safety) std.debug.assert(self._holds(ih));
@@ -394,7 +434,8 @@ pub const ItemList = struct {
 
     /// Adds the item at the end and empties the Slot.
     ///
-    /// The Slot must hold an item. An append is not a defer target.
+    /// Asserts the Slot is not empty. An append is not a defer target, so it
+    /// follows a send rather than a put.
     pub fn appendFromSlot(self: *ItemList, slot: *Slot) void {
         std.debug.assert(slot.* != null);
         self.append(slot.*.?);
@@ -403,7 +444,8 @@ pub const ItemList = struct {
 
     /// Adds the item at the front and empties the Slot.
     ///
-    /// The Slot must hold an item. A prepend is not a defer target.
+    /// Asserts the Slot is not empty. A prepend is not a defer target, so it
+    /// follows a send rather than a put.
     pub fn prependFromSlot(self: *ItemList, slot: *Slot) void {
         std.debug.assert(slot.* != null);
         self.prepend(slot.*.?);
@@ -411,6 +453,9 @@ pub const ItemList = struct {
     }
 
     /// Adds the item right after one already in the list.
+    ///
+    /// Also asserts `existing` is in this list, and is not the item being
+    /// inserted.
     pub inline fn insertAfter(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void {
         if (std.debug.runtime_safety) {
             std.debug.assert(existing != ih);
@@ -421,6 +466,9 @@ pub const ItemList = struct {
     }
 
     /// Adds the item right before one already in the list.
+    ///
+    /// Also asserts `existing` is in this list, and is not the item being
+    /// inserted.
     pub inline fn insertBefore(self: *ItemList, existing: ItemHandle, ih: ItemHandle) void {
         if (std.debug.runtime_safety) {
             std.debug.assert(existing != ih);
@@ -436,6 +484,11 @@ pub const ItemList = struct {
     }
 
     /// Number of items in the list.
+    ///
+    /// Forwards std's walk. O(n).
+    ///
+    /// Mailbox and pool keep their own counters for this reason. This never
+    /// replaces them.
     pub inline fn len(self: *const ItemList) usize {
         return self._list.len();
     }
@@ -451,8 +504,10 @@ pub const ItemList = struct {
     ///
     /// `other` is left empty.
     ///
-    /// Same list twice does nothing. std.DoublyLinkedList would ring the
-    /// items and clear the header, losing every one of them.
+    /// Asserts `other` is not this list, then returns early on the same list
+    /// twice. Outside safety builds the assert is unreachable, and
+    /// concatByMoving would ring the items and clear the header, losing every
+    /// one of them.
     pub inline fn concat(self: *ItemList, other: *ItemList) void {
         std.debug.assert(self != other);
         if (self == other) return;
@@ -461,7 +516,12 @@ pub const ItemList = struct {
 
     /// Takes the contents of a std list.
     ///
-    /// The source is left empty.
+    /// The source is left empty. O(1).
+    ///
+    /// Asserts the std header it is handed is consistent — first and last both
+    /// null, or both set.
+    ///
+    /// There is no copy form. A header copy aliases the same items.
     pub fn moveFromList(list: *std.DoublyLinkedList) ItemList {
         if (std.debug.runtime_safety)
             std.debug.assert((list.first == null) == (list.last == null));
@@ -473,7 +533,9 @@ pub const ItemList = struct {
 
     /// Move the contents to a std list.
     ///
-    /// This list is left empty.
+    /// This list is left empty. O(1).
+    ///
+    /// There is no copy form. A header copy aliases the same items.
     pub fn moveToList(self: *ItemList) std.DoublyLinkedList {
         const moved = self._list;
         self._list = .{};
@@ -497,6 +559,15 @@ pub const ItemList = struct {
     /// Use the methods below.
     ///
     /// Using of this field allowed for tests.
+    ///
+    /// An item taken out this way keeps its old prev/next. popFirst did not
+    /// run, so reset did not either — call reset yourself.
+    ///
+    /// std.DoublyLinkedList.popFirst does not clear the links.
+    /// ItemList.popFirst does.
+    ///
+    /// Skipping reset gives false positives from is_linked, and assert
+    /// failures in the mailbox and pool guards.
     ///
     _list: std.DoublyLinkedList = .{},
 };

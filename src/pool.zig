@@ -44,6 +44,12 @@
 //!
 //! `close` can be called more than once. Later calls collect nothing.
 //!
+//! Examples:
+//! https://g41797.github.io/matryoshka-tk/examples/pool/
+//!
+//! The three together:
+//! https://g41797.github.io/matryoshka-tk/examples/flow/
+//!
 
 const _doc_stub = void;
 
@@ -88,7 +94,8 @@ pub const Pool = struct {
     ///
     /// Be careful - your code will run in the heart of Matryoshka!!!
     ///
-    /// `in_pool_count` is a hint, read under lock before the hook runs without lock:
+    /// `in_pool_count` is a hint. It is read under the lock and used without
+    /// it, so another thread may have changed the real count by then:
     /// - `on_get`: count after removal — items remaining with this tag.
     /// - `on_put`: count before addition — items already stored with this tag.
     ///
@@ -98,7 +105,13 @@ pub const Pool = struct {
     ///
     /// A hook that touches shared state must protect it itself.
     ///
-    /// A hook must not call pool APIs or blocking operations.
+    /// A hook must not call pool APIs or blocking operations. That is the
+    /// contract, not a deadlock warning — the lock is not held while a hook
+    /// runs.
+    ///
+    /// A hook that needs shared state locks it with `Io.Mutex` and
+    /// `lockUncancelable`. A hook returns void, so it has no way to report a
+    /// cancelled lock.
     pub const Hooks = struct {
         ctx: *anyopaque,
         tags: []const *const anyopaque,
@@ -110,6 +123,9 @@ pub const Pool = struct {
         /// `in_pool_count`: number of available items with this tag before removal.
         ///
         /// `slot`: receives the selected item, or stays empty if no item is available.
+        ///
+        /// Returning an item whose tag is not the requested one is a programming
+        /// error. Asserted in Debug and ReleaseSafe.
         on_get: *const fn (ctx: *anyopaque, tag: *const anyopaque, in_pool_count: usize, slot: *polynode.Slot) void,
 
         /// `slot`: keep, accept, or clear the one carried item.
@@ -119,6 +135,13 @@ pub const Pool = struct {
         /// `null` or an empty list: nothing more to add.
         ///
         /// Non-empty list: each item is added the same way `slot`'s item is, same checks.
+        ///
+        /// This is how a composite item gives its parts back — the parts go into
+        /// the list, the parent stays in `slot`.
+        ///
+        /// The hook gives back only valid, unlinked, correctly-tagged items. The
+        /// pool does not check that they form a real composite, and does not
+        /// distinguish a composite item from a simple one.
         on_put: *const fn (ctx: *anyopaque, in_pool_count: usize, slot: *polynode.Slot) ?polynode.ItemList,
 
         /// Called when the pool is closed.
@@ -177,6 +200,9 @@ pub const Pool = struct {
     /// Registers hooks.
     ///
     /// Call once, right after `new`.
+    ///
+    /// Asserts the tag list is not empty, the pool is not closed, and no hooks
+    /// are registered yet.
     pub fn init(self: *Pool, hooks: Hooks) !void {
         std.debug.assert(hooks.tags.len > 0);
 
@@ -203,6 +229,9 @@ pub const Pool = struct {
     /// Acquires a handle without waiting. Calls `on_get`.
     ///
     /// On success, stores the handle in `slot.*`.
+    ///
+    /// Asserts the slot is empty, the hooks are registered, and the tag is one
+    /// of the registered ones.
     pub fn get(self: *Pool, tag: *const anyopaque, mode: GetMode, slot: *polynode.Slot) GetError!void {
         std.debug.assert(slot.* == null);
 
@@ -226,6 +255,9 @@ pub const Pool = struct {
     /// does not call on_get hook
     ///
     /// `get_wait` always uses the timeout error set regardless of the timeout value.
+    ///
+    /// Asserts the slot is empty, the hooks are registered, and the tag is one
+    /// of the registered ones.
     pub fn get_wait(self: *Pool, tag: *const anyopaque, slot: *polynode.Slot, timeout_ns: ?u64) (GetError || Io.Cancelable || error{Timeout})!void {
         std.debug.assert(slot.* == null);
 
@@ -270,7 +302,8 @@ pub const Pool = struct {
 
     /// Returns a handle to the pool.
     ///
-    /// `slot.* == null`: no-op.
+    /// `slot.* == null`: returns immediately. No hook call, no assert on the
+    /// tag.
     ///
     /// Open pool:
     /// - Calls `on_put`.
@@ -278,9 +311,26 @@ pub const Pool = struct {
     /// - `slot.*` cleared to null by the hook: the item is not added.
     /// - Any items in the list returned by the hook are added to the pool.
     ///
+    /// Four outcomes the hook may pick. None of them is mandated:
+    /// - deleted, nothing returned — hook frees the item and clears `slot.*`.
+    /// - returned as-is — hook leaves the data alone, `slot.*` stays non-null.
+    /// - returned after reset — hook resets the data first.
+    /// - deleted, a different item returned — hook frees the original and puts
+    ///   another item in `slot.*`.
+    ///
+    /// A non-null `slot.*` when the hook returns means exactly one thing: an
+    /// item — the original or a replacement — is kept.
+    ///
     /// Closed pool:
     /// - No-op.
-    /// - `slot.*` is unchanged.
+    /// - `slot.*` is unchanged, so the caller still holds the item and must
+    ///   release it.
+    ///
+    /// Asserts the item has no neighbours, when the slot is not empty.
+    ///
+    /// No sequence guarantee. Put three times, get three times, and the count,
+    /// the identity and the order of what comes back are hook policy. The
+    /// shape of the call sequence promises nothing.
     pub fn put(self: *Pool, slot: *polynode.Slot) void {
         if (slot.* == null) return;
 
@@ -339,6 +389,12 @@ pub const Pool = struct {
     ///
     /// So check the list after the call. A non-empty list means the caller
     /// still holds those items and must release them.
+    ///
+    /// The restored order after a mid-batch close may differ from the original
+    /// order.
+    ///
+    /// Asserts every item's tag is one of the registered ones, under one lock,
+    /// before anything is transferred.
     pub fn put_all(self: *Pool, list: *polynode.ItemList) void {
         if (list.isEmpty()) return;
 
@@ -368,7 +424,8 @@ pub const Pool = struct {
     /// calls `on_close` once with the full list,\
     /// then wakes any blocked `get_wait` callers.
     ///
-    /// Safe to call more than once.
+    /// Safe to call more than once. Later calls collect nothing, and `on_close`
+    /// runs once.
     pub fn close(self: *Pool) void {
         const io: Io = self.*.io;
         self.*.mutex.lockUncancelable(io);

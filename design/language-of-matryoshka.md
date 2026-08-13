@@ -191,6 +191,29 @@ They are an implementation detail.
 
 Architecturally, a Master communicates Items.
 
+## ParentHandle
+
+A pointer to an embedded `std.DoublyLinkedList.Node`, used as a handle to the
+struct that embeds it.
+
+The mechanism is part of Zig.
+
+* `std.DoublyLinkedList` is handed the `*Node`.
+* `@fieldParentPtr` gets back to the parent struct.
+* Matryoshka invents nothing here.
+
+Only the term is ours. The book needed a word for the thing an `ItemHandle` is
+the analog of.
+
+`ParentHandle` and `ItemHandle` are not the same.
+
+* `ParentHandle` is plain Zig. It carries no type information.
+* `ItemHandle` is Matryoshka. It is a `*PolyNode`, so it carries a tag, and the
+  cast back is checked.
+
+The term appears in Part 2 of [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md),
+and in `tests/zig_mechanisms.zig`. It is not used in `src/`.
+
 ---
 
 # Reading Matryoshka documentation

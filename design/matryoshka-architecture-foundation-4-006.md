@@ -7,7 +7,7 @@ Read [matryoshka-concepts-002.md](matryoshka-concepts-002.md) first. It covers
 what Matryoshka is, why it exists, and the four concepts. This document assumes  
 all of that and starts at the layer contracts.
 
-Companion: [matryoshka-api-reference-038.md](matryoshka-api-reference-038.md) — the shipped surface.\  
+Companion: [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the shipped surface.\  
 Companion: [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md) — the Zig 0.16 constraints.
 
 ---

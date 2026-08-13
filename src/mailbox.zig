@@ -47,6 +47,12 @@
 //! There is no state in which running it is wrong. Never write
 //! `_ = mbx.close()`.
 //!
+//! Examples:
+//! https://g41797.github.io/matryoshka-tk/examples/mailbox/
+//!
+//! The three together:
+//! https://g41797.github.io/matryoshka-tk/examples/flow/
+//!
 const _doc_stub = void;
 
 ///
@@ -119,6 +125,8 @@ pub const Mbox = struct {
     ///
     /// On `error.Closed` the slot is unchanged.\
     /// The sender still holds the item.
+    ///
+    /// Asserts the slot is not empty, and that the item has no neighbours.
     pub fn send(self: *Mbox, slot: *polynode.Slot) error{Closed}!void {
         std.debug.assert(slot.* != null);
         std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -148,6 +156,20 @@ pub const Mbox = struct {
     ///
     /// On `error.Closed` the slot is unchanged.\
     /// The sender still holds the item.
+    ///
+    /// Asserts the slot is not empty, and that the item has no neighbours.
+    ///
+    /// FIFO among OOB handles. Every OOB handle sits ahead of every regular
+    /// one.
+    ///
+    /// ```text
+    /// send(R1), send(R2):   [R1, R2]                 oob=0
+    /// send_oob(O1):         [O1, R1, R2]             oob=1
+    /// send(R3):             [O1, R1, R2, R3]         oob=1
+    /// send_oob(O2):         [O1, O2, R1, R2, R3]     oob=2
+    /// receive -> O1:        [O2, R1, R2, R3]         oob=1
+    /// receive -> O2:        [R1, R2, R3]             oob=0
+    /// ```
     pub fn send_oob(self: *Mbox, slot: *polynode.Slot) error{Closed}!void {
         std.debug.assert(slot.* != null);
         std.debug.assert(!polynode.is_linked(slot.*.?));
@@ -183,16 +205,24 @@ pub const Mbox = struct {
     /// - OOB handles have priority
     ///
     /// - `timeout_ns == null`: waits forever.
-    /// - `timeout_ns == 0`: returns `error.Timeout` immediately for empty mailbox
+    /// - `timeout_ns == 0`: returns `error.Timeout` immediately for empty
+    ///   mailbox. Same reach as try_receive, reported as an error instead of
+    ///   false.
     ///
     /// receive breaks on
     /// - timeout
     /// - cancel
     /// - `wakeUpAll()`
     ///
-    /// For the break - `slot.*` stays null.
+    /// For the break - `slot.*` stays null. That includes `error.Wakeup` from
+    /// a wakeUpAll() while this receiver was blocked.
     ///
     /// Cancel does not close mailbox.
+    ///
+    /// Several receivers compete for each handle, and one gets it. Order among
+    /// them is up to the Io runtime. It is not FIFO.
+    ///
+    /// Asserts the slot is empty.
     pub fn receive(self: *Mbox, slot: *polynode.Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Io.Cancelable)!void {
         std.debug.assert(slot.* == null);
 
@@ -248,6 +278,8 @@ pub const Mbox = struct {
     /// Returns
     /// - true if a handle was received
     /// - false if the mailbox was empty
+    ///
+    /// Asserts the slot is empty.
     pub fn try_receive(self: *Mbox, slot: *polynode.Slot) error{Closed}!bool {
         std.debug.assert(slot.* == null);
 
@@ -278,7 +310,8 @@ pub const Mbox = struct {
     /// - returns all stored handles as list
     /// - empties mailbox
     ///
-    /// Returns an empty list if the mailbox is empty.
+    /// Returns an empty list if the mailbox is empty. An empty mailbox is not
+    /// an error, and this never waits.
     ///
     /// The caller holds every item in the list.\
     /// Release them — free them, or put them back into a pool.
@@ -320,7 +353,8 @@ pub const Mbox = struct {
     /// ```
     ///
     /// Never write `_ = mbx.close()` — it drops items the mailbox handed
-    /// back.
+    /// back. Those items keep their list links, so send rejects them
+    /// afterwards.
     pub fn close(self: *Mbox) polynode.ItemList {
         const io: Io = self.*.io;
         self.*.mutex.lockUncancelable(io);
@@ -350,7 +384,8 @@ pub const Mbox = struct {
     /// - wakes receivers currently waiting in `receive()`
     /// - as result - waiting receivers return `error.Wakeup`.
     ///
-    /// Receivers that start waiting later are not affected.
+    /// Receivers that start waiting later are not affected. The effect does
+    /// not persist past the call.
     ///
     /// The mailbox remains open.
     ///
@@ -406,7 +441,9 @@ pub inline fn is_it_you(tag: *const anyopaque) bool {
 ///
 /// Must be closed first.
 ///
-/// Destroying an open mailbox is a programming error — panics.
+/// Destroying an open mailbox is a programming error — panics. Closedness is
+/// a precondition here, and nowhere else: every other method returns
+/// error.Closed and stays a valid object.
 pub fn destroy(mbx: *Mbox, alloc: std.mem.Allocator) void {
     if (!mbx.*.closed.load(.acquire)) {
         @panic("mailbox.destroy: mailbox must be closed first");

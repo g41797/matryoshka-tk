@@ -15,3 +15,13 @@ Proposal 27: `MayItem` → `Slot`
 "Slot and ownership idioms" → "Slot and transfer
 idioms", "Transfer clears ownership" → "Transfer clears the slot", "Cancellation
 preserves ownership" → "Cancellation keeps the item where it is"
+
+# api-13-book-001 — the frozen annotated record of API 13. The owner wrote the
+# ban into this file, in these lines, using the word in order to ban it. It is
+# kept by owner's decision as the record of what was asked for. Rewriting it
+# would falsify what the owner wrote. Same reasoning as STATUS-LOG.md.
+- 13-1 records each displaced item in a ledger.
+- A displacement ledger, new design note, `book-ledger` first version.
+[Owner] A displacement ledger, new design note, `book-ledger` first version
+- Input: the `to-src` rows of the ledger.
+- Only rows the ledger marks as landed.
