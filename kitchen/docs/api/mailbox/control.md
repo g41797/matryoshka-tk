@@ -44,7 +44,7 @@ var rem: polynode.ItemList = mbx.close();
 first, so an empty list costs nothing. No call site has to work out whether  
 the mailbox was empty first.
 
-Never write `_ = mbx.close()`. It drops items the mailbox handed back, and  
+Never write `_ = mbx.close()`. It drops items the mailbox gave back, and  
 the items it drops keep their list links — `send` asserts an unlinked item,  
 so they cannot be sent again.
 

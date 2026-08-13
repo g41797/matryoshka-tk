@@ -60,7 +60,7 @@ One consequence, stated up front.
 
 ## 2. What is wrong with the file today
 
-Owner's findings, each confirmed against the version this stage replaced —
+Owner's findings, each confirmed against the version this stage replaced —  
 `-038`, 2066 lines.
 
 | finding | evidence |
@@ -98,7 +98,7 @@ Doc comment conventions. Owner's answer to `-001`.
 - The rules come from two places.
   - `matryoshka-zig-0.16-notes-003.md`.
   - The `///` and `//!` style already in `src/*.zig`.
-- Part 4 of `rules-046.md` governs. Nothing new is invented for 13-2.
+- Part 4 of `rules-047.md` governs. Nothing new is invented for 13-2.
 
 The safety rule.
 
@@ -123,7 +123,7 @@ Advice: keep the file name. Bump `-038` to `-039`. Change the `# H1` only.
 Reasons.
 
 - Seven design docs link to it.
-  - `context.md`, `STATUS.md`, `patterns-027.md`, `matryoshka-concepts-002.md`,
+  - `context.md`, `STATUS.md`, `patterns-028.md`, `matryoshka-concepts-002.md`,
     `matryoshka-zig-0.16-notes-003.md`,  
     `matryoshka-architecture-foundation-4-006.md`,  
     `api-12-real-pointers-005.md`.
@@ -402,7 +402,7 @@ Where the hook writer goes deeper. All four already exist.
 - `examples/hooks/AlwaysCreateHooks.zig`.
 - `kitchen/docs/api/pool/hooks-discipline.md`.
 
-`examples/layer4/035-cross_layer_pool_hooks_mailbox_flow.zig` is a consumer
+`examples/layer4/035-cross_layer_pool_hooks_mailbox_flow.zig` is a consumer  
 example, not a writer's example.
 
 - It shows what hooks do to the items.
@@ -527,7 +527,7 @@ The carry-over note.
     - 13-3 removes from the book only what has landed.
   - **To remove later** — the slogan register outside this stage's scope.
     - One row per hit: file, line, what it says.
-    - Candidates: `matryoshka-concepts-002.md`, `patterns-027.md`, `README.md`,
+    - Candidates: `matryoshka-concepts-002.md`, `patterns-028.md`, `README.md`,
       `src/` doc comments.
     - 13-1 records. It does not edit documents it does not own.
 - One file, not two.
@@ -591,7 +591,7 @@ Owner's answer to `-001`: discuss after Parts 1-5 are ready.
 
 - The book is standalone. It dictates the content of every other doc.
 - Read the neighbours for information that belongs in the book.
-  - `matryoshka-concepts-002.md` and `patterns-027.md` overlap it most.
+  - `matryoshka-concepts-002.md` and `patterns-028.md` overlap it most.
   - `kitchen/docs/` pages, both directions.
 - Reconcile `kitchen/docs/api/pool/hooks-discipline.md`.
   - The book's Hooks section states the same rules by then.
@@ -627,12 +627,12 @@ Owner's answer to `-001`: discuss after Parts 1-5 are ready.
 
 ## 12. Related documents
 
-- [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the book
+- [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — the book
   this note describes.
-- [rules-046.md](rules-046.md) — staccato, Part 6. Banned words, Part 5.
+- [rules-047.md](rules-047.md) — staccato, Part 6. Banned words, Part 5.
   Doc comments, Part 4.
 - [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — overlaps the book.
-- [patterns-027.md](patterns-027.md) — overlaps the book.
+- [patterns-028.md](patterns-028.md) — overlaps the book.
 - [language-of-matryoshka.md](language-of-matryoshka.md) — gains `ParentHandle`.
 
 ---
@@ -643,7 +643,7 @@ Owner's answer to `-001`: discuss after Parts 1-5 are ready.
 
 The banned word is no longer open. Owner ruled on 2026-08-13.
 
-- It is in Part 5 of `rules-046.md`, and the glossary gate enforces it.
+- It is in Part 5 of `rules-047.md`, and the glossary gate enforces it.
 - The previous rules version is gone. Sixteen files repointed.
 - One claim in this note's first version was wrong, and is corrected here.
   - It said the gate would start rejecting the word repo-wide.

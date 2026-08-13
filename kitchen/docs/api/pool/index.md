@@ -97,7 +97,7 @@ A pool touches items — it creates, resets, keeps or destroys them. Every one
 of those is your hook doing it, never the pool deciding on its own. A
 [Mailbox](../mailbox/index.md) never touches an item at all.
 
-A closed pool hands items back:
+A closed pool gives items back:
 
 - `put` is a no-op and leaves the slot unchanged.
 - `put_all` stops at the first refusal and leaves the rest in the list.

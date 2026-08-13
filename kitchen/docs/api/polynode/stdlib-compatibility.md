@@ -30,7 +30,7 @@ while (batch.popFirst()) |ih| {
 }
 ```
 
-One step. `popFirst` hands back an `ItemHandle`, not a list node, so  
+One step. `popFirst` gives back an `ItemHandle`, not a list node, so  
 `@fieldParentPtr` never appears in your code.
 
 ## What ItemList adds

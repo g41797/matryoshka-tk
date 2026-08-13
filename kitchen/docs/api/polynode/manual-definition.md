@@ -195,7 +195,7 @@ const poly: *PolyNode = @fieldParentPtr("node", list_node_ptr);
 const ev: *Event = @fieldParentPtr("poly", poly);
 ```
 
-You write neither line. `ItemList.popFirst` does step 1 and hands back an  
+You write neither line. `ItemList.popFirst` does step 1 and gives back an  
 `ItemHandle`; `PolyHelper.fromPoly` does step 2 with the tag check:
 
 ```zig

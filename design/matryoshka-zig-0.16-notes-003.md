@@ -14,8 +14,8 @@ The port shipped, so the block-by-block build instructions went with it; the
 Odin idiom mapping moved to
 [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md).
 
-Companion: [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the API surface.\  
-Companion: [rules-046.md](rules-046.md) — the rules these constraints justify.
+Companion: [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — the API surface.\  
+Companion: [rules-047.md](rules-047.md) — the rules these constraints justify.
 
 `.minimum_zig_version` is `0.16.0`.
 
@@ -77,7 +77,7 @@ This is not a recommendation. "Must not use" now means "does not exist."
 return `error.Canceled`. They never appear in `_Mailbox` or `_Pool`.
 
 This is the mechanical reason behind the `std.Thread.spawn` ban in
-[rules-046.md](rules-046.md): a thread spawned outside Io carries no
+[rules-047.md](rules-047.md): a thread spawned outside Io carries no
 cancellation token, so nothing can wake it but a close broadcast.
 
 # 3. Two backends
@@ -305,7 +305,7 @@ item reliably. If `Pool.put` could itself fail with `error.Canceled`, the item
 would be lost with nothing holding it. `Pool.put` returns `void`.
 
 The per-function cancel contract lives in
-[matryoshka-api-reference-040.md](matryoshka-api-reference-040.md).
+[matryoshka-api-reference-041.md](matryoshka-api-reference-041.md).
 
 ## 7.4 `error.Canceled` is not `error.Closed`
 

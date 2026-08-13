@@ -21,10 +21,10 @@ pub const polynode = @import("polynode.zig");
 pub const mailbox = @import("mailbox.zig");
 pub const pool = @import("pool.zig");
 
-/// A mailbox. Application code holds `*Mbox`.
+/// A mailbox. Application code keeps `*Mbox`.
 pub const Mbox = mailbox.Mbox;
 
-/// A pool. Application code holds `*Pool`.
+/// A pool. Application code keeps `*Pool`.
 pub const Pool = pool.Pool;
 
 const std = @import("std");

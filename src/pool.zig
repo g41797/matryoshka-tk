@@ -4,45 +4,21 @@
 //! Pool for PolyNode items.
 //!
 //! A pool:
-//! - holds free items by type
+//! - keeps free items by type
 //! - creates items through user hooks
 //! - recycles returned items
 //! - is itself a PolyNode.
 //!
-//! # Pool is not storage
-//!
-//! It answers one question: is a reusable item available right now.
+//! A pool is not storage. It answers one question: is a reusable item
+//! available right now.
 //!
 //! It signals backpressure through that answer. What happens to an item on
 //! `put` is entirely up to the hooks.
 //!
-//! # The pool touches items — through your hooks
-//!
-//! This is the difference from `Mbox`, which never touches an item at all.
-//! A pool creates, resets, keeps or destroys — but every one of those is
-//! your hook doing it, never the pool deciding.
-//!
-//! # It does not care whether you closed it — except `destroy`
-//!
-//! Every other method returns `error.Closed`, or is a no-op, and stays a
-//! valid object. Only `destroy` makes closedness a precondition. It panics
-//! on an open pool.
-//!
-//! # A closed pool hands items back
-//!
-//! - `put` on a closed pool is a no-op and leaves `slot.*` unchanged.
-//! - `put_all` stops at the first refusal and leaves the rest in the list.
-//!
-//! Either way the caller still holds those items and must release them.
-//!
-//! # Closing releases through `on_close`, not through the caller
-//!
-//! `close` collects every held item and passes the list to `on_close`.
-//!
-//! The hook releases them. This is the other difference from `Mbox`, which
-//! returns the list to the caller and leaves the releasing to them.
-//!
-//! `close` can be called more than once. Later calls collect nothing.
+//! The pool touches items — through your hooks. This is the difference from
+//! `Mbox`, which never touches an item at all. A pool creates, resets, keeps
+//! or destroys — but every one of those is your hook doing it, never the
+//! pool deciding.
 //!
 //! Examples:
 //! https://g41797.github.io/matryoshka-tk/examples/pool/
@@ -53,12 +29,7 @@
 
 const _doc_stub = void;
 
-///
-///
-/// A pool.
-///
-/// A pool is also a PolyNode. `toPoly`/`fromPoly` carry it through
-/// a mailbox or another pool like any other item.
+/// A pool - tool for Items reusing
 ///
 /// The fields below are internal.\
 /// Don't touch.
@@ -94,20 +65,24 @@ pub const Pool = struct {
     ///
     /// Be careful - your code will run in the heart of Matryoshka!!!
     ///
-    /// `in_pool_count` is a hint. It is read under the lock and used without
-    /// it, so another thread may have changed the real count by then:
+    /// `in_pool_count` is a hint.
+    ///
+    /// It is read under the lock and used without it. Another thread may have
+    /// changed the real count by then.
     /// - `on_get`: count after removal — items remaining with this tag.
     /// - `on_put`: count before addition — items already stored with this tag.
     ///
     /// Hooks run outside the pool's mutex.
     ///
-    /// Multiple threads (tasks) may call a hook at once — the pool does not serialize them.
+    /// Multiple threads (tasks) may call a hook at once. The pool does not
+    /// serialize them.
     ///
     /// A hook that touches shared state must protect it itself.
     ///
-    /// A hook must not call pool APIs or blocking operations. That is the
-    /// contract, not a deadlock warning — the lock is not held while a hook
-    /// runs.
+    /// A hook must not call pool APIs or blocking operations.
+    ///
+    /// That is the contract, not a deadlock warning. The lock is not held
+    /// while a hook runs.
     ///
     /// A hook that needs shared state locks it with `Io.Mutex` and
     /// `lockUncancelable`. A hook returns void, so it has no way to report a
@@ -250,9 +225,10 @@ pub const Pool = struct {
     /// `timeout_ns == 0`: returns `error.Timeout` immediately.
     ///
     /// Logically equivalent to `get(.available_only)` at that point, but returns\
-    /// `error.Timeout` instead of `error.NotAvailable` — intentional
+    /// `error.Timeout` instead of `error.NotAvailable`. The divergence is
+    /// intentional.
     ///
-    /// does not call on_get hook
+    /// Does not call the `on_get` hook. It takes a stored item or waits for one.
     ///
     /// `get_wait` always uses the timeout error set regardless of the timeout value.
     ///
@@ -268,6 +244,9 @@ pub const Pool = struct {
             Io.Timeout{ .duration = .{ .raw = .{ .nanoseconds = @as(i96, @intCast(ns)) }, .clock = .real } }
         else
             .none;
+        // Anchor the deadline once, before the retry loop. condition_waitTimeout
+        // calls toDeadline itself, but converting a duration inside the loop
+        // would restart the timeout on every spurious wakeup.
         const deadline: Io.Timeout = timeout_val.toDeadline(io);
 
         self.*.mutex.lock(io) catch |err| return err;
@@ -318,19 +297,21 @@ pub const Pool = struct {
     /// - deleted, a different item returned — hook frees the original and puts
     ///   another item in `slot.*`.
     ///
-    /// A non-null `slot.*` when the hook returns means exactly one thing: an
-    /// item — the original or a replacement — is kept.
+    /// A non-null `slot.*` when the hook returns means one thing.
+    /// An item is kept. It may be the original or a replacement.
     ///
     /// Closed pool:
     /// - No-op.
-    /// - `slot.*` is unchanged, so the caller still holds the item and must
+    /// - `slot.*` is unchanged, so the caller still has the item and must
     ///   release it.
     ///
     /// Asserts the item has no neighbours, when the slot is not empty.
     ///
-    /// No sequence guarantee. Put three times, get three times, and the count,
-    /// the identity and the order of what comes back are hook policy. The
-    /// shape of the call sequence promises nothing.
+    /// No sequence guarantee.
+    ///
+    /// Put three times, then get three times. The count is hook policy.
+    /// So is the identity. So is the order. The shape of the call sequence
+    /// promises nothing.
     pub fn put(self: *Pool, slot: *polynode.Slot) void {
         if (slot.* == null) return;
 
@@ -387,8 +368,10 @@ pub const Pool = struct {
     /// - items already transferred go to `on_close`;\
     /// - items not yet transferred stay in the caller's list.
     ///
-    /// So check the list after the call. A non-empty list means the caller
-    /// still holds those items and must release them.
+    /// So check the list after the call.
+    ///
+    /// A non-empty list means the caller still has those items and must
+    /// release them.
     ///
     /// The restored order after a mid-batch close may differ from the original
     /// order.
@@ -423,6 +406,9 @@ pub const Pool = struct {
     /// Collects all handles from every per-tag free-list,\
     /// calls `on_close` once with the full list,\
     /// then wakes any blocked `get_wait` callers.
+    ///
+    /// The hook releases them. This is the other difference from `Mbox`, which
+    /// returns the list to the caller and leaves the releasing to them.
     ///
     /// Safe to call more than once. Later calls collect nothing, and `on_close`
     /// runs once.
@@ -490,6 +476,9 @@ pub inline fn is_it_you(tag: *const anyopaque) bool {
 ///
 /// Must be closed first.\
 /// Destroying an open pool is a programming error — panics.
+///
+/// Closedness is a precondition here, and nowhere else: every other method
+/// returns `error.Closed`, or is a no-op, and stays a valid object.
 pub fn destroy(p: *Pool, alloc: std.mem.Allocator) void {
     if (!p.*.closed.load(.acquire)) {
         @panic("pool.destroy: pool must be closed first");

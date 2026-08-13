@@ -39,7 +39,8 @@ The struct fields are internal. Use the methods.
 
 ## What a mailbox never does
 
-The mailbox holds. It never touches. No inspection, no copy, no free — it  
+The mailbox keeps items. It never touches them. No inspection, no copy, no  
+free — it  
 allocates and frees exactly one thing, itself.
 
 So every item it holds goes back to a caller:

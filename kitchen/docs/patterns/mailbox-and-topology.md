@@ -78,7 +78,7 @@ Why.
 - Which release applies — free, or return to a pool — is yours to know. The
   mailbox does not know and never did.
 
-- Run it unconditionally. `close` can be called more than once and hands back
+- Run it unconditionally. `close` can be called more than once and gives back
   an empty list after the first, so the loop is always safe: on a mailbox still holding  
   items, on one already empty, on one closed twice.
 
@@ -88,7 +88,7 @@ Why.
 
 Do not.
 
-- Do not write `_ = mbx.close()`. It drops what the mailbox handed back, and
+- Do not write `_ = mbx.close()`. It drops what the mailbox gave back, and
   the items it drops keep their list links — `Mbox.send` asserts an unlinked  
   item, so they cannot be sent again.
 

@@ -1,13 +1,13 @@
-# Matryoshka Zig — Give-back Audit Recipe (001)
+# Matryoshka Zig — Give-back Audit Recipe (002)
 
-How to audit a layer for items the toolkit hands back and nobody catches.
+How to audit a layer for items the toolkit gives back and nobody catches.
 
 Written after MBOX 1 (2026-08-12), which did this by hand for the mailbox.  
 INTR 7 did it for the pool a month earlier, from scratch, and the two stages  
 shared no method. This doc is so the third one does not start over.
 
 Tool: `kitchen/tools/audit_edges.sh` — the mechanical inventory.  
-Rules it enforces: [rules-046.md](rules-046.md) Part 8.
+Rules it enforces: [rules-047.md](rules-047.md) Part 8.
 
 ---
 
@@ -61,8 +61,8 @@ and stop thinking about it.
 4. **Fix**, one file at a time, running `build_and_test_debug.sh` after each,
    as INTR 7 did.
 5. **Write the framing down.** Both audits ended with a sentence the docs had
-   been missing — "Pool is not storage", "the mailbox holds, it never  
-   touches". Put it in `src/` doc comments *and* the pages. INTR 7 put its  
+   been missing — "Pool is not storage", "the mailbox keeps items, it never  
+   touches them". Put it in `src/` doc comments *and* the pages. INTR 7 put its  
    sentence in three docs and not in `src/pool.zig`, where the contradicting  
    word sat untouched for a month.
 

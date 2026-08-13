@@ -4,11 +4,11 @@
 
 Everything reusable lives here.
 
-A Pool hands out items for reuse, instead of allocating fresh ones in a hot loop.
+A Pool gives out items for reuse, instead of allocating fresh ones in a hot loop.
 
 ## What a Pool does
 
-A Pool hands out items for reuse instead of a fresh allocation every time.
+A Pool gives out items for reuse instead of a fresh allocation every time.
 
 ```text
 new()
@@ -24,10 +24,10 @@ put() [kept]                       put() [destroyed]
 back in the pool                   caller frees it
 
 close()
-  ↓ every stored item is handed back for the caller to free
+  ↓ every stored item is given back for the caller to free
 ```
 
-- `get` hands a handle to the caller — reused if one is free, freshly made otherwise.
+- `get` gives a handle to the caller — reused if one is free, freshly made otherwise.
 - `put` returns the handle — the Pool decides whether to keep it or let it go.
 - `close` collects everything still held and passes it to your `on_close`
   hook, which releases it.
@@ -55,7 +55,7 @@ This is the difference from a [Mailbox](mailbox.md), which never touches an
 Item at all. A Pool creates, resets, keeps or destroys — but every one of  
 those is your hook doing it, never the Pool deciding on its own.
 
-## A closed Pool hands items back
+## A closed Pool gives items back
 
 A Pool does not care whether you closed it either. Only `destroy` insists,  
 and panics on an open Pool.

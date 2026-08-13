@@ -6,7 +6,7 @@
 //! A mailbox:
 //! - sends/receives ItemHandles
 //! - supports waiting and non-waiting receive
-//! - holds handles until they are received
+//! - keeps handles until they are received
 //! - is itself a PolyNode
 //!
 //!  Thread(task) safe
@@ -14,38 +14,12 @@
 //!  - Multi-Sender/Multi-Receiver
 //!  - Fan-In/Fan-Out
 //!
-//! # The mailbox holds. It never touches.
-//!
-//! On the ok path it "transfers" the item from the sender to the receiver.
+//! The mailbox keeps items. It never touches them. On the ok path it
+//! "transfers" the item from the sender to the receiver.
 //!
 //! - No inspection.
 //! - No copy.
 //! - No free.
-//!
-//! # It does not care whether you closed it — except `destroy`
-//!
-//! Every other method returns `error.Closed` and stays a valid object.
-//! Only `destroy` makes closedness a precondition. It panics on an open
-//! mailbox.
-//!
-//! # Closing and releasing is the caller's job
-//!
-//! `close` hands the list back and is done. What those items are — heap
-//! items to free, pool items to put back — is knowledge the mailbox does
-//! not have and never had.
-//!
-//! # Release unconditionally
-//!
-//! `close` can be called more than once and returns an empty list after the first.
-//!
-//! So the release loop is always safe to run:
-//!
-//! - on a mailbox that still holds items
-//! - on one already empty
-//! - on one closed twice
-//!
-//! There is no state in which running it is wrong. Never write
-//! `_ = mbx.close()`.
 //!
 //! Examples:
 //! https://g41797.github.io/matryoshka-tk/examples/mailbox/
@@ -55,15 +29,14 @@
 //!
 const _doc_stub = void;
 
-///
-///
-/// A mailbox.
-///
-/// Application code holds `*Mbox` and calls methods on it.
+/// A mailbox - tool for Items exchanging
 ///
 /// A mailbox is also a PolyNode.
 ///
 /// Use `toPoly`/`fromPoly` for using it as any other item.
+///
+/// The fields below are internal.\
+/// Don't touch.
 pub const Mbox = struct {
     const no_create_destroy = void{};
 
@@ -79,7 +52,7 @@ pub const Mbox = struct {
     io: Io,
     alloc: std.mem.Allocator,
 
-    /// 'Packed' result of receive attempt
+    /// Result of a receive attempt, packed into a union.
     pub const Result = union(enum) {
         item: polynode.ItemHandle,
         closed: void,
@@ -117,6 +90,8 @@ pub const Mbox = struct {
         return helper.isIt(tag);
     }
 
+    /// Sends an item. It goes behind every item already queued.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
@@ -124,7 +99,7 @@ pub const Mbox = struct {
     /// - `slot.*` becomes null.
     ///
     /// On `error.Closed` the slot is unchanged.\
-    /// The sender still holds the item.
+    /// The sender still has the item.
     ///
     /// Asserts the slot is not empty, and that the item has no neighbours.
     pub fn send(self: *Mbox, slot: *polynode.Slot) error{Closed}!void {
@@ -147,6 +122,8 @@ pub const Mbox = struct {
         self.*.cond.signal(io);
     }
 
+    /// Sends an item out of band, ahead of all regular items.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
@@ -155,7 +132,7 @@ pub const Mbox = struct {
     /// - `slot.*` becomes null
     ///
     /// On `error.Closed` the slot is unchanged.\
-    /// The sender still holds the item.
+    /// The sender still has the item.
     ///
     /// Asserts the slot is not empty, and that the item has no neighbours.
     ///
@@ -197,6 +174,8 @@ pub const Mbox = struct {
         self.*.cond.signal(io);
     }
 
+    /// Receives an item, waiting until one is available.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
@@ -205,8 +184,8 @@ pub const Mbox = struct {
     /// - OOB handles have priority
     ///
     /// - `timeout_ns == null`: waits forever.
-    /// - `timeout_ns == 0`: returns `error.Timeout` immediately for empty
-    ///   mailbox. Same reach as try_receive, reported as an error instead of
+    /// - `timeout_ns == 0`: returns `error.Timeout` immediately for an empty
+    ///   mailbox. Same reach as try_receive. Reported as an error instead of
     ///   false.
     ///
     /// receive breaks on
@@ -214,13 +193,16 @@ pub const Mbox = struct {
     /// - cancel
     /// - `wakeUpAll()`
     ///
-    /// For the break - `slot.*` stays null. That includes `error.Wakeup` from
-    /// a wakeUpAll() while this receiver was blocked.
+    /// For the break - `slot.*` stays null.
+    ///
+    /// That includes `error.Wakeup` from a wakeUpAll() while this receiver
+    /// was blocked.
     ///
     /// Cancel does not close mailbox.
     ///
-    /// Several receivers compete for each handle, and one gets it. Order among
-    /// them is up to the Io runtime. It is not FIFO.
+    /// Several receivers compete for each handle. One gets it.
+    ///
+    /// Order among them is up to the Io runtime. It is not FIFO.
     ///
     /// Asserts the slot is empty.
     pub fn receive(self: *Mbox, slot: *polynode.Slot, timeout_ns: ?u64) (error{ Closed, Timeout, Wakeup } || Io.Cancelable)!void {
@@ -234,6 +216,9 @@ pub const Mbox = struct {
         else
             .none;
 
+        // Anchor the deadline once, before the retry loop. condition_waitTimeout
+        // calls toDeadline itself, but converting a duration inside the loop
+        // would restart the timeout on every spurious wakeup.
         const deadline: Io.Timeout = timeout_val.toDeadline(io);
 
         self.*.mutex.lock(io) catch |err| return err;
@@ -269,6 +254,8 @@ pub const Mbox = struct {
         slot.* = ih;
     }
 
+    /// Receives an item if one is available now. Never waits.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
@@ -304,16 +291,19 @@ pub const Mbox = struct {
         return true;
     }
 
+    /// Takes every stored item at once, as a list.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
     /// - returns all stored handles as list
     /// - empties mailbox
     ///
-    /// Returns an empty list if the mailbox is empty. An empty mailbox is not
-    /// an error, and this never waits.
+    /// Returns an empty list if the mailbox is empty.
     ///
-    /// The caller holds every item in the list.\
+    /// An empty mailbox is not an error. This never waits.
+    ///
+    /// The caller has every item in the list.\
     /// Release them — free them, or put them back into a pool.
     pub fn receive_batch(self: *Mbox) error{Closed}!polynode.ItemList {
         if (self.*.closed.load(.acquire)) return error.Closed;
@@ -341,20 +331,30 @@ pub const Mbox = struct {
     /// Safe to call more than once.\
     /// Later calls return an empty list.
     ///
-    /// The caller holds every item in the returned list.\
+    /// The caller has every item in the returned list.\
     /// Release them — free them, or put them back into a pool.
     ///
-    /// Run the release unconditionally. An empty list costs nothing, so no
-    /// call site has to know whether the mailbox was emptied first.
+    /// Releasing is the caller's job. What those items are — heap items to
+    /// free, pool items to put back — is knowledge the mailbox does not have
+    /// and never had.
+    ///
+    /// Run the release unconditionally. An empty list costs nothing.
+    /// No call site has to know whether the mailbox was emptied first.
+    ///
+    /// So the release loop is always safe to run:
+    ///
+    /// - on a mailbox that still has items
+    /// - on one already empty
+    /// - on one closed twice
     ///
     /// ```zig
     /// var rem: polynode.ItemList = mbx.close();
     /// // release every item in `rem`
     /// ```
     ///
-    /// Never write `_ = mbx.close()` — it drops items the mailbox handed
-    /// back. Those items keep their list links, so send rejects them
-    /// afterwards.
+    /// Never write `_ = mbx.close()`. It drops items the mailbox gave back.
+    ///
+    /// Those items keep their list links, so send rejects them afterwards.
     pub fn close(self: *Mbox) polynode.ItemList {
         const io: Io = self.*.io;
         self.*.mutex.lockUncancelable(io);
@@ -378,6 +378,8 @@ pub const Mbox = struct {
         return result;
     }
 
+    /// Wakes every blocked receiver.
+    ///
     /// If mailbox is closed - returns error.Closed
     ///
     /// Otherwise:
@@ -403,10 +405,7 @@ pub const Mbox = struct {
         self.*.cond.broadcast(io);
     }
 
-    /// Wraps `receiveResult`
-    /// - in an `Io.Future`
-    /// - for direct await
-    /// - or `Io.Group` use.
+    /// Wraps `receiveResult` in an `Io.Future` for direct await or `Io.Group` use.
     pub fn receive_future(self: *Mbox, timeout_ns: ?u64) Io.ConcurrentError!Io.Future(Result) {
         return self.*.io.concurrent(receiveResult, .{ self, timeout_ns });
     }
@@ -451,19 +450,16 @@ pub fn destroy(mbx: *Mbox, alloc: std.mem.Allocator) void {
     alloc.destroy(mbx);
 }
 
-/// Packs 'receive()` results to union,
-/// returned via Io.Queue
+/// Packs every `receive()` outcome into a `Mbox.Result`, returned via Io.Queue.
 ///
-///  Waiting.
-///
+/// Waiting.
 ///
 /// Primary building block for
 /// - `select.concurrent`
 /// - `io.concurrent`
 /// - `group.concurrent`.
 ///
-///
-/// The mailbox does not change it's state.
+/// The mailbox does not change its state.
 pub fn receiveResult(mbx: *Mbox, timeout_ns: ?u64) Mbox.Result {
     var slot: polynode.Slot = null;
     mbx.*.receive(&slot, timeout_ns) catch |err| return switch (err) {

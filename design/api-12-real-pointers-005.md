@@ -232,7 +232,7 @@ MailboxHandle = ItemHandle;`, an alias that no longer exists; they now state
 the struct and the pointer rule, worded from the `///` blocks in `src/`.
 
 **The two deferred write-ups.** Worker-finish-signal and Wrapper, in the API  
-reference and `patterns-027.md`. Both were rewritten around the real  
+reference and `patterns-028.md`. Both were rewritten around the real  
 comparison — `Mbox.mustFromPoly(slot.?) == worker_mbx`, two `*Mbox` the  
 compiler agrees about — with a line on why the handle-era version leaned on  
 the tag alone.
@@ -254,4 +254,4 @@ stage left them. Small follow-up.
 ## See also
 
 - [handle-based-programming.md](../kitchen/docs/addendums/handle-based-programming.md) — the pointer/handle idiom this extends.
-- [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the API surface, rewritten to real pointers across 12-2 through 12-4.
+- [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — the API surface, rewritten to real pointers across 12-2 through 12-4.

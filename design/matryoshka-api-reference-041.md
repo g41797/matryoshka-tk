@@ -14,7 +14,7 @@ Seven parts. Parts 3, 4 and 5 have the same shape, in the same order.
 
 A part learned once is a part learned everywhere.
 
-Deep dive is not this book's job. For that the reader goes to `src/`, to an
+Deep dive is not this book's job. For that the reader goes to `src/`, to an  
 example, or to the docs site.
 
 Base of the docs site: `https://g41797.github.io/matryoshka-tk/`.
@@ -89,16 +89,16 @@ These are the parts of Zig that Matryoshka is built out of.
 
 A reader who wants the full treatment goes to the Zig documentation.
 
-Everything here is standard Zig. Nothing in this part is a Matryoshka
+Everything here is standard Zig. Nothing in this part is a Matryoshka  
 invention. One term is ours, and this part says which one.
 
-The demonstration is a real test file: `tests/zig_mechanisms.zig`. It imports
+The demonstration is a real test file: `tests/zig_mechanisms.zig`. It imports  
 nothing from Matryoshka. Every snippet below is taken from it.
 
 ### Intrusion — the links are part of the struct
 
-<a href="https://ziglang.org/documentation/0.16.0/std/#std.DoublyLinkedList" target="_blank" rel="noopener noreferrer">std.DoublyLinkedList</a>
-works on
+<a href="https://ziglang.org/documentation/0.16.0/std/#std.DoublyLinkedList" target="_blank" rel="noopener noreferrer">std.DoublyLinkedList</a>  
+works on  
 <a href="https://ziglang.org/documentation/0.16.0/std/#std.DoublyLinkedList.Node" target="_blank" rel="noopener noreferrer">Nodes</a>.
 
 Two steps, and that is the whole mechanism.
@@ -158,8 +158,8 @@ Source: `tests/zig_mechanisms.zig`, scenario B2.
 
 ### ParentHandle — the way back
 
-The caller follows its own rules, and can get a pointer to the parent struct
-through
+The caller follows its own rules, and can get a pointer to the parent struct  
+through  
 <a href="https://ziglang.org/documentation/0.16.0/#toc-fieldParentPtr" target="_blank" rel="noopener noreferrer">@fieldParentPtr</a>.
 
 ```zig
@@ -188,7 +188,7 @@ The reason to have a word for it: two things must stay apart.
 
 They are the same address. They are not the same thing.
 
-- The list is handed the `*Node`.
+- The list is passed the `*Node`.
 - Your code works with the `*Reading`.
 - `@fieldParentPtr` crosses between them.
 
@@ -209,7 +209,7 @@ Only one of them is right.
 - Zig does not check it.
 - The handle carries nothing to check against.
 
-So the caller has to know the type by other means — the order it inserted
+So the caller has to know the type by other means — the order it inserted  
 items in, a separate list per type, or a field of its own.
 
 This is the gap polynode closes. Part 3 starts there.
@@ -497,7 +497,7 @@ pub fn moveToList(self: *ItemList) std.DoublyLinkedList
 - After popping from the plain list, call `polynode.reset(poly)` yourself.
   Skip it and the item looks linked to everything that checks.
 
-There is no adapter and no custom node type. Every PolyNode-based item carries
+There is no adapter and no custom node type. Every PolyNode-based item carries  
 the standard intrusive links, so a plain `std.DoublyLinkedList` accepts it.
 
 ### Generation
@@ -583,7 +583,7 @@ pub fn destroy(allocator: std.mem.Allocator, slot: *Slot) void
 
 Transfer of items between tasks.
 
-The mailbox holds. It never touches.
+The mailbox keeps items. It never touches them.
 
 - No inspection, no copy, no free.
 - Internally a list of handles. It allocates and frees exactly one thing —
@@ -1129,9 +1129,9 @@ pub fn init(self: *Pool, hooks: Pool.Hooks) !void
 - Called once after `new`, on a pool that is not closed.
 - The tag list must not be empty.
 
-Hooks are the three functions the pool calls on your behalf — `on_get`,
-`on_put` and `on_close` — plus the tags they answer for. Without them the pool
-has no policy and cannot make an item. The **Hooks** section at the end of this
+Hooks are the three functions the pool calls on your behalf — `on_get`,  
+`on_put` and `on_close` — plus the tags they answer for. Without them the pool  
+has no policy and cannot make an item. The **Hooks** section at the end of this  
 part says what each one does, and what must not happen inside one.
 
 ```zig
@@ -1332,7 +1332,7 @@ pub const Hooks = struct {
 - If `slot.*` is null on entry: no item was available — create a new one or
   leave null (creation failed).
 - Must either leave `slot.* == null` (creation failed) OR set `slot.*` to a
-  valid node with the tag that was requested. Another tag is a programming
+  valid node with the tag that was requested. Another tag is a programming  
   error.
 
 #### `on_put` — keep or destroy
@@ -1369,7 +1369,7 @@ If your hook touches shared state, protect it.
 - Obtain `io` from the surrounding context that has the pool; do not acquire it
   inside the hook.
 
-From inside a hook, never call back into the same pool, never block, and never
+From inside a hook, never call back into the same pool, never block, and never  
 wait. This is a contract, not a deadlock warning.
 
 ### Where to go deeper
@@ -1386,7 +1386,7 @@ wait. This is a contract, not a deadlock warning.
 
 ## Part 6 — Using them together
 
-The material below spans the three tools. No section of it belongs to one part
+The material below spans the three tools. No section of it belongs to one part  
 alone.
 
 Four sections:
@@ -1989,6 +1989,7 @@ API 8: `ItemList` — the toolkit's list type. `Mbox.receive_batch`, `Mbox.close
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 041 | 2026-08-13 | API 13-4. Custody-sense wording reconciled with `src/`. The mailbox statement in Part 4 now reads "The mailbox keeps items. It never touches them.", matching `src/mailbox.zig` after the 13-4a rewrite. One Part 2 line says the list is passed the `*Node` rather than given it. Changelog rows are left as written — they record what an earlier stage did. No section moved, no contract changed. |
 | 040 | 2026-08-13 | API 13-3. The book sheds the detail that 13-2 wrote into `src/`. The line it cuts on: a precondition the caller has to satisfy stays, the assert mechanism goes. All nine `Assert:` blocks are gone; where the surrounding bullets did not already say the precondition, one line of prose does. Out of Parts 3 to 5: the two-checks-per-insert reasoning, the O(n) cost of the safety checks, the `concatByMoving` and header-consistency explanations, the `!is_linked` assert site list — which named five sites where the code has seven — the `in_pool_count` lock mechanics, the pool's internal lock order, and the reentrancy reasoning. The `init` precondition "each tag not null" is deleted rather than moved: no such assert exists in `src/`, and `hooks.tags` holds non-optional pointers, so none can. Kept against their carry-over row, by the owner's ruling: the OOB ordering diagram, the two-`popFirst` warning trimmed to two bullets, and the two behavioural contracts a reader designs around — waiter order is not FIFO, and the pool gives no put-then-get sequence guarantee. Parts 1, 2, 6 and 7 are untouched. |
 | 039 | 2026-08-13 | API 13-1. The reference becomes a book for the reader who is learning Matryoshka. 22 flat `##` headings become seven parts, and Parts 3, 4 and 5 share one five-piece shape: what this is, participants, usual flow, the API in named groups, where to go deeper. New Part 1 states what Matryoshka is, what it is for, who it is for and what it is not. New Part 2 gives the three parts of Zig the toolkit is built out of — intrusion, type erasure, and the `*Node`-plus-`@fieldParentPtr` handle this book calls `ParentHandle`; its snippets come from a new test file, `tests/zig_mechanisms.zig`, and `ItemHandle` moves out of the opening lines into Part 3, where it is introduced as the analog with a tag added. Every code snippet in Parts 2 through 5 is extracted from a file a kitchen script already builds, and names its source. The pool part gains a `Hooks` section one level above `Get` and `Put`, last in the part, because hooks are written rather than called. 475 lines of manual type definition and `PolyHelper` walkthrough are removed in favour of pointers to the two hand-maintained pages that already carry them on the docs site. The complexity table is removed — it was never for the reader. Bare signature lists are replaced by grouped signatures, each with its description. The stale note naming this file the source for `///` doc comments is removed: the code is working, and the flow is now the other way. The dead `Addendums → Io 101` pointer becomes a link to the page. Part 6 groups the eleven cross-tool sections into four, by the owner's ruling: identity across the tools, the slot rule, concurrency and cancel, what the toolkit assumes. The grouping demotes the eleven one level and reorders them into their group; no section body is rewritten. |
 | 038 | 2026-08-13 | FLOW 1-1r. Both `Usual flow` sections rewritten in staccato. The wording of 037 was prose. Each numbered step is now a heading line with nested bullets under it, one fact per line, split at every colon, "and" and semicolon. The counting introductions are gone: "Four steps. Two set up, two take down." for `mailbox`, "Five steps. Three set up, two take down." for `pool`. The three trailing paragraphs on each side — close before destroy, `destroy` is not optional, teardown is the sharpest difference — are now a short lead line plus a bullet list, the same shape on both sides. No statement changed meaning. Code blocks, diagrams and every other section are untouched. |

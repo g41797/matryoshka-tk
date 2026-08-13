@@ -1,6 +1,6 @@
 """Inventory for a give-back audit. Reports, never edits.
 
-Two independent scans, described in design/audit-recipe-001.md:
+Two independent scans, described in design/audit-recipe-002.md:
 
   1. Give-back edges. Every call where the toolkit may hand the item back to
      the caller — a refused `send`, a `close` returning its list, a `put` the

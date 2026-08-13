@@ -16,7 +16,7 @@ sender Slot                      sender Slot
 |      Handle       |            |       empty        |
 +-------------------+            +-------------------+
 
-send  ───────────────────►      Mailbox holds the handle
+send  ───────────────────►      Mailbox keeps the handle
 ```
 
 ```text
@@ -45,7 +45,7 @@ receive   ◄──────────────────    Receiver 
 
 - No locks needed while a receiver processes what it received — nobody else has it.
 
-## The Mailbox holds. It never touches.
+## The Mailbox keeps items. It never touches them.
 
 Custody is not use. While the Mailbox has the handle, it does nothing to the  
 Item behind it.
@@ -66,7 +66,7 @@ A Mailbox does not care whether you closed it. Every method on a closed
 Mailbox simply says so and the object stays valid. Only `destroy` insists —  
 it must be closed first, and panics otherwise.
 
-When you close it, it hands back everything it was still holding, as a list,  
+When you close it, it gives back everything it still had, as a list,  
 and it is done.
 
 - What those Items are — heap items to free, pool items to put back — is

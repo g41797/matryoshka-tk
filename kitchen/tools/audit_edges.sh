@@ -16,7 +16,7 @@
 #
 # The classifier reads text, not syntax, and over-reports BARE by design:
 # a multi-line `catch { ... }` that frees still lands there. A clean table is
-# not proof of a clean codebase. Method: design/audit-recipe-001.md.
+# not proof of a clean codebase. Method: design/audit-recipe-002.md.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"

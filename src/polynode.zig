@@ -36,16 +36,15 @@ pub const PolyTag = struct {
 /// Alias of *PolyNode.
 pub const ItemHandle = *PolyNode;
 
-/// Embedded in every managed item.
-///
-/// Applications work with the parent item.
+/// Embedded in every Matryoshka Item.
 ///
 /// Two ways to name the same pointer:
-/// - ItemHandle
+///
+/// - Matryoshka uses it as ItemHandle
 ///   - Mailbox and Pool carry items this way.
-///   - Hold it. Send it. Put it in a Slot.
+///   - Keep it. Send it. Put it in a Slot.
 ///   - Do not look inside.
-/// - *PolyNode
+/// - Applications use it as *PolyNode
 ///   - PolyHelper takes this.
 ///   - Where the node is opened.
 ///   - Read the tag. Reach the parent item.
@@ -153,9 +152,9 @@ pub fn PolyHelper(comptime T: type) type {
                 return &self.poly;
             }
 
-            /// Cast to T through the Slot holding it.
+            /// Cast to T through the Slot containing it.
             ///
-            /// Returns null if the Slot is empty or holds another type.\
+            /// Returns null if the Slot is empty or contains another type.\
             /// Does not empty the Slot.
             pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
@@ -171,7 +170,7 @@ pub fn PolyHelper(comptime T: type) type {
 
             /// Takes T out of the Slot.
             ///
-            /// Returns null if the Slot is empty or holds another type.\
+            /// Returns null if the Slot is empty or contains another type.\
             /// On success the Slot is left empty.\
             /// On failure the Slot is unchanged.
             ///
@@ -279,9 +278,9 @@ pub fn PolyHelper(comptime T: type) type {
                 return &self.poly;
             }
 
-            /// Cast to T through the Slot holding it.
+            /// Cast to T through the Slot containing it.
             ///
-            /// Returns null if the Slot is empty or holds another type.\
+            /// Returns null if the Slot is empty or contains another type.\
             /// Does not empty the Slot.
             pub inline fn fromSlot(slot: *const Slot) ?*T {
                 const node = slot.* orelse return null;
@@ -297,7 +296,7 @@ pub fn PolyHelper(comptime T: type) type {
 
             /// Takes T out of the Slot.
             ///
-            /// Returns null if the Slot is empty or holds another type.\
+            /// Returns null if the Slot is empty or contains another type.\
             /// On success the Slot is left empty.\
             /// On failure the Slot is unchanged.
             ///
@@ -337,7 +336,7 @@ fn validatePolyType(comptime T: type) void {
 ///
 /// Under runtime safety every insert asserts twice on the new item.
 ///
-/// - This list does not already hold it. A walk, comparing addresses.
+/// - This list does not already contain it. A walk, comparing addresses.
 /// - The item has no neighbours. A read of the item.
 ///
 /// Neither check alone is enough.
@@ -398,7 +397,7 @@ pub const ItemList = struct {
         return ih;
     }
 
-    /// True if this list already holds the item.
+    /// True if this list already contains the item.
     ///
     /// Compares node addresses. Never reads the item.
     fn _holds(self: *const ItemList, ih: ItemHandle) bool {
@@ -410,7 +409,7 @@ pub const ItemList = struct {
     /// Asserts the item can be inserted into this list.
     ///
     /// _holds sees this list. is_linked sees any list, except the one
-    /// holding it alone. Neither is complete. Together they cover more.
+    /// containing it alone. Neither is complete. Together they cover more.
     ///
     /// std.DoublyLinkedList checks nothing. This is where it is checked.
     inline fn _checkInsert(self: *const ItemList, ih: ItemHandle) void {
@@ -478,7 +477,7 @@ pub const ItemList = struct {
         self._list.insertBefore(&existing.node, &ih.node);
     }
 
-    /// True if the list holds no items.
+    /// True if the list contains no items.
     pub inline fn isEmpty(self: *const ItemList) bool {
         return self._list.first == null;
     }
@@ -518,7 +517,7 @@ pub const ItemList = struct {
     ///
     /// The source is left empty. O(1).
     ///
-    /// Asserts the std header it is handed is consistent — first and last both
+    /// Asserts the std header passed to it is consistent — first and last both
     /// null, or both set.
     ///
     /// There is no copy form. A header copy aliases the same items.
@@ -560,8 +559,9 @@ pub const ItemList = struct {
     ///
     /// Using of this field allowed for tests.
     ///
-    /// An item taken out this way keeps its old prev/next. popFirst did not
-    /// run, so reset did not either — call reset yourself.
+    /// An item taken out this way keeps its old prev/next.
+    ///
+    /// popFirst did not run, so reset did not either. Call reset yourself.
     ///
     /// std.DoublyLinkedList.popFirst does not clear the links.
     /// ItemList.popFirst does.

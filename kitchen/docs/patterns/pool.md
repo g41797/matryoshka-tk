@@ -132,7 +132,7 @@ fn onPut(ctx_opaque: *anyopaque, _: usize, slot: *Slot) ?polynode.ItemList {
   enters the same way.
 
 - Return `null` when there is nothing extra — the common case.
-- The hook hands back only unlinked, correctly-tagged items. The pool does not
+- The hook gives back only unlinked, correctly-tagged items. The pool does not
   check that they form a real composite.
 
 - The pool draws no distinction between a simple and a composite item.

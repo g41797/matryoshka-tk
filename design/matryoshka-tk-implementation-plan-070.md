@@ -1,9 +1,9 @@
-# Matryoshka Zig — Implementation Plan (069)
+# Matryoshka Zig — Implementation Plan (070)
 
-Change from -068: API 13-3 done. The book shed the assert mechanism; the  
-carry-over note's Section 2 is discharged from both ends. 13-4 is now the prose  
-pass over `src/` and the documents, owner's decision 2026-08-13, and "the book  
-governs" moves to 13-5.
+Change from -069: API 13-4a and 13-4b-1 done. `src/` reads as prose, the custody  
+wording is reworded there and in the documents that contradicted it, and the  
+module headers are modelled on `std.Io`'s. 13-4b-2 and 13-4b-3 carry the rest of  
+the document pass. "The book governs" stays 13-5.
 
 **Reconstructed 2026-08-12.** Versions -056 through -059 were lost: the agent  
 deleted -059 while the command meant to create -060 had already failed, and  
@@ -14,18 +14,17 @@ log, not the originals. Everything from API 12-1 on is exact.
 
 ## Status
 
-Green across the board. `zig build test` passes **195/195** — 191 plus the  
-four scenarios of `tests/zig_mechanisms.zig`, added by API 13-1.  
-`zig build stories` passes and runs the transcoder narrative end to end.
+Current state lives in [STATUS.md](STATUS.md), not here. This file carries
+forward-looking work and one line per completed stage.
 
-`build_and_test_all.sh` passes in Debug, ReleaseSafe, ReleaseFast and  
-ReleaseSmall. `build_cross_debug.sh` passes for x86_64-macos, aarch64-macos  
-and x86_64-windows. `build_core_debug.sh` and `check_design.sh` exit 0.
+Version note: `-070` is kept rather than superseded. It was created for API 13-4
+and no stage has completed since; the edits after its creation are that stage's
+own close-out corrections. `-069` was deleted against Part 0 and is unrecoverable
+— see STATUS-LOG.md, 2026-08-13, and Open Item 14 in STATUS.md.
 
-`src/`, `tests/`, `examples/`, `stories/`, `kitchen/docs/` and `design/` all  
-speak the pointer API. API 12 is closed.
-
-Last completed stage: API 13-1, 2026-08-13.
+Last completed stage: API 13-4b-1, 2026-08-13 — close-out incomplete.
+`build_and_test_all.sh` and `build_cross_debug.sh` have not been run since
+API 13-3, so the four-mode and cross-compile claims are unverified.
 
 ---
 
@@ -77,8 +76,8 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - EXMPL 5a-5e — receive router: design note, example + test, pattern docs, catalog and nav, `cancelDiscard` audit over 15 sites with no defects. DONE 2026-07-27 (169/169). Design: [receive-router-002.md](receive-router-002.md).
 - API 6 — `identifyNodeAs`/`identifySlotAs` → `fromNode`/`fromSlot` (+ `must`), new `moveFromSlot`, ~222 call sites. DONE 2026-07-28 (170/170).
 - API 7a-7d — `toNode`, the outbound accessor; three `src/` hand-rolls self-hosted; `src/polynode.zig` doc comments fixed. DONE 2026-07-29 (171/171).
-- API 7e — closed as superseded: `ItemList.append` takes an `ItemHandle`, so the sites `toListNode` targeted are gone. See [item-list-010.md](item-list-010.md) Q22.
-- API 8a-8d — `ItemList` closes the `std.DoublyLinkedList` boundary; five public signatures moved; `popFirst` turns the reset trap into a type guarantee. DONE 2026-07-29 (175/175). Design: [item-list-010.md](item-list-010.md).
+- API 7e — closed as superseded: `ItemList.append` takes an `ItemHandle`, so the sites `toListNode` targeted are gone. See [item-list-011.md](item-list-011.md) Q22.
+- API 8a-8d — `ItemList` closes the `std.DoublyLinkedList` boundary; five public signatures moved; `popFirst` turns the reset trap into a type guarantee. DONE 2026-07-29 (175/175). Design: [item-list-011.md](item-list-011.md).
 - API 9 — intrusive safety: `appendFromSlot`/`prependFromSlot`, `tests/layer1_itemlist.zig`, the `_holds` walk, `concat` self-check. Misuse cases 1 and 5 stay open by decision (Q26 = D). DONE 2026-07-30 (177/177).
 - API 10 — `ItemList` completion: `remove`, `popLast`, `first`, `last`, `insertBefore`; `iterate` → `iterator`; `concat` self-concat leak fixed. DONE 2026-07-31 (182/182).
 - API 11 — `fromNode`/`mustFromNode`/`toNode` → `fromPoly`/`mustFromPoly`/`toPoly`, 164 call sites. Slot accessors keep their names. DONE 2026-07-31 (182/182).
@@ -86,7 +85,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
 - DISPATCH 2 — table dispatch documented; the handler belongs to the pair (receiver, tag), so the choice moves into data. `examples/helpers/TagTable.zig`, scenarios 113-117. No `src/` change. DONE 2026-07-31 (192/192). Working doc: [table-dispatch-002.md](table-dispatch-002.md).
 - CMPCT 1 — STATUS/plan/log/context de-duplicated; rules-038 "Status file ownership". DONE 2026-08-01 (192/192, doc-only).
 - CMPCT 2 — rules regrouped into rules-039.md: gates first, one topic in one place, dated rationale moved to the log, six stale links fixed. No rule changed meaning. DONE 2026-08-01 (192/192, doc-only).
-- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-046.md](rules-046.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
+- DOC 22 — `design/` compacted to the current picture. Five concept docs merged into [matryoshka-concepts-002.md](matryoshka-concepts-002.md); nine files moved to `design/secondary/` (frozen, indexed by its own `context.md`); eight deleted; `context.md` rewritten; every dead cross-reference repaired. New in [rules-047.md](rules-047.md): where a doc lives, present tense in `design/`, story file layout. DONE 2026-08-02 (192/192, doc-only).
 - DOC 23 — the two large docs split by audience. `matryoshka-tk-0.16-implementation-guide-001.md` retired: its Odin idiom mapping to [secondary/odin-to-zig-backport-001.md](secondary/odin-to-zig-backport-001.md), its still-binding material to [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md), its walkthroughs of shipped code deleted with owner approval. [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md) drops the four sections `matryoshka-concepts-002.md` already owns and renames `MayItem` to `Slot`. New gate `kitchen/tools/check_design.sh`. DONE 2026-08-02 (192/192, doc-only).
 - WEB 1 — the landing page reaches the API docs. `kitchen/docs/index.md`: the `XYZ Lines Of Code` badge is now the link to `apidocs/`, opening in a new tab; the API button above it, hidden by CSS since it was added, is deleted. `kitchen/docs/stylesheets/extra.css`: the badge gains link styling and a per-scheme hover, and the button styling it made dead — `.hero-button`, both `-primary` and `-secondary` scheme pairs, the `display: none` rule, the unused `.hero-buttons` selector — is removed. DONE 2026-08-02 (doc-only, no `src/` change).
 
@@ -136,22 +135,23 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   12-3's doc-comment sweep. DONE 2026-08-12 (191/191).
 
 - MBOX 1 — the mailbox audit, the deferred twin of INTR 7. The framing the
-  docs were missing: the mailbox holds, it never touches — no inspection, no  
-  copy, no free — so everything it holds goes back to a caller, and releasing  
+  docs were missing: the mailbox keeps items, it never touches them — no  
+  inspection, no copy, no free — so everything it keeps goes back to a caller,  
+  and releasing  
   it is the caller's job. Written into `src/mailbox.zig`, the concept and api  
   pages, and the API reference, with the mirror statements for Pool (it does  
-  touch items, through hooks; a closed pool hands them back; `close`  
+  touch items, through hooks; a closed pool gives them back; `close`  
   releases through `on_close`). Code: 32 `_ = mbx.close()` sites replaced by  
   an unconditional release, a refused `send` of a pool item in  
   `056-job_pool_circular.zig`, unchecked `put_all` leftovers in 034 and 040,  
   and four `mbh` names API 12 missed. Found and fixed on the way: 15  
   documented asserts that never existed in `src/`, and  
-  `kitchen/docs/tools/pool.md` claiming `Pool.close` hands items back to the  
+  `kitchen/docs/tools/pool.md` claiming `Pool.close` gives items back to the  
   caller when it passes them to `on_close`. Follow-up in the same session:  
   every item `tests/layer2_mailbox.zig` sends is now allocated, closing its  
   own violation of Part 8's "never send a stack-allocated item" — 33 sites,  
   no rule exemption needed. No `src/` behaviour change.  
-  DONE 2026-08-12 (191/191). Rules: [rules-046.md](rules-046.md).
+  DONE 2026-08-12 (191/191). Rules: [rules-047.md](rules-047.md).
 
 - AUDIT 1 — the give-back audit made repeatable. MBOX 1 and INTR 7 did the
   same kind of work a month apart and shared no method, so the method is now  
@@ -159,7 +159,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   `audit_edges.py`: classifies every give-back edge as  
   COVERED / CATCH-FREES / DISCARDED / BARE, and checks every documented  
   `Assert:` entry against the asserts in `src/`. Reports, never edits; exits 0  
-  always, deliberately not a gate. [audit-recipe-001.md](audit-recipe-001.md)  
+  always, deliberately not a gate. [audit-recipe-002.md](audit-recipe-002.md)  
   carries what the script cannot: the edge table, the four verdicts and why  
   there is no fifth, the read-only-then-report ordering, and the post-MBOX-1  
   baseline to diff against. No change to `src/`, `tests/`, `examples/`,  
@@ -197,7 +197,7 @@ One line each. Full account: `STATUS-LOG.md`, by date.
   and the dead `Addendums → Io 101` pointer both fixed. Part 6 groups  
   the eleven cross-tool sections into four, by the owner's ruling. Detail stays in  
   the book and is recorded in  
-  [api-13-carryover-003.md](api-13-carryover-003.md) — 43 rows.  
+  [api-13-carryover-004.md](api-13-carryover-004.md) — 43 rows.  
   `ParentHandle` added to the glossary.  
   DONE 2026-08-13 (195/195).
 
@@ -208,14 +208,24 @@ plan-046 without starting, and `design/candidates/` does not exist on disk.
 
 ## Next
 
-**API 13-4**, the prose pass, is next. Detail below.
+**No stage is authorized.** The owner names the next stage. What follows is a
+menu with costs attached, not a queue, and no heading here is permission to
+start.
+
+Open first: the API 13-4 close-out. Six steps of the Part 0 finish checklist
+were not run. Listed in [STATUS.md](STATUS.md) under Next.
+
+Candidates: **13-4b-3** (the `design/` prose pass, heavy versioning tax),
+**13-5 — the book governs**, and the **`polynode` audit**, which is a
+correctness gap rather than polish. Recommendation on record favours the audit;
+the owner has not ruled. Detail below, deferred pool further down.
 
 ---
 
 ## FLOW 1 — the usual flow of a mailbox and a pool
 
-The gap FLOW 1 closed: every doc described the edges, none described the
-ordinary path. `new`, `init(hooks)`, `destroy` and close-before-destroy were
+The gap FLOW 1 closed: every doc described the edges, none described the  
+ordinary path. `new`, `init(hooks)`, `destroy` and close-before-destroy were  
 documented only as hazards, or not at all.
 
 - **FLOW 1-1** — the canonical text, written into the api reference.
@@ -224,16 +234,21 @@ documented only as hazards, or not at all.
   Every numbered step is a heading line with nested bullets under it.
 
 The canonical text now lives in Parts 4 and 5 of
-[matryoshka-api-reference-040.md](matryoshka-api-reference-040.md), carried
+[matryoshka-api-reference-041.md](matryoshka-api-reference-041.md), carried
 into the book unchanged by API 13-1.
 
-**1-2 and 1-3 are postponed.** Owner's call, 2026-08-13. Their scope is below
+**1-2 and 1-3 are postponed.** Owner's call, 2026-08-13. Their scope is below  
 and unchanged.
 
-Vocabulary, owner's ruling 2026-08-12: `lifecycle` is AI-sh, and the section is
-called **Usual flow** everywhere. `hands` and `holds` stay out of new text. The
-MBOX 1 framing already in `src/` — "The mailbox holds. It never touches." —
-stays as it is.
+Vocabulary, owner's ruling 2026-08-12: `lifecycle` is AI-sh, and the section is  
+called **Usual flow** everywhere. `hands` and `holds` stay out of new text.
+
+Superseded by the owner's ruling of 2026-08-13, in API 13-4: the custody sense of  
+both words is reworded wherever it appears, and the MBOX 1 framing goes with it.  
+`src/mailbox.zig` now reads "The mailbox keeps items. It never touches them."  
+Scoped away from the Hold vocabulary in
+[matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md),
+which stays.
 
 ### FLOW 1-2 — propagate
 
@@ -271,78 +286,95 @@ list. Renaming Layer 1 example 022 — still owner-only, still a `git mv`.
 
 ## API 13 — the reference becomes a book
 
-Design note: [api-13-book-002.md](api-13-book-002.md). It carries the reason,
-the eight findings, the seven-part structure, the displacement table and the
-deliverables, with the owner's rulings on `-001` folded into the sections they
+Design note: [api-13-book-002.md](api-13-book-002.md). It carries the reason,  
+the eight findings, the seven-part structure, the displacement table and the  
+deliverables, with the owner's rulings on `-001` folded into the sections they  
 govern.
 
-The direction reversed. The reference was the source for `src/` doc comments;
-the code is working now, so the code takes the detail and the book keeps what a
+The direction reversed. The reference was the source for `src/` doc comments;  
+the code is working now, so the code takes the detail and the book keeps what a  
 reader learning Matryoshka needs.
 
 ### API 13-1 — the restructure. DONE 2026-08-13
 
-Summary in Completed stages. Verified with `check_design.sh` exit 0 and
+Summary in Completed stages. Verified with `check_design.sh` exit 0 and  
 `build_and_test_debug.sh` 195/195.
 
 ### Part 6 — grouped, DONE 2026-08-13
 
-The owner approved the four-section grouping: identity across the tools, the
-slot rule, concurrency and cancel, what the toolkit assumes. The eleven
-cross-tool sections dropped one heading level and moved into their group. No
+The owner approved the four-section grouping: identity across the tools, the  
+slot rule, concurrency and cancel, what the toolkit assumes. The eleven  
+cross-tool sections dropped one heading level and moved into their group. No  
 body text was rewritten. `build_and_test_debug.sh` 195/195.
 
 ### API 13-2 — the code takes the detail. DONE 2026-08-13
 
-All 43 rows are `///` or `//!` comments in `src/polynode.zig`,
-`src/mailbox.zig` and `src/pool.zig`. Doc comments only, no behaviour change.
-Each of the four modules points at its own examples root plus `/examples/flow/`,
-roots only. No snippet in `src/`. `src/matryoshka.zig` lost its one banned word,
-and `polynode.zig`'s header says what the second helper variant omits instead of
+All 43 rows are `///` or `//!` comments in `src/polynode.zig`,  
+`src/mailbox.zig` and `src/pool.zig`. Doc comments only, no behaviour change.  
+Each of the four modules points at its own examples root plus `/examples/flow/`,  
+roots only. No snippet in `src/`. `src/matryoshka.zig` lost its one banned word,  
+and `polynode.zig`'s header says what the second helper variant omits instead of  
 apologising for it. Three things the code did not back are in Section 5 of
-[api-13-carryover-003.md](api-13-carryover-003.md). 195/195, docs target clean.
+[api-13-carryover-004.md](api-13-carryover-004.md). 195/195, docs target clean.
 
 ### API 13-3 — the book sheds the detail. DONE 2026-08-13
 
 The book is now
-[matryoshka-api-reference-040.md](matryoshka-api-reference-040.md), 2062 lines
-down to 2022. The line it
-cut on: a precondition the caller satisfies stays, the assert mechanism goes.
-All nine `Assert:` blocks are gone. Also out: the two-checks-per-insert
-reasoning, the safety-build cost, the `concatByMoving` and header-consistency
-explanations, the `!is_linked` site list, the `in_pool_count` lock mechanics and
-the reentrancy reasoning. The `init` null-tag clause was deleted, not moved — no
-such assert exists. Kept against their row by the owner's ruling: the OOB
-diagram, the trimmed `popFirst` warning, and the two behavioural contracts.
+[matryoshka-api-reference-041.md](matryoshka-api-reference-041.md), 2062 lines
+down to 2022. The line it  
+cut on: a precondition the caller satisfies stays, the assert mechanism goes.  
+All nine `Assert:` blocks are gone. Also out: the two-checks-per-insert  
+reasoning, the safety-build cost, the `concatByMoving` and header-consistency  
+explanations, the `!is_linked` site list, the `in_pool_count` lock mechanics and  
+the reentrancy reasoning. The `init` null-tag clause was deleted, not moved — no  
+such assert exists. Kept against their row by the owner's ruling: the OOB  
+diagram, the trimmed `popFirst` warning, and the two behavioural contracts.  
 Parts 1, 2, 6 and 7 untouched.
 
 ### API 13-4 — the prose pass
 
-Owner's decision, 2026-08-13: `src/*.zig` and the documents both read as prose
-in places. This is its own stage, not a post-stage cleanup row — that rule is
-shallow by design and already missed this.
+**13-4a — `src/*.zig`. DONE 2026-08-13.** Three voice lines brought to the owner  
+and all kept unchanged. Custody wording reworded across 29 sites, the MBOX 1  
+statement with them. Six mailbox summary lines replaced, so the autodoc module  
+page no longer shows six identical rows; "item" chosen over "handle". Headers  
+modelled on `std.Io`'s — `mailbox.zig` 52 lines to 26, `pool.zig` 49 to 25, no  
+`#` sections left, mostly by deleting what `close` and `destroy` already said.  
+Thirteen multi-fact sentences split, and a set of render defects fixed.  
+Autodocs regenerated; the rendered page was not viewed.
 
-Why here and not earlier or last.
+**13-4b-1 — the documents that contradicted `src/`. DONE 2026-08-13.** Six new  
+versions, 11 kitchen pages, `STATUS.md` and `context.md` in place. The rules  
+carve-out for the old mailbox statement retired. The carry-over note's finding  
+discharged. Owner's ruling: the Hold vocabulary in
+[matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md)
+is out of scope — it replaced a banned family of words and names sections and the  
+`HELD` state.
 
-- After 13-3, because 13-3 decides which facts the code is now the only home
-  for. Those doc comments have to carry them alone.
-- Before "the book governs", because that stage reconciles other documents
-  against `src/` and the book. Reconciling against text that then changes means
-  doing it twice.
+**Post-stage cleanup. DONE 2026-08-13.** Two comment-level fixes; three  
+code-level findings reported, not actioned. See STATUS-LOG.md.
 
-Scope.
+### 13-4b-2 — DROPPED 2026-08-13
 
-- The four `//!` headers. Rules Part 4 says model them on `std.Io`'s.
-  `mailbox.zig`'s is 50 lines of five `#` sections; `pool.zig`'s is similar.
-- `///` blocks that name more than one fact in a sentence, or run to several
-  paragraphs. `Pool.put`'s is about thirty lines after 13-2.
-- Voice. "Be careful - your code will run in the heart of Matryoshka!!!",
-  "Fix laziness of std.DoubleLinkedList", "Don't touch". Some is character worth
-  keeping. The list goes to the owner; the agent does not decide it.
-- The two `hands` hits, once the owner has ruled.
-- The documents, same pass.
-- Verification is the rendered autodoc page, not the source. The splice rules
-  make a source-level read unverifiable.
+Defined from symmetry with 13-4a, not from evidence. A scan of the 59
+hand-maintained kitchen pages found one line over 180 characters
+(`kitchen/docs/addendums/intrusion-type-erasure.md`) and one multi-fact sentence in a
+generated page. Those pages were written in staccato and never accumulated the
+prose `src/` did. The long line goes to 13-5.
+
+### 13-4b-3 — the `design/` documents, prose
+
+The versioning rule makes this the expensive half. Every doc touched needs a new  
+suffixed version plus a link cascade, and a bulk repoint must name its files and  
+exclude `STATUS-LOG.md`.
+
+Two carried items, both the owner's:
+
+- `handle` vs `item` in `mailbox.zig` body text. It runs 29 to 18 for `handle`
+  while the rest of the repo runs 6:1 the other way. The summary lines already  
+  say "item", so single comments now use both.
+- `language-of-matryoshka.md` is unsuffixed, against "all docs require one". Its
+  one custody-adjacent hit is mechanism sense. Left out of 13-4b-1 for both  
+  reasons.
 
 ### API 13-5 — the book governs
 
@@ -351,12 +383,12 @@ Scope.
 - The book dictates the content of every other doc.
 - Read the neighbours for material that belongs in the book:
   [matryoshka-concepts-002.md](matryoshka-concepts-002.md) and
-  [patterns-027.md](patterns-027.md) overlap it most.
+  [patterns-028.md](patterns-028.md) overlap it most.
 - Reconcile `kitchen/docs/api/pool/hooks-discipline.md`. The book's Hooks
-  section states the same rules. Decide whether the page keeps its own text or
+  section states the same rules. Decide whether the page keeps its own text or  
   becomes a pointer.
 - The carry-over note's "to remove later" section is discharged here or by an
-  owner decision — the slogan register, and the banned word Section 3 of that
+  owner decision — the slogan register, and the banned word Section 3 of that  
   note counts.
 - Move material in, move material out, record both.
 
@@ -409,7 +441,7 @@ Scope.
   left under `kitchen/docs/` are `@import` lines inside generated example  
   pages, which are correct. The `design/` side was closed by DOC 22.
 - **Closed by the 2026-07-30 banned-word pass.** The `patterns-017` section
-  titles carried from `-016`/`-015` are reworded in `patterns-027.md`, and the  
+  titles carried from `-016`/`-015` are reworded in `patterns-028.md`, and the  
   `022-ownership_transfer.zig` `//!` title and entry-point name are reworded  
   too. The **filename** still carries the word — owner's decision, since  
   renaming trips the examples-catalog nav-sync rule.

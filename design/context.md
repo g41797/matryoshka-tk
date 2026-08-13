@@ -10,25 +10,25 @@
 One line per doc: the link, then what the doc is.
 
 Not a changelog. How a doc reached its current version is narrative, and  
-narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-046.md,  
+narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-047.md,  
 "Status file ownership".
 
 `design/` holds the current picture of Matryoshka. Snapshots, superseded  
 drafts, session logs and unstarted intentions live in  
-[secondary/](secondary/context.md) and are frozen. See rules-046.md,  
+[secondary/](secondary/context.md) and are frozen. See rules-047.md,  
 "Where a doc lives".
 
 ## State
 
 - [STATUS.md](STATUS.md) — where we are and what is next. Read in full each session.
-- [matryoshka-tk-implementation-plan-069.md](matryoshka-tk-implementation-plan-069.md) — forward-looking work + one line per completed stage.
+- [matryoshka-tk-implementation-plan-070.md](matryoshka-tk-implementation-plan-070.md) — forward-looking work + one line per completed stage.
 - [STATUS-LOG.md](STATUS-LOG.md) — session narrative, by date. Do not read by default.
 
 ## Sources of truth
 
-- [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — the book. Seven parts: introduction, the Zig mechanisms, then one part each for polynode, mailbox and pool in the same five-piece shape, the cross-tool material, and what sits beyond the toolkit. Signatures, types, error sets, preconditions and the cancel contract live in the three tool parts. The assert mechanism does not — that is in `src/` doc comments.
-- [rules-046.md](rules-046.md) — coding, doc, and process rules. Includes the banned-word list.
-- [patterns-027.md](patterns-027.md) — unified pattern and idiom catalog.
+- [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — the book. Seven parts: introduction, the Zig mechanisms, then one part each for polynode, mailbox and pool in the same five-piece shape, the cross-tool material, and what sits beyond the toolkit. Signatures, types, error sets, preconditions and the cancel contract live in the three tool parts. The assert mechanism does not — that is in `src/` doc comments.
+- [rules-047.md](rules-047.md) — coding, doc, and process rules. Includes the banned-word list.
+- [patterns-028.md](patterns-028.md) — unified pattern and idiom catalog.
 - [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md) — Zig 0.16 constraints, the cancellation contract, and what comptime bought.
 
 ## Concepts
@@ -39,13 +39,13 @@ drafts, session logs and unstarted intentions live in
 
 ## Design notes
 
-- [item-list-010.md](item-list-010.md) — `ItemList` and intrusive safety. The question record behind API 8, 9 and 10.
+- [item-list-011.md](item-list-011.md) — `ItemList` and intrusive safety. The question record behind API 8, 9 and 10.
 - [receive-router-002.md](receive-router-002.md) — receive-router use case and chosen solution.
 - [table-dispatch-002.md](table-dispatch-002.md) — table dispatch: the handler belongs to the pair (receiver, tag).
 - [api-12-real-pointers-005.md](api-12-real-pointers-005.md) — API 12: Mbox/Pool as real pointers, replacing MailboxHandle/PoolHandle.
 - [api-13-book-002.md](api-13-book-002.md) — API 13: the api reference becomes a standalone book for the user, and the detail moves into `src/` doc comments. Current version, with the owner's rulings on `-001` folded in.
-- [api-13-carryover-003.md](api-13-carryover-003.md) — API 13: what left the book, and where it goes. Landed in `src/` by 13-2, still the input for 13-3. Carries the slogan register, the banned-word footprint, and what 13-2 found the code did not back.
-- [audit-recipe-001.md](audit-recipe-001.md) — how to audit a layer for items the toolkit hands back. Method behind INTR 7 and MBOX 1, with the current baseline. Tool: `kitchen/tools/audit_edges.sh`.
+- [api-13-carryover-004.md](api-13-carryover-004.md) — API 13: what left the book, and where it goes. Landed in `src/` by 13-2, still the input for 13-3. Carries the slogan register, the banned-word footprint, and what 13-2 found the code did not back.
+- [audit-recipe-002.md](audit-recipe-002.md) — how to audit a layer for items the toolkit gives back. Method behind INTR 7 and MBOX 1, with the current baseline. Tool: `kitchen/tools/audit_edges.sh`.
 
 ## Tests and examples
 

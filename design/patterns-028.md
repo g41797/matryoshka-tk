@@ -1,5 +1,8 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (027)
+# Matryoshka Zig — Pattern and Idiom Catalog (028)
 
+Change from patterns-027: API 13-4 — the three custody-sense `hands`/`holds`  
+sentences in the mailbox close-recovery pattern reworded to match `src/`.  
+No pattern changed.
 
 Change from patterns-026: MBOX 1 — "Mailbox close recovery" rewritten around  
 the unconditional release, with `_ = mbx.close()` named as the thing not to  
@@ -65,9 +68,9 @@ Change from patterns-011:
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-046.md](rules-046.md) — what is mandatory.  
+Companion: [rules-047.md](rules-047.md) — what is mandatory.  
 Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the thinking model.  
-Companion: [matryoshka-api-reference-040.md](matryoshka-api-reference-040.md) — signatures and contracts.
+Companion: [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -94,7 +97,7 @@ Order of this catalog.
 
 ## Slot and transfer idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-040.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-041.md).
 
 ### Empty Slot initialization
 
@@ -308,7 +311,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-040.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-041.md).
 
 ---
 
@@ -407,7 +410,7 @@ list.append(EventPolyHelper.toPoly(&ev));
 ### Walk a batch — ItemList
 
 When to use.
-- Anything hands back many items: `Mbox.receive_batch`, `Mbox.close`,
+- Anything gives back many items: `Mbox.receive_batch`, `Mbox.close`,
   `Pool.close`'s `on_close` hook, `on_put`'s returned list.
 
 Code shape.  
@@ -592,7 +595,7 @@ try log_table.dispatch(self, &slot);
   never left the Slot, so unlike the last branch of a chain, the caller frees  
   it — the caller knows its own type set.
 - The handler follows the transfer rule: on return the Slot is null if the
-  handler took the item, full if it did not. See rules-046.md.
+  handler took the item, full if it did not. See rules-047.md.
 - Not in `src/`: the handler's first parameter is the application's receiver
   type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
 
@@ -651,7 +654,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-040.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-041.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -713,7 +716,7 @@ Why.
   Under the handle API it compared two look-alike `ItemHandle`s, and only the  
   tag stood between a match and a silent mistake.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-040.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-041.md).
 
 ### Pool-as-message
 
@@ -800,9 +803,9 @@ Why.
 - Which release applies — free, or return to a pool — is yours to know. The
   mailbox does not know and never did.
 
-- Run it unconditionally. `close` can be called more than once and hands back
-  an empty list after the first, so the loop is always safe: on a mailbox still holding  
-  items, on one already empty, on one closed twice. Nothing has to work out  
+- Run it unconditionally. `close` can be called more than once and gives back
+  an empty list after the first, so the loop is always safe: on a mailbox that  
+  still has items, on one already empty, on one closed twice. Nothing has to work out  
   which of those it is looking at.
 
 - Nothing leaks.
@@ -810,7 +813,7 @@ Why.
 
 Do not.
 
-- Do not write `_ = mbx.close()`. It drops what the mailbox handed back.
+- Do not write `_ = mbx.close()`. It drops what the mailbox gave back.
   Even where nothing leaks — items living in the caller's frame — the dropped  
   list is still a chain of linked nodes, and `Mbox.send` asserts an unlinked  
   item, so those items cannot be sent again.
@@ -1604,7 +1607,7 @@ Example: `examples/layer2/062-shutdown_exit.zig`.
 
 ### Observable function shapes
 
-Concrete templates for the "Observable by human" MUST rule. See [rules-046.md](rules-046.md).
+Concrete templates for the "Observable by human" MUST rule. See [rules-047.md](rules-047.md).
 
 #### Coordinator / run
 

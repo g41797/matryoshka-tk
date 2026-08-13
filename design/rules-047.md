@@ -1,12 +1,14 @@
-# Matryoshka Zig — Rules (046)
+# Matryoshka Zig — Rules (047)
 
 All coding, doc, and process rules for the project.  
-Change from -045: API 13-3 — a bulk repoint of doc references must exclude  
-`design/STATUS-LOG.md`. One bullet in Part 0, Documents.  
+Change from -046: API 13-4 — the custody-sense glossary entry now covers both  
+words and is scoped away from the architecture doc's Hold vocabulary. The  
+carve-out for the old MBOX 1 framing is retired, because `src/` no longer  
+uses it. Two Part 8 sentences reworded to match.  
 Which stage introduced which rule is Part 10.
 
 Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the concepts and the thinking model.  
-Companion: [patterns-027.md](patterns-027.md) — reusable coding patterns.
+Companion: [patterns-028.md](patterns-028.md) — reusable coding patterns.
 
 ---
 
@@ -30,9 +32,9 @@ Documents.
 - Doc link rule: after creating a new version, update every cross-reference to
   the old version in every other doc. The owner never does this by hand.
 - A bulk repoint excludes `design/STATUS-LOG.md`. A past entry names the version
-  that was current when it was written, and that is the fact it records. A
-  `grep -rl ... design/ | xargs sed` rewrites it silently — API 13-3 did exactly
-  that, changing `-039` to `-040` inside a finished entry from earlier the same
+  that was current when it was written, and that is the fact it records. A  
+  `grep -rl ... design/ | xargs sed` rewrites it silently — API 13-3 did exactly  
+  that, changing `-039` to `-040` inside a finished entry from earlier the same  
   day. Name the files, or exclude the log.
 - Two files are updated in place instead: `design/STATUS.md` and
   `design/context.md`, the stable entry points.
@@ -75,7 +77,7 @@ Per-stage finish checklist.
    code that can be extracted.
 5. Re-run all three kitchen scripts after cleanup.
 6. Scan changed `.zig` files for patterns not yet in
-   [patterns-027.md](patterns-027.md). Report candidates to the owner. The owner
+   [patterns-028.md](patterns-028.md). Report candidates to the owner. The owner
    decides. Do not auto-document, do not auto-extract.
 7. Banned-word scan over changed `*.md` and `*.zig` — Part 5. Report to the
    owner. Do not fix without approval.
@@ -337,7 +339,7 @@ Each story is a mini-project. Two artifacts plus one shared test file.
     flows, all event sources. Diagram only. No prose.
 - Code: `stories/name/name.zig`.
   - ASCII transfer circuit diagram at the top of the file.
-  - Code is structured around Masters. See [patterns-027.md](patterns-027.md)
+  - Code is structured around Masters. See [patterns-028.md](patterns-028.md)
     for the Master composition pattern.
 - Test wrapper: `tests/stories_test.zig`. Single file, all story wrappers.
 - What qualifies as a story: at least two layers composing, and a real domain
@@ -658,9 +660,15 @@ Words.
   - Enforced by the glossary gate in `check_design.sh`, not by the manual scan  
     alone.
 - `hands`, as in "a closed pool hands items back" — use `gives back`,
-  `returns`, `passes to`, or name the receiver. `holds` is discouraged in new  
-  text for the same reason; prefer `keeps` or `is left with`. The MBOX 1  
-  framing "The mailbox holds. It never touches." predates this and stays.
+  `returns`, `passes to`, or name the receiver. `holds` in the custody sense  
+  goes the same way; prefer `keeps`, `has`, or `contains` for a container.  
+  API 13-4 reworded both across `src/`, and the MBOX 1 framing with them: it  
+  now reads "The mailbox keeps items. It never touches them." The carve-out  
+  that exempted the old wording is retired.
+  - Scoped to the custody sense. `hold`/`holder`/`held` in
+    [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md)  
+    is the deliberate replacement for the banned `ownership` family, chosen  
+    on 2026-07-09, and names sections and the `HELD` state. It stays.
 
 AI-sh word list.
 - robust, seamlessly, comprehensive, leverage, efficient, powerful, facilitate,
@@ -798,7 +806,7 @@ Structure.
 - Cross-reference instead of duplicating.
 - When extending an existing document, match the heading levels already in use.
 - Link to [matryoshka-concepts-002.md](matryoshka-concepts-002.md),
-  [patterns-027.md](patterns-027.md), and this file.
+  [patterns-028.md](patterns-028.md), and this file.
 
 Markdown hard breaks — MUST.
 - CommonMark collapses two lines separated by a single newline into one rendered
@@ -864,7 +872,7 @@ It cannot free the item. `alloc.destroy` takes `*T`, and the allocator needs the
 size to release the memory. With no type there is no size. An unknown item can  
 only be dropped or reported; its memory belongs to whoever knows what it is.
 
-Catalog: [patterns-027.md](patterns-027.md), "The last branch of a dispatch chain".
+Catalog: [patterns-028.md](patterns-028.md), "The last branch of a dispatch chain".
 
 ### No switch over tags — MUST
 
@@ -922,7 +930,7 @@ questions, and a caller that frees on error without looking at the Slot
 double-frees.
 
 Where it is written: the doc comment on `TagTable.Handler`, and
-[patterns-027.md](patterns-027.md), "Polymorphic dispatch — table".
+[patterns-028.md](patterns-028.md), "Polymorphic dispatch — table".
 
 Detail: [table-dispatch-002.md](table-dispatch-002.md).
 
@@ -945,7 +953,7 @@ General.
   on a mailbox still holding items, on one already empty, on one closed  
   twice. There is no state in which running it is wrong, which means no call  
   site has to reason about which state it is in.
-- Never write `_ = mbx.close()`. It drops items the mailbox handed back. Even
+- Never write `_ = mbx.close()`. It drops items the mailbox gave back. Even
   where nothing leaks — items that live in the caller's frame — the dropped  
   list is still a chain of linked nodes, and `send` asserts an unlinked item,  
   so those items cannot be sent again. MBOX 1 found 32 sites doing this while  
@@ -990,7 +998,7 @@ General.
 
 ## Part 9 — Patterns
 
-The pattern catalog lives in [patterns-027.md](patterns-027.md).
+The pattern catalog lives in [patterns-028.md](patterns-028.md).
 
 It covers:
 - Observable function shapes: coordinator / step / init / destroy / Select event
@@ -1050,6 +1058,10 @@ the header. The full account of each stage is in
 - rules-041 (DOC 23) — the design gate. `kitchen/tools/check_design.sh` must
   exit 0 before a stage that touched `design/` is done. It is what makes the  
   "where a doc lives" rule enforceable rather than remembered.
+- rules-047 (API 13-4) — the custody-sense entry in Part 5 covers `hands` and
+  `holds` together, and is scoped away from the architecture doc's Hold  
+  vocabulary. The carve-out for the old MBOX 1 framing is retired: `src/` was  
+  reworded in 13-4a, so there is nothing left to exempt.
 - rules-046 (API 13-3) — a bulk repoint excludes `STATUS-LOG.md`. The log
   already had two exemptions, both for reading it — the banned-word scan and  
   three of the four design-gate checks. This is the first for writing to it.  
@@ -1072,7 +1084,7 @@ the header. The full account of each stage is in
   next run does not re-derive which files are off-limits. The scope is what  
   turned a 500-hit raw count into the ~20 that were real.
 - rules-042 (MBOX 1) — the mailbox audit. Part 8's release rules made
-  unconditional and given their reason: the list `close` hands back must be  
+  unconditional and given their reason: the list `close` gives back must be  
   walked every time, `_ = mbx.close()` is banned, a refused `send`/`put`  
   leaves the item with the caller, and `put_all` must be checked for what it  
   refused. Part 4 gains "documented asserts must exist" — the audit found 15  

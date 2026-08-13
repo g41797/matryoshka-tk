@@ -1,5 +1,7 @@
-# ItemList (010)
+# ItemList (011)
 
+Change from -010: API 13-4 — custody-sense `hands`/`handed` reworded to match  
+`src/polynode.zig`. No contract changed.
 
 Change from -009: API 12-4 — the doc speaks the pointer API. Methods on  
 `*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
@@ -131,7 +133,7 @@ struct.
 | `iterator(self)` | `Iterator` | non-destructive. Yields `ItemHandle`. No unlink, no `reset` |
 | `concat(self, other: *ItemList)` | — | keeps `self`'s order, keeps `other`'s order, appends the second to the first, empties `other`. O(1). The same list twice does nothing |
 | `moveFromList(list: *std.DoublyLinkedList)` | `ItemList` | takes the contents, empties the source, returns fresh. O(1). Asserts the header is consistent |
-| `moveToList(self)` | `std.DoublyLinkedList` | hands the contents over, empties `self`. O(1) |
+| `moveToList(self)` | `std.DoublyLinkedList` | moves the contents over, empties `self`. O(1) |
 
 `Iterator.next()` returns `?ItemHandle`. A std list node never reaches a caller.
 
@@ -351,7 +353,7 @@ extracts and empties. A Slot can be inspected safely because it holds one
 pointer. A list header cannot, so it only ever gets the `move` form.
 
 **Cost.** O(1). A two-word value copy. No walk, and no `reset` — the nodes stay  
-correctly linked to each other, only the header changes hands.
+correctly linked to each other, only the header moves.
 
 ### 4.6 `moveFromList` returns fresh
 
@@ -773,7 +775,7 @@ Prevention was always immune, because it reads nothing.
 ## 8. Decisions — round 6
 
 Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
-are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-069.md` and `context.md`, so the  
+are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-070.md` and `context.md`, so the  
 labels stay even though these are no longer questions.
 
 Every full argument lives in sections 5-7. This section records what was decided  
@@ -842,7 +844,7 @@ arguments are different lists.
 
 **Why.** Self-concat silently empties the list and leaks every item in it. The  
 check is section 7.2 — a pointer comparison between two arguments the caller  
-already handed over, needing no shared state and no build-mode reasoning beyond  
+already passed in, needing no shared state and no build-mode reasoning beyond  
 the safety gate. It is independent of every other decision here and could ship  
 alone.
 
@@ -921,7 +923,7 @@ though the check works: `layer1_polynode.zig:71`, `layer2_mailbox.zig:598`,
 reporting it.
 
 **What the walk cannot do for this.** `PolyHelper.destroy` and `moveFromSlot` are  
-handed a `Slot` and hold no list to interrogate, so Q34 does not reach the two  
+passed a `Slot` and have no list to interrogate, so Q34 does not reach the two  
 sites where this matters most. That is why A is a resting state and not a fix.
 
 ### Q34 — the container walk, all four inserts — **C**
@@ -967,7 +969,7 @@ list is not reachable from `self`. Nothing outside safety builds.
 ## 9. Required follow-up — done
 
 - **The happens-before invariant of 3.2** — done 2026-07-30, now in
-  `rules-046.md` ("Exclusive access, second half") and `matryoshka-concepts-002.md` ("The transfer  
+  `rules-047.md` ("Exclusive access, second half") and `matryoshka-concepts-002.md` ("The transfer  
   orders memory"). Step 0 of the ship order.
 - **`src/polynode.zig:67`** — the `is_linked` doc comment now claims only what
   the function computes: whether the node has neighbours.
@@ -1039,7 +1041,7 @@ destination list from inside `send` or `put` before the lock is taken.
 
 Name and signature unchanged. All seven `!is_linked` asserts kept. The doc  
 comment at `src/polynode.zig:67` now says "True if the node has neighbours" and  
-states the sole-member case outright. The rules entry is in `rules-046.md`  
+states the sole-member case outright. The rules entry is in `rules-047.md`  
 ("The neighbour check"), and the three test comments of Q33 are corrected.
 
 ### 11.4 Tests (Q29)
