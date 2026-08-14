@@ -63,11 +63,23 @@ your hooks.
 ## new
 
 ```zig
-pub fn new(io: Io, alloc: std.mem.Allocator) !*Mbox
+pub fn new(io: Io, alloc: std.mem.Allocator, slot: *polynode.Slot) !void
 ```
 
-- Creates a new mailbox.
+- Creates a mailbox and puts it in the Slot. It returns no pointer.
+- The Slot must be empty on entry.
+- The Slot is left unchanged if the creation fails.
+- Take the pointer out with `Mbox.moveFromSlot(&slot)`, on the next line.
 - Stores `io` internally.
+
+```zig
+pub fn destroy_slot(slot: *polynode.Slot, alloc: std.mem.Allocator) void
+```
+
+- Frees the mailbox in the Slot, and empties the Slot.
+- An empty Slot is a no-op. So is a second call on the same Slot.
+- A Slot holding another type is a programming error (panic).
+- Must be closed first, as `destroy` requires.
 
 ---
 

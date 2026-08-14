@@ -10,30 +10,30 @@
 One line per doc: the link, then what the doc is.
 
 Not a changelog. How a doc reached its current version is narrative, and  
-narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-047.md,  
+narrative lives in [STATUS-LOG.md](STATUS-LOG.md). See rules-049.md,  
 "Status file ownership".
 
 `design/` holds the current picture of Matryoshka. Snapshots, superseded  
 drafts, session logs and unstarted intentions live in  
-[secondary/](secondary/context.md) and are frozen. See rules-047.md,  
+[secondary/](secondary/context.md) and are frozen. See rules-049.md,  
 "Where a doc lives".
 
 ## State
 
 - [STATUS.md](STATUS.md) — where we are and what is next. Read in full each session.
-- [matryoshka-tk-implementation-plan-070.md](matryoshka-tk-implementation-plan-070.md) — forward-looking work + one line per completed stage.
+- [matryoshka-tk-implementation-plan-072.md](matryoshka-tk-implementation-plan-072.md) — forward-looking work + one line per completed stage.
 - [STATUS-LOG.md](STATUS-LOG.md) — session narrative, by date. Do not read by default.
 
 ## Sources of truth
 
-- [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — the book. Seven parts: introduction, the Zig mechanisms, then one part each for polynode, mailbox and pool in the same five-piece shape, the cross-tool material, and what sits beyond the toolkit. Signatures, types, error sets, preconditions and the cancel contract live in the three tool parts. The assert mechanism does not — that is in `src/` doc comments.
-- [rules-047.md](rules-047.md) — coding, doc, and process rules. Includes the banned-word list.
-- [patterns-028.md](patterns-028.md) — unified pattern and idiom catalog.
+- [matryoshka-api-reference-042.md](matryoshka-api-reference-042.md) — the book. Seven parts: introduction, the Zig mechanisms, then one part each for polynode, mailbox and pool in the same five-piece shape, the cross-tool material, and what sits beyond the toolkit. Signatures, types, error sets, preconditions and the cancel contract live in the three tool parts. The assert mechanism does not — that is in `src/` doc comments.
+- [rules-049.md](rules-049.md) — coding, doc, and process rules. Includes the banned-word list.
+- [patterns-029.md](patterns-029.md) — unified pattern and idiom catalog.
 - [matryoshka-zig-0.16-notes-003.md](matryoshka-zig-0.16-notes-003.md) — Zig 0.16 constraints, the cancellation contract, and what comptime bought.
 
 ## Concepts
 
-- [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — what Matryoshka is: why it exists, the one constraint, Master as an Io task, the four concepts, the who-holds-it mantra, the three-category model, where Io fits.
+- [matryoshka-concepts-003.md](matryoshka-concepts-003.md) — what Matryoshka is: why it exists, the one constraint, Master as an Io task, the four concepts, the who-holds-it mantra, the three-category model, where Io fits.
 - [matryoshka-architecture-foundation-4-006.md](matryoshka-architecture-foundation-4-006.md) — four layers (Hold/Movement/Lifecycle/Coordination), hold states, concurrency contract, infrastructure as items, design decisions, non-goals.
 - [language-of-matryoshka.md](language-of-matryoshka.md) — vocabulary. Where another doc differs, this one wins.
 
@@ -45,12 +45,13 @@ drafts, session logs and unstarted intentions live in
 - [api-12-real-pointers-005.md](api-12-real-pointers-005.md) — API 12: Mbox/Pool as real pointers, replacing MailboxHandle/PoolHandle.
 - [api-13-book-002.md](api-13-book-002.md) — API 13: the api reference becomes a standalone book for the user, and the detail moves into `src/` doc comments. Current version, with the owner's rulings on `-001` folded in.
 - [api-13-carryover-004.md](api-13-carryover-004.md) — API 13: what left the book, and where it goes. Landed in `src/` by 13-2, still the input for 13-3. Carries the slogan register, the banned-word footprint, and what 13-2 found the code did not back.
+- [intr-8-slot-based-creation-003.md](intr-8-slot-based-creation-003.md) — INTR 8: `new` fills a Slot, `Pool.init` folds into `pool.new`, `destroy_slot` checks inside, and the two classes of item are named. Carries what was rejected and why.
 - [audit-recipe-002.md](audit-recipe-002.md) — how to audit a layer for items the toolkit gives back. Method behind INTR 7 and MBOX 1, with the current baseline. Tool: `kitchen/tools/audit_edges.sh`.
 
 ## Tests and examples
 
-- [task1-tests-007.md](task1-tests-007.md) — Layers 1-3, 84 scenarios.
-- [task2-tests-003.md](task2-tests-003.md) — Layer 4, 16 scenarios: worker lifecycle, shutdown, cancellation.
+- [task1-tests-008.md](task1-tests-008.md) — Layers 1-3, 84 scenarios.
+- [task2-tests-004.md](task2-tests-004.md) — Layer 4, 16 scenarios: worker lifecycle, shutdown, cancellation.
 - [task1-examples-006.md](task1-examples-006.md) — Layers 1-4, 29 scenarios. Index only; the description lives in each source file's doc comment.
 - [task2-examples-007.md](task2-examples-007.md) — Layer 4 + cross-layer, 48 scenarios. Index only.
 
@@ -65,6 +66,31 @@ drafts, session logs and unstarted intentions live in
 - [matryoshka-Tk-diagram-style-guide-003.md](matryoshka-Tk-diagram-style-guide-003.md) — diagram notation and style.
 - [../kitchen/defer/matryoshka-storytelling-003.md](../kitchen/defer/matryoshka-storytelling-003.md) — storytelling rhythm: Discussion, SRS, Translation, Central Insight.
 - [../kitchen/notes.md](../kitchen/notes.md) — running notes on `kitchen/` tooling. Not versioned, edit in place.
+
+## Superseded versions
+
+Kept as historical record. Owner's ruling, 2026-08-14.
+
+Part 0 of rules-049.md forbids deleting them, and `check_design.sh` reports any  
+unlisted `design/` file as an orphan. One line here satisfies both. Nothing in  
+`design/` is deleted to pass the gate.
+
+The rule, in full: a superseded version stays on disk and gets one line in this  
+section, naming what replaced it. See Decisions in STATUS.md.
+
+Read the current version instead. These are here so nothing is lost.
+
+- [matryoshka-tk-implementation-plan-070.md](matryoshka-tk-implementation-plan-070.md) — superseded by -071.
+- [matryoshka-tk-implementation-plan-071.md](matryoshka-tk-implementation-plan-071.md) — superseded by -072.
+- [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — superseded by -042.
+- [rules-047.md](rules-047.md) — superseded by -048.
+- [rules-048.md](rules-048.md) — superseded by -049.
+- [patterns-028.md](patterns-028.md) — superseded by -029.
+- [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — superseded by -003.
+- [task1-tests-007.md](task1-tests-007.md) — superseded by -008.
+- [task2-tests-003.md](task2-tests-003.md) — superseded by -004.
+- [intr-8-slot-based-creation-001.md](intr-8-slot-based-creation-001.md) — superseded by -003.
+- [intr-8-slot-based-creation-002.md](intr-8-slot-based-creation-002.md) — superseded by -003.
 
 ## Secondary
 

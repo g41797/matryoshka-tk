@@ -2,51 +2,573 @@
 
 Full session history, newest entries at top. Append-only. Read only when explicitly asked (history audit, "what did we do about X") — not routine context-loading. See design/STATUS.md for the rule and current state.
 
+## 2026-08-14 — rules-049.
+
+The one bullet the Open Item 14 ruling left pending, done properly rather than  
+carried. Owner asked for the version now.
+
+**Part 0, Documents.** A new rule beside "never overwrite": a superseded  
+version is kept, not deleted, and it is listed — one line in the Superseded  
+versions section of `context.md`, naming what replaced it. Three sub-bullets  
+carry what the bare rule does not say: it covers every doc and not only plan  
+versions; it is what makes "do not delete" and the orphan gate hold together,  
+because an unlisted keeper fails `check_design.sh` and invites the deletion the  
+rule forbids; and the section grows by one line per superseded doc, a cost the  
+owner accepted.
+
+**Part 0, New plan version.** "Old plan versions stay as historical record. Do  
+not delete them." keeps its wording and gains a pointer to the general rule  
+above. The plan rule was the narrow case all along.
+
+**Part 10.** Provenance line for rules-049.
+
+**Cascade.** 14 design docs repointed, plus `kitchen/tools/check_design.sh`,  
+whose four comments named rules-047 and were two versions stale. `-048` added  
+to the Superseded versions section of `context.md` — the first use of the rule  
+it introduces. STATUS-LOG.md excluded, plan-070 and plan-071 excluded as  
+historical record.
+
+**Removed from the plan:** the "Pending rules text" entry under Reported, not  
+actioned. It existed only to hold this work and is discharged.
+
+**Gates.** `check_design.sh` exit 0 — dead links, orphans, forward-tense prose  
+and glossary conformance all clean. `fix_md_hardbreaks.sh` clean. Doc-only, no  
+build gate.
+
+## 2026-08-14 — Open Item 14 ruled.
+
+Owner's ruling: keep the Superseded versions section. Open Item 14 is closed  
+after standing open since the plan-versioning rule met the orphan gate.
+
+**The rule.** A superseded doc version stays on disk and gets one line in the  
+Superseded versions section of `context.md`, naming what replaced it. Nothing  
+in `design/` is deleted to satisfy `check_design.sh`. Part 0's "do not delete"  
+and the orphan gate both hold. The section grows by one line per superseded  
+doc, and that cost is accepted.
+
+Scope note: the ruling covers every doc, not only plan versions. Part 0's  
+sentence was written about plans; the gate never was.
+
+**Where it landed.** Removed from Open Items in STATUS.md and written into  
+Decisions there. The preamble of the Superseded versions section in  
+`context.md` now states it as the owner's ruling rather than as the least-bad  
+resolution. The paragraph in STATUS.md Next asking for the ruling is gone.
+
+**Left pending, deliberately.** Part 0 of rules-048.md still carries only half  
+the rule — "do not delete", without the listing half. Completing it is one  
+bullet. A `-049` for one bullet cascades into 17 files, so it rides along with  
+the next stage that bumps the rules. Recorded in the plan under "Reported, not  
+actioned" so it cannot be lost.
+
+**Gates.** `check_design.sh` exit 0. `fix_md_hardbreaks.sh` clean. Doc-only, no  
+build gate.
+
+## 2026-08-14 — plan -072.
+
+New plan version after INTR 8, per Part 0. 604 lines to 513.
+
+**Collapsed to one line each in Completed stages.** The whole INTR 8 section  
+(8-1, 8-2, 8-3 and the follow-up) and the finished API 13 sub-stages — 13-1,  
+Part 6, 13-2, 13-3, 13-4a, 13-4b-1. Six of those had no line in Completed  
+stages and got one written from the section before it was cut, so nothing was  
+dropped without a record.
+
+**Kept in full**, because they are forward-looking: FLOW 1-2 and 1-3  
+(postponed, not cancelled), 13-4b-3, 13-5, the dropped 13-4b-2 note, Deferred,  
+and Reported not actioned.
+
+**Re-homed.** The top-level `matryoshka.destroy_slot` follow-up captured by  
+INTR 8 moved into Deferred, which is where unbuilt captured work belongs.
+
+**Next rewritten** in the plan: the ranking audit named as the recommended step  
+with its input, output and the seven things it ranks, plus the standing  
+`polynode`-audit recommendation and the argument INTR 8-3 added to it — every  
+doc 13-4b-3 versions now also adds a line to the Superseded versions section.
+
+**STATUS.md Next trimmed**, 66 lines to 27. It had grown a full copy of the  
+candidate menu, the 13-4 checklist detail and the deferred pool, all of which  
+the plan owns. Status file ownership says a fact lives in one file and the  
+others get a pointer. It now carries current state, the owner-edit warning, the  
+Open Item 14 note and a pointer to the plan.
+
+**Two corrections found while trimming.** The parked block said six Part 0  
+steps were unrun for 13-4; steps 2 and 3 have since passed green twice, in 8-2  
+and 8-3, so four are left — 6, 7, 9 and 10. And the plan-versioning rule still  
+described Open Item 14 as an unresolved conflict; it now names the Superseded  
+versions section.
+
+**Banned word caught by the gate.** The first draft of the change note used  
+`ledger`, banned by owner's ruling of 2026-08-13. `check_design.sh` glossary  
+conformance rejected it and it was reworded. The same word was also sitting in  
+STATUS.md's own statement of the status-file-ownership rule, quoted from an  
+older rules version, and is now gone from there too.
+
+**Post-stage cleanup.** Doc-only. No code touched. Cross-references repointed  
+to -072 in five design docs; `-071` added to the Superseded versions section of  
+context.md.
+
+**Gates.** `check_design.sh` exit 0. `fix_md_hardbreaks.sh` clean. No build  
+gate run — no file outside `design/` changed.
+
+## 2026-08-14 — INTR 8-3: the documents.
+
+The last sub-stage of INTR 8. Doc-only. `check_design.sh` exit 0.
+
+**Six new versions, each with its link cascade.**
+
+- matryoshka-api-reference-042.md. Every snippet that took a returned pointer
+  rewritten. The pool's `Usual flow` dropped from five steps to four, because  
+  the hooks are a parameter of `new` and there is no second call that arms a  
+  pool. Both tools now read the same four steps, and step 1 on each side  
+  carries the detach and the empty-Slot precondition. `Pool.init` gone from the  
+  signature group, its text folded into `new`. Both Create-and-destroy groups  
+  gained `destroy_slot`. The item-state diagram lost its two-box opening, and  
+  `get` lost "the pool initialized" from its preconditions — neither is a state  
+  that can exist now.
+- patterns-029.md. The Init pattern carries the acquisition shape. Four
+  coordinator shapes updated with it.
+- task1-tests-008.md. Scenarios 26 and 63 follow the test names in `tests/`.
+- task2-tests-004.md. Scenario 8's changed meaning, recorded.
+- rules-048.md. All four design-note findings. Part 1 gained "How a Master
+  acquires a mailbox or a pool". Part 3's Slot Rule names `new` as an  
+  acquisition API and adds both `destroy_slot` functions to the null-safe  
+  cleanup list. Part 8 gained the `new` and `destroy_slot` contract, including  
+  the one place the Slot convention gives way to a panic.
+- intr-8-slot-based-creation-003.md. The `?*Mbox` clause removed and the
+  owner's ruling of 2026-08-14 recorded against it.
+
+**New vocabulary.** matryoshka-concepts-003.md gained "Two classes of item" in  
+Chapter 4, and `language-of-matryoshka.md` the matching glossary entry.  
+The glossary was edited in place, owner's ruling, 2026-08-14. The unsuffixed  
+-file question stays open and stays with 13-4b-3.
+
+**Kitchen pages, in place.** `master-and-shutdown.md` — the same five snippets  
+as patterns. `api/mailbox/index.md` — the `new` signature, plus a  
+`destroy_slot` entry. `api/pool/index.md` and `tools/pool.md` — the `new()` box  
+at the top of the state diagram. The 88 generated example pages regenerated  
+from source; no stale creation call survived.
+
+**Two deviations from the planned scope.**
+
+- The plan listed four kitchen pages as carrying `Usual flow` text. They do
+  not. FLOW 1-2 is postponed and never wrote one. What was actually stale on  
+  them is the list above.
+- `language-of-matryoshka.md` was edited in place rather than versioned.
+
+**Open Item 14, resolved in practice.** Seven superseded versions became  
+orphans the moment the new ones landed, and Part 0 forbids deleting them.  
+`context.md` gained a **Superseded versions** section listing every one. Both  
+rules hold, nothing is deleted, and the gate exits 0. It costs one line per  
+superseded doc and the section grows every stage, so whether it is the  
+permanent answer is still the owner's call. Recorded in Open Item 14.
+
+**Post-stage cleanup.** Doc-only stage, no code touched. Re-read the six new  
+versions for stale cross-references after the cascade: the only remaining  
+mentions of old versions are changelog and provenance rows, which record what  
+an earlier stage did and are correct as written.
+
+**Follow-up in the same session, owner's request.** The owner asked whether  
+`detachFromSlot` would be better wording than `moveFromSlot`. Advice given:  
+keep `moveFromSlot`. A Slot is a place, not a linkage, so nothing is attached  
+to one, and `detach` is the vocabulary of links — which this repo genuinely has  
+in `ItemList`, `is_linked` and `polynode.reset`. `move` is the architecture's  
+own verb, stated in `language-of-matryoshka.md` ("The default operation is  
+movement") and matched by `moveFromList`. The prefix is also the only axis that  
+separates `fromSlot` / `mustFromSlot` / `moveFromSlot`, so a different word  
+breaks the family. Cost, had it gone the other way: 204 call sites in code and  
+185 mentions in documents.
+
+The real gap was in the prose: the design note has said since `-002` that  
+"`moveFromSlot` is what a Master calls to detach", and nothing bound the two  
+words. Owner approved the fix. A clause now sits in Part 1 of rules-048.md and  
+in step 1 of both `Usual flow` sections of the api reference: detach is the  
+reading word, `moveFromSlot` is the call, and the reason they differ is stated  
+once. Both docs edited in place — they were created earlier in this same stage  
+and never published under the old text, so no version is superseded. Changelog  
+and provenance rows updated to match.
+
+**Gates.** `check_design.sh` exit 0 — dead links, orphans, forward-tense prose  
+and glossary conformance all clean. `fix_md_hardbreaks.sh` and `build_site.sh`  
+below.
+
+## 2026-08-14 — INTR 8-2: every caller moves to Slot-based creation.
+
+186 `new` call sites in 70 files, 39 `pl.init(hooks)` lines deleted. All four  
+modes 195/195, three cross targets green, `zig build stories` green.
+
+**The Master field decision reversed the design note.** `intr-8-slot-based-creation-002.md`  
+had a Master keep `?*Mbox` / `?*Pool` and read it as `self.mbx.?`. Measured, that  
+clause was the largest edit in the stage: 202 field reads, more than the 186 `new`  
+sites it was meant to serve. The owner chose the alternative — the field stays  
+`*Mbox` / `*Pool` and the unwrap happens once, at creation, as  
+`Mbox.moveFromSlot(&slot).?`. The optional encoded a state that does not exist:  
+after `init` returns, no Master field is ever null. 202 reads went untouched.  
+The design note gets a `-003` at 8-3 recording this.
+
+**The rule came before the code, at the owner's insistence.** Part 1 of  
+rules-047.md names `examples/layer4/018-master_with_pool.zig` as the canonical  
+Master reference, and that file is one this stage rewrites — so sweeping first  
+would have meant reverse-engineering the rule from whatever the sweep produced.  
+018 was rewritten alone and approved first, then the other Masters followed it.
+
+Writing 018 corrected the acquisition shape. The first sketch put an `errdefer`  
+on the Slot between `new` and the detach; that panics, because `mustFromSlot` on  
+an emptied Slot fails and an `errdefer` registered there still fires for later  
+failures. The real finding: nothing fallible sits between `new` and the detach,  
+so the Slot's sole-ownership window has no failure in it and needs no `errdefer`  
+at all. The guard stays on the field, registered after the detach. Text for  
+Part 1 approved and carried to 8-3.
+
+**Two systematic defects in the search-and-replace, both repaired forward.**  
+Git is disabled, so there was no revert; the transformation is deterministic, so  
+a second pass fixed the output. First, the emitted move line dropped the  
+declaration — `const mbx: *Mbox = ...` became a bare assignment, 163 sites.  
+Second, folding the hooks into `new` moved their use above their declaration at  
+57 sites, because the hooks value is declared between the old `new` and the old  
+`init`. The repair relocated each acquisition block below the declarations it  
+needs. One block landed inside a multi-line struct literal  
+(`tests/layer4_cancel.zig` scenario 10) and one site could not be relocated  
+automatically (scenario 63, which reads `pl` in between); both fixed by hand.  
+Every remaining case was a compile error, not a silent one.
+
+**Six pools had no hooks and now must have some.** The fold makes `Hooks`  
+non-optional, keeps `assert(tags.len > 0)`, and makes `close` call `on_close`  
+unconditionally.
+
+- Scenario 63 in `tests/layer3_pool.zig` loses its middle step and is renamed
+  "63 - pool new, destroy". The scenario doc resync is 8-3.
+- Scenarios 19, 20 and 94's inner pool share a new inert hook set in
+  `tests/layer4_infra.zig`. Its `on_close` asserts the list is empty, which is  
+  true by construction — nothing is ever stored in those pools.
+- 096's inner pools get their hooks from a `Ctx` method, so the hook context
+  outlives the pools it serves. A local would have dangled.
+- **Scenario 8, `tests/layer4_cancel.zig`, changed meaning by the owner's
+  ruling.** It read `close before init: put checks closed before any  
+  assertions`. That state cannot be built now — a pool is initialized before it  
+  can be closed. It keeps the closed-pool `put` check and drops the ordering  
+  claim, which the code can no longer get wrong.
+
+**Infrastructure items as cargo.** The five transport sites needed no change on  
+the transfer half — `toPoly`, `send`/`put`, `receive`/`get` all kept their  
+signatures. Two improvements taken:
+
+- 096's inner-pool loop creates straight into the Slot it puts, so the
+  detach-and-re-slot round trip is gone. A transport site keeps no pointer.
+- Scenarios 93 and 94 release the received item with `destroy_slot` after
+  closing it. Before, `destroy` left the Slot pointing at freed memory — the  
+  exact hole INTR 8 exists to close. This is also the only coverage  
+  `destroy_slot` has; 8-1 added it and nothing called it.
+
+Left as `mustFromPoly` + `destroy`: `095`'s `releaseHandle` and `096`'s  
+`on_close`, where the item arrives as a bare `*PolyNode` off an `ItemList`. No  
+Slot was manufactured to reach `destroy_slot`.
+
+**Post-stage cleanup.** `zig fmt --check` clean across `tests/`, `examples/`,  
+`stories/`. A blank line added before each of 72 acquisition blocks, matching  
+the approved 018 shape. All gates re-run after the cleanup and green.
+
+Reported, not fixed: `src/pool.zig` fails `zig fmt --check` on a stray blank  
+line at 342 — 8-1's file, and one carrying owner edits, so untouched. The  
+banned-word scan over the hand-edited files found only pre-existing `holds`  
+prose in `096`, `063` and `layer3_pool.zig`. `README.md` names no `new` or  
+`init` snippet, so step 9 needed nothing.
+
+## 2026-08-14 — zig_mechanisms.zig fixed, with the owner's approval.
+
+`tests/zig_mechanisms.zig:97` declared `const l: Label`, so `&l` handed a  
+`*const Label` to `handleOf`, which takes `*Label`. It is `var l` now.
+
+`var` is right, not a workaround. Scenario B4 two tests below already writes  
+`var r: Reading = .{ .value = 42 }`, takes its address, and never mutates it.  
+B3 is the same shape and was the odd one out.
+
+Verified by compiling the file on its own — it imports nothing but `std`, so it  
+does not need the suite. All 4 scenarios pass. This is a direct `zig test`  
+rather than a kitchen script, which Part 0 normally forbids: no script covers a  
+single file, and the suite that would gate it is red by design between INTR 8-1  
+and 8-2. Recorded here so the exception is visible rather than assumed.
+
+The breakage was an owner edit, found by a baseline run of  
+`build_and_test_all.sh` before any INTR 8 change touched the tree. It was never  
+INTR 8's doing, and fixing it needed the owner's word because of that.
+
+
+## 2026-08-14 — INTR 8-1 done. src/ carries the new API.
+
+**Gate: `build_core_debug.sh`, 3/3 steps, 1/1 tests.** `check_design.sh` exit 0.
+
+The core gate is real evidence here, not a formality. `examples/core_surface.zig`  
+walks every public declaration recursively with its own `refAll`, precisely  
+because Zig analyses lazily and a step can pass while holding stale calls. Every  
+new signature was compiled, not merely parsed.
+
+**`src/mailbox.zig`.**
+
+- `new(io, alloc, slot) !void`. Asserts `slot.* == null`. `slot.* =
+  Mbox.toPoly(mbx)` is the last statement in the function.
+- `destroy_slot(slot, alloc)`. Empty Slot returns early. `mustFromPoly` panics
+  on a wrong type. The Slot is emptied before `destroy` runs, so a second call  
+  on the same Slot does nothing.
+- `fromSlot`, `mustFromSlot`, `moveFromSlot` re-exported as `inline` one-liners
+  beside the five wrappers already there.
+- `destroy(mbx, alloc)` unchanged.
+
+**`src/pool.zig`.** All ten obsolete sites from the design note are gone.
+
+- `hooks: ?Hooks` became `hooks: Hooks`. With it went five
+  `assert(hooks != null)`, three `.?` unwraps, and the `if (self.*.hooks)
+  |hooks|` branch in `close`, which is now an unconditional call.
+- `init` is private. Its `assert(!closed)` and `assert(hooks == null)` are gone,
+  and so is its `lockUncancelable` — nothing else can reach the pool yet.
+- `assert(hooks.tags.len > 0)` stays. It checks caller input.
+- `new(io, alloc, hooks, slot) !void`, plus the same three accessors and the
+  same `destroy_slot`.
+
+**Two deviations from the design note, both narrowings, both deliberate.** The  
+note had `new` write `.hooks = undefined` and `init(self, hooks)` assign it. The  
+struct literal sets `.hooks = hooks` directly instead, so no field is ever  
+`undefined` at any point, and `init(self: *Pool) !void` now only builds one empty  
+list and one counter per tag, reading the hooks back off the struct. Same  
+behaviour, one less trap.
+
+**The errdefer chain**, as designed: `alloc.destroy`, then `lists.deinit`, then  
+`counts.deinit`, unwinding in reverse. A partial failure where `lists` grew and  
+`counts` did not is covered, and `deinit` on an empty map is a no-op. In both  
+modules `slot.* = ...` is the last statement, so no failure path can leave a Slot  
+pointing at freed memory.
+
+**Banned-word scan over both changed files.** The only hits are  
+`Io.Mutex.unlock`, a stdlib method name, which Part 5 exempts. Clean.
+
+**What is red, and why that is correct.** `tests/`, `examples/` and `stories/` do  
+not compile: 186 `new` call sites, 201 `destroy` call sites, and around 30  
+`pl.init(hooks)` calls that now name a private function. That is INTR 8-2, in one  
+stage, and until it lands `build_and_test_debug.sh` and the four-mode and cross  
+gates cannot run. API 12-1 ran in the same shape.
+
+`tests/zig_mechanisms.zig:99` is still red for its own unrelated reason. Owner's  
+word, same day: it is their edit. No INTR 8 sub-stage touches it, and 8-2 cannot  
+claim its gates until it compiles.
+
+**Post-stage cleanup.** Deferred to 8-2 with the rest of the Part 0 checklist.  
+Nothing in it can run against a suite that does not build.
+
+## 2026-08-14 — INTR 8: Pool.init folds into pool.new. Design note -002.
+
+**Addition to the INTR 8 design, same day. Still no code.**
+
+The owner ruled that `Pool.init(hooks)` belongs inside `pool.new`. Signature  
+becomes `pool.new(io, alloc, hooks, slot) !void`, with `hooks` before `slot` so  
+the Slot stays the last parameter in both modules.
+
+`init` is not deleted. It stops being `pub` and becomes the private step that  
+`new` calls — owner's correction to a first draft that had it inlined. `new` is  
+the coordinator, `init` is its named step, which is Part 1's shape. Inlining the  
+body would have left a block needing a comment, and Part 1 says that is the  
+signal to extract a step rather than write the comment.
+
+Evidence gathered before advising. Around 30 sites create a pool, and every one  
+calls `init` two or three lines after `new` — including the Masters, which do  
+both inside their own `init`. No site registers hooks at a distance. No test  
+exercises a pool that has no hooks yet. Nothing depends on the two calls being  
+separate.
+
+The argument for folding is correctness, not tidiness. A pool exists half-built  
+between `new` and `init`. The only guard against using it is  
+`std.debug.assert(self.*.hooks != null)`, and asserts are removed in ReleaseFast  
+and ReleaseSmall. Two of the four modes this repo gates on have no guard at all.  
+Folding deletes the state, so there is nothing left to guard.
+
+Ten sites in `src/pool.zig` go obsolete with the fold: the optional `hooks`  
+field, five `assert(hooks != null)`, three `.?` unwraps, the `if (hooks) |h|`  
+branch in `close`, the `.hooks = null` initializer, the two asserts inside `init`  
+that only made sense for a public entry point, the `lockUncancelable` that  
+guarded against a caller nothing else can reach yet, and three doc-comment  
+clauses. `assert(hooks.tags.len > 0)` stays — it checks caller input.
+
+The owner also called for the errdefer chain, and it is the part most likely to  
+go wrong. `ensureTotalCapacity` runs twice inside `init` and can fail after  
+`alloc.create` succeeded. Today a failed `init` left the caller a valid pool  
+whose `destroy` released the maps; after the fold `new` owns that. The chain  
+registers `alloc.destroy`, then `lists.deinit`, then `counts.deinit`, so  
+`errdefer` unwinds them in the right order, and a partial failure where `lists`  
+grew but `counts` did not is covered. `slot.* = ...` is the last statement in the  
+function, after everything that can fail — that is what makes "failure leaves the  
+Slot unchanged" a fact rather than an intention. `mailbox.new` takes the same  
+shape with only its existing `alloc.destroy` errdefer.
+
+Knock-on: this shrinks INTR 8-3 rather than growing it. Pool's Usual flow drops  
+from five steps to four, identical to the mailbox's, because the extra step was  
+`init`. Scenario 63 loses its middle step in `tests/layer3_pool.zig` and in  
+`task1-tests-007.md`.
+
+**Documents.** New version `intr-8-slot-based-creation-002.md`. `-001` is kept  
+and listed in `context.md` as the superseded version, the same treatment plan  
+`-070` got, so the orphan gate passes without deleting anything. `-001`  
+repointed to `-002` in `context.md`, `STATUS.md` and plan `-071`, by name, with  
+`STATUS-LOG.md` excluded per Part 0. Plan `-071` gained the fold in its INTR 8-1  
+and 8-3 sections; it is not superseded, since no stage has completed since it was  
+created.
+
+**Still blocked.** `tests/zig_mechanisms.zig:99` does not compile, unchanged from  
+the earlier entry today. INTR 8-1 does not start until it is green, and the fix  
+is a code change in an uncommitted owner edit.
+
+**Post-stage cleanup.** Not applicable. No code was written.
+
+## 2026-08-14 — INTR 8 designed. Baseline measurement found a broken tree.
+
+**INTR 8 named and designed. No code written.**
+
+The owner named INTR 8 as an unplanned insertion ahead of the whole API 13  
+menu. It had a name in STATUS.md and nothing else — no definition anywhere in  
+`design/` or `kitchen/`. It was defined in this session, by discussion.
+
+The gap it closes. The Slot idiom covers every transfer in the toolkit and  
+stops at creation. 22 signatures in `src/` take a Slot parameter and all 22  
+take it by pointer; none take one by value; the repo carries 874 `&slot` call  
+sites. `mailbox.new` and `pool.new` return `!*Mbox` / `!*Pool`, and  
+`destroy(mbx, alloc)` frees the memory while leaving the caller's pointer in  
+place, so a second destroy is a use-after-free. `PolyHelper.destroy(alloc,  
+&slot)` cannot fail that way — it empties the Slot before releasing.
+
+Decisions, all the owner's:
+
+- `new(io, alloc, slot: *polynode.Slot) !void`. Asserts `slot.* == null`.
+  Fills the Slot on success, leaves it unchanged on failure.
+- Hard break. The pointer-returning `new` is deleted, no alias.
+- Two release APIs, both kept. `destroy(mbx, alloc)` for a detached pointer,
+  `destroy_slot(slot, alloc)` for a Slot. Two holders, neither converting.
+- `destroy_slot` checks inside: null is a no-op, a wrong type panics, an open
+  Mbox or Pool panics with the Slot unchanged, a closed one is freed after the  
+  Slot is emptied.
+- All three Slot accessors re-exported on both types. The private helper stays
+  private, and `init` is not published.
+- The Master keeps `?*Mbox` / `?*Pool`. The Slot is a local in `init`.
+
+Two classes of item were named for the first time. Application items flow  
+through the toolkit constantly. Infrastructure items — `Mbox` and `Pool` — are  
+created once and stay Master fields, travel rarely, and generate no  
+`create`/`destroy` because both declare `no_create_destroy`. Same mechanism,  
+opposite usage profile, and no document said so.
+
+Corrected during the discussion. A claim that a public `PolyHelper` would leak  
+`create` and `destroy` for Mbox and Pool was wrong: both declare  
+`no_create_destroy`, so the reduced variant generates neither. The owner caught  
+it. The recommendation survived on other grounds — a public helper would add a  
+second spelling for `fromPoly` and publish `init`.
+
+Rejected, with reasons on record in the design note: a top-level  
+`matryoshka.destroy_slot`, and a Slot-only `destroy`.
+
+Sub-stages. 8-1 `src/`, 8-2 all callers together, 8-3 documents. `tests/` and  
+`examples/` cannot be split — every example has a wrapper in `tests/`, so both  
+compile into one binary. API 12 tried it and closed 12-2 at 120/120 with the  
+example wrappers held out, a stage that ran without a real gate.
+
+**The baseline measurement, and what it found.**
+
+`build_and_test_all.sh` was run before touching anything, to separate our  
+breakage from drift. It failed in Debug, the first mode:  
+`tests/zig_mechanisms.zig:99:50`, `expected type '*zig_mechanisms.Label', found  
+'*const zig_mechanisms.Label'`. Line 96 declares `const l: Label`, so `&l`  
+gives `*const Label` to a `handleOf` taking `*Label`. Build Summary 2/5 steps  
+succeeded, 1 failed. `build_cross_debug.sh` was not run.
+
+The file is an uncommitted working-tree edit, and it is the permanent test  
+API 13-1 added for Part 2 of the book. The 195/195 claim predates the edit.  
+Steps 2 and 3 of the Part 0 checklist are the two that would have caught it,  
+and they are among the six the API 13-4 close-out skipped. STATUS.md's "green  
+across the board" was false and is corrected.
+
+Not fixed. It is an uncommitted edit that may be the owner's, and a code change  
+needs its own approval. INTR 8-1 does not start until it is green.
+
+**Documents.** New plan version `-071`. Design note  
+`intr-8-slot-based-creation-001.md`. `context.md` and `STATUS.md` updated in  
+place. Cross-references repointed from `-070` in `item-list-011.md` and  
+`api-13-carryover-004.md`, by name, with `STATUS-LOG.md` excluded per Part 0.
+
+Open Item 14 resolved without breaking a rule, for the first time. `-070` is  
+kept on disk and listed in `context.md` as the historical version, so the  
+orphan gate passes and nothing is deleted. Every past session resolved it by  
+deleting, against Part 0.
+
+**Post-stage cleanup.** Not applicable. No code was written, and INTR 8 has not  
+started.
+
+### 2026-08-14 — work parked for INTR 8
+
+The owner named INTR 8, an unplanned API revision, ahead of everything on the  
+menu. No stage from the menu was started. An audit follows INTR 8 and decides  
+the order of what is left.
+
+Open at the moment of suspension: the API 13-4 close-out (six Part 0 checklist  
+steps unrun), the three candidates 13-4b-3, 13-5 and the `polynode` audit, three  
+code-level findings reported and not actioned, the unviewed autodoc page, and  
+the undecided `handle` vs `item` wording in `mailbox.zig`.
+
+A PARKED WORK block now sits at the top of `STATUS.md`, above "Start here". It  
+is the re-entry point: pointers only, no restatement, and it names its own exit  
+condition — the post-INTR-8 audit ruling landing in Next. The detail stays where  
+it already lived, in `STATUS.md` Next and in the plan.
+
+The "OWNER WORK IN FLIGHT" paragraph was written in present continuous ("the  
+owner is editing"), which stops being true the moment INTR 8 starts. Reworded to  
+a settled statement: the hand edits in the three `src/` files and in the api  
+reference are the owner's and stay.
+
+`matryoshka-tk-implementation-plan-070.md` was not touched. The versioning rule  
+wants a new suffixed version for any doc change, and a plan bump for a  
+bookkeeping edit costs a link cascade for nothing. The post-INTR-8 audit is  
+recorded in the `STATUS.md` block instead. If the owner wants it as a real plan  
+stage, that is plan-071 and their call.
+
 ### 2026-08-13 — plan-069 was deleted against the rule, and is unrecoverable
 
 Reported by the agent, unprompted.
 
-While repointing references from `-069` to `-070`, the agent ran
-`rm design/matryoshka-tk-implementation-plan-069.md` in the same command.
-Part 0 of rules-047.md says "Old plan versions stay as historical record. Do not
-delete them." The deletion was not covered by the owner's approval that session,
+While repointing references from `-069` to `-070`, the agent ran  
+`rm design/matryoshka-tk-implementation-plan-069.md` in the same command.  
+Part 0 of rules-047.md says "Old plan versions stay as historical record. Do not  
+delete them." The deletion was not covered by the owner's approval that session,  
 which named six documents and not the plan.
 
-It is not recoverable. `-069` was untracked at the start of the session, so no
-committed copy exists. `-070` was copied from it before the deletion, so the
+It is not recoverable. `-069` was untracked at the start of the session, so no  
+committed copy exists. `-070` was copied from it before the deletion, so the  
 content survives; what is lost is `-069` as a distinct version.
 
-The deletion also exposed a conflict between two rules. Part 0 says old plan
-versions are kept. `check_design.sh` reports any unreferenced `design/` file as
-an ORPHAN and exits 1, and a kept old plan version is unreferenced by
-construction. The two cannot both hold. Every earlier session resolved it by
-deleting, which is why only one plan version has ever been on disk. Recorded as
+The deletion also exposed a conflict between two rules. Part 0 says old plan  
+versions are kept. `check_design.sh` reports any unreferenced `design/` file as  
+an ORPHAN and exits 1, and a kept old plan version is unreferenced by  
+construction. The two cannot both hold. Every earlier session resolved it by  
+deleting, which is why only one plan version has ever been on disk. Recorded as  
 Open Item 14 for the owner.
 
-Owner's decision the same day: the entry point is `STATUS.md` plus the plan.
-No auto-loading agent instruction file at the repo root, now or later. Written
+Owner's decision the same day: the entry point is `STATUS.md` plus the plan.  
+No auto-loading agent instruction file at the repo root, now or later. Written  
 into the top of `STATUS.md`.
 
 ### 2026-08-13 — 13-4 close-out is incomplete, and 13-4b-2 is dropped
 
 Found by reading Part 0 of rules-047.md after the status files were written.
 
-The per-stage finish checklist has ten steps. Steps 1, 4, 5 and 8 were done.
-Not done: 2 and 3 (`build_and_test_all.sh` and `build_cross_debug.sh` — only the
-Debug script was ever run, and Part 0 says a stage is complete only when all four
-modes pass), 6 (pattern scan), 7 (banned-word scan), 9 (README sync), 10 (rules
+The per-stage finish checklist has ten steps. Steps 1, 4, 5 and 8 were done.  
+Not done: 2 and 3 (`build_and_test_all.sh` and `build_cross_debug.sh` — only the  
+Debug script was ever run, and Part 0 says a stage is complete only when all four  
+modes pass), 6 (pattern scan), 7 (banned-word scan), 9 (README sync), 10 (rules  
 audit).
 
-`STATUS.md` claimed the stage was closed. Corrected: it now lists the six
+`STATUS.md` claimed the stage was closed. Corrected: it now lists the six  
 outstanding steps under Next.
 
-13-4b-2 is dropped rather than done. It was defined from symmetry with 13-4a, not
-from evidence. A scan of the 59 hand-maintained kitchen pages found one line over
-180 characters and one multi-fact sentence, and the second is in a generated page
-so the fix belongs in the example source. Those pages were written in staccato
+13-4b-2 is dropped rather than done. It was defined from symmetry with 13-4a, not  
+from evidence. A scan of the 59 hand-maintained kitchen pages found one line over  
+180 characters and one multi-fact sentence, and the second is in a generated page  
+so the fix belongs in the example source. Those pages were written in staccato  
 and never accumulated the prose `src/` did. The one long line goes to 13-5.
 
-The owner is editing `src/` doc comments by hand from here, and possibly the api
+The owner is editing `src/` doc comments by hand from here, and possibly the api  
 reference. `STATUS.md` carries a do-not-touch note.
 
 ### 2026-08-13 — API 13-4b-1: the documents adopt the reworded statements

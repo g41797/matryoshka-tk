@@ -1,14 +1,13 @@
-# Matryoshka Zig — Rules (047)
+# Matryoshka Zig — Rules (049)
 
 All coding, doc, and process rules for the project.  
-Change from -046: API 13-4 — the custody-sense glossary entry now covers both  
-words and is scoped away from the architecture doc's Hold vocabulary. The  
-carve-out for the old MBOX 1 framing is retired, because `src/` no longer  
-uses it. Two Part 8 sentences reworded to match.  
+Change from -048: Open Item 14 closed. Part 0 now carries both halves of the  
+superseded-version rule — keep it, and list it in `context.md`. The keeping  
+half was written about plan versions; the rule covers every doc.  
 Which stage introduced which rule is Part 10.
 
-Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the concepts and the thinking model.  
-Companion: [patterns-028.md](patterns-028.md) — reusable coding patterns.
+Companion: [matryoshka-concepts-003.md](matryoshka-concepts-003.md) — the concepts and the thinking model.  
+Companion: [patterns-029.md](patterns-029.md) — reusable coding patterns.
 
 ---
 
@@ -38,6 +37,15 @@ Documents.
   day. Name the files, or exclude the log.
 - Two files are updated in place instead: `design/STATUS.md` and
   `design/context.md`, the stable entry points.
+- A superseded version is kept, not deleted, and it is listed. One line in the
+  **Superseded versions** section of `design/context.md`, naming what replaced  
+  it. Owner's ruling, 2026-08-14, closing Open Item 14.
+  - This covers every doc, not only plan versions.
+  - It is what makes "do not delete" and the orphan gate hold at the same
+    time. `check_design.sh` reports any unlisted `design/` file as an ORPHAN  
+    and exits 1, so an unlisted keeper fails the gate and invites the deletion  
+    the rule forbids. Every session before this one resolved it by deleting.
+  - The section grows by one line per superseded doc. That cost is accepted.
 - Read `design/STATUS.md` first. It is current state, not history.
 
 Verification.
@@ -77,7 +85,7 @@ Per-stage finish checklist.
    code that can be extracted.
 5. Re-run all three kitchen scripts after cleanup.
 6. Scan changed `.zig` files for patterns not yet in
-   [patterns-028.md](patterns-028.md). Report candidates to the owner. The owner
+   [patterns-029.md](patterns-029.md). Report candidates to the owner. The owner
    decides. Do not auto-document, do not auto-extract.
 7. Banned-word scan over changed `*.md` and `*.zig` — Part 5. Report to the
    owner. Do not fix without approval.
@@ -95,7 +103,8 @@ New plan version.
 - Plans are new versions of `design/matryoshka-tk-implementation-plan-NNN.md`,
   not separate files.
 - Keep active and future stages in full detail.
-- Old plan versions stay as historical record. Do not delete them.
+- Old plan versions stay as historical record. Do not delete them. They are
+  listed with every other superseded doc — see Documents above.
 
 ---
 
@@ -206,6 +215,40 @@ Master struct shape.
 - Fields — shared state between steps; replace scattered locals.
 - The entry point and `run` sit at the top of the file — see Part 4, "File layout".
 
+How a Master acquires a mailbox or a pool.
+- `mailbox.new` and `pool.new` fill a Slot. They return no pointer.
+- The Slot is a local in `init`. It dies there. It is never a field.
+- Take the item out of the Slot on the next line:
+  `self.mbx = Mbox.moveFromSlot(&slot).?`. `moveFromSlot` empties the Slot.
+- **Detach** is the name for that step. It is the reading word, not an API name.
+  The call is always `moveFromSlot`, because `move` is what the toolkit calls  
+  every transfer of an item — see `moveFromList`, and "the item moves, it never  
+  duplicates" in [matryoshka-concepts-003.md](matryoshka-concepts-003.md). A  
+  Slot is a place, not a linkage, so nothing is literally attached to one;  
+  `detach` describes what the Master does, `move` describes what happens to the  
+  item.
+- Nothing fallible goes between `new` and the detach. That is what makes the
+  Slot window need no `errdefer` of its own.
+- The `errdefer` for the resource is registered after the detach. It guards the
+  field, not the Slot.
+- The field is `*Mbox` or `*Pool`. Never optional. The unwrap happens once, at
+  creation, and a Master with a null mailbox is not a state that occurs.
+- One Slot per resource, each named for its resource — `mbx_slot`, `pl_slot`.
+  Never one Slot reused down the `init`.
+- A pool is one call. The hooks are a parameter of `pool.new`; there is no
+  separate registration step.
+
+```zig
+var mbx_slot: Slot = null;
+try mailbox.new(io, allocator, &mbx_slot);
+self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
+errdefer {
+    var rem = self.mbx.close();
+    items.freeList(&rem, allocator);
+    mailbox.destroy(self.mbx, allocator);
+}
+```
+
 ```zig
 pub fn <snake_case>(allocator: std.mem.Allocator, io: std.Io) !void {
     const master = try MasterXYZ.init(allocator, io);
@@ -310,7 +353,7 @@ Completeness.
 - Pool items are empty containers on acquisition. Work intent must come from
   outside the pool item.
 - See "Pool items are empty containers" in
-  [matryoshka-concepts-002.md](matryoshka-concepts-002.md).
+  [matryoshka-concepts-003.md](matryoshka-concepts-003.md).
 
 ### Stories
 
@@ -339,11 +382,11 @@ Each story is a mini-project. Two artifacts plus one shared test file.
     flows, all event sources. Diagram only. No prose.
 - Code: `stories/name/name.zig`.
   - ASCII transfer circuit diagram at the top of the file.
-  - Code is structured around Masters. See [patterns-028.md](patterns-028.md)
+  - Code is structured around Masters. See [patterns-029.md](patterns-029.md)
     for the Master composition pattern.
 - Test wrapper: `tests/stories_test.zig`. Single file, all story wrappers.
 - What qualifies as a story: at least two layers composing, and a real domain
-  problem. See [matryoshka-concepts-002.md](matryoshka-concepts-002.md),  
+  problem. See [matryoshka-concepts-003.md](matryoshka-concepts-003.md),  
   "Three-category model".
 
 ---
@@ -406,10 +449,14 @@ General style.
 The Slot Rule.
 - Never overwrite a non-null slot.
 - Always start with `var slot: Slot = null`.
-- All acquisition APIs assert `slot.* == null` on entry.
+- All acquisition APIs assert `slot.* == null` on entry. `mailbox.new` and
+  `pool.new` are acquisition APIs and assert it too — they create the item they  
+  put in the Slot, rather than moving one that already existed, and the rule is  
+  the same either way.
+- An acquisition that fails leaves the Slot unchanged.
 - Transfer clears the slot: `slot.* = null`.
-- Cleanup ops (`pool.put`, `PolyHelper.destroy`, `helpers.freeSlot`) are no-ops on
-  null slots.
+- Cleanup ops (`pool.put`, `PolyHelper.destroy`, `helpers.freeSlot`,
+  `mailbox.destroy_slot`, `pool.destroy_slot`) are no-ops on null slots.
 - Use defer-before-acquisition — safe because cleanup is null-safe.
 - Never use `allocator.create` / `allocator.destroy` directly on PolyNode-based
   user types in examples or tests. Use `PolyHelper.create`, `PolyHelper.destroy`,  
@@ -805,8 +852,8 @@ Diagrams.
 Structure.
 - Cross-reference instead of duplicating.
 - When extending an existing document, match the heading levels already in use.
-- Link to [matryoshka-concepts-002.md](matryoshka-concepts-002.md),
-  [patterns-028.md](patterns-028.md), and this file.
+- Link to [matryoshka-concepts-003.md](matryoshka-concepts-003.md),
+  [patterns-029.md](patterns-029.md), and this file.
 
 Markdown hard breaks — MUST.
 - CommonMark collapses two lines separated by a single newline into one rendered
@@ -872,7 +919,7 @@ It cannot free the item. `alloc.destroy` takes `*T`, and the allocator needs the
 size to release the memory. With no type there is no size. An unknown item can  
 only be dropped or reported; its memory belongs to whoever knows what it is.
 
-Catalog: [patterns-028.md](patterns-028.md), "The last branch of a dispatch chain".
+Catalog: [patterns-029.md](patterns-029.md), "The last branch of a dispatch chain".
 
 ### No switch over tags — MUST
 
@@ -930,7 +977,7 @@ questions, and a caller that frees on error without looking at the Slot
 double-frees.
 
 Where it is written: the doc comment on `TagTable.Handler`, and
-[patterns-028.md](patterns-028.md), "Polymorphic dispatch — table".
+[patterns-029.md](patterns-029.md), "Polymorphic dispatch — table".
 
 Detail: [table-dispatch-002.md](table-dispatch-002.md).
 
@@ -943,6 +990,15 @@ General.
   wins over all other sources.
 - Never send a stack-allocated item. Use `alloc.create` or `pool.get`.
 - After transfer (`send`, `put`), `slot.* = null`.
+- `mailbox.new` and `pool.new` fill the Slot as the last thing they do, after
+  everything that can fail. A failure leaves the Slot exactly as it was, so a  
+  caller reads the error, never the Slot, to learn what happened.
+- `destroy_slot` empties the Slot before it frees the container, so a second
+  call is a no-op rather than a double free.
+- `destroy_slot` panics on a Slot holding another type. The caller named the
+  module, so the module knows what it was handed. This is the one place the  
+  Slot convention does not apply: a wrong type is a bug in the call, not a  
+  transfer that was refused.
 - A refused transfer gives the item back. `send`/`send_oob` returning
   `error.Closed` leave `slot.*` unchanged, and `put` on a closed pool is a  
   no-op that leaves it unchanged. The caller still holds the item. Handle  
@@ -998,7 +1054,7 @@ General.
 
 ## Part 9 — Patterns
 
-The pattern catalog lives in [patterns-028.md](patterns-028.md).
+The pattern catalog lives in [patterns-029.md](patterns-029.md).
 
 It covers:
 - Observable function shapes: coordinator / step / init / destroy / Select event
@@ -1089,3 +1145,18 @@ the header. The full account of each stage is in
   leaves the item with the caller, and `put_all` must be checked for what it  
   refused. Part 4 gains "documented asserts must exist" — the audit found 15  
   documented asserts that were never in `src/`.
+- rules-049 (Open Item 14) — superseded versions are kept **and listed**. Part
+  0 had only the keeping half, written about plan versions, which left every  
+  kept version failing the orphan gate. The listing half is the Superseded  
+  versions section of `context.md`, and the rule covers every doc. Owner's  
+  ruling, 2026-08-14.
+- rules-048 (INTR 8) — Slot-based creation. Part 1 gains the shape a Master
+  uses to acquire a mailbox or a pool: a Slot per resource, local to `init`,  
+  the detach on the next line, the `errdefer` after it, and the field left  
+  non-optional. Part 3's Slot Rule names `new` as an acquisition API and adds  
+  the two `destroy_slot` functions to the null-safe cleanup list. Part 8 gains  
+  the `new` and `destroy_slot` contract, including the one place the Slot  
+  convention gives way to a panic: a Slot holding the wrong type. Part 1 also  
+  names `detach` as the reading word for the `moveFromSlot` step, and says why  
+  the API keeps `move`: it is the toolkit's word for every transfer, and a Slot  
+  is a place rather than a linkage.

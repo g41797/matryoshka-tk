@@ -7,7 +7,7 @@ INTR 7 did it for the pool a month earlier, from scratch, and the two stages
 shared no method. This doc is so the third one does not start over.
 
 Tool: `kitchen/tools/audit_edges.sh` — the mechanical inventory.  
-Rules it enforces: [rules-047.md](rules-047.md) Part 8.
+Rules it enforces: [rules-049.md](rules-049.md) Part 8.
 
 ---
 

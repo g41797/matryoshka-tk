@@ -174,7 +174,10 @@ const GracefulShutdownMaster = struct {
         self.shutdown_seen = false;
         self.freed_inbox = 0;
         self.recycled_pool = 0;
-        self.mbx = try mailbox.new(io, allocator);
+
+        var mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx_slot);
+        self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
         errdefer {
             var rem: polynode.ItemList = self.mbx.close();
             items.freeList(&rem, allocator);
@@ -182,12 +185,14 @@ const GracefulShutdownMaster = struct {
         }
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.pl = try pool.new(io, allocator);
+
+        var pl_slot: Slot = null;
+        try pool.new(io, allocator, self.pool_ctx.poolHooks(&self.tags), &pl_slot);
+        self.pl = Pool.moveFromSlot(&pl_slot).?;
         errdefer {
             self.pl.close();
             pool.destroy(self.pl, allocator);
         }
-        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         self.sel = std.Io.Select(MasterEvent).init(self.io, &self.buf);
         return self;
     }

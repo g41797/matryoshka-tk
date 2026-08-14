@@ -261,10 +261,12 @@ fn freeSegmentList(list: *polynode.ItemList, alloc: std.mem.Allocator) void {
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
     // Shared resources.
     // Buffer pool: fixed N_BUFFERS — acts as backpressure signal.
-    const buf_pl: *Pool = try pool.new(io, allocator);
     var buf_ctx: VideoBufCtx = .{ .alloc = allocator };
     const buf_tags = [_]*const anyopaque{VideoBufferPolyHelper.TAG};
-    try buf_pl.init(buf_ctx.poolHooks(&buf_tags));
+
+    var buf_pl_slot: Slot = null;
+    try pool.new(io, allocator, buf_ctx.poolHooks(&buf_tags), &buf_pl_slot);
+    const buf_pl: *Pool = Pool.moveFromSlot(&buf_pl_slot).?;
     defer {
         buf_pl.close();
         pool.destroy(buf_pl, allocator);
@@ -275,8 +277,13 @@ pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
     // Ready queue: StreamContext items route camera state to workers.
     // Storage mailbox: encoded segments flow from workers to storage task.
     // Both are closed and destroyed explicitly during shutdown below.
-    const ready_queue: *Mbox = try mailbox.new(io, allocator);
-    const storage_mbx: *Mbox = try mailbox.new(io, allocator);
+    var ready_queue_slot: Slot = null;
+    try mailbox.new(io, allocator, &ready_queue_slot);
+    const ready_queue: *Mbox = Mbox.moveFromSlot(&ready_queue_slot).?;
+
+    var storage_mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &storage_mbx_slot);
+    const storage_mbx: *Mbox = Mbox.moveFromSlot(&storage_mbx_slot).?;
 
     // Start the storage task.
     var storage_ctx: StorageCtx = .{ .storage_mbx = storage_mbx, .alloc = allocator };

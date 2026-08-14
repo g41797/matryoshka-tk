@@ -41,7 +41,7 @@ pub const Pool = struct {
     cond: Io.Condition,
     lists: std.AutoHashMapUnmanaged(*const anyopaque, polynode.ItemList),
     counts: std.AutoHashMapUnmanaged(*const anyopaque, usize),
-    hooks: ?Hooks,
+    hooks: Hooks,
     closed: std.atomic.Value(bool),
     io: Io,
     alloc: std.mem.Allocator,
@@ -172,21 +172,40 @@ pub const Pool = struct {
         return helper.isIt(tag);
     }
 
-    /// Registers hooks.
+    /// Cast to the pool through the Slot containing it.
     ///
-    /// Call once, right after `new`.
+    /// Returns null if the Slot is empty or contains another type.\
+    /// Does not empty the Slot.
+    pub inline fn fromSlot(slot: *const polynode.Slot) ?*Pool {
+        return helper.fromSlot(slot);
+    }
+
+    /// Same as fromSlot().
     ///
-    /// Asserts the tag list is not empty, the pool is not closed, and no hooks
-    /// are registered yet.
-    pub fn init(self: *Pool, hooks: Hooks) !void {
+    /// Panics on failure.
+    pub inline fn mustFromSlot(slot: *const polynode.Slot) *Pool {
+        return helper.mustFromSlot(slot);
+    }
+
+    /// Takes the pool out of the Slot.
+    ///
+    /// Returns null if the Slot is empty or contains another type.\
+    /// On success the Slot is left empty.\
+    /// On failure the Slot is unchanged.
+    pub inline fn moveFromSlot(slot: *polynode.Slot) ?*Pool {
+        return helper.moveFromSlot(slot);
+    }
+
+    /// Builds one empty list and one counter per registered tag.
+    ///
+    /// Step of `new`, and its only caller. The hooks are already in place.
+    ///
+    /// No lock: nothing else can reach the pool yet.
+    ///
+    /// Asserts the tag list is not empty.
+    fn init(self: *Pool) !void {
+        const hooks: Hooks = self.*.hooks;
         std.debug.assert(hooks.tags.len > 0);
-
-        const io: Io = self.*.io;
-        self.*.mutex.lockUncancelable(io);
-        defer self.*.mutex.unlock(io);
-
-        std.debug.assert(!self.*.closed.load(.monotonic));
-        std.debug.assert(self.*.hooks == null);
 
         // Grow capacity before any modification — OOM fails cleanly here.
         const n: u32 = @intCast(hooks.tags.len);
@@ -197,16 +216,13 @@ pub const Pool = struct {
             self.*.lists.putAssumeCapacity(tag, .{});
             self.*.counts.putAssumeCapacity(tag, 0);
         }
-
-        self.*.hooks = hooks;
     }
 
     /// Acquires a handle without waiting. Calls `on_get`.
     ///
     /// On success, stores the handle in `slot.*`.
     ///
-    /// Asserts the slot is empty, the hooks are registered, and the tag is one
-    /// of the registered ones.
+    /// Asserts the slot is empty and the tag is one of the registered ones.
     pub fn get(self: *Pool, tag: *const anyopaque, mode: GetMode, slot: *polynode.Slot) GetError!void {
         std.debug.assert(slot.* == null);
 
@@ -232,8 +248,7 @@ pub const Pool = struct {
     ///
     /// `get_wait` always uses the timeout error set regardless of the timeout value.
     ///
-    /// Asserts the slot is empty, the hooks are registered, and the tag is one
-    /// of the registered ones.
+    /// Asserts the slot is empty and the tag is one of the registered ones.
     pub fn get_wait(self: *Pool, tag: *const anyopaque, slot: *polynode.Slot, timeout_ns: ?u64) (GetError || Io.Cancelable || error{Timeout})!void {
         std.debug.assert(slot.* == null);
 
@@ -252,7 +267,6 @@ pub const Pool = struct {
         self.*.mutex.lock(io) catch |err| return err;
         defer self.*.mutex.unlock(io);
 
-        std.debug.assert(self.*.hooks != null);
         std.debug.assert(self.*.lists.contains(tag));
 
         while (true) {
@@ -325,13 +339,12 @@ pub const Pool = struct {
             return; // handle stays with the caller
         }
 
-        std.debug.assert(self.*.hooks != null);
 
         const handle: polynode.ItemHandle = slot.*.?;
         const tag: *const anyopaque = handle.*.tag;
         std.debug.assert(self.*.lists.contains(tag));
 
-        const hooks: Hooks = self.*.hooks.?;
+        const hooks: Hooks = self.*.hooks;
         const count: usize = self.*.counts.get(tag) orelse 0;
 
         self.*.mutex.unlock(io);
@@ -434,9 +447,8 @@ pub const Pool = struct {
         self.*.cond.broadcast(io);
         self.*.mutex.unlock(io);
 
-        if (self.*.hooks) |hooks| {
-            hooks.on_close(hooks.ctx, &collected);
-        }
+        const hooks: Hooks = self.*.hooks;
+        hooks.on_close(hooks.ctx, &collected);
     }
 
     /// Wraps `getWaitResult` in an `Io.Future` for direct await or `Io.Group` use.
@@ -449,8 +461,16 @@ pub const Pool = struct {
     }
 };
 
-/// Creates a pool.
-pub fn new(io: Io, alloc: std.mem.Allocator) !*Pool {
+/// Creates a pool, registers the hooks, and stores it in the Slot.
+///
+/// Asserts the Slot is empty, and that the hook tag list is not empty.
+///
+/// On failure the Slot is unchanged and nothing is left allocated.
+///
+/// Take the pointer out with `Pool.moveFromSlot`.
+pub fn new(io: Io, alloc: std.mem.Allocator, hooks: Pool.Hooks, slot: *polynode.Slot) !void {
+    std.debug.assert(slot.* == null);
+
     const p: *Pool = try alloc.create(Pool);
     errdefer alloc.destroy(p);
     p.* = .{
@@ -459,12 +479,17 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !*Pool {
         .cond = .init,
         .lists = .empty,
         .counts = .empty,
-        .hooks = null,
+        .hooks = hooks,
         .closed = std.atomic.Value(bool).init(false),
         .io = io,
         .alloc = alloc,
     };
-    return p;
+    errdefer p.*.lists.deinit(alloc);
+    errdefer p.*.counts.deinit(alloc);
+
+    try p.*.init();
+
+    slot.* = Pool.toPoly(p);
 }
 
 /// True if the tag identifies a Pool.
@@ -486,6 +511,24 @@ pub fn destroy(p: *Pool, alloc: std.mem.Allocator) void {
     p.*.lists.deinit(alloc);
     p.*.counts.deinit(alloc);
     alloc.destroy(p);
+}
+
+/// Frees the pool contained in the Slot, and empties the Slot.
+///
+/// Does nothing if the Slot is empty. A second call on the same Slot is a
+/// no-op, because the Slot is emptied before the pool is released.
+///
+/// Panics if the Slot contains another type. The caller named this module.
+///
+/// Must be closed first, as `destroy` requires. Closing is not done here:
+/// `close` passes the remaining items to `on_close`, and that call belongs to
+/// the caller's own sequence.
+pub fn destroy_slot(slot: *polynode.Slot, alloc: std.mem.Allocator) void {
+    const ih: polynode.ItemHandle = slot.* orelse return;
+    const p: *Pool = Pool.mustFromPoly(ih);
+
+    slot.* = null;
+    destroy(p, alloc);
 }
 
 /// Maps every `get_wait` outcome to a `Pool.Result` variant. Blocking.
@@ -527,7 +570,6 @@ inline fn _get_available_or_new(p: *Pool, tag: *const anyopaque, slot: *polynode
         p.*.mutex.unlock(io);
         return error.Closed;
     }
-    std.debug.assert(p.*.hooks != null);
     std.debug.assert(p.*.lists.contains(tag));
 
     if (p.*.lists.getPtr(tag)) |list| {
@@ -537,7 +579,7 @@ inline fn _get_available_or_new(p: *Pool, tag: *const anyopaque, slot: *polynode
         }
     }
 
-    const hooks: Pool.Hooks = p.*.hooks.?;
+    const hooks: Pool.Hooks = p.*.hooks;
     const count: usize = p.*.counts.get(tag) orelse 0;
     p.*.mutex.unlock(io);
 
@@ -555,10 +597,9 @@ inline fn _get_new_only(p: *Pool, tag: *const anyopaque, slot: *polynode.Slot) P
         p.*.mutex.unlock(io);
         return error.Closed;
     }
-    std.debug.assert(p.*.hooks != null);
     std.debug.assert(p.*.lists.contains(tag));
 
-    const hooks: Pool.Hooks = p.*.hooks.?;
+    const hooks: Pool.Hooks = p.*.hooks;
     const count: usize = p.*.counts.get(tag) orelse 0;
     p.*.mutex.unlock(io);
 
@@ -574,7 +615,6 @@ inline fn _get_available_only(p: *Pool, tag: *const anyopaque, slot: *polynode.S
     defer p.*.mutex.unlock(io);
 
     if (p.*.closed.load(.monotonic)) return error.Closed;
-    std.debug.assert(p.*.hooks != null);
     std.debug.assert(p.*.lists.contains(tag));
 
     if (p.*.lists.getPtr(tag)) |list| {

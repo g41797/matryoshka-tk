@@ -23,7 +23,9 @@
 //!
 
 pub fn select_mailbox_close_propagation(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
     defer {
         if (!ctx.mbx_closed) {

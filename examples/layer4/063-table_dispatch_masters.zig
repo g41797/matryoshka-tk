@@ -104,7 +104,9 @@ const LogMaster = struct {
     lines: usize = 0,
 
     fn init(allocator: std.mem.Allocator, io: std.Io) !LogMaster {
-        return .{ .allocator = allocator, .mbx = try mailbox.new(io, allocator) };
+        var mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx_slot);
+        return .{ .allocator = allocator, .mbx = Mbox.moveFromSlot(&mbx_slot).? };
     }
 
     fn deinit(self: *LogMaster) void {
@@ -164,7 +166,9 @@ const CountMaster = struct {
     unhandled: usize = 0,
 
     fn init(allocator: std.mem.Allocator, io: std.Io) !CountMaster {
-        return .{ .allocator = allocator, .mbx = try mailbox.new(io, allocator) };
+        var mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx_slot);
+        return .{ .allocator = allocator, .mbx = Mbox.moveFromSlot(&mbx_slot).? };
     }
 
     fn deinit(self: *CountMaster) void {

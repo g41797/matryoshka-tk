@@ -151,13 +151,19 @@ const CancelDecideMaster = struct {
         self.allocator = allocator;
         self.io = io;
         self.mbx1_closed = false;
-        self.mbx1 = try mailbox.new(io, allocator);
+
+        var mbx1_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx1_slot);
+        self.mbx1 = Mbox.moveFromSlot(&mbx1_slot).?;
         errdefer {
             var rem: polynode.ItemList = self.mbx1.close();
             items.freeList(&rem, allocator);
             mailbox.destroy(self.mbx1, allocator);
         }
-        self.mbx2 = try mailbox.new(io, allocator);
+
+        var mbx2_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx2_slot);
+        self.mbx2 = Mbox.moveFromSlot(&mbx2_slot).?;
         return self;
     }
 

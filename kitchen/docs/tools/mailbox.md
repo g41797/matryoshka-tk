@@ -47,7 +47,7 @@ receive   ◄──────────────────    Receiver 
 
 ## The Mailbox keeps items. It never touches them.
 
-Custody is not use. While the Mailbox has the handle, it does nothing to the  
+While the Mailbox has the handle, it does nothing to the  
 Item behind it.
 
 - No inspection.

@@ -25,14 +25,18 @@
 //!
 
 pub fn two_mailboxes_timer_in_select(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx1: *Mbox = try mailbox.new(io, allocator);
+    var mbx1_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx1_slot);
+    const mbx1: *Mbox = Mbox.moveFromSlot(&mbx1_slot).?;
     defer {
         var rem: polynode.ItemList = mbx1.close();
         items.freeList(&rem, allocator);
         mailbox.destroy(mbx1, allocator);
     }
 
-    const mbx2: *Mbox = try mailbox.new(io, allocator);
+    var mbx2_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx2_slot);
+    const mbx2: *Mbox = Mbox.moveFromSlot(&mbx2_slot).?;
     defer {
         var rem: polynode.ItemList = mbx2.close();
         items.freeList(&rem, allocator);

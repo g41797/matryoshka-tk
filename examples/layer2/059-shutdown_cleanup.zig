@@ -17,7 +17,9 @@
 //!
 
 pub fn shutdown_with_remaining_item_cleanup(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer mailbox.destroy(mbx, allocator);
 
     const n_events: usize = 5;

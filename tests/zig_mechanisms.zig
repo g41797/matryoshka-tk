@@ -36,11 +36,15 @@ const Label = struct {
 /// it. Zig gives the mechanism. This file only names it.
 const ParentHandle = *std.DoublyLinkedList.Node;
 
-/// The way back. From the handle to the parent struct.
+/// From the handle to the parent struct.
 ///
-/// The caller supplies `T`. The handle does not carry it.
 fn parentOf(comptime T: type, handle: ParentHandle) *T {
     return @fieldParentPtr("node", handle);
+}
+
+/// Given a pointer to the parent struct, return a handle.
+fn handleOf(comptime T: type, parent: *T) ParentHandle {
+    return &parent.node;
 }
 
 // --- Scenario B1: intrusion — the links are part of the struct ---
@@ -92,7 +96,7 @@ test "B2 - one list holds two unrelated parent types" {
 test "B3 - the wrong parent type is not caught by anything" {
     var l: Label = .{ .text = "not a reading" };
 
-    const handle: ParentHandle = &l.node;
+    const handle: ParentHandle = handleOf(Label, &l);
 
     // Both casts compile. Both run. Only one of them is right.
     //
@@ -116,7 +120,7 @@ test "B3 - the wrong parent type is not caught by anything" {
 test "B4 - the handle round trip returns the same struct" {
     var r: Reading = .{ .value = 42 };
 
-    const handle: ParentHandle = &r.node;
+    const handle: ParentHandle = handleOf(Reading, &r);
     const back: *Reading = parentOf(Reading, handle);
 
     try testing.expect(back == &r);

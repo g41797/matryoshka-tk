@@ -136,13 +136,19 @@ const PipelineMaster = struct {
         errdefer allocator.destroy(self);
         self.allocator = allocator;
         self.io = io;
-        self.transformer_mbx = try mailbox.new(io, allocator);
+
+        var transformer_mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &transformer_mbx_slot);
+        self.transformer_mbx = Mbox.moveFromSlot(&transformer_mbx_slot).?;
         errdefer {
             var rem: polynode.ItemList = self.transformer_mbx.close();
             items.freeList(&rem, allocator);
             mailbox.destroy(self.transformer_mbx, allocator);
         }
-        self.consumer_mbx = try mailbox.new(io, allocator);
+
+        var consumer_mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &consumer_mbx_slot);
+        self.consumer_mbx = Mbox.moveFromSlot(&consumer_mbx_slot).?;
         self.prod_ctx = .{ .out_mbx = self.transformer_mbx, .alloc = allocator };
         self.trans_ctx = .{ .in_mbx = self.transformer_mbx, .out_mbx = self.consumer_mbx, .alloc = allocator };
         self.cons_ctx = .{ .in_mbx = self.consumer_mbx, .alloc = allocator };

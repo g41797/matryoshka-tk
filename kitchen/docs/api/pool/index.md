@@ -33,8 +33,8 @@ pl.put(&slot);                                      // slot is now null (if kept
 ## Lifecycle flow
 
 ```text
-new()
-  ↓
+new(io, alloc, hooks, &slot)
+  ↓ moveFromSlot
 EMPTY pool
 
 get() [available_or_new, pool empty]     get() [available_or_new, pool has items]

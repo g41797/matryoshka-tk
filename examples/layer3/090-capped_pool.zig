@@ -25,12 +25,13 @@ pub fn backpressure_pool(allocator: std.mem.Allocator, io: std.Io) !void {
     var pool_ctx: hooks.CappedPoolHooks = .{ .alloc = allocator, .cap = cap, .io = io };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
 
-    const pl = try pool.new(io, allocator);
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_ctx.poolHooks(&tags), &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, allocator);
     }
-    try pl.init(pool_ctx.poolHooks(&tags));
 
     var workers: [thread_count]WorkerCtx = undefined;
     var futures: [thread_count]std.Io.Future(void) = undefined;

@@ -28,17 +28,21 @@
 //!
 
 pub fn pool_hooks_mailbox_flow(allocator: std.mem.Allocator, io: std.Io) !void {
-    const pl: *Pool = try pool.new(io, allocator);
     // CappedPoolHooks: cap=1 — first put keeps, second put destroys.
     var pool_ctx: hooks.CappedPoolHooks = .{ .alloc = allocator, .cap = 1, .io = io };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
-    try pl.init(pool_ctx.poolHooks(&tags));
+
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_ctx.poolHooks(&tags), &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, allocator);
     }
 
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);

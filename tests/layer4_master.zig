@@ -22,7 +22,9 @@ test "1 - single worker spawn and join" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, testing.allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);
@@ -49,7 +51,9 @@ test "2 - worker group spawn and join" {
     defer threaded.deinit();
     const io: Io = threaded.io();
 
-    const mbx: *Mbox = try mailbox.new(io, testing.allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, testing.allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, testing.allocator);

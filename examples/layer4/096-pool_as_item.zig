@@ -19,22 +19,31 @@
 
 pub fn pool_holds_pools_at_teardown(allocator: std.mem.Allocator, io: std.Io) !void {
     // Carrier pool — holds inner pools as items.
-    const carrier: *Pool = try pool.new(io, allocator);
     var carrier_ctx: CarrierCtx = .{ .alloc = allocator };
     const carrier_tags = [_]*const anyopaque{Pool.TAG};
-    try carrier.init(.{
+
+    var carrier_slot: Slot = null;
+    try pool.new(io, allocator, .{
         .ctx = &carrier_ctx,
         .tags = &carrier_tags,
         .on_get = onGet,
         .on_put = onPut,
         .on_close = onClose,
-    });
+    }, &carrier_slot);
+    const carrier: *Pool = Pool.moveFromSlot(&carrier_slot).?;
 
     const n: usize = 2;
-    var ctx: Ctx = .{ .carrier = carrier, .alloc = allocator, .io = io };
+    var ctx: Ctx = .{
+        .carrier = carrier,
+        .alloc = allocator,
+        .io = io,
+        .inner_ctx = .{ .alloc = allocator },
+    };
     try ctx.createAndStoreInnerPools(n);
     try ctx.closeCarrier(&carrier_ctx, n);
 }
+
+const inner_tags = [_]*const anyopaque{Pool.TAG};
 
 const CarrierCtx = struct {
     alloc: std.mem.Allocator,
@@ -65,12 +74,28 @@ const Ctx = struct {
     carrier: *Pool,
     alloc: std.mem.Allocator,
     io: std.Io,
+    inner_ctx: CarrierCtx,
+
+    /// Hooks for an inner pool.
+    ///
+    /// An inner pool is cargo: it is created, stored in the carrier and closed
+    /// at teardown, and no item ever passes through it. It still needs a full
+    /// hook set, because `pool.new` registers one and `close` calls `on_close`.
+    fn innerHooks(self: *Ctx) Pool.Hooks {
+        return .{
+            .ctx = &self.inner_ctx,
+            .tags = &inner_tags,
+            .on_get = onGet,
+            .on_put = onPut,
+            .on_close = onClose,
+        };
+    }
 
     fn createAndStoreInnerPools(self: *Ctx, n: usize) !void {
         var j: usize = 0;
         while (j < n) : (j += 1) {
-            const inner: *Pool = try pool.new(self.io, self.alloc);
-            var slot: Slot = Pool.toPoly(inner);
+            var slot: Slot = null;
+            try pool.new(self.io, self.alloc, self.innerHooks(), &slot);
             self.carrier.put(&slot);
             try helpers.expect(error.PoolAsItemFailed, slot == null, "carrier did not accept inner pool");
             std.log.info("stored inner pool {d} in carrier", .{j + 1});

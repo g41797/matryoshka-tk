@@ -11,7 +11,7 @@ A Pool gives out items for reuse, instead of allocating fresh ones in a hot loop
 A Pool gives out items for reuse instead of a fresh allocation every time.
 
 ```text
-new()
+new(hooks) — into a Slot, then take the pointer out
   ↓
 empty pool
 

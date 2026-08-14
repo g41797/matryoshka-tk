@@ -16,14 +16,18 @@
 //!
 
 pub fn request_response_between_masters(allocator: std.mem.Allocator, io: std.Io) !void {
-    const a_inbox: *Mbox = try mailbox.new(io, allocator);
+    var a_inbox_slot: Slot = null;
+    try mailbox.new(io, allocator, &a_inbox_slot);
+    const a_inbox: *Mbox = Mbox.moveFromSlot(&a_inbox_slot).?;
     defer {
         var rem: polynode.ItemList = a_inbox.close();
         items.freeList(&rem, allocator);
         mailbox.destroy(a_inbox, allocator);
     }
 
-    const b_inbox: *Mbox = try mailbox.new(io, allocator);
+    var b_inbox_slot: Slot = null;
+    try mailbox.new(io, allocator, &b_inbox_slot);
+    const b_inbox: *Mbox = Mbox.moveFromSlot(&b_inbox_slot).?;
     defer {
         var rem: polynode.ItemList = b_inbox.close();
         items.freeList(&rem, allocator);

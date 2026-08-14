@@ -13,7 +13,9 @@ test "26 - mailbox new and destroy" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     try testing.expect(Mbox.is_it_you(mbx.poly.tag));
 
     const remaining: polynode.ItemList = mbx.close();
@@ -26,7 +28,9 @@ test "27 - send and receive single item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -54,7 +58,9 @@ test "28 - fifo ordering" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -84,7 +90,9 @@ test "29 - send to closed mailbox" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, alloc);
     defer mailbox.destroy(mbx, alloc);
@@ -103,7 +111,9 @@ test "30 - receive from closed mailbox" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, alloc);
     defer mailbox.destroy(mbx, alloc);
@@ -117,7 +127,9 @@ test "31 - receive timeout" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -147,7 +159,9 @@ test "32 - receive wait forever (null timeout), item from thread" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -175,7 +189,9 @@ test "33 - close returns remaining items" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     for ([_]i32{ 1, 2, 3 }) |code| {
         var slot: Slot = null;
@@ -200,7 +216,9 @@ test "34 - second close returns empty list" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     {
         var slot: Slot = null;
@@ -228,7 +246,9 @@ test "35 - send_oob delivers to front" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -275,7 +295,9 @@ test "36 - send_oob wakes blocked receiver" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -303,7 +325,9 @@ test "37 - multiple send_oob items are FIFO among OOBs" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -341,7 +365,9 @@ test "38 - send_oob to closed mailbox" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, alloc);
     defer mailbox.destroy(mbx, alloc);
@@ -360,7 +386,9 @@ test "39 - data priority over closed" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     {
         var slot: Slot = null;
@@ -387,7 +415,9 @@ test "40 - receive_batch gets all items" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -421,7 +451,9 @@ test "41 - receive_batch on empty returns empty list" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -438,7 +470,9 @@ test "42 - batch items walkable via popFirst" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -467,7 +501,9 @@ test "43 - send transfers the item (slot is null)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -489,7 +525,9 @@ test "44 - receive transfers the item (slot is non-null)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -511,7 +549,9 @@ test "45 - try_receive on empty returns false" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -530,7 +570,9 @@ test "46 - try_receive gets item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -553,7 +595,9 @@ test "47 - send: IN_FLIGHT to HELD, slot is null" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -588,7 +632,9 @@ test "48 - receive: HELD to IN_FLIGHT, slot is non-null" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -659,7 +705,9 @@ test "50 - fan-in (3+1): 3 sender threads, main receives all" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     var ctx_a: Ctx50Sender = .{ .mbx = mbx, .alloc = alloc };
     var ctx_b: Ctx50Sender = .{ .mbx = mbx, .alloc = alloc };
@@ -713,7 +761,9 @@ test "51 - fan-slot (1+2): main sends, 2 receiver threads" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     {
         var slot: Slot = null;
@@ -826,7 +876,9 @@ test "52 - combined (3+2+main): fan-in + fan-slot, close after 100ms" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     var ctx_se: Ctx52Sender = .{ .mbx = mbx, .alloc = alloc };
     var ctx_ss: Ctx52Sender = .{ .mbx = mbx, .alloc = alloc };
@@ -873,7 +925,9 @@ test "oob last resets after last oob received, next send_oob goes to front" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -933,7 +987,9 @@ test "wakeUpAll wakes blocked receiver" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -971,7 +1027,9 @@ test "wakeUpAll does not affect future receiver" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -998,7 +1056,9 @@ test "wakeUpAll wakes all blocked receivers" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);
@@ -1045,7 +1105,9 @@ test "wakeUpAll on closed mailbox returns error.Closed" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     var rem: polynode.ItemList = mbx.close();
     items.freeList(&rem, alloc);
 
@@ -1058,7 +1120,9 @@ test "wakeUpAll with no waiters does not affect next receive" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const mbx: *Mbox = try mailbox.new(io, alloc);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, alloc, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, alloc);

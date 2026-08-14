@@ -225,7 +225,7 @@ An **Item** is
 
 ### Item and ItemHandle.
 
-The documentation talks about _Item(s)_.      
+The documentation talks about _Item_.      
 The API works with an **ItemHandle**.  
 
 You are thinking in terms of:

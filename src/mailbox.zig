@@ -90,6 +90,30 @@ pub const Mbox = struct {
         return helper.isIt(tag);
     }
 
+    /// Cast to the mailbox through the Slot containing it.
+    ///
+    /// Returns null if the Slot is empty or contains another type.\
+    /// Does not empty the Slot.
+    pub inline fn fromSlot(slot: *const polynode.Slot) ?*Mbox {
+        return helper.fromSlot(slot);
+    }
+
+    /// Same as fromSlot().
+    ///
+    /// Panics on failure.
+    pub inline fn mustFromSlot(slot: *const polynode.Slot) *Mbox {
+        return helper.mustFromSlot(slot);
+    }
+
+    /// Takes the mailbox out of the Slot.
+    ///
+    /// Returns null if the Slot is empty or contains another type.\
+    /// On success the Slot is left empty.\
+    /// On failure the Slot is unchanged.
+    pub inline fn moveFromSlot(slot: *polynode.Slot) ?*Mbox {
+        return helper.moveFromSlot(slot);
+    }
+
     /// Sends an item. It goes behind every item already queued.
     ///
     /// If mailbox is closed - returns error.Closed
@@ -411,8 +435,16 @@ pub const Mbox = struct {
     }
 };
 
-/// Creates a mailbox.
-pub fn new(io: Io, alloc: std.mem.Allocator) !*Mbox {
+/// Creates a mailbox and stores it in the Slot.
+///
+/// Asserts the Slot is empty.
+///
+/// On failure the Slot is unchanged.
+///
+/// Take the pointer out with `Mbox.moveFromSlot`.
+pub fn new(io: Io, alloc: std.mem.Allocator, slot: *polynode.Slot) !void {
+    std.debug.assert(slot.* == null);
+
     const mbx: *Mbox = try alloc.create(Mbox);
     errdefer alloc.destroy(mbx);
     mbx.* = .{
@@ -428,7 +460,8 @@ pub fn new(io: Io, alloc: std.mem.Allocator) !*Mbox {
         .io = io,
         .alloc = alloc,
     };
-    return mbx;
+
+    slot.* = Mbox.toPoly(mbx);
 }
 
 /// True if the tag identifies a Mbox.
@@ -448,6 +481,24 @@ pub fn destroy(mbx: *Mbox, alloc: std.mem.Allocator) void {
         @panic("mailbox.destroy: mailbox must be closed first");
     }
     alloc.destroy(mbx);
+}
+
+/// Frees the mailbox contained in the Slot, and empties the Slot.
+///
+/// Does nothing if the Slot is empty. A second call on the same Slot is a
+/// no-op, because the Slot is emptied before the mailbox is released.
+///
+/// Panics if the Slot contains another type. The caller named this module.
+///
+/// Must be closed first, as `destroy` requires. Closing is not done here:
+/// `close` gives back the items the mailbox keeps, and that list belongs to
+/// the caller.
+pub fn destroy_slot(slot: *polynode.Slot, alloc: std.mem.Allocator) void {
+    const ih: polynode.ItemHandle = slot.* orelse return;
+    const mbx: *Mbox = Mbox.mustFromPoly(ih);
+
+    slot.* = null;
+    destroy(mbx, alloc);
 }
 
 /// Packs every `receive()` outcome into a `Mbox.Result`, returned via Io.Queue.

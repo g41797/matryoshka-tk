@@ -134,7 +134,13 @@ Source: `tests/zig_mechanisms.zig`, scenario B1.
 
 **Intrusion** — the links are part of the struct.
 
+---
+
+
 ### Type erasure — the list works on Node
+
+---
+
 
 `std.DoublyLinkedList` does not care:
 
@@ -156,23 +162,57 @@ Source: `tests/zig_mechanisms.zig`, scenario B2.
 
 **Type erasure** — the list operates on `Node`, not on the concrete type.
 
+---
+
+
 ### ParentHandle — the way back
 
-The caller follows its own rules, and can get a pointer to the parent struct  
-through  
-<a href="https://ziglang.org/documentation/0.16.0/#toc-fieldParentPtr" target="_blank" rel="noopener noreferrer">@fieldParentPtr</a>.
+---
+
+- Your code works with the `*Reading`.
+- The list is passed the `*Node`.
+- Zig does not guarantee that *Reading and *Node are the same.
+
+---
+
+
+[`@fieldParentPtr`](https://ziglang.org/documentation/0.16.0/#toc-fieldParentPtr) provides "cast".
+
+---
+
+*Node is used for 2 different things:
+
+- for list operations
+- for calculation of address of parent structure
+
+The purpose of _ParentHandle_ is to clarify usage of *Node for 
+
+- calculation
+- or for any operation except list ones
+
 
 ```zig
 /// A `ParentHandle` is a pointer to the embedded Node.
+/// (*Node alias)
 const ParentHandle = *std.DoublyLinkedList.Node;
 
-/// The way back. From the handle to the parent struct.
+/// From the handle to the parent struct T.
 ///
-/// The caller supplies `T`. The handle does not carry it.
 fn parentOf(comptime T: type, handle: ParentHandle) *T {
     return @fieldParentPtr("node", handle);
 }
 ```
+
+---
+
+```zig
+    const readingHandle: ParentHandle = list.popFirst() orelse unreachable;
+    const labelHandle: ParentHandle = list.popFirst() orelse unreachable;
+
+    try testing.expectEqual(@as(i32, 7), parentOf(Reading, readingHandle).*.value);
+    try testing.expectEqualStrings("seven", parentOf(Label, labelHandle).*.text);
+```
+
 
 Source: `tests/zig_mechanisms.zig`.
 
@@ -181,18 +221,13 @@ Source: `tests/zig_mechanisms.zig`.
 - The mechanism is part of Zig — a `*Node`, plus `@fieldParentPtr`.
 - Only the name is ours. This book needed a word for it.
 
-The reason to have a word for it: two things must stay apart.
+---
 
-- The real pointer to your struct — `*Reading`.
-- The intrusive struct inside it — `*Node`.
-
-They are the same address. They are not the same thing.
-
-- The list is passed the `*Node`.
-- Your code works with the `*Reading`.
-- `@fieldParentPtr` crosses between them.
 
 ### Why the caller must check before casting
+
+---
+
 
 The cast is unchecked. Both of these compile, and both run.
 
@@ -214,7 +249,13 @@ items in, a separate list per type, or a field of its own.
 
 This is the gap polynode closes. Part 3 starts there.
 
+---
+
+
 ### Where to go deeper
+
+---
+
 
 - `tests/zig_mechanisms.zig` — the four scenarios, runnable.
 - [Intrusion and Type erasure](https://g41797.github.io/matryoshka-tk/addendums/intrusion-type-erasure/) — the same terms, one page.
@@ -223,6 +264,9 @@ This is the gap polynode closes. Part 3 starts there.
 ---
 
 ## Part 3 — polynode
+
+---
+
 
 ### What this is
 
@@ -234,13 +278,10 @@ Part 2 ended on an unchecked cast. polynode makes it checked.
 - The tag says what the parent type is.
 - The check happens on the handle, not in the caller's head.
 
-polynode needs no `Io` and no allocator of its own. It works on stack values.
 
 ### Participants
 
 ```zig
-const polynode = @import("matryoshka").polynode;
-
 pub const PolyTag = struct { _: u8 = 0 };
 
 pub const PolyNode = struct {
@@ -577,7 +618,36 @@ pub fn destroy(allocator: std.mem.Allocator, slot: *Slot) void
 
 ---
 
+## Interlude: Item and ItemHandle
+
+---
+
+The documentation talks about _Item_.      
+The API works with 
+
+- an **ItemHandle**
+- and **Slot** - "container" for ItemHandle
+
+You are thinking in terms of:
+
+- read _file_
+- write _file_
+- close _file_
+
+on API level one of the arguments is _file handle_.
+
+The same is for Matryoshka-Tk API
+
+- you are thinking in terms of _Item_ - Application entity
+- API is working with _ItemHandle_/_Slot_ - Matryoshka-Tk entity
+
+
+---
+
 ## Part 4 — mailbox
+
+---
+
 
 ### What this is
 
@@ -635,7 +705,9 @@ Same rules as application items.
 Four steps. Two set up, two take down.
 
 ```zig
-const mbx = try mailbox.new(io, alloc);   // 1. create
+var mbx_slot: Slot = null;                // 1. create
+try mailbox.new(io, alloc, &mbx_slot);
+const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 defer mailbox.destroy(mbx, alloc);        // 4. free the mailbox itself
 
 // 2. use it: send and receive, from any number of tasks
@@ -648,7 +720,17 @@ items.freeList(&left, alloc);
 ```
 
 1. **Create.**
-   - `mailbox.new(io, alloc)` returns a `*Mbox`.
+   - `mailbox.new(io, alloc, &slot)` fills a Slot. It returns no pointer.
+   - The Slot must be empty on entry. `new` asserts it.
+   - On failure the Slot is left unchanged.
+   - `Mbox.moveFromSlot(&slot)` takes the pointer out and empties the Slot.
+     - Call it on the next line.
+     - Nothing fallible belongs between the two.
+     - This step is called **detaching**. The word is for reading; the call is
+       `moveFromSlot`. `move` is the toolkit's word for every transfer of an  
+       item, and a Slot is a place rather than a linkage, so nothing is  
+       literally attached to one.
+   - The Slot is a local. It dies where it was declared.
    - Internally the mailbox uses `Io` synchronisation objects.
    - `Io` should be Threaded.
 2. **Use.**
@@ -668,6 +750,8 @@ items.freeList(&left, alloc);
      - The mailbox stays a valid object.
 4. **Destroy.**
    - `mailbox.destroy(mbx, alloc)` frees the mailbox itself.
+   - `mailbox.destroy_slot(&slot, alloc)` does the same from a Slot, and
+     empties it.
 
 Close before destroy.
 
@@ -689,6 +773,15 @@ Teardown is the sharpest difference between the two.
 A full send and receive, in real code:
 
 ```zig
+var mbx_slot: Slot = null;
+try mailbox.new(io, allocator, &mbx_slot);
+const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
+defer {
+    var rem: polynode.ItemList = mbx.close();
+    items.freeList(&rem, allocator);
+    mailbox.destroy(mbx, allocator);
+}
+
 {
     var slot: Slot = null;
     defer items.freeSlot(&slot, allocator);
@@ -711,10 +804,12 @@ Source: `examples/layer2/053-simple_send_receive.zig`.
 ### Create and destroy
 
 ```zig
-pub fn new(io: Io, alloc: std.mem.Allocator) !*Mbox
+pub fn new(io: Io, alloc: std.mem.Allocator, slot: *polynode.Slot) !void
 ```
 
-- Creates a new mailbox.
+- Creates a mailbox and puts it in the Slot.
+- The Slot must be empty on entry.
+- The Slot is left unchanged if the creation fails.
 - Stores `io` internally.
 
 ```zig
@@ -724,6 +819,15 @@ pub fn destroy(mbx: *Mbox, alloc: std.mem.Allocator) void
 - Frees the mailbox.
 - Must be closed first.
 - Calling destroy on an open mailbox is a programming error (panic).
+
+```zig
+pub fn destroy_slot(slot: *polynode.Slot, alloc: std.mem.Allocator) void
+```
+
+- Frees the mailbox in the Slot, and empties the Slot.
+- An empty Slot is a no-op. So is a second call on the same Slot.
+- A Slot holding another type is a programming error (panic).
+- Must be closed first, as `destroy` requires.
 
 ```zig
 pub fn is_it_you(tag: *const anyopaque) bool
@@ -938,6 +1042,9 @@ const result = try fut.await(io);
 
 ## Part 5 — pool
 
+---
+
+
 ### What this is
 
 Reuse of items, decided by user supplied hooks.
@@ -1005,48 +1112,57 @@ Same rules as application items.
 
 ### Usual flow
 
-Five steps. Three set up, two take down.
+Four steps. Two set up, two take down. The same four as a mailbox.
 
-- The extra step is `init`.
-- A pool without hooks cannot create anything.
+- The hooks go in at step 1.
+- A pool cannot exist without them.
 
 ```zig
-const pl = try pool.new(io, alloc);   // 1. create
-defer pool.destroy(pl, alloc);        // 5. free the pool itself
-try pl.init(my_hooks);                // 2. register hooks
+var pl_slot: Slot = null;                          // 1. create
+try pool.new(io, alloc, my_hooks, &pl_slot);
+const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
+defer pool.destroy(pl, alloc);                     // 4. free the pool itself
 
-// 3. use it
+// 2. use it
 try pl.get(EVENT_TAG, .available_or_new, &slot);
 pl.put(&slot);
 
-pl.close();                           // 4. on_close releases what is left
+pl.close();                                        // 3. on_close releases what is left
 ```
 
 1. **Create.**
-   - `pool.new(io, alloc)` returns a `*Pool` with no hooks.
-   - Nothing works yet.
-2. **Register hooks.**
-   - `init(hooks)` once, right after `new`.
+   - `pool.new(io, alloc, hooks, &slot)` fills a Slot. It returns no pointer.
+   - The Slot must be empty on entry. `new` asserts it.
+   - On failure the Slot is left unchanged.
+   - `Pool.moveFromSlot(&slot)` takes the pointer out and empties the Slot.
+     - Call it on the next line.
+     - Nothing fallible belongs between the two.
+     - This step is called **detaching**, the same as for a mailbox. Part 4
+       says why the word and the call differ.
+   - The Slot is a local. It dies where it was declared.
    - The hooks are the pool.
      - `on_get` creates.
      - `on_put` decides whether an item is kept.
      - `on_close` releases.
-   - Skip this and the first `get` has no way to make an item.
-3. **Use.**
+   - A pool is one call. There is no second step that arms it.
+   - The tag list must not be empty.
+2. **Use.**
    - `get` asks whether a reusable item is available right now.
    - `put` offers one back.
    - Check the slot after `put`.
      - A refusal leaves it non-null.
      - You still have the item.
-4. **Close.**
+3. **Close.**
    - `close` collects everything the pool keeps.
    - It passes the list to `on_close`.
    - Nothing comes back to you.
    - After `close`:
      - `put` is a no-op.
      - Your slot is left unchanged.
-5. **Destroy.**
+4. **Destroy.**
    - `pool.destroy(pl, alloc)` frees the pool itself.
+   - `pool.destroy_slot(&slot, alloc)` does the same from a Slot, and empties
+     it.
 
 Close before destroy.
 
@@ -1064,15 +1180,16 @@ Teardown is the sharpest difference between the two.
 - A pool passes its items to `on_close`.
 - A mailbox returns them to the caller.
 
-The five steps in real code:
+The four steps in real code:
 
 ```zig
-const pl = try pool.new(io, allocator);
+var pl_slot: Slot = null;
+try pool.new(io, allocator, ctx.poolHooks(&tags), &pl_slot);
+const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
 defer {
     pl.close();
     pool.destroy(pl, allocator);
 }
-try pl.init(ctx.poolHooks(&tags));
 
 var slot: Slot = null;
 defer pl.put(&slot);
@@ -1089,10 +1206,8 @@ Source: `examples/layer3/089-basic_recycler.zig`.
 What an item does between the steps:
 
 ```text
-new()
-  ↓
-pool with no hooks
-  ↓ init(hooks)
+new(io, alloc, hooks, &slot)
+  ↓ moveFromSlot
 EMPTY pool
 
 get() [available_or_new, pool empty]     get() [available_or_new, pool has items]
@@ -1117,21 +1232,19 @@ the pool itself is freed
 ### Create and destroy
 
 ```zig
-pub fn new(io: Io, alloc: std.mem.Allocator) !*Pool
+pub fn new(io: Io, alloc: std.mem.Allocator, hooks: Pool.Hooks, slot: *polynode.Slot) !void
 ```
-- Creates a new pool.
-- Stores `io` internally.
-
-```zig
-pub fn init(self: *Pool, hooks: Pool.Hooks) !void
-```
-- Registers hooks.
-- Called once after `new`, on a pool that is not closed.
+- Creates a pool and puts it in the Slot.
+- The Slot must be empty on entry.
+- The Slot is left unchanged if the creation fails.
+- The hooks are registered here. There is no second call.
 - The tag list must not be empty.
+- Stores `io` internally.
 
 Hooks are the three functions the pool calls on your behalf — `on_get`,  
 `on_put` and `on_close` — plus the tags they answer for. Without them the pool  
-has no policy and cannot make an item. The **Hooks** section at the end of this  
+has no policy and cannot make an item, which is why they are a parameter of  
+`new` rather than a step after it. The **Hooks** section at the end of this  
 part says what each one does, and what must not happen inside one.
 
 ```zig
@@ -1140,6 +1253,14 @@ pub fn destroy(pl: *Pool, alloc: std.mem.Allocator) void
 - Frees the pool.
 - Must be closed first.
 - Calling destroy on an open pool is a programming error (panic).
+
+```zig
+pub fn destroy_slot(slot: *polynode.Slot, alloc: std.mem.Allocator) void
+```
+- Frees the pool in the Slot, and empties the Slot.
+- An empty Slot is a no-op. So is a second call on the same Slot.
+- A Slot holding another type is a programming error (panic).
+- Must be closed first, as `destroy` requires.
 
 ```zig
 pub fn is_it_you(tag: *const anyopaque) bool
@@ -1154,7 +1275,7 @@ pub fn get(self: *Pool, tag: *const anyopaque, mode: GetMode, slot: *Slot) GetEr
 - Non-blocking acquisition.
 - Calls `on_get` hook.
 - Moves the handle — `slot.*` set to non-null on success.
-- The Slot must be empty, the pool initialized, and the tag one it answers for.
+- The Slot must be empty, and the tag one the pool answers for.
 
 ```zig
 pub fn get_wait(self: *Pool, tag: *const anyopaque, slot: *Slot, timeout_ns: ?u64) (GetError || Cancelable || error{Timeout})!void
@@ -1968,6 +2089,8 @@ Matryoshka plugs into the same pattern:
 
 ## Change log
 
+API 13 : Rewrite reference , update src comments
+
 API 12 (real pointers): `MailboxHandle` and `PoolHandle` are gone. `Mbox`  
 and `Pool` are public structs with internal fields; application code holds  
 `*Mbox` / `*Pool` and calls methods on the pointer. Companion types nest —  
@@ -1989,6 +2112,7 @@ API 8: `ItemList` — the toolkit's list type. `Mbox.receive_batch`, `Mbox.close
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 042 | 2026-08-14 | INTR 8-3. `new` fills a Slot in both tools, so every snippet that took a returned pointer is rewritten: declare the Slot, call `new`, detach with `moveFromSlot` on the next line. Part 5 loses a step. The pool's `Usual flow` drops from five steps to four, because the hooks are a parameter of `new` and there is no second call that arms the pool; both tools now read the same four steps, and step 1 on each side carries the detach and the empty-Slot precondition. `Pool.init` is gone from the signature group, its text folded into `new`. Both Create-and-destroy groups gain `destroy_slot`. The pool's item-state diagram loses the two-box opening — a pool with no hooks is no longer a state that exists. The `get` preconditions drop "the pool initialized" for the same reason. Step 1 on each side also binds the reading word to the call: the step is called detaching, the call is always `moveFromSlot`, and Part 4 says why they differ — `move` is the toolkit's word for every transfer, and a Slot is a place rather than a linkage. Parts 1, 2, 3, 6 and 7 are untouched. |
 | 041 | 2026-08-13 | API 13-4. Custody-sense wording reconciled with `src/`. The mailbox statement in Part 4 now reads "The mailbox keeps items. It never touches them.", matching `src/mailbox.zig` after the 13-4a rewrite. One Part 2 line says the list is passed the `*Node` rather than given it. Changelog rows are left as written — they record what an earlier stage did. No section moved, no contract changed. |
 | 040 | 2026-08-13 | API 13-3. The book sheds the detail that 13-2 wrote into `src/`. The line it cuts on: a precondition the caller has to satisfy stays, the assert mechanism goes. All nine `Assert:` blocks are gone; where the surrounding bullets did not already say the precondition, one line of prose does. Out of Parts 3 to 5: the two-checks-per-insert reasoning, the O(n) cost of the safety checks, the `concatByMoving` and header-consistency explanations, the `!is_linked` assert site list — which named five sites where the code has seven — the `in_pool_count` lock mechanics, the pool's internal lock order, and the reentrancy reasoning. The `init` precondition "each tag not null" is deleted rather than moved: no such assert exists in `src/`, and `hooks.tags` holds non-optional pointers, so none can. Kept against their carry-over row, by the owner's ruling: the OOB ordering diagram, the two-`popFirst` warning trimmed to two bullets, and the two behavioural contracts a reader designs around — waiter order is not FIFO, and the pool gives no put-then-get sequence guarantee. Parts 1, 2, 6 and 7 are untouched. |
 | 039 | 2026-08-13 | API 13-1. The reference becomes a book for the reader who is learning Matryoshka. 22 flat `##` headings become seven parts, and Parts 3, 4 and 5 share one five-piece shape: what this is, participants, usual flow, the API in named groups, where to go deeper. New Part 1 states what Matryoshka is, what it is for, who it is for and what it is not. New Part 2 gives the three parts of Zig the toolkit is built out of — intrusion, type erasure, and the `*Node`-plus-`@fieldParentPtr` handle this book calls `ParentHandle`; its snippets come from a new test file, `tests/zig_mechanisms.zig`, and `ItemHandle` moves out of the opening lines into Part 3, where it is introduced as the analog with a tag added. Every code snippet in Parts 2 through 5 is extracted from a file a kitchen script already builds, and names its source. The pool part gains a `Hooks` section one level above `Get` and `Put`, last in the part, because hooks are written rather than called. 475 lines of manual type definition and `PolyHelper` walkthrough are removed in favour of pointers to the two hand-maintained pages that already carry them on the docs site. The complexity table is removed — it was never for the reader. Bare signature lists are replaced by grouped signatures, each with its description. The stale note naming this file the source for `///` doc comments is removed: the code is working, and the flow is now the other way. The dead `Addendums → Io 101` pointer becomes a link to the page. Part 6 groups the eleven cross-tool sections into four, by the owner's ruling: identity across the tools, the slot rule, concurrency and cancel, what the toolkit assumes. The grouping demotes the eleven one level and reorders them into their group; no section body is rewritten. |

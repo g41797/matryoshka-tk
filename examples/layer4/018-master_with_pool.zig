@@ -73,13 +73,19 @@ const MasterWithPool = struct {
         self.io = io;
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.pl = try pool.new(io, allocator);
+
+        var pl_slot: Slot = null;
+        try pool.new(io, allocator, self.pool_ctx.poolHooks(&self.tags), &pl_slot);
+        self.pl = Pool.moveFromSlot(&pl_slot).?;
         errdefer {
             self.pl.close();
             pool.destroy(self.pl, allocator);
         }
-        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
-        self.mbx = try mailbox.new(io, allocator);
+
+        var mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx_slot);
+        self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
+
         self.worker_ctx = .{ .mbx = self.mbx, .pl = self.pl };
         return self;
     }

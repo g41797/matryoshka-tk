@@ -20,14 +20,18 @@
 //!
 
 pub fn worker_finish_signal_via_mailbox_return(allocator: std.mem.Allocator, io: std.Io) !void {
-    const master_inbox: *Mbox = try mailbox.new(io, allocator);
+    var master_inbox_slot: Slot = null;
+    try mailbox.new(io, allocator, &master_inbox_slot);
+    const master_inbox: *Mbox = Mbox.moveFromSlot(&master_inbox_slot).?;
     defer {
         var rem: polynode.ItemList = master_inbox.close();
         releaseInbox(&rem, allocator);
         mailbox.destroy(master_inbox, allocator);
     }
 
-    const worker_mbx: *Mbox = try mailbox.new(io, allocator);
+    var worker_mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &worker_mbx_slot);
+    const worker_mbx: *Mbox = Mbox.moveFromSlot(&worker_mbx_slot).?;
 
     try sendJobsAndShutdown(worker_mbx, allocator);
 

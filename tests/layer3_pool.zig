@@ -1,10 +1,7 @@
-// --- Scenario 63: pool.new, pool.init, pool.destroy ---
-test "63 - pool new, init, destroy" {
+// --- Scenario 63: pool.new, pool.destroy ---
+test "63 - pool new, destroy" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
-
-    const pl: *Pool = try pool.new(io, alloc);
-    try testing.expect(Pool.is_it_you(pl.poly.tag));
 
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
@@ -15,7 +12,11 @@ test "63 - pool new, init, destroy" {
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
     };
-    try pl.init(hooks);
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, hooks, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
+    try testing.expect(Pool.is_it_you(pl.poly.tag));
 
     pl.close();
     pool.destroy(pl, alloc);
@@ -26,16 +27,18 @@ test "64 - pl.get creates new item via on_get" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -56,16 +59,18 @@ test "65 - pl.get reuses stored item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -90,16 +95,18 @@ test "66 - on_get reinitializes recycled item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -125,16 +132,18 @@ test "67 - pl.put calls on_put" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -153,16 +162,18 @@ test "68 - on_put can destroy item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc, .destroy_on_put = true };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -186,16 +197,18 @@ test "69 - on_put can keep item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -218,16 +231,18 @@ test "70 - GetMode.new_only always creates, ignores available items" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -257,16 +272,18 @@ test "71 - GetMode.available_only returns error.NotAvailable" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -282,16 +299,18 @@ test "72 - GetMode.available_only returns stored item" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -315,16 +334,18 @@ test "73 - per-tag free lists: Event and Sensor stored separately" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const both_tags = [_]*const anyopaque{ EventPolyHelper.TAG, SensorPolyHelper.TAG };
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &both_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -365,16 +386,18 @@ test "74 - pl.close calls on_close with all items" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
 
     // Use new_only to accumulate 5 distinct heap items in the pool.
     for (0..5) |_| {
@@ -394,16 +417,18 @@ test "75 - pl.close is repeatable" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer pool.destroy(pl, alloc);
 
     pl.close();
@@ -415,16 +440,18 @@ test "76 - pl.get on closed pool returns error.Closed" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer pool.destroy(pl, alloc);
 
     pl.close();
@@ -438,16 +465,18 @@ test "77 - pl.put on closed pool returns item to caller" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
 
     var slot: Slot = null;
     try pl.get(EventPolyHelper.TAG, .available_or_new, &slot);
@@ -471,16 +500,18 @@ test "78 - backpressure: on_put drops items beyond cap" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc, .cap = 2 };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -501,16 +532,18 @@ test "79 - pool seeding: pre-allocate N items, then available_only consumes them
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -539,16 +572,18 @@ test "80 - in_pool_count: on_put and on_get receive correct count" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -577,16 +612,18 @@ test "81 - hooks run outside lock: no deadlock on put+get cycle" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -604,16 +641,18 @@ test "82 - pl.put_all returns batch from ItemList" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -638,16 +677,18 @@ test "83 - pl.get_wait timeout on empty pool" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -681,16 +722,18 @@ test "84 - pl.get_wait forever: item put from another thread" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -713,16 +756,18 @@ test "85 - transfer: HELD->IN_FLIGHT via pl.get" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -750,16 +795,18 @@ test "86 - transfer: IN_FLIGHT->HELD via pl.put with keep" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -779,16 +826,18 @@ test "87 - transfer: IN_FLIGHT->FREE via pl.put with destroy" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc, .destroy_on_put = true };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -811,16 +860,18 @@ test "88 - double pl.put: is_linked detection (assert documented)" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: TestCtx = .{ .alloc = alloc };
     const event_tags = [_]*const anyopaque{EventPolyHelper.TAG};
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &event_tags,
         .on_get = onGetAlways,
         .on_put = onPutAdaptive,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);
@@ -846,16 +897,18 @@ test "89 - on_put returns composite sub-items" {
     const io: Io = testing.io;
     const alloc: std.mem.Allocator = testing.allocator;
 
-    const pl: *Pool = try pool.new(io, alloc);
     var ctx: CompositeCtx = .{ .alloc = alloc };
     const tags = [_]*const anyopaque{ EventPolyHelper.TAG, SensorPolyHelper.TAG, TimerPolyHelper.TAG, ShutdownCommandPolyHelper.TAG };
-    try pl.init(.{
+
+    var pl_slot: Slot = null;
+    try pool.new(io, alloc, .{
         .ctx = &ctx,
         .tags = &tags,
         .on_get = onGetAlways,
         .on_put = onPutComposite,
         .on_close = onCloseAdaptive,
-    });
+    }, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, alloc);

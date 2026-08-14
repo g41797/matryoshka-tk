@@ -109,6 +109,33 @@ Instead of sharing an Item, pass the Item itself.
 
 ---
 
+# Application item, infrastructure item
+
+The two classes of Item. Same mechanism, opposite usage profile.
+
+An **application item** is what the application defines.
+
+* Event, Request, VideoFrame.
+* It flows through the toolkit constantly.
+* It is created, sent, received and released on every pass.
+* `PolyHelper` serves it in full, `create` and `destroy` included.
+
+An **infrastructure item** is a `Mbox` or a `Pool`.
+
+* It embeds a `PolyNode`, so it can travel through a mailbox or a pool.
+* That travel is rare. Two examples in the repo do it.
+* Normally it is created once and stays a field of a Master.
+* `PolyHelper` gives it no `create` and no `destroy`. Both types declare
+  `no_create_destroy`, because both allocate themselves.
+
+The terms are needed because the shared machinery suggests a symmetry that does  
+not exist in practice.
+
+The concept text is in Chapter 4 of
+[matryoshka-concepts-003.md](matryoshka-concepts-003.md).
+
+---
+
 # Mailbox
 
 A **Mailbox** communicates Items between Masters.
@@ -211,7 +238,7 @@ the analog of.
 * `ItemHandle` is Matryoshka. It is a `*PolyNode`, so it carries a tag, and the
   cast back is checked.
 
-The term appears in Part 2 of [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md),  
+The term appears in Part 2 of [matryoshka-api-reference-042.md](matryoshka-api-reference-042.md),  
 and in `tests/zig_mechanisms.zig`. It is not used in `src/`.
 
 ---

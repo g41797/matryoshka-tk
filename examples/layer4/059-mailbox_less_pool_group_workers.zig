@@ -26,10 +26,12 @@
 //!
 
 pub fn pool_group_worker_pool(allocator: std.mem.Allocator, io: std.Io) !void {
-    const pl: *Pool = try pool.new(io, allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
-    try pl.init(pool_ctx.poolHooks(&tags));
+
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_ctx.poolHooks(&tags), &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
 
     try seedContainers(pl);
 

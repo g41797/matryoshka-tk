@@ -231,7 +231,7 @@ that delivers the pointer is the same edge that orders the writes to it.
 
 **This is owed to two other documents.** `rules-033.md:405` carries "an object  
 sits in exactly one place, in exactly one state, at any moment";  
-`matryoshka-concepts-002.md` carries the exclusive-access claim. Neither states  
+`matryoshka-concepts-003.md` carries the exclusive-access claim. Neither states  
 the happens-before consequence. Writing it down is independent of every open  
 decision in section 8.
 
@@ -775,7 +775,7 @@ Prevention was always immune, because it reads nothing.
 ## 8. Decisions — round 6
 
 Answered by the owner on 2026-07-30. Numbering is preserved from 004 — Q25-Q34  
-are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-070.md` and `context.md`, so the  
+are cited by number in `STATUS-LOG.md`, `matryoshka-tk-implementation-plan-072.md` and `context.md`, so the  
 labels stay even though these are no longer questions.
 
 Every full argument lives in sections 5-7. This section records what was decided  
@@ -969,7 +969,7 @@ list is not reachable from `self`. Nothing outside safety builds.
 ## 9. Required follow-up — done
 
 - **The happens-before invariant of 3.2** — done 2026-07-30, now in
-  `rules-047.md` ("Exclusive access, second half") and `matryoshka-concepts-002.md` ("The transfer  
+  `rules-049.md` ("Exclusive access, second half") and `matryoshka-concepts-003.md` ("The transfer  
   orders memory"). Step 0 of the ship order.
 - **`src/polynode.zig:67`** — the `is_linked` doc comment now claims only what
   the function computes: whether the node has neighbours.
@@ -1041,7 +1041,7 @@ destination list from inside `send` or `put` before the lock is taken.
 
 Name and signature unchanged. All seven `!is_linked` asserts kept. The doc  
 comment at `src/polynode.zig:67` now says "True if the node has neighbours" and  
-states the sole-member case outright. The rules entry is in `rules-047.md`  
+states the sole-member case outright. The rules entry is in `rules-049.md`  
 ("The neighbour check"), and the three test comments of Q33 are corrected.
 
 ### 11.4 Tests (Q29)

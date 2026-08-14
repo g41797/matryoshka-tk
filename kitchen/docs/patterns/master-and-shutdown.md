@@ -133,19 +133,30 @@ fn init(allocator: std.mem.Allocator, io: std.Io) !*Master {
     errdefer allocator.destroy(self);
     self.allocator = allocator;
     self.io = io;
-    self.mbx = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
     errdefer {
         var rem = self.mbx.close();
         helpers.freeList(&rem, allocator);
         mailbox.destroy(self.mbx, allocator);
     }
-    self.pl = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
+
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_hooks, &pl_slot);
+    self.pl = Pool.moveFromSlot(&pl_slot).?;
     return self;
 }
 ```
 
 - Allocate first, guard with `errdefer allocator.destroy`.
-- Acquire each resource, guard with `errdefer` for that resource.
+- Acquire each resource into its own Slot, named for the resource.
+- Detach on the next line. The field is `*Mbox` or `*Pool`, never optional.
+- Nothing fallible sits between `new` and the detach, so the Slot window needs
+  no `errdefer` of its own.
+
+- Register the resource's `errdefer` after the detach. It guards the field.
+- The Slot is a local. It dies in `init`.
 - Return `self` last.
 
 Example: `examples/layer4/018-master_with_pool.zig`.
@@ -221,7 +232,9 @@ Code shape (explicit params, 1-2 shared values).
 const Sel = std.Io.Select(MasterEvent);
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const pl: *Pool = try pool.new(io, allocator, &pool_ctx, pool_hooks);
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_hooks, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer pool.destroy(pl, allocator);
 
     try seedPool(pl, allocator);
@@ -273,7 +286,9 @@ const Ctx = struct {
 };
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer { ... }
 
     var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
@@ -303,7 +318,9 @@ When to use.
 Code shape (single spawn+await step).  
 ```zig
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer { ... }
 
     try seedMailbox(mbx, allocator);

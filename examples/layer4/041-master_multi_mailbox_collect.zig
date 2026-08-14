@@ -21,8 +21,13 @@
 //!
 
 pub fn master_pre_shutdown_collect(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx_a: *Mbox = try mailbox.new(io, allocator);
-    const mbx_b: *Mbox = try mailbox.new(io, allocator);
+    var mbx_a_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_a_slot);
+    const mbx_a: *Mbox = Mbox.moveFromSlot(&mbx_a_slot).?;
+
+    var mbx_b_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_b_slot);
+    const mbx_b: *Mbox = Mbox.moveFromSlot(&mbx_b_slot).?;
 
     var ctx: Ctx = .{ .mbx_a = mbx_a, .mbx_b = mbx_b, .alloc = allocator };
     try ctx.fillMailboxA();

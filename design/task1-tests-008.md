@@ -1,5 +1,10 @@
-# Task 1 — Test Scenarios for Layers 1–3 (007)
+# Task 1 — Test Scenarios for Layers 1–3 (008)
 
+
+Change from -007: INTR 8 — scenarios 26 and 63 follow the test names in  
+`tests/layer2_mailbox.zig` and `tests/layer3_pool.zig`. Both now create into a  
+Slot and detach. Scenario 63 loses its middle step: the hooks go in at `new`,  
+so there is no separate registration call. Numbers unchanged.
 
 Change from -006: API 12-4 — the doc speaks the pointer API. Methods on  
 `*Mbox` / `*Pool`; `new`, `destroy`, `receiveResult`, `getWaitResult` stay  
@@ -91,7 +96,7 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 
 ## Layer 2 — Movement (Mailbox)
 
-26. **mailbox.new and mailbox.destroy** — create mailbox, verify `Mbox.is_it_you(mbx.poly.tag)` returns true; close then destroy, verify freed
+26. **mailbox new and destroy** — create mailbox into a Slot, detach with `Mbox.moveFromSlot`, verify `Mbox.is_it_you(mbx.poly.tag)` returns true; close then destroy, verify freed
 27. **Send and receive single item** — `mbx.send` one PolyNode, `mbx.receive` it, verify tag and data intact
 28. **FIFO ordering** — send 3 items, receive 3, verify order preserved
 29. **Send to closed mailbox returns error.Closed** — close first, then send, verify error
@@ -129,7 +134,7 @@ are intentionally excluded. Layers 1–3 must be fully testable without them.
 
 ## Layer 3 — Lifecycle (Pool)
 
-63. **pool.new, pl.init, pool.destroy** — create pool, register hooks via `pl.init`, verify handle; close then destroy
+63. **pool new, destroy** — create pool with hooks into a Slot, detach with `Pool.moveFromSlot`, verify `Pool.is_it_you(pl.poly.tag)`; close then destroy
 64. **pl.get creates new item via on_get** — empty pool, `.available_or_new` mode, on_get called with `m.* == null`, returns new item
 65. **pl.get reuses stored item** — put item back, get again, verify same pointer returned
 66. **on_get reinitializes recycled item** — put item with data, get it back, verify fields were reset by on_get

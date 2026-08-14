@@ -117,12 +117,14 @@ const PoolFanInMaster = struct {
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
         self.results = .{0} ** N;
-        self.pl = try pool.new(io, allocator);
+
+        var pl_slot: Slot = null;
+        try pool.new(io, allocator, self.pool_ctx.poolHooks(&self.tags), &pl_slot);
+        self.pl = Pool.moveFromSlot(&pl_slot).?;
         errdefer {
             self.pl.close();
             pool.destroy(self.pl, allocator);
         }
-        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         var created: usize = 0;
         errdefer for (0..created) |i| {
             var rem: polynode.ItemList = self.mbxs[i].close();
@@ -130,7 +132,9 @@ const PoolFanInMaster = struct {
             mailbox.destroy(self.mbxs[i], allocator);
         };
         for (0..N) |i| {
-            self.mbxs[i] = try mailbox.new(io, allocator);
+            var mbx_slot: Slot = null;
+            try mailbox.new(io, allocator, &mbx_slot);
+            self.mbxs[i] = Mbox.moveFromSlot(&mbx_slot).?;
             created += 1;
             self.ctxs[i] = .{ .mbx = self.mbxs[i], .pl = self.pl, .result = &self.results[i] };
             self.futs[i] = try io.concurrent(workerFn, .{&self.ctxs[i]});

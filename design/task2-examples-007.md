@@ -15,11 +15,11 @@ in the barrel and in the site nav, but had never been listed in this catalog.
 Change from 003: EXMPL 5 — added scenario 62, the receive router.
 
 Index only. Full staccato description lives in each source file's `///` doc comment,  
-per "Description as code" in [rules-047.md](rules-047.md).
+per "Description as code" in [rules-049.md](rules-049.md).
 
 Pool items are empty containers on acquisition. Work input comes from outside the pool item:  
 a mailbox, a timer, a network source, spawn-time arguments, or the worker's own accumulated state.  
-See "Pool items are empty containers" in [matryoshka-concepts-002.md](matryoshka-concepts-002.md).
+See "Pool items are empty containers" in [matryoshka-concepts-003.md](matryoshka-concepts-003.md).
 
 All Layer 4 examples use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, real I/O.
 

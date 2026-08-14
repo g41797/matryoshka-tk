@@ -19,8 +19,13 @@
 //!
 
 pub fn pipeline(allocator: std.mem.Allocator, io: std.Io) !void {
-    const stage1: *Mbox = try mailbox.new(io, allocator);
-    const stage2: *Mbox = try mailbox.new(io, allocator);
+    var stage1_slot: Slot = null;
+    try mailbox.new(io, allocator, &stage1_slot);
+    const stage1: *Mbox = Mbox.moveFromSlot(&stage1_slot).?;
+
+    var stage2_slot: Slot = null;
+    try mailbox.new(io, allocator, &stage2_slot);
+    const stage2: *Mbox = Mbox.moveFromSlot(&stage2_slot).?;
     defer {
         var r1: polynode.ItemList = stage1.close();
         items.freeList(&r1, allocator);

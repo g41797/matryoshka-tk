@@ -21,12 +21,13 @@ pub fn basic_recycler(allocator: std.mem.Allocator, io: std.Io) !void {
     var ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
 
-    const pl = try pool.new(io, allocator);
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, ctx.poolHooks(&tags), &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer {
         pl.close();
         pool.destroy(pl, allocator);
     }
-    try pl.init(ctx.poolHooks(&tags));
 
     var slot: Slot = null;
     defer pl.put(&slot);
@@ -53,5 +54,6 @@ const helpers = @import("../helpers/helpers.zig");
 const matryoshka = @import("matryoshka");
 const std = @import("std");
 const pool = matryoshka.pool;
+const Pool = matryoshka.Pool;
 const polynode = matryoshka.polynode;
 const Slot = polynode.Slot;

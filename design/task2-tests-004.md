@@ -1,5 +1,10 @@
-# Task 2 — Test Scenarios for Layer 4 and Cross-Layer (003)
+# Task 2 — Test Scenarios for Layer 4 and Cross-Layer (004)
 
+
+Change from -003: INTR 8 — scenario 8 changed meaning. Owner's ruling,  
+2026-08-14. A pool closed before its hooks were registered is no longer a  
+state that can be built, because the hooks go in at `new`. The scenario keeps  
+the closed-pool `put` check and drops the ordering claim.
 
 Change from -002: API 12 — mailbox and pool operations read as methods on the  
 receiver (`mbx.receive`, `pl.put`). Numbers and meanings unchanged.
@@ -24,7 +29,7 @@ All tests use real `Io.Threaded.init(gpa, .{})` — concurrency, cancellation, r
 
 6. **Broadcast shutdown: mbx.close before join** — Master closes mailbox (broadcasts), worker wakes with `error.Closed`, exits. Master joins, then closes pool, walks remaining items. `[mbx.close broadcast, error.Closed, lockUncancelable]`
 7. **Cancel shutdown: future.cancel before close** — Master calls `future.cancel(io)`, worker exits. Then Master calls `pl.close` and `mbx.close` to reclaim items. No race — worker already exited. `[Future.cancel, pl.close, mbx.close after join]`
-8. **pl.put on closed pool** — Worker holds item when `pl.close` runs. `pl.put` returns item to caller (Slot stays non-null). Worker disposes item via on_close hook. `[pl.put cancel-protected, closed pool rejection]`
+8. **pl.put on closed pool** — Pool is closed before the worker runs. Worker receives an item and calls `pl.put`; the closed pool refuses it and the Slot stays non-null, so the item is still the worker's. Worker releases it. `[pl.put cancel-protected, closed pool rejection]`
 9. **mbx.close returns remaining items** — Send 10 items, close after 3 consumed. Walk returned `std.DoublyLinkedList` via `popFirst()`, verify 7 items recovered. `[mbx.close snapshot, batch cleanup]`
 10. **pl.close calls on_close with all items** — Put 5 items, `pl.close`. on_close receives `*std.DoublyLinkedList` with 5 items. Hook walks via `popFirst()` and frees. `[pl.close, on_close hook]`
 

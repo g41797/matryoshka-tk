@@ -20,7 +20,9 @@
 //!
 
 pub fn worker_loop_pattern(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer {
         var rem: polynode.ItemList = mbx.close();
         items.freeList(&rem, allocator);

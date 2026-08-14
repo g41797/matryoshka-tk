@@ -20,12 +20,16 @@
 //!
 
 pub fn master_shutdown_close_stdlib_walk_free(allocator: std.mem.Allocator, io: std.Io) !void {
-    const pl: *Pool = try pool.new(io, allocator);
     var pool_ctx: hooks.AlwaysCreateHooks = .{ .alloc = allocator };
     const tags = [_]*const anyopaque{items.Event.EventPolyHelper.TAG};
-    try pl.init(pool_ctx.poolHooks(&tags));
 
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_ctx.poolHooks(&tags), &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
+
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
 
     try seedMailbox(mbx, allocator, N_ITEMS);
     try seedPool(pl, N_ITEMS);

@@ -117,7 +117,10 @@ const MailboxPoolTimerMaster = struct {
         self.inbox_count = 0;
         self.pool_count = 0;
         self.ticks = 0;
-        self.mbx = try mailbox.new(io, allocator);
+
+        var mbx_slot: Slot = null;
+        try mailbox.new(io, allocator, &mbx_slot);
+        self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
         errdefer {
             var rem: polynode.ItemList = self.mbx.close();
             items.freeList(&rem, allocator);
@@ -125,12 +128,14 @@ const MailboxPoolTimerMaster = struct {
         }
         self.pool_ctx = .{ .alloc = allocator };
         self.tags = .{items.Event.EventPolyHelper.TAG};
-        self.pl = try pool.new(io, allocator);
+
+        var pl_slot: Slot = null;
+        try pool.new(io, allocator, self.pool_ctx.poolHooks(&self.tags), &pl_slot);
+        self.pl = Pool.moveFromSlot(&pl_slot).?;
         errdefer {
             self.pl.close();
             pool.destroy(self.pl, allocator);
         }
-        try self.pl.init(self.pool_ctx.poolHooks(&self.tags));
         try self.seedResources();
         self.sel = std.Io.Select(MasterEvent).init(self.io, &self.buf);
         return self;

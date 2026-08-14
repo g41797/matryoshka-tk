@@ -26,8 +26,13 @@
 //!
 
 pub fn timer_cancel_close_walk_remaining(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx1: *Mbox = try mailbox.new(io, allocator);
-    const mbx2: *Mbox = try mailbox.new(io, allocator);
+    var mbx1_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx1_slot);
+    const mbx1: *Mbox = Mbox.moveFromSlot(&mbx1_slot).?;
+
+    var mbx2_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx2_slot);
+    const mbx2: *Mbox = Mbox.moveFromSlot(&mbx2_slot).?;
     defer {
         var rem1: polynode.ItemList = mbx1.close();
         items.freeList(&rem1, allocator);

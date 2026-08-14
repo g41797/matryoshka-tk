@@ -1,4 +1,10 @@
-# Matryoshka Zig — Pattern and Idiom Catalog (028)
+# Matryoshka Zig — Pattern and Idiom Catalog (029)
+
+Change from patterns-028: INTR 8 — `mailbox.new` and `pool.new` fill a Slot.  
+The Init pattern gains the acquisition shape: a Slot per resource, the detach  
+on the next line, the `errdefer` registered after it. A pool is one call, so  
+the separate hook-registration line is gone from every shape. Four coordinator  
+shapes updated with it. No pattern changed its purpose.
 
 Change from patterns-027: API 13-4 — the three custody-sense `hands`/`holds`  
 sentences in the mailbox close-recovery pattern reworded to match `src/`.  
@@ -61,16 +67,16 @@ Change from patterns-013: staccato-style scan, prose paragraphs converted to bul
 
 Change from patterns-012:
 - `Thread.spawn` removed as an accepted task-creation option.
-- `io.concurrent()` is the only way a task starts (`matryoshka-concepts-002.md`, chapter 3).
+- `io.concurrent()` is the only way a task starts (`matryoshka-concepts-003.md`, chapter 3).
 
 Change from patterns-011:
 - API 4 renamed `NodeHandle` → `ItemHandle` — the old name leaked the intrusive-node implementation detail.
 - No pattern content changed, wording only.
 
 One unified catalog. Every pattern and idiom appears once, in logical order.  
-Companion: [rules-047.md](rules-047.md) — what is mandatory.  
-Companion: [matryoshka-concepts-002.md](matryoshka-concepts-002.md) — the thinking model.  
-Companion: [matryoshka-api-reference-041.md](matryoshka-api-reference-041.md) — signatures and contracts.
+Companion: [rules-049.md](rules-049.md) — what is mandatory.  
+Companion: [matryoshka-concepts-003.md](matryoshka-concepts-003.md) — the thinking model.  
+Companion: [matryoshka-api-reference-042.md](matryoshka-api-reference-042.md) — signatures and contracts.
 
 How this doc differs from rules.
 - Rules constrain. A rule says what you must or must not do.
@@ -97,7 +103,7 @@ Order of this catalog.
 
 ## Slot and transfer idioms
 
-The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-041.md).
+The slot rule in full: [api-reference — Slot-based programming](matryoshka-api-reference-042.md).
 
 ### Empty Slot initialization
 
@@ -311,7 +317,7 @@ Why.
 - Raw `allocator.create` skips both. The object is unusable for dispatch.
 
 Exempt: `mailbox.zig` / `pool.zig` internals, PolyHelper implementations, pool hook bodies, non-PolyNode structs.  
-Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-041.md).
+Full list: [api-reference — No raw allocator calls](matryoshka-api-reference-042.md).
 
 ---
 
@@ -595,7 +601,7 @@ try log_table.dispatch(self, &slot);
   never left the Slot, so unlike the last branch of a chain, the caller frees  
   it — the caller knows its own type set.
 - The handler follows the transfer rule: on return the Slot is null if the
-  handler took the item, full if it did not. See rules-047.md.
+  handler took the item, full if it did not. See rules-049.md.
 - Not in `src/`: the handler's first parameter is the application's receiver
   type, which the toolkit cannot name. It ships as `examples/helpers/TagTable.zig`.
 
@@ -654,7 +660,7 @@ Use.
 - Pointer comparison for infrastructure handles.
 - User fields (`kind`, `role`) for application roles.
 
-Details: [api-reference — Tag identity](matryoshka-api-reference-041.md).
+Details: [api-reference — Tag identity](matryoshka-api-reference-042.md).
 
 ### Wrapper type for infrastructure handles
 
@@ -716,7 +722,7 @@ Why.
   Under the handle API it compared two look-alike `ItemHandle`s, and only the  
   tag stood between a match and a silent mistake.
 
-Details: [api-reference — Transporting infra handles](matryoshka-api-reference-041.md).
+Details: [api-reference — Transporting infra handles](matryoshka-api-reference-042.md).
 
 ### Pool-as-message
 
@@ -1607,7 +1613,7 @@ Example: `examples/layer2/062-shutdown_exit.zig`.
 
 ### Observable function shapes
 
-Concrete templates for the "Observable by human" MUST rule. See [rules-047.md](rules-047.md).
+Concrete templates for the "Observable by human" MUST rule. See [rules-049.md](rules-049.md).
 
 #### Coordinator / run
 
@@ -1667,19 +1673,29 @@ fn init(allocator: std.mem.Allocator, io: std.Io) !*Master {
     errdefer allocator.destroy(self);
     self.allocator = allocator;
     self.io = io;
-    self.mbx = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    self.mbx = Mbox.moveFromSlot(&mbx_slot).?;
     errdefer {
         var rem = self.mbx.close();
         helpers.freeList(&rem, allocator);
         mailbox.destroy(self.mbx, allocator);
     }
-    self.pl = try pool.new(io, allocator, &self.pool_ctx, pool_hooks);
+
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_hooks, &pl_slot);
+    self.pl = Pool.moveFromSlot(&pl_slot).?;
     return self;
 }
 ```
 
 - Allocate first, guard with `errdefer allocator.destroy`.
-- Acquire each resource, guard with `errdefer` for that resource.
+- Acquire each resource into its own Slot, named for the resource.
+- Detach on the next line. The field is `*Mbox` or `*Pool`, never optional.
+- Nothing fallible sits between `new` and the detach, so the Slot window needs
+  no `errdefer` of its own.
+- Register the resource's `errdefer` after the detach. It guards the field.
+- The Slot is a local. It dies in `init`.
 - Return `self` last.
 
 Example: `examples/layer4/018-master_with_pool.zig`.
@@ -1750,7 +1766,9 @@ Code shape (explicit params, 1-2 shared values).
 const Sel = std.Io.Select(MasterEvent);
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const pl: *Pool = try pool.new(io, allocator, &pool_ctx, pool_hooks);
+    var pl_slot: Slot = null;
+    try pool.new(io, allocator, pool_hooks, &pl_slot);
+    const pl: *Pool = Pool.moveFromSlot(&pl_slot).?;
     defer pool.destroy(pl, allocator);
 
     try seedPool(pl, allocator);
@@ -1802,7 +1820,9 @@ const Ctx = struct {
 };
 
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer { ... }
 
     var ctx: Ctx = .{ .mbx = mbx, .alloc = allocator, .io = io };
@@ -1831,7 +1851,9 @@ When to use.
 Code shape (single spawn+await step).  
 ```zig
 pub fn run(allocator: std.mem.Allocator, io: std.Io) !void {
-    const mbx: *Mbox = try mailbox.new(io, allocator);
+    var mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &mbx_slot);
+    const mbx: *Mbox = Mbox.moveFromSlot(&mbx_slot).?;
     defer { ... }
 
     try seedMailbox(mbx, allocator);

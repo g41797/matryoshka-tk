@@ -17,10 +17,14 @@
 //!
 
 pub fn request_response(allocator: std.mem.Allocator, io: std.Io) !void {
-    const req_mbx: *Mbox = try mailbox.new(io, allocator);
+    var req_mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &req_mbx_slot);
+    const req_mbx: *Mbox = Mbox.moveFromSlot(&req_mbx_slot).?;
     defer mailbox.destroy(req_mbx, allocator);
 
-    const resp_mbx: *Mbox = try mailbox.new(io, allocator);
+    var resp_mbx_slot: Slot = null;
+    try mailbox.new(io, allocator, &resp_mbx_slot);
+    const resp_mbx: *Mbox = Mbox.moveFromSlot(&resp_mbx_slot).?;
     defer mailbox.destroy(resp_mbx, allocator);
 
     var ctx: WorkerCtx = .{ .req_mbx = req_mbx, .resp_mbx = resp_mbx, .alloc = allocator };
