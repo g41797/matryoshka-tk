@@ -1101,3 +1101,104 @@ earlier notes:
 [ ] Does Mbox keep an O(1) len, now that the list can provide one?
 [ ] Compiler floor version.
 ```
+
+
+## When yes, when no
+
+**The gap is real.** 
+
+Phobos has no zero-copy, no-GC message passing. 
+
+`std.concurrency` is GC-mandatory and refuses mutable pointer transfer by design. 
+
+Below it there is nothing — people hand-roll a mutex and a linked list. That's a genuine hole, not a crowded space you'd be entering.
+
+**Where it fits well:**
+
+- betterC, embedded, and plugins loaded into a host that doesn't own druntime. No alternative exists here at all.
+- Latency-budgeted thread-pool servers. The pool bounding total memory rather than queue depth is the right shape for middleware.
+- The data plane of a mixed service, with `std.concurrency` doing lifecycle above it.
+
+**Where it doesn't:**
+
+- Ordinary GC applications at moderate rate. `std.concurrency` is fine and needs no document.
+- **Fiber-based servers — and this is the one I'd think hardest about.** vibe.d is where most of D's server population lives, and it's fibers all the way down. A mailbox whose `receive` blocks the carrier thread is unusable there. That excludes a large share of "D systems" by construction, and it's the same gap `Io.Mutex` closes in Zig 0.16. A small integration shim — an eventfd or a `try_receive`-plus-yield adapter — would widen the addressable set more than any other single piece of work. It doesn't belong in the toolkit, but it might belong in the repo.
+
+**The adoption risk isn't quality.** It's that the audience with the strongest need — the no-GC corner — is also the audience most inclined to write their own queue and be satisfied with it. The counter-argument you'd make to them is the four-way split of responsibilities: their hand-rolled queue bundles synchronisation, storage, capacity and allocation into one type, and they'll discover the seams the first time capacity needs to be bounded somewhere other than the queue.
+
+**One thing I noticed across this session that's worth acting on.** The D port isn't a degraded translation. `@mustuse`, `@disable this(this)`, the destructor asserting empty, `static assert(!hasManagedRefs!T)`, struct invariants, contract-violation tests, and attribute inference doing the `@nogc` work — a large share of what Matryoshka currently enforces by documentation becomes compiler-enforced in D. The idiom is more precisely expressible there than in its original language.
+
+That might make the D version the better place to write the canonical documentation, even if Zig stays the reference implementation. Worth considering before you write the docs twice.
+
+
+## Docs
+
+That resolves it — one consumer per root, so nothing gets escaped twice:
+
+```text
+src/        →  adrdox         →  API reference
+tests/      →  nothing
+examples/   →  gen script     →  MkDocs pages
+```
+
+Example diagrams are safe. The shell script only pattern-matches fences, so box drawing, `---`, `$(`, anything passes through untouched.
+
+## But the constraint moves to `src/`
+
+`src/` doc comments now *are* adrdox source, so three things become meaningful there:
+
+- **`$(` starts a macro.** Fine in prose you control, a problem in any comment quoting D code inline.
+- **`---` at line start opens a code section.** No markdown horizontal rules in `src/` comments, and no ASCII diagram that uses `---` as a divider. Box-drawing characters are fine.
+- **Use `---` fences for D code samples**, not triple-backtick — that's the form both ddoc and adrdox understand.
+
+If you want an architecture diagram in a `src/` module comment, either switch it to box-drawing only, or keep it in `examples/` where the script is the only reader.
+
+## One rule that falls out of the split
+
+White-box unittests live in `src/` (module-scoped `private`), and adrdox scans `src/`. So:
+
+> Never put `///` on a white-box unittest.
+
+A documented unittest is rendered as an example in the API reference. A white-box test reads private fields. Documenting one publishes private-field access as though it were usage guidance, in the public API reference, silently.
+
+Undocumented `version(MatryoshkaUnittest) unittest` blocks are skipped, so the default is safe — the failure only happens if someone adds an explanatory `///` out of good habits.
+
+The converse is the same rule I gave earlier, now with a sharper reason: **documented unittests in `src/` must use public API only**, because they aren't just tests, they're published documentation.
+
+Worth checking adrdox's visibility flags too — confirm it isn't documenting `private` declarations by default, or the whole internal surface ends up in the reference.
+
+## Joining the two sites
+
+MkDocs copies non-`.md` files from `docs_dir` verbatim. So point adrdox at `kitchen/docs/api/` and add one nav entry to `api/index.html`. Both outputs ship as one site, and the generator script and adrdox stay unaware of each other.
+
+
+## The shared prose is smaller than it looks
+
+Classify honestly and the duplication problem mostly evaporates:
+
+**Genuinely shared** — the Manifesto, History, Why Boring, Notation, Laws of documentation, Tag vs Tagged Union, Slot vs Ref-Counting, Handle-Based Programming. Eight pages.
+
+**Looks shared, isn't** — Slot-Based Programming (the D version has the strict struct, `@mustuse`, the destructor assert; genuinely different), Intrusion and Type erasure (`@fieldParentPtr` versus `offsetof`, and D's deterministic layout changes the argument), Mailbox vs TypeErasedQueue (the D counterpart is `std.concurrency`, a different document), Io 101 (no Io), Installation.
+
+Eight pages doesn't justify a submodule or a third repo. Keep them canonical in the Zig repo and have the D site link out, under an explicit nav section — "Concepts" or similar — so a reader understands they're leaving deliberately rather than hitting a stray external link.
+
+Two mechanical points: give the D site a different `site_name` so search results don't collide, and set `site_url` on both — still missing, and cross-linking makes canonical URLs matter more than before.
+
+## The D catalog starts about a third smaller
+
+Counting your nav, "How to... Io (Select, Group, Future)" is ~25 examples, plus several Io-flavoured layer4 entries in the Mailbox section. None of those port — no `Io`, no `Select`, no `Future`, no `Group`.
+
+That's fine and expected, but two consequences:
+
+- The D Overview pages must not be translations of the Zig ones. A translated overview promises a section that doesn't exist.
+- The Io examples were carrying your async story. In D that story is `wakeUpAll` plus the epoch, plus threads, plus the explicit non-support for fibers. That needs its own examples written fresh, not ported — probably fewer than 25, but not zero.
+
+## One page the D site needs that the Zig site doesn't
+
+"Differences from the Zig implementation", as a first-class nav entry near the top. Not an addendum.
+
+Your likeliest D reader is someone who found the Zig project first. They arrive already knowing the model and needing exactly one thing: what changed. Cancellation gone, `Status` instead of error unions, no `Io`, fibers unsupported, and the things D enforces that Zig documents. That's a short page and it's the highest-traffic one you'll have in the first year.
+
+## Still worth doing, unchanged
+
+`strict: true` in CI, `navigation.indexes` for your eight `Overview:` entries, `navigation.tabs`, `.pages` files emitted by the generator instead of hand-maintained nav, no `edit_uri` on generated pages, and Installation somewhere a new arrival can find it.
