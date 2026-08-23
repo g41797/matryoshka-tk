@@ -3,7 +3,7 @@
 Stage 3TK-5 of [3tk-staging-plan-001.md](3tk-staging-plan-001.md).
 
 The C3 shape of Matryoshka. Written from
-[matryoshka-specification-001.md](matryoshka-specification-001.md), the ruled
+[matryoshka-specification-001.md](../../common/backup/matryoshka-specification-001.md), the ruled
 review [3tk-drafts-review-001.md](../3tk-drafts-review-001.md), and the measured
 answers of [c3-capabilities-001.md](../c3-capabilities-001.md).
 

@@ -7,6 +7,48 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-23 — the specification left this folder
+
+Moved: `matryoshka-specification-002.md` and `ztk-audit-001.md` to
+[`../common/`](../common/README.md), and specification 001 to
+`../common/backup/`. Created `../common/README.md` and
+[`../common/port-flow-001.md`](../common/port-flow-001.md). Not a stage, and not
+a revision either — nothing was rewritten. A reorganization.
+
+The reason is the review answered earlier the same day. Twenty-seven items were
+raised against the C3 proposal and **two of them were specification defects**.
+The specification describes itself as language-neutral and self-contained — *a
+port is written from this file alone* — yet it lived inside `c3/`, one
+consumer's folder. Had those two been fixed only in the C3 document, the same
+trap would have stayed set for dtk and otk. A shared input that lives in a
+consumer's folder is a fork waiting to happen, so it now lives where it belongs
+and every port links to it.
+
+The ztk audit went with it for the same reason: it is read-only evidence about
+**Zig**, the reference implementation, and there is nothing C3 in it.
+
+`port-flow-001.md` is new, and it is the 3tk process with C3 removed. Three
+tiers, because the failure mode of reusing a proven flow is inheriting the
+previous language's answers along with its questions. Tier 1 transfers as
+written — cold-start stages, *finishing a stage does not start the next*, the
+provenance rule, the three shapes of negative test, **compile judged separately
+from run**, and sabotage verification. The compile-versus-run rule carries the
+`release_open_pool` story as its reason, because a rule with a corpse attached
+is obeyed. Tier 2 transfers only as a question, and the sharpest entry is the
+build matrix: **not four builds** — four is this port's `--safe` × `-O` axis, and
+a port that copies the number has performed a ritual rather than a verification.
+
+Fourteen links across nine files were rewritten, in both directions, by
+resolving each link's basename against where the file actually lives. Zero
+dangling links after. The two `.c3` headers naming `matryoshka-specification-001.md`
+were left exactly as they are — they mention the file, they do not link to it,
+and they are provenance. A path is not a pointer.
+
+`3tk/run-builds.sh` still reports four builds green, 59 checks, 0 failures. The
+move touched no code.
+
+---
+
 ## 2026-08-23 — the review answered, and a test that never ran
 
 Written: `matryoshka-specification-002.md`, `3tk-porting-proposal-003.md`.

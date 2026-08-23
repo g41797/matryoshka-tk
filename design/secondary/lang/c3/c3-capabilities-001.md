@@ -1,7 +1,7 @@
 # C3 capability study (001)
 
 Stage 3TK-4. The capability questionnaire of
-[matryoshka-specification-001.md](backup/matryoshka-specification-001.md) Part 21,
+[matryoshka-specification-001.md](../common/backup/matryoshka-specification-001.md) Part 21,
 answered for C3, with a citation per answer.
 
 Every answer marked **verified** was compiled and run. Every answer marked

@@ -1,8 +1,8 @@
 # 3tk — review of the seven c3 drafts (001)
 
 Stage 3TK-3. Every claim in the seven `c3/` drafts, measured against
-[matryoshka-specification-001.md](backup/matryoshka-specification-001.md) and
-[ztk-audit-001.md](ztk-audit-001.md).
+[matryoshka-specification-001.md](../common/backup/matryoshka-specification-001.md) and
+[ztk-audit-001.md](../common/ztk-audit-001.md).
 
 Conflicts are reported. They are not resolved. The owner rules.
 

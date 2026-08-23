@@ -4,7 +4,7 @@ Stage 3TK-5 of `3tk-staging-plan-001.md`, **accepted by the owner 2026-08-23**
 after 3TK-6 and 3TK-7 built it.
 
 The C3 shape of Matryoshka. Written from
-[matryoshka-specification-002.md](matryoshka-specification-002.md), the ruled
+[matryoshka-specification-002.md](../common/matryoshka-specification-002.md), the ruled
 review [3tk-drafts-review-001.md](3tk-drafts-review-001.md), and the measured
 answers of [c3-capabilities-001.md](c3-capabilities-001.md).
 
@@ -30,7 +30,7 @@ places the **text had drifted behind the code** rather than defects in either.
 
 Three of its findings are not corrections to this file at all. They were
 defects in the specification, and they were fixed there:
-**[matryoshka-specification-002.md](matryoshka-specification-002.md)** now
+**[matryoshka-specification-002.md](../common/matryoshka-specification-002.md)** now
 separates Part 4.2's two conceptual parts from its three fields, states in
 Parts 11.6 and 11.8 that a closed container is empty, and carries that as
 **invariant 34**. This file is written against 002.

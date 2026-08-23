@@ -1,6 +1,6 @@
 # ztk audit (001)
 
-Stage 3TK-1 of [3tk-staging-plan-001.md](backup/3tk-staging-plan-001.md).
+Stage 3TK-1 of [3tk-staging-plan-001.md](../c3/backup/3tk-staging-plan-001.md).
 
 Read-only evidence. Every claim names a file and a line range.
 

@@ -1,8 +1,6 @@
-# The Matryoshka portable specification (002)
+# The Matryoshka portable specification (001)
 
-Stage 3TK-2 of [3tk-staging-plan-001.md](backup/3tk-staging-plan-001.md), revised
-2026-08-23 after the C3 port proved two of its statements imprecise. The change
-log at the end names them. Version 001 stays on disk.
+Stage 3TK-2 of [3tk-staging-plan-001.md](../../c3/backup/3tk-staging-plan-001.md).
 
 This document says what Matryoshka is, without naming a language.
 
@@ -21,7 +19,7 @@ Zig appears only as one realization, in the lines marked *ztk*.
 
 ## Sources
 
-- [ztk-audit-001.md](ztk-audit-001.md) — the read-only record of the Zig
+- [ztk-audit-001.md](../ztk-audit-001.md) — the read-only record of the Zig
   realization. Section numbers of the audit are cited as `audit 2.1`.
 - Porting is not transpiling. This file says what a port preserves. How a port
   spells it is the port's business.
@@ -227,21 +225,13 @@ wait goes through those two.
 
 ## 4.2 The inner — MUST
 
-The inner has exactly two conceptual parts.
+The inner has exactly two parts.
 
-- **Linkage** — the links of a doubly-linked list. Two fields, on the usual
-  realization: a previous and a next.
-- **Identity** — the type identity of the outer. One field. Part 5.
+- The links of a doubly-linked list.
+- The type identity of the outer. Part 5.
 
-Two parts, three fields. The parts are what the specification fixes; the field
-count is what a realization happens to need, and a port that spells the linkage
-differently is still conformant.
-
-A port adds a further per-item field only with a reason written down. Every
-item in the program pays for it, including the items that never use it. That
-is the test the field has to pass, and an allocator is the one that most often
-fails it — it serves the subset of items the toolkit allocates and is charged
-to all of them. Part 13.4.
+A port adds a third field only with a reason written down. Every item pays for
+it.
 
 *ztk*: `polynode.zig:83-86`, `audit 1.2`.
 
@@ -776,16 +766,6 @@ And:
 - Discarding the list a close returns is the named mistake. It drops items,
   and those items keep their links, so a later send refuses them.
 
-**A closed mailbox is empty.** Close is the only drain, it takes the whole
-queue in one step, and a send is refused after the closed flag is set — both
-under the same mutex, Part 15.3. So no item can be in a closed mailbox, and no
-acquisition ever has to choose between returning an item and reporting closed.
-Invariant 34.
-
-That is why Part 19.1 needs no precedence rule. A port that reads the outcome
-table as a choice — item, or closed, when both seem to apply — has invented a
-state this design does not have.
-
 *ztk*: `audit 2.6`.
 
 ## 11.7 The pool — MUST
@@ -820,11 +800,6 @@ The mirror image of Part 11.6, and the sharpest asymmetry in the toolkit.
 - A list put stops at the first refusal, puts that item back at the front of
   the caller's list, and returns. The caller checks the list after the call.
 - The restored order after a mid-batch close may differ from the original.
-
-**A closed pool is empty**, for the same reason and by the same mechanism: the
-close collects every bucket in one step under the mutex, and a put after the
-flag is set is refused. The items go to the hook rather than to the caller, and
-that is the only difference from Part 11.6. Invariant 34.
 
 *ztk*: `audit 2.6`.
 
@@ -1211,7 +1186,6 @@ Every MUST of Parts 2 to 15, in the order a port meets them.
 | 31 | The transfer orders memory. | 14.2 |
 | 32 | One mutex per container, covering its own state only. | 15.1 |
 | 33 | No lock is held across a call into application code. | 15.2 |
-| 34 | A closed container is empty. Close is the only drain. | 11.6, 11.8 |
 
 ---
 
@@ -1219,11 +1193,6 @@ Every MUST of Parts 2 to 15, in the order a port meets them.
 
 The outcomes of every operation, as values. A port picks its own mechanism:
 errors, a status value, an optional, a union.
-
-These are sets, not orderings. Where a row lists both an item and *closed*, the
-two do not compete: invariant 34 makes a closed container empty, so the
-acquiring operations below reach *closed* only on an empty container. No
-precedence rule is needed and none is given.
 
 ## 19.1 Mailbox
 
@@ -1395,4 +1364,3 @@ privileged access.
 | Version | Date | Description |
 |---|---|---|
 | 001 | 2026-08-23 | First version. Stage 3TK-2. |
-| 002 | 2026-08-23 | Three corrections, all found by the C3 port. Part 4.2 separates two conceptual parts from three fields. Parts 11.6 and 11.8 state that a closed container is empty, and Part 19's preamble stops the outcome tables being read as a precedence question. Part 18 gains invariant 34. No rule changed; three were imprecise. |

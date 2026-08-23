@@ -9,7 +9,8 @@ by the owner in [3tk-staging-plan-003.md](3tk-staging-plan-003.md).
 
 The Matryoshka port family: **otk** (Odin), **ztk** (Zig, this repo), **3tk**  
 (C3), **dtk** (D). 3tk is the active target. otk needs refactoring, later. ztk  
-needs tuning, later. dtk is thinking only.
+needs tuning, later. dtk has a prepared folder and no stage has run —  
+[../d/dtk-status.md](../d/dtk-status.md).
 
 The first deliverable is not C3 code. It is a portable specification of  
 Matryoshka, language-neutral and self-contained, usable as the sole input for  
@@ -18,8 +19,20 @@ any port.
 ## Where the work lives
 
 Everything for these stages lives in this folder,  
-`design/secondary/lang/c3/` — plans, status, log, audits, specification,  
-reviews, notes.
+`design/secondary/lang/c3/` — plans, status, log, reviews, notes, and the code  
+at `3tk/`.
+
+**Two of them left on 2026-08-23.** The portable specification and the ztk audit  
+now live in [`../common/`](../common/README.md), because they bind every port  
+and never bound only this one. The specification always said so of itself — *a  
+port is written from this file alone* — while sitting in a consumer's folder,  
+and the revision of that day sent the bill: two of the twenty-seven review items  
+were *specification* defects, and fixing them here alone would have left the  
+same trap set for D and Odin. A shared input inside one consumer's folder is a  
+fork waiting to happen. `common/` also holds  
+[port-flow-001.md](../common/port-flow-001.md), the 3tk process written as  
+process. Every link that named a moved file was corrected in place, both  
+directions.
 
 `c3/backup/` holds what is no longer read: the seven raw drafts, superseded by  
 `3tk-drafts-review-001.md`, the review that retired proposal 002, and **every  
@@ -143,13 +156,16 @@ pointers in this file move. The distinction is stated in *Superseded*.
 
 ### If the next work is not 3tk
 
-The specification is the deliverable that outlives this line of work. Any of
-these starts from `matryoshka-specification-002.md` and nothing else:
+The specification is the deliverable that outlives this line of work. It, the
+ztk audit and `port-flow-001.md` are in [`../common/`](../common/README.md). Any
+of these starts from the specification and nothing else:
 
 - **otk** (Odin) needs refactoring.
 - **ztk** (Zig, this repo) needs tuning.
-- **dtk** (D) is thinking only, and would start at its own capability study —
-  the shape of `c3-capabilities-001.md`, answering Part 21 for D.
+- **dtk** (D) has a prepared folder as of 2026-08-23 —
+  [../d/dtk-status.md](../d/dtk-status.md). Scope is ruled (Linux only, `@nogc`,
+  not betterC yet), the eighteen inputs are mapped, and no stage has run. It
+  starts by reading its own status file, not this one.
 
 Those are separate lines of work with their own folders under
 `design/secondary/lang/`, and none of them belongs in a 3TK stage.
@@ -179,8 +195,8 @@ Edited in place, no suffix — the entry points:
 Versioned — a change makes a new file, the old one stays and is listed below:
 
 - **Current plan: [3tk-staging-plan-003.md](3tk-staging-plan-003.md).**
-- [ztk-audit-001.md](ztk-audit-001.md) — the 3TK-1 output.
-- **[matryoshka-specification-002.md](matryoshka-specification-002.md) — the
+- [ztk-audit-001.md](../common/ztk-audit-001.md) — the 3TK-1 output.
+- **[matryoshka-specification-002.md](../common/matryoshka-specification-002.md) — the
   portable specification, and the source of truth for every port.** The 3TK-2
   output, revised.
 - [3tk-drafts-review-001.md](3tk-drafts-review-001.md) — the 3TK-3 output.
@@ -208,9 +224,9 @@ folder holds only what a current reader needs.
   [3tk-porting-proposal-003.md](3tk-porting-proposal-003.md) on 2026-08-23, in
   answer to [3tk-porting-proposal-review.md](backup/3tk-porting-proposal-review.md).
   No decision moved.
-- [matryoshka-specification-001.md](backup/matryoshka-specification-001.md),
+- [matryoshka-specification-001.md](../common/backup/matryoshka-specification-001.md),
   replaced by
-  [matryoshka-specification-002.md](matryoshka-specification-002.md) on
+  [matryoshka-specification-002.md](../common/matryoshka-specification-002.md) on
   2026-08-23. Three imprecisions the C3 port found, and invariant 34. No rule
   changed. **The other ports read 002.**
 
