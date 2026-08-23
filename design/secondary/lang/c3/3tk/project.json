@@ -1,0 +1,15 @@
+{
+  "langrev": "1",
+  "authors": [ "g41797" ],
+  "version": "0.1.0",
+  "sources": [ "src/**" ],
+  "test-sources": [ "test" ],
+  "targets": {
+    "mtk": {
+      "type": "static-lib"
+    },
+    "mtk-test": {
+      "type": "test"
+    }
+  }
+}

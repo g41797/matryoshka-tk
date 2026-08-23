@@ -1,0 +1,410 @@
+<*
+ Part 11.3 to 11.6, Part 19.1 — the mailbox.
+
+ Part 18 invariants 21, 22, 23, 26.
+*>
+module mtk_test;
+import mtk;
+import mtk::mailbox;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+
+fn Mailbox* new_mailbox()
+{
+    return mailbox::create(mem)!!;
+}
+
+<*
+ Close the mailbox and release it, giving back whatever was left.
+
+ Part 11.6's named mistake is NOT to do this: discarding the list a close
+ returns drops the items, and those items keep their links, so a later send
+ refuses them.
+*>
+fn void drop_mailbox(Mailbox* mb)
+{
+    NodeList left;
+    mb.close(&left);
+    while (AnyHandle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    mb.release();
+}
+
+<*
+ Part 11.1 MUST, invariant 21: the mailbox is itself an item.
+
+ It embeds an inner, it carries an identity, it crosses the border like any
+ other item, and it can sit on a list. This is the toolkit's stated reason for
+ existing, and D1 is what keeps it literal.
+*>
+fn void a_mailbox_is_an_item() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    AnyHandle h = mailbox::to_any(mb);
+    always_assert(h != null, "the mailbox has no handle");
+    always_assert(h.type == mailbox::TYPE, "the mailbox carries no identity");
+    always_assert(mailbox::of(h) == mb, "the mailbox did not survive the round trip");
+
+    // and it sits on a list, beside an item of another type
+    Msg m;
+    msg_init(&m);
+    NodeList list;
+    list.push_back(h);
+    list.push_back(msg_to_any(&m));
+    always_assert(list.len() == 2, "a mailbox would not go on a list");
+    always_assert(mailbox::of(list.pop_front()) == mb, "the mailbox came off wrong");
+    list.pop_front();
+}
+
+<*
+ Send and receive, and Part 9.3's signature shape on both sides.
+*>
+fn void send_then_poll() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Msg m;
+    msg_init(&m);
+    m.id = 5;
+
+    Slot s;
+    s.fill(msg_to_any(&m));
+    if (catch mb.send(&s)) { always_assert(false, "send failed on an open mailbox"); }
+    always_assert(s.is_empty(), "send did not clear the Slot");
+
+    Slot r;
+    if (catch mb.poll(&r)) { always_assert(false, "poll found nothing"); }
+    always_assert(msg_move(&r) == &m, "the wrong item came back");
+    always_assert(r.is_empty(), "the claim did not clear the Slot");
+}
+
+<*
+ Part 19.1: poll reports EMPTY, and it never waits.
+*>
+fn void poll_on_an_empty_mailbox() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Slot r;
+    if (catch f = mb.poll(&r))
+    {
+        always_assert(f == mtk::EMPTY, "an empty mailbox reported something other than EMPTY");
+        always_assert(r.is_empty(), "a failed poll filled the Slot");
+        return;
+    }
+    always_assert(false, "poll on an empty mailbox succeeded");
+}
+
+<*
+ Part 11.3: ordinary items are first-in first-out among themselves.
+*>
+fn void ordinary_items_are_fifo() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Msg[6] ms;
+    for (usz i = 0; i < 6; i++)
+    {
+        ms[i].id = (int)i;
+        msg_init(&ms[i]);
+        Slot s;
+        s.fill(msg_to_any(&ms[i]));
+        if (catch mb.send(&s)) { always_assert(false, "send failed"); }
+    }
+
+    for (usz i = 0; i < 6; i++)
+    {
+        Slot r;
+        if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
+        always_assert(msg_move(&r).id == (int)i, "the mailbox is not first-in first-out");
+    }
+}
+
+<*
+ Part 11.3 MUST, invariant 22, and the clause with three halves:
+
+   - out-of-band items are first-in first-out among THEMSELVES,
+   - every out-of-band item sits ahead of every ordinary one,
+   - and the anchor keeps the insert O(1).
+
+ The interleaving here is deliberate: ordinary, oob, ordinary, oob, ordinary.
+ A port that puts each out-of-band item at the front gets the first clause
+ backwards and this test catches it.
+*>
+fn void out_of_band_ordering() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Msg[6] ms;
+    for (usz i = 0; i < 6; i++) { ms[i].id = (int)i; msg_init(&ms[i]); }
+
+    // ordinary 0, oob 1, ordinary 2, oob 3, ordinary 4
+    send_one(mb, &ms[0], false);
+    send_one(mb, &ms[1], true);
+    send_one(mb, &ms[2], false);
+    send_one(mb, &ms[3], true);
+    send_one(mb, &ms[4], false);
+
+    // expected: 1, 3 (oob, in order), then 0, 2, 4 (ordinary, in order)
+    int[5] want = { 1, 3, 0, 2, 4 };
+    for (usz i = 0; i < 5; i++)
+    {
+        Slot r;
+        if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
+        always_assert(msg_move(&r).id == want[i], "out-of-band ordering is wrong");
+    }
+}
+
+fn void send_one(Mailbox* mb, Msg* m, bool oob)
+{
+    Slot s;
+    s.fill(msg_to_any(m));
+    if (oob)
+    {
+        if (catch mb.send_oob(&s)) { always_assert(false, "send_oob failed"); }
+    }
+    else
+    {
+        if (catch mb.send(&s)) { always_assert(false, "send failed"); }
+    }
+    always_assert(s.is_empty(), "the send did not clear the Slot");
+}
+
+<*
+ Part 11.3: the anchor is cleared when the last out-of-band item is taken.
+
+ Drain the out-of-band run, then send another one. It must go to the front
+ again — if the anchor were left dangling, the new item would be inserted after
+ an item that is no longer in the queue.
+*>
+fn void the_anchor_is_cleared() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Msg[4] ms;
+    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; msg_init(&ms[i]); }
+
+    send_one(mb, &ms[0], true);      // oob
+    send_one(mb, &ms[1], false);     // ordinary
+
+    Slot r;
+    if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
+    always_assert(msg_move(&r).id == 0, "the out-of-band item did not come first");
+
+    // the out-of-band run is drained; the anchor must be gone
+    send_one(mb, &ms[2], true);
+    if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
+    always_assert(msg_move(&r).id == 2, "the new out-of-band item did not go to the front");
+}
+
+<*
+ Part 11.6: a batch receive gives the whole list to the caller.
+*>
+fn void receive_the_batch() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Msg[4] ms;
+    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
+
+    NodeList got;
+    if (catch mb.receive_all(&got)) { always_assert(false, "receive_all failed"); }
+
+    always_assert(got.len() == 4, "the batch is the wrong size");
+    always_assert(mb.len() == 0, "the mailbox kept something");
+    for (usz i = 0; i < 4; i++)
+    {
+        always_assert(msg_from_any(got.pop_front()).id == (int)i, "the batch is out of order");
+    }
+}
+
+<*
+ Part 11.6 MUST, invariant 23: every item the mailbox keeps goes back to a
+ caller — and close is the path that is easiest to get wrong.
+
+ The items come back with their links cleared, so they can be sent again. That
+ is the second half of the named mistake: a dropped item keeps its links and a
+ later send refuses it.
+*>
+fn void close_gives_the_remainder_back() @test
+{
+    Mailbox* mb = mailbox::create(mem)!!;
+
+    Msg[3] ms;
+    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
+
+    NodeList left;
+    mb.close(&left);
+    always_assert(left.len() == 3, "close did not give the remainder back");
+
+    for (usz i = 0; i < 3; i++)
+    {
+        AnyHandle h = left.pop_front();
+        always_assert(msg_from_any(h).id == (int)i, "the remainder is out of order");
+        always_assert(!mtk::is_linked(h), "a returned item kept its links");
+    }
+    mb.release();
+}
+
+<*
+ Part 19.1: every operation on a closed mailbox reports CLOSED, and a refused
+ send leaves the Slot unchanged — the sender still has the item.
+
+ Part 11.12: closedness is a precondition at release and NOWHERE else. Every
+ other call reports closed and the object stays a valid item.
+*>
+fn void a_closed_mailbox_refuses_everything() @test
+{
+    Mailbox* mb = mailbox::create(mem)!!;
+    NodeList left;
+    mb.close(&left);
+    always_assert(left.is_empty(), "an empty mailbox returned a remainder");
+
+    Msg m;
+    msg_init(&m);
+    Slot s;
+    s.fill(msg_to_any(&m));
+
+    always_assert(@catch_is(mb.send(&s), mtk::CLOSED), "a closed mailbox accepted a send");
+    always_assert(s.is_full(), "a refused send did not leave the Slot alone");
+    always_assert(s.peek() == msg_to_any(&m), "a refused send changed the Slot");
+
+    always_assert(@catch_is(mb.send_oob(&s), mtk::CLOSED), "a closed mailbox accepted an out-of-band send");
+    always_assert(s.is_full(), "a refused send_oob did not leave the Slot alone");
+
+    Slot r;
+    always_assert(@catch_is(mb.poll(&r), mtk::CLOSED), "a closed mailbox was polled");
+    always_assert(@catch_is(mb.receive(&r, time::ms(1)), mtk::CLOSED), "a closed mailbox was received from");
+    always_assert(@catch_is(mb.wake_all(), mtk::CLOSED), "a closed mailbox woke waiters");
+    always_assert(r.is_empty(), "a refused receive filled the Slot");
+
+    NodeList batch;
+    always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox gave a batch");
+
+    // and the mailbox is still a valid item
+    always_assert(mailbox::of(mailbox::to_any(mb)) == mb, "a closed mailbox stopped being an item");
+
+    s.take();
+    mb.release();
+}
+
+<*
+ Part 11.12: close is callable more than once, and the second call takes
+ nothing.
+*>
+fn void close_is_idempotent() @test
+{
+    Mailbox* mb = mailbox::create(mem)!!;
+
+    Msg m;
+    msg_init(&m);
+    send_one(mb, &m, false);
+
+    NodeList first;
+    mb.close(&first);
+    always_assert(first.len() == 1, "the first close did not give the item back");
+
+    NodeList second;
+    mb.close(&second);
+    always_assert(second.is_empty(), "the second close produced items from nowhere");
+
+    first.pop_front();
+    mb.release();
+}
+
+<*
+ Part 19.1: receive reports TIMEOUT on an empty mailbox, and the Slot is
+ untouched.
+*>
+fn void receive_times_out() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Slot r;
+    Clock c = clock::now();
+    always_assert(@catch_is(mb.receive(&r, time::ms(60)), mtk::TIMEOUT), "receive did not time out");
+    always_assert(r.is_empty(), "a timed-out receive filled the Slot");
+    always_assert(c.mark().to_ms() >= 50, "receive returned before its deadline");
+}
+
+<*
+ A deadline already in the past returns immediately.
+*>
+fn void a_past_deadline_returns_at_once() @test
+{
+    Mailbox* mb = new_mailbox();
+    defer drop_mailbox(mb);
+
+    Slot r;
+    Clock c = clock::now();
+    always_assert(@catch_is(mb.receive(&r, time::DURATION_ZERO), mtk::TIMEOUT), "a zero timeout did not time out");
+    always_assert(c.mark().to_ms() < 100, "a zero timeout waited");
+}
+
+<*
+ True when the call returned exactly this fault.
+*>
+macro bool @catch_is(#call, want)
+{
+    if (catch f = #call) return f == want;
+    return false;
+}
+
+<*
+ **Invariant 34, mailbox side. Part 11.6:** a closed mailbox is empty.
+
+ The close takes the whole queue in one step under the mutex, and a send is
+ refused after the flag is set under that same mutex, so there is no state in
+ which the mailbox is closed and still holds something.
+
+ That is what makes Part 19.1's outcome set a set rather than an ordering. A
+ receive on a closed mailbox never has to choose between handing back an item
+ and reporting CLOSED, because there is never an item left to hand back.
+
+ `a_closed_mailbox_refuses_everything` closes an EMPTY mailbox, which cannot
+ tell the two readings apart. This one closes a mailbox holding three.
+*>
+fn void a_closed_mailbox_is_empty() @test
+{
+    Mailbox* mb = new_mailbox();
+
+    Msg[3] m;
+    for (usz i = 0; i < 3; i++)
+    {
+        msg_init(&m[i]);
+        m[i].id = (int)i;
+        Slot s;
+        s.fill(msg_to_any(&m[i]));
+        if (catch mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
+    }
+    always_assert(mb.len() == 3, "the mailbox did not take three");
+
+    NodeList left;
+    mb.close(&left);
+
+    // invariant 34: the close is the only drain, and it drained everything
+    always_assert(left.len() == 3, "the close did not hand back all three");
+    always_assert(mb.len() == 0, "a closed mailbox still holds items");
+
+    // so every acquisition reports CLOSED, and none of them can find an item
+    Slot r;
+    always_assert(@catch_is(mb.poll(&r), mtk::CLOSED), "a closed mailbox answered a poll with an item");
+    always_assert(@catch_is(mb.receive(&r, time::ms(1)), mtk::CLOSED), "a closed mailbox answered a receive with an item");
+    always_assert(r.is_empty(), "a refused acquisition filled the Slot");
+
+    NodeList batch;
+    always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox answered a batch receive with items");
+    always_assert(batch.is_empty(), "a refused batch receive moved items");
+
+    while (AnyHandle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    mb.release();
+}
