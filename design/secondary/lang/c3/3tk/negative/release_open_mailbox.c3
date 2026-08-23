@@ -25,7 +25,7 @@ fn int main()
     Msg m;
     msg_init(&m);
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
     if (catch mb.send(&s)) return 1;
 
     mb.release();                    // <-- the violation: never closed

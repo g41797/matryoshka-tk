@@ -7,11 +7,16 @@ module mtk_test;
 import mtk;
 
 <*
- Part 4.2: the inner has exactly two parts. Three words, and no more.
+ Part 4.2: the inner has exactly two parts — **one link and the identity**.
+
+ R5 deleted `prev` and R6 refused the membership field that would have taken
+ its place, so the inner is two words rather than three: 16 bytes on
+ linux-x64, down from 24. Every item in the program pays for this struct, and
+ a third field is added only with a reason written down.
 *>
 fn void inner_is_two_parts() @test
 {
-    always_assert(AnyNode::size == 2 * uptr::size + typeid::size, "the inner grew a field");
+    always_assert(Inner::size == uptr::size + typeid::size, "the inner grew a field");
 }
 
 <*
@@ -29,10 +34,10 @@ fn void inner_at_any_offset() @test
     msg_init(&m);
     job_init(&j);
 
-    always_assert(msg_to_any(&m) == (AnyHandle)&m.node, "Msg: to_any is not the inner");
-    always_assert(job_to_any(&j) == (AnyHandle)&j.node, "Job: to_any is not the inner");
-    always_assert(msg_from_any(msg_to_any(&m)) == &m, "Msg: the round trip lost the outer");
-    always_assert(job_from_any(job_to_any(&j)) == &j, "Job: the round trip lost the outer");
+    always_assert(msg_to_inner(&m) == (Handle)&m.node, "Msg: to_inner is not the inner");
+    always_assert(job_to_inner(&j) == (Handle)&j.node, "Job: to_inner is not the inner");
+    always_assert(msg_from_inner(msg_to_inner(&m)) == &m, "Msg: the round trip lost the outer");
+    always_assert(job_from_inner(job_to_inner(&j)) == &j, "Job: the round trip lost the outer");
 }
 
 <*
@@ -69,7 +74,7 @@ fn void identity_is_stored() @test
 {
     Msg m;
     msg_init(&m);
-    AnyHandle h = msg_to_any(&m);
+    Handle h = msg_to_inner(&m);
     always_assert(h.type == MSG_TYPE, "the identity is not in the inner");
 }
 
@@ -84,8 +89,8 @@ fn void identity_is_stored() @test
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!msg_is_mine((AnyHandle)&m.node), "an uninitialized inner was claimed");
-    always_assert(msg_from_any((AnyHandle)&m.node) == null, "an uninitialized inner crossed the border");
+    always_assert(!msg_is_mine((Handle)&m.node), "an uninitialized inner was claimed");
+    always_assert(msg_from_inner((Handle)&m.node) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -98,10 +103,10 @@ fn void checking_crossing_refuses() @test
 {
     Twin t;
     twin_init(&t);
-    AnyHandle h = twin_to_any(&t);
+    Handle h = twin_to_inner(&t);
 
-    always_assert(msg_from_any(h) == null, "a Twin crossed as a Msg");
-    always_assert(twin_from_any(h) == &t, "a Twin failed to cross as a Twin");
+    always_assert(msg_from_inner(h) == null, "a Twin crossed as a Msg");
+    always_assert(twin_from_inner(h) == &t, "a Twin failed to cross as a Twin");
     always_assert(!msg_is_mine(h), "the predicate claimed a Twin");
 }
 
@@ -111,8 +116,8 @@ fn void checking_crossing_refuses() @test
 fn void null_handle_is_nobodys() @test
 {
     always_assert(!msg_is_mine(null), "the predicate claimed null");
-    always_assert(msg_from_any(null) == null, "null crossed the border");
-    always_assert(msg_to_any(null) == null, "to_any invented a handle from null");
+    always_assert(msg_from_inner(null) == null, "null crossed the border");
+    always_assert(msg_to_inner(null) == null, "to_inner invented a handle from null");
 }
 
 <*
@@ -128,19 +133,19 @@ fn void heterogeneous_walk_claims_correctly() @test
     Job  j1;
     msg_init(&m1); msg_init(&m2); twin_init(&t1); job_init(&j1);
 
-    NodeList list;
-    list.push_back(msg_to_any(&m1));
-    list.push_back(twin_to_any(&t1));
-    list.push_back(job_to_any(&j1));
-    list.push_back(msg_to_any(&m2));
+    InnerQueue list;
+    list.push_back(msg_to_inner(&m1));
+    list.push_back(twin_to_inner(&t1));
+    list.push_back(job_to_inner(&j1));
+    list.push_back(msg_to_inner(&m2));
 
     usz mine = 0;
     usz seen = 0;
-    NodeListIterator it = list.iter();
-    for (AnyHandle h = it.next(); h; h = it.next())
+    InnerQueueIterator it = list.iter();
+    for (Handle h = it.next(); h; h = it.next())
     {
         seen++;
-        if (msg_from_any(h)) mine++;
+        if (msg_from_inner(h)) mine++;
     }
     always_assert(seen == 4, "the walk lost an item");
     always_assert(mine == 2, "the walk claimed the wrong number of items");

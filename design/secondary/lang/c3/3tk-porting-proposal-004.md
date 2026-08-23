@@ -1,7 +1,8 @@
-# The 3tk porting proposal (003)
+# The 3tk porting proposal (004)
 
 Stage 3TK-5 of `3tk-staging-plan-001.md`, **accepted by the owner 2026-08-23**
-after 3TK-6 and 3TK-7 built it.
+after 3TK-6 and 3TK-7 built it. Revised by **3TK-8** of
+[3tk-staging-plan-004.md](backup/3tk-staging-plan-004.md), 2026-08-23.
 
 The C3 shape of Matryoshka. Written from
 [matryoshka-specification-002.md](../common/matryoshka-specification-002.md), the ruled
@@ -15,12 +16,46 @@ Idiomatic C3. Not transliterated Zig.
 All sixteen decisions in this file are **accepted by the owner, 2026-08-23**.
 
 Version 001 proposed them. 3TK-6 and 3TK-7 implemented them and produced the
-findings incorporated here. **No accepted decision has changed.** Each version
-since has changed only the realization, where implementation disproved or
-refined an earlier assumption.
+findings incorporated here. **No accepted decision has changed across four
+versions.** Each version since has changed only the realization, where
+implementation disproved or refined an earlier assumption — and in 004, where a
+review disproved an *argument* while leaving its conclusion standing. D1 is that
+case, and the owner reaffirmed the ruling on 2026-08-23 with a better reason
+than the document had been giving.
 
 Rejected alternatives stay in the text, because the reason a thing was chosen
 outlives the choosing.
+
+## What changed in 004
+
+004 answers [`3tk-porting-proposal-003-review.md`](backup/3tk-porting-proposal-003-review.md),
+a review of **design and implementation** rather than of prose. Its 28 items
+were read against `3tk/src/` before any of them was accepted — the discipline
+003 used, and the reason 003 could reject three of the previous review's
+findings.
+
+**The review's central finding is right, and D1's argument was wrong.** Not its
+ruling. D1 said hiding the container internals must cost Part 11.1's MUST,
+having weighed two shapes. A third exists, and the port now says so. **The owner
+ruled on 2026-08-23:** the ruling stands, no code changes for the sake of
+hiding — *"I don't like wars with language."* That reason is stronger than the
+one it replaces, and D1 below is rewritten around it.
+
+| Kind | What |
+|---|---|
+| Rewritten | **D1's argument**, on the owner's ruling. Nine measured answers behind it — Q13 to Q17, M1 to M5 — where 003 inferred |
+| Corrected | The Part 4.2 mapping row and D12, which still said "a third field". The 24 bytes, an observation and not an invariant. Part 15.2's lock statement, current rather than timeless |
+| Added | **Section 6, the implementation invariants** — six rules the code already honours and no document stated. Including the `AnyHandle`/`Slot` signature rule, with the audit that found no violation |
+| Fixed in code | **Creation is now a transaction.** Neither `Pool.create` nor `Mailbox.create` cleaned up after a partial failure. Section 9 |
+| Rejected | The `char[N]` opaque storage of the review's §7, for the reasons the review itself gives |
+| Deferred | The `NodeList` mutation core of its §15, with the reason recorded rather than dropped |
+| Confirmed | Five items the code already satisfied, three of them better than the review assumed. They became section 6 rather than changes |
+
+The nine measurements live in D1, folded in from
+`3tk-porting-proposal-addendum-001.md`, which this file supersedes.
+`c3-capabilities-001.md` is **not** amended — it is the 3TK-4 output and records
+what was true when that stage ran. Owner's ruling: one home for the
+measurements, beside the decision they support.
 
 ## What changed in 003
 
@@ -47,7 +82,7 @@ One code change came out of the review — `Pool.create` now refuses a duplicate
 identity — and one defect came out of building it, which the review could not
 have seen: **a tier 1 negative had never compiled**, and the test harness had
 been reading its compile failure as the abort it was supposed to prove. Both
-are in section 7.
+are in section 8.
 
 **What changed in 002**, kept here because the findings are still the record.
 Only what the code proved wrong, and none of it moved a decision:
@@ -60,7 +95,7 @@ Only what the code proved wrong, and none of it moved a decision:
 | Section 5.9 | `HashMap{typeid, Bucket}` | a flat `PoolBucket[]` | G4 |
 | Section 5.9 | one Slot through `put` | two Slots, and why | G5 |
 | Section 5.10 | unqualified names | module-qualified | G1 |
-| Section 7.2 | the safe optimized build is `-O3` | `--safe=yes -O3` | **F1** |
+| Section 8.2 | the safe optimized build is `-O3` | `--safe=yes -O3` | **F1** |
 | Section 9 | what 3TK-6 would be | what 3TK-6 and 3TK-7 did | — |
 | throughout | `return CLOSED?` | `return mtk::CLOSED~` | G2 |
 
@@ -168,6 +203,12 @@ parts — linkage, and stored identity — and leaves the field count to the
 realization. Here linkage is `prev` and `next`, identity is `type`, and the
 whole inner is three words: 24 bytes on linux-x64.
 
+**That number is an observation, never a requirement.** The invariant is *two
+pointer links and one identity value*; the size follows from the target. No
+code in the port depends on `sizeof(AnyNode) == 24` and none may be added that
+does — a port on another target will measure something else and be just as
+correct.
+
 The distinction matters because D3 turns on it. What Part 4.2 guards is not the
 number three; it is **a further per-item field**, of any kind, that every item
 in the program would pay for. D3 refuses an allocator on exactly that test, and
@@ -247,7 +288,7 @@ give the argument and the alternative each one rejects.
 
 | # | Decision | Ruling | Source |
 |---|---|---|---|
-| D1 | Hiding the container internals — Q4 | **Public struct, public fields, the helper border does the work.** No opaque typedef | Q4, Part 11.11 |
+| D1 | Hiding the container internals — Q4 | **Public struct, public fields.** Hiding is *possible* and is rejected on cost: C3 enforces no field privacy at any price, and every shape that hides costs an allocation per container | Q4, Q13-Q17, M5, Part 11.11 |
 | D2 | `inline AnyNode`, or a plain field — C2 | **Plain field, at any offset.** No `inline` | C2, Part 7.5 |
 | D3 | Allocators — C7, Part 20 decision 2 | **Containers keep one. Application items keep one in the *outer*, never in the inner.** No release call takes an allocator | C7, Part 13 |
 | D4 | Typed handles `MboxHandle`, `PoolHandle` — C10 | **No.** One `AnyHandle` | C10, Part 7.5 |
@@ -271,46 +312,171 @@ The rest of this section argues each one.
 
 ## D1 — Hiding the container internals
 
-**Ruling: option 3 of Q4. Public struct, public fields, the border does the
-work.**
+**Ruling: public struct, public fields. Reaffirmed by the owner 2026-08-23,
+with a different reason than 003 gave.**
 
-Q4 measured three options. The reasoning against the other two:
+Read this section as two things kept apart, because 003 ran them together and
+that is what the review caught:
+
+- **Can** the container internals be hidden without breaking Part 11.1? **Yes.**
+  003 said no. 003 was wrong.
+- **Should** this port hide them? **No** — and the argument is cost, not
+  impossibility.
+
+### What 003 claimed, and why it was wrong
+
+003 weighed two shapes and concluded that hiding *necessarily* costs Part 11.1's
+MUST:
 
 - Option 1, a comment saying internal, is ztk. It claims nothing and gains
-  nothing. It is what this decision would default to, not what it should
-  choose.
+  nothing.
 - Option 2, `typedef Pool = void`, buys real hiding and sells a MUST for a
-  SHOULD. Part 11.1 MUST says the two containers **are themselves items** — the
-  mailbox embeds an inner, the pool embeds an inner, a pool sits on a list. A
-  `typedef Pool = void` embeds nothing. The property has to be re-established
-  through `PoolImpl`, the helper binds to `PoolImpl`, and the type the
-  application names is no longer the type the toolkit describes. Part 11.11 is
-  a SHOULD. Part 11.1 is a MUST and invariant 21.
+  SHOULD. Part 11.1 MUST says the two containers **are themselves items**. A
+  `typedef Pool = void` embeds nothing; the property has to be re-established
+  through `PoolImpl`, and the type the application names is no longer the type
+  the toolkit describes.
 
-Option 3 is chosen for a reason stronger than "what is left". Part 7.5 MUST
-already puts every crossing in one file. The fields of `Mailbox` and `Pool`
-being *reachable* is then a documentation problem: an application that reads
-`pool.in_pool` has not broken an invariant, it has read a stale hint — which is
-what Part 12.4 says that number is even to a hook.
+Option 2's reasoning still holds — *for option 2*. The error was treating it as
+the only way to hide. A third shape exists:
+
+```c3
+struct Pool
+{
+    AnyNode   node;
+    Allocator _alloc;
+    PoolImpl* _impl;      // the operational state, hidden
+}
+```
+
+`Pool` is still the type the application names. It still embeds `AnyNode`, still
+crosses through `mtk::helper{Pool}`, still sits on a `NodeList`, still travels
+through a mailbox. **Part 11.1 is satisfied literally.** Only the operational
+state moves.
+
+The review states the confusion precisely, and the statement is worth keeping:
+
+> **A.** The container is itself an item. **B.** Every byte of the container's
+> implementation state is physically inside the same public struct. Part 11.1
+> requires A. D1 assumed A implies B. That implication needs proof.
+
+It has none. **Hiding costs an indirection. It does not cost Part 11.1.**
+
+### What C3 0.8.3 actually permits — measured, not inferred
+
+Nine probes, against `c3c` 0.8.3, git `1d155ee`, LLVM 22.1.8, linux-x64 — the
+toolchain of `c3-capabilities-001.md`, so these extend Q1 to Q12 rather than
+restating them. Q13 to Q17 were measured for this decision; M1 to M5 came from
+the owner's questions of the same day and are folded in from
+`3tk-porting-proposal-addendum-001.md`.
+
+| # | Question | Answer |
+|---|---|---|
+| **Q13** | May a public struct hold a field whose type is `@private` to the module? | **Yes.** Compiles, runs, and the module's own methods use it normally |
+| **Q14** | May another module *name* that private type? | **No.** *"The struct 'Impl' in lib is '@private' and not visible from other modules"* |
+| **Q15** | May another module assign the field anyway — `b.impl = null`? | **Yes.** The field is reachable even when its type is not nameable |
+| **Q16** | May an incomplete `struct Impl;` be embedded **by value** with the definition private? | **No, and not for the expected reason.** C3 0.8.3 has no forward struct declaration at all: `struct Impl;` is a parse error, *"Expected '{'"* |
+| **Q17** | Does the `typedef PoolState = void` + private cast fallback work? | **Yes**, and it is forgeable: another module may cast any pointer into it. Less type-safe than Q13, exactly as the review's §26 predicted |
+| **M1** | Is there UFCS — may `f(handle, ...)` be called as `handle.f(...)`? | **No.** Method functions only, `fn void Type.f(&self)` |
+| **M2** | Do method functions give the dotted call? | **Yes.** Every dotted call in the port is one |
+| **M3** | May a method be declared on a type from another module? | **Yes.** The association is open, not owner-only |
+| **M4** | May a method attach to a pointer alias? | **No.** *"Methods can not be associated with 'Node*'"* — see D5 |
+| **M5** | Is there field-level privacy? | **No, at any price.** `@private` on a field is refused outright; on a struct it hides the *type name* only; `inline` makes it worse |
+
+**M5 is the one that decides this section**, and it came from the owner asking
+the sharpest version of the question: restrict *fields* without restricting
+*functions*. The shape was a `@private` fields-only struct, `inline` inside the
+public container — transparent to `mtk`'s own methods, closed to an application.
+Six probes say C3 0.8.3 does not deliver it. Another module still reads, writes
+and takes the address of every field, and the write lands. `inline` is worse
+than a named field, because it lifts the hidden members into the outer's own
+namespace: `mb.closed` needs no `.guts` at all. And `inline` must be the *first*
+field, which puts it in competition with `AnyNode node` for position.
+
+So there is no shape that hides container state **while leaving it inside the
+object**. Every mechanism that works — the `Impl*` pointer, the opaque
+`char[N]` — works by moving the state out.
+
+### The ruling, and its reason
+
+**Owner, 2026-08-23:** *"I don't like wars with language. If it does not support
+the feature + I need additional allocation — better not change code and add
+comment and update docs."*
+
+That is the decision and it is the whole argument:
+
+- C3 0.8.3 **enforces no field privacy at any price** (M5). Whatever the port
+  builds, an application that wants to reach `pool._closed` will reach it.
+- The shapes that *would* hide the state each cost **one extra allocation, one
+  extra pointer, two-level destruction, a partial-creation state and one
+  dereference per access** — per container.
+- Paying that for a boundary the language will not keep is a bad trade. The port
+  does not make it.
+
+**Part 11.11 is skipped, and Part 0 requires the reason to be stated. This is
+it:** not that C3 makes hiding impossible — it does not — but that hiding costs
+an allocation and a lifetime rule per container, and buys a convention rather
+than an enforcement.
 
 What the port does instead, and it is not nothing:
 
 - Every internal free function and macro carries `@private`. That is
-  declaration-level visibility, which C3 *does* have (Q4, *read*
-  `collections/list.c3:426`).
-- The mutex, the condition variable and the closed flag are named with a
-  leading underscore, and the header comment of each container names the
-  reachable fields as internal.
+  declaration-level visibility, which C3 *does* have. **It does not extend to
+  methods**: the compiler says so out loud — *"'@private' modifiers are ignored
+  for method declarations"* — which is why `NodeList.unlink_no_repair` is named
+  for what it leaves undone and documented rather than hidden.
+- The mutex, the condition variable and the closed flag are named with a leading
+  underscore.
+- **The fields are grouped by role** — item identity, synchronization, lifetime,
+  container state — with a comment on each group. Owner's instruction: since the
+  language will not enforce the boundary, the comment *is* the boundary, and it
+  is where an application author looks. It also makes a future split
+  representation legible.
 - No public method reads a field the application could not have derived.
 
-Part 0 requires a port that skips a SHOULD to say why. This section is that
-statement: **Part 11.11 is skipped, because in C3 0.8.3 the only mechanism that
-delivers it costs Part 11.1.**
+An application that reads `pool.in_pool` has not broken an invariant. It has
+read a stale hint — which is what Part 12.4 says that number is even to a hook.
 
-*If the owner overrides to option 2:* D4 is unaffected, D10 is unaffected, and
-the helper instantiations in `mailbox.c3` and `pool.c3` bind to `MailboxImpl`
-and `PoolImpl`. Every public method gains a leading cast. Section 5.11's table
-is the part that changes.
+### What the helper border does and does not do
+
+003 said *the helper border does the work*. The review is right that this
+overstates it, and the correction matters because the two boundaries solve
+different problems:
+
+- **The helper border protects the polymorphic representation boundary.** It is
+  the only place `outer ↔ inner` arithmetic happens, and Part 7.5 MUST puts it
+  in one file. That is real and it is enforced.
+- **It does not hide container operational state**, and was never able to. An
+  application cannot legally cross `outer → AnyNode` by hand, but it can read
+  `Pool._buckets` — because C3 has no field privacy, M5.
+
+The helper border is not a substitute for information hiding. It solves the
+crossing problem, completely. This section's subject is a different problem,
+solved by convention.
+
+### The rejected alternative, kept because the reason outlives the choosing
+
+**Split representation.** Public `Mailbox`/`Pool` embedding `AnyNode` and owning
+the allocator, pointing at a private `MailboxImpl`/`PoolImpl`:
+
+- **Preserves** Part 11.1, the `AnyNode` embedding, `helper{Mailbox}`,
+  `helper{Pool}`, every public operation, the Slot semantics and all observable
+  behaviour. Q13 confirms C3 permits the shape.
+- **Costs** one pointer, one allocation, two-level destruction, a
+  partial-creation state, one dereference per access — per container. And with
+  M5 in hand, it buys a convention, not an enforcement: the `_impl` field itself
+  stays assignable from outside (Q15).
+- **Rejected on that trade**, by the owner, 2026-08-23. Not on Part 11.1.
+
+If it is ever adopted, the allocator belongs in the **public** struct and not in
+the `Impl` — the review's §22, and it is right: outer lifetime state belongs to
+the outer, which is the same principle D3 already applies to application items.
+
+**Opaque public storage**, `char[N]` with the private module treating it as
+`PoolImpl` — **rejected**, for the reasons the review's §7 gives against it:
+size and alignment become the public contract, changing the implementation
+breaks users, placement construction by hand, and the public type still exposes
+mysterious storage. Q17's opaque-typedef variant is the same family and is
+forgeable besides.
 
 ## D2 — A plain inner field, not `inline`
 
@@ -707,8 +873,10 @@ exercised. Step 3 starts from working code.
 ## D12 to D16, briefly
 
 **D12 — the link test's blind spot is accepted.** Part 8.7 prices the
-alternative at a field per item, and D3 already refused a third field in the
-inner for a stronger reason. The blind spot is documented at the link test and
+alternative at a field per item, and D3 already refused **an additional
+per-item allocator field** in the inner for a stronger reason. (003 said "a
+third field" here; the inner already has three. What Part 4.2 guards is a
+*further* per-item field of any kind, not the number three. Section 1.) The blind spot is documented at the link test and
 in `NodeList`'s header comment, as Part 8.7 requires. The walk of Part 8.6 is
 what covers it in checking builds.
 
@@ -812,7 +980,7 @@ MAY elements are in section 6. EXCLUDED elements are in section 3.
 | Spec | Marking | C3 shape |
 |---|---|---|
 | 4.1 The outer embeds the inner | MUST | `AnyNode node;` as a field. **D2**, no `inline` |
-| 4.2 Two parts, nothing more | MUST | `prev`, `next`, `type`. 24 bytes. **D3 part 2 refuses a third** |
+| 4.2 Two parts, nothing more | MUST | `prev`, `next`, `type`. **Two conceptual parts, three fields** — section 1. **D3 refuses an additional per-item allocator responsibility**, which is the test Part 4.2 sets. 24 bytes on linux-x64, measured, not required |
 | 4.3 The field may sit anywhere | SHOULD | `$Type::members` gives `.offset`; the crossing subtracts it. Q3, verified at offset 8 |
 | 4.4 One inner per outer | MUST | `$assert` in the helper: exactly one `AnyNode` field, not zero and not two |
 | 5.1 A per-type identity | MUST | `Type::typeid`. Every clause measured. Q2 |
@@ -1168,7 +1336,7 @@ whole idiom exists for, and the port does not soften it into a fault.
 | 14.2 The transfer orders memory | MUST | Both containers publish through their own mutex. Items are read with plain loads. Documented, because it is invisible in the signatures |
 | 14.3 The transfer circuit | SHOULD | Carried into the port's docs as the diagram it is |
 | 15.1 One mutex per container | MUST | `Mutex _mu`, covering that object's state only. No application data under it |
-| 15.2 No lock across application code | MUST | The unlock-call-relock of 12.3. No path takes two locks, so there is no ordering to state |
+| 15.2 No lock across application code | MUST | The unlock-call-relock of 12.3. **No current toolkit path holds one container mutex while acquiring another**, so the toolkit has no inter-container lock order. Stated as a property of the code today, not as a timeless one: it holds while hooks run outside the lock and no operation coordinates a Mailbox and a Pool. Section 6.6 |
 | 15.3 The closed flag | MUST | Read and set under the mutex. Setting it is the whole of close's state change |
 | 15.4 The pre-lock check | SHOULD | **D16.** `Atomic{bool}`, acquire outside, relaxed inside, release on the store, **and the re-read under the lock** |
 | 15.5 Asserts versus outcomes | SHOULD | **D6.** Three tiers, and every runtime condition is a fault |
@@ -1200,7 +1368,126 @@ containers perform is one an application could write.** Section 7 runs both.
 
 ---
 
-# 6. What is dropped, and why
+# 6. The implementation invariants
+
+Six rules the port already obeys and no document stated. They are here because
+an unstated invariant is one refactor away from being lost: every one of them
+looks like an inefficiency or an oversight to a reader who does not know why it
+is there, and each would be easy to "improve" into a defect.
+
+They came out of `3tk-porting-proposal-003-review.md`, which asked for most of
+them as changes. Read against `3tk/src/`, five were already true. Writing them
+down is the whole of the work, and it is the most durable thing in this
+revision.
+
+## 6.1 The pre-lock atomic is a hint, never an authorization
+
+D16's fast read may **reject** work early. It may never **permit** a mutation.
+
+```
+outside the lock   the atomic may refuse the call
+inside the lock    the mutex-protected state is authoritative, always
+```
+
+No path may do `if (!closed_fast) { mutate }`. Every caller that reads `false`
+re-reads `_closed` under the mutex, because close may fire between the two.
+`Mailbox.@closed_fast` and `Pool.@closed_fast` are pure early rejections today
+and must stay so. Part 15.4 forbids keeping the fast read without the re-check,
+and this is the implementation half of that prohibition.
+
+## 6.2 Creation is a transaction
+
+Every creation path that can fail after its first allocation undoes exactly what
+succeeded before it. `defer catch`, in the shape `std::threads::channel` uses
+for the same problem.
+
+Nothing partially constructed is ever returned, and nothing partially
+constructed is ever observable. A caller that receives a fault from `create` has
+no object and no obligation.
+
+**This was not true until 3TK-8.** Section 9.
+
+## 6.3 `close` is not `destroy`
+
+```
+close      changes container state, hands back or hands on what is held,
+           wakes waiters. Callable more than once
+release    ends the object's lifetime. Callable once, and only after close
+```
+
+They are never merged. A closed container is **still an item**: it has its inner
+and its identity, it can still sit on a list, and its outer may still need to
+transfer or release it. Part 11.12's tier 1 assert enforces the order and is one
+of only two `always_assert` sites in the port.
+
+## 6.4 The hook boundary, and what survives it
+
+Part 12.3: the pool unlocks, calls the hook, relocks. The implementation
+contract around that:
+
+**Before the unlock** — every invariant another thread could observe already
+holds; the item is in neither the caller's Slot nor a pool list unless the
+operation intends it; the hook-local Slot holds the only temporary ownership.
+
+**After the relock** — everything read before the unlock is **stale**. Counts,
+list lengths, emptiness, the closed flag: all of it is re-read. The hook's
+result is fresh input and is checked like any other input.
+
+`Pool.put`'s two Slots — `mine` for the item, `extra` for the parts — fix the
+*caller's* semantics. They do not by themselves make arbitrary application code
+safe, and this section is the half that does.
+
+## 6.5 No reference into bucket storage survives a hook call
+
+The bucket array is fixed at creation, but its **contents** are mutable and a
+hook runs with the mutex released.
+
+**The rule: after any call into application code, look the bucket up again by
+identity.** The lookup is linear over a small fixed set, and correctness beats
+preserving a pointer across code the toolkit does not control. `Pool.put` does
+exactly this — `take_back_handle` re-resolves — and it must not be "optimized"
+into hoisting the lookup out of the hook boundary.
+
+**One deliberate exception**, and it is safe for a reason that is a property of
+creation rather than of the loop: `Pool.get_wait` holds a `PoolBucket*` across
+`wait_until`, which releases the mutex. The slice is allocated once in `create`
+and never grown, moved or reallocated, so the address is valid for the pool's
+life. Only the contents change, and they are re-read every turn of the loop.
+No application code runs in that window. The comment at the site says so.
+
+## 6.6 The lock order is a statement about today
+
+**No current toolkit path holds one container mutex while acquiring another.**
+Therefore the toolkit has no inter-container lock order.
+
+That is narrower than 003's *"no path takes two locks, so there is no ordering
+to state"*, and deliberately. It holds because hooks run outside the lock, and
+because no operation coordinates a Mailbox and a Pool. An operation that ever
+does will need an order, and this sentence is where it goes.
+
+## 6.7 The `AnyHandle` / `Slot` signature rule
+
+```
+returns AnyHandle    it transfers or exposes a handle
+takes   Slot*        it may consume, fill, or preserve a transfer location
+takes   AnyHandle    it observes or links a handle already owned per its contract
+```
+
+Sharper than "the Slot is distinct", because it is checkable. **Every public
+signature in `3tk/src/` was audited against it and none violates it.**
+
+The rule also has a leg in the language, which is worth knowing before anyone
+proposes to make the two symmetrical. **M4: a method cannot attach to a pointer
+alias.** `alias AnyHandle = AnyNode*` can carry no methods at all; the distinct
+`typedef Slot` can, and does — `fill`, `take`, `peek`, `is_empty`, `is_full`.
+So a Slot reads like an object and a handle reads like a value partly because
+C3 will only let one of them be an object. D5 chose the distinct type for the
+compiler's sake; M4 says the choice also bought the only place behaviour could
+live.
+
+---
+
+# 7. What is dropped, and why
 
 Beyond section 3's excluded surface.
 
@@ -1218,9 +1505,9 @@ not met, and one consequence.
 
 ---
 
-# 7. Build and test
+# 8. Build and test
 
-## 7.1 The project
+## 8.1 The project
 
 One `project.json`. C9 is closed by writing a third shape rather than choosing
 between two that were never compiled.
@@ -1243,13 +1530,13 @@ incomplete. **Unverified, and this stage did not verify it.** It affects
 distribution, not the port. The proposal ships source, as B6 suggests, and the
 question is a tooling stage's.
 
-## 7.2 The four builds
+## 8.2 The four builds
 
 **Every build runs every test applicable to that build, and the matrix covers
 all four.** D6's whole point is that the tiers behave differently across them,
 and a port that runs one build has exercised one tier. But "every test in every
 build" would be the wrong promise: a tier 3 check is *not compiled* in a fast
-build, so a test that asserts it fires has nothing to assert there. Section 7.3
+build, so a test that asserts it fires has nothing to assert there. Section 8.3
 says which is which.
 
 | Build | Flags | What it proves |
@@ -1271,7 +1558,7 @@ five negatives reported *did NOT abort in a checking build*.
 **Never infer the build mode from the `-O` level.** Both sides are explicit,
 `--safe=yes` or `--safe=no`, in every build this port runs.
 
-## 7.3 The tests
+## 8.3 The tests
 
 Grouped by what they establish, not by file.
 
@@ -1318,7 +1605,24 @@ running in parallel on different threads; a `close` racing a `release`. Run
 under the four builds, and under a thread sanitizer where the toolchain offers
 one.
 
-## 7.4 What the numbers mean
+**Allocation failure**, added by 3TK-8 and living in `test/t_alloc.c3` — its own
+file, on the owner's instruction, because `common.c3` is the shared fixture that
+every other test compiles against and an allocator that fails on purpose does
+not belong in it. Two allocators: one that counts outstanding blocks, one that
+wraps it and refuses after a budget. The assertion is always the same — after a
+failed creation, nothing is outstanding.
+
+**On what those tests can and cannot reach.** `Pool.create`'s bucket allocation
+is provokable and is provoked: budget 1 lets the `Pool` through and fails the
+array, which is the exact shape that leaked. `Mailbox.create` performs only one
+acquisition through the caller's allocator — its later failure points,
+`_mu.init()` and `_cv.init()`, allocate through the platform — so its cleanup is
+**correct by construction and untested**. The sabotage run says so plainly:
+removing the mailbox's `defer catch` pair leaves every test green, while
+removing the pool's fails one. That is written at the test site rather than left
+for a reader to discover.
+
+## 8.4 What the numbers mean
 
 The suite counts two different things and 002 reported them in one sentence.
 
@@ -1332,11 +1636,17 @@ The suite counts two different things and 002 reported them in one sentence.
 | Layering checks | 3, once | source, not a build |
 
 - **"59 checks"** is the number of pass/fail lines the script prints: 14 per
-  build × 4 builds, plus the 3 layering checks that are not per-build.
-- **"73 tests"** is the number of `@test` functions in the suite. They run in
+  build × 4 builds, plus the 3 layering checks that are not per-build. **3TK-8
+  does not change this number** — it added tests, and the suite is one check
+  however many tests it contains.
+- **"77 tests"** is the number of `@test` functions in the suite. They run in
   each of the four builds, and the suite as a whole is one of the 14 checks.
   The 73 do not include the negatives; a negative is a separate program, and
   its whole point is that it must not run to completion.
+- **3TK-8 took it from 73 to 77**, all four in `test/t_alloc.c3`: three
+  creation-failure tests and one whole-life test that proves the counting
+  allocator reaches zero on the ordinary path, so that a zero on a failure path
+  means something.
 - The 7 runtime negatives are **not** among the 73, and each is judged
   differently in a safe build than in a fast one — one program, two expected
   behaviours, both required.
@@ -1347,19 +1657,24 @@ reports a `SIGABRT`: a non-zero exit. A negative that stopped compiling would
 therefore be read as a negative that aborted, and would pass forever having
 proved nothing. Section 9 records the one that did.
 
-## 7.5 What the kitchen gate needs
+## 8.5 What the kitchen gate needs
 
 `kitchen/tools/check_design.sh` exits 1 today, before this stage and after it.
-43 problems, 29 of them orphans under `design/secondary/lang/`, because
-`design/secondary/context.md` lists no `lang/` subfolder at all.
+**63 problems after 3TK-8, up from 43** — and the whole rise is orphans, 29 to
+49, because `design/secondary/context.md` lists no `lang/` subfolder at all, so
+every file under it counts as one. 3TK-8 added two files and moved three into
+`backup/`; each move is a new path and therefore a new orphan row.
 
-This file adds one more orphan row, for the same reason. It is drift in
-`context.md`, not in this line of work, and it is not fixed here. Recorded
-again so the count is not mistaken for a regression.
+**The 14 dead links are unchanged**, all in `design/context.md`, all naming
+documents that predate this line of work. That number is the one that would
+signal a regression, and it did not move.
+
+It is drift in `context.md`, not in this line of work, and it is not fixed here.
+Recorded with both numbers so the rise is not mistaken for damage.
 
 ---
 
-# 7.6 The words this document uses
+# 8.6 The words this document uses
 
 The port is terminology-heavy by design — Part 10.1 exists so a reader of a
 signature knows which side of a border they are on. The risk is that a prose
@@ -1377,7 +1692,7 @@ distinction gets read as an API distinction. These are the pairs worth pinning:
 
 ---
 
-# 8. The conflict register, closed
+# 9. The conflict register, closed
 
 Every conflict of `3tk-drafts-review-001.md` section 9, with its state after
 this stage.
@@ -1392,7 +1707,7 @@ this stage.
 | C6 | The `AnyList` surface | **Closed here.** Section 5.5, sixteen operations, from Part 8.2 |
 | C7 | Allocator at release? | **Closed here. D3** — no release call takes one |
 | C8 | Where the list goes in the order | **Closed here. D11** — Part 22 as written, step 5 |
-| C9 | Two `project.json` shapes | **Closed here.** Section 7.1, a third, written to be compiled |
+| C9 | Two `project.json` shapes | **Closed here.** Section 8.1, a third, written to be compiled |
 | C10 | Typed handles | **Closed here. D4** — no |
 | C11 | `polynode` or `AnyNode` naming | **Closed here. D8** — `AnyNode`, and `NodeList` not `AnyList` |
 
@@ -1401,7 +1716,7 @@ owner, 2026-08-23.
 
 ---
 
-# 9. What was built from this
+# 10. What was built from this
 
 Both stages are done and this section is a record rather than a plan.
 
@@ -1410,10 +1725,13 @@ Both stages are done and this section is a record rather than a plan.
 - **3TK-7** wrote steps 6 and 7 — `mailbox.c3`, `pool.c3`. The two optional
   tools of Part 17.2, depending on nothing in the first beyond its public
   surface. Six findings, in `3tk-containers-notes-001.md`.
+- **3TK-8** answered `3tk-porting-proposal-003-review.md`. It rewrote D1's
+  argument without moving its ruling, added section 6, fixed one real defect in
+  both creation paths, and added `test/t_alloc.c3`. This file is its output.
 
-**All four builds green: 59 checks, 0 failures.** 73 tests in each of four
+**All four builds green: 59 checks, 0 failures.** **77** tests in each of four
 builds, 7 runtime negatives, 2 tier 1 negatives, 3 compile-time refusals, 3
-layering checks. Section 7.4 says what each number counts. `3tk/run-builds.sh`.
+layering checks. Section 8.4 says what each number counts. `3tk/run-builds.sh`.
 
 **Part 18 is complete: all thirty-four invariants are accounted for.**
 Twenty-nine are directly tested or deliberately provoked. Five are structural or
@@ -1427,7 +1745,55 @@ put it in the specification and then in the suite.
 Sixteen decisions, sixteen exercised, sixteen survived. No decision has moved
 across three versions.
 
-## What the revision found in the code
+## What 3TK-8 found in the code
+
+The review that produced this version was written about the *design*, and read
+`3tk/src/` only through the proposal. So its 28 items were re-audited against
+the source before any of them was accepted, and the audit changed most of the
+verdicts.
+
+**One real defect, and the review could not have seen it.** Its §20 asks for
+`Pool.create` to be made transactional, reasoning about a design it thought
+might exist. Read against the code, the defect was real and **broader than its
+own framing** — neither creation path cleaned up after a partial failure:
+
+- `Pool.create` allocated the `Pool`, then initialized a mutex, then a
+  condition variable, then the bucket array. A failure at any of the last three
+  propagated straight out and **leaked everything already built**. The bucket
+  allocation is the largest and the likeliest to fail, and by then there was a
+  live `Pool`, a live mutex and a live condition variable to lose.
+- `Mailbox.create` had the identical shape, one step shorter.
+
+Both are now transactions — `defer catch`, undoing exactly what succeeded, in
+the shape `std::threads::channel` uses for the same problem. Section 6.2 states
+it as an invariant so it is not lost again.
+
+**Two stages and two reviews walked past it.** It is worth asking why, because
+the answer is not carelessness. The leak is in an error path that an ordinary
+test never takes: on Linux with an ordinary allocator, `new_try` does not fail.
+Nothing in the suite could reach it, so nothing in the suite complained. The
+port had no way to make an allocator fail — which is why 3TK-8 built one, in
+`test/t_alloc.c3`, and why the file is the durable half of this fix.
+
+**And the test was checked by sabotage, not by passing.** Removing the pool's
+`defer catch` lines turns the suite red on `pool_create_fails_at_the_buckets`.
+Removing the mailbox's leaves it green, because that path cannot be provoked
+through the caller's allocator at all. Both facts are written at the test site.
+A test whose failure is impossible is worse than no test, and saying which is
+which is the only honest way to ship one.
+
+**Five items the code already satisfied**, three of them in better shape than
+the review assumed — the pre-lock atomic was already a hint, `close` was already
+not `destroy`, and `Pool.put` already re-resolved its bucket by identity after
+the hook rather than carrying a pointer across the unlock. Those became section
+6 instead of changes. That section is the most valuable thing in this revision:
+five invariants that were true only by habit are now true on purpose.
+
+**One correction that is a document defect, not a code defect.** D1's argument
+was wrong for three versions. The ruling it defended was right the whole time,
+which is exactly why nobody checked the argument.
+
+## What the 003 revision found in the code
 
 Two things, and the second is the one worth remembering.
 
@@ -1469,4 +1835,5 @@ only target built. Packaging was never in this line of work.
 |---|---|---|
 | 001 | 2026-08-23 | First version. Stage 3TK-5. Sixteen decisions, all PROPOSED. |
 | 002 | 2026-08-23 | **Owner accepted all sixteen.** G1's submodules accepted. Amendments from the code folded in: F1's build flags, F3/F5's `@check`, F4's aliases, G2's `~`, G4's flat buckets, G5's two Slots. No decision moved. |
+| 004 | 2026-08-23 | Answers `3tk-porting-proposal-003-review.md`, a review of design and implementation. **D1's argument rewritten and its ruling reaffirmed by the owner** — hiding is possible and is rejected on cost, not on Part 11.1. Nine measured answers added, Q13 to Q17 and M1 to M5, superseding `3tk-porting-proposal-addendum-001.md`. **Section 6 added**, six implementation invariants the code already honoured and no document stated. Four text corrections: the Part 4.2 row, D12, the 24 bytes, Part 15.2's lock statement. **One real defect fixed in code** — neither creation path was transactional — with `test/t_alloc.c3` and its two allocators added to provoke it. The `char[N]` storage rejected, the `NodeList` mutation core deferred with its reason. No decision moved. |
 | 003 | 2026-08-23 | Answers `3tk-porting-proposal-review.md`. Three counting contradictions fixed. Section 0's central boundary, the Slot surface, `AnyHandle`'s nullability, the `@check` side-effect rule, `Pool.put`'s two Slot domains, the `NodeList` count invariant, the bucket construction rules, and section 7.4's counts glossary added. The layering and submodule claims narrowed to what they prove. Written against specification **002** and its invariant 34. One code change — `Pool.create` refuses duplicate identities — and one harness defect found and fixed. The review's `wake_all` suggestion rejected, its `receive_all` precedence question dissolved. No decision moved. |

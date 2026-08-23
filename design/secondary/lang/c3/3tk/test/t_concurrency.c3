@@ -152,7 +152,7 @@ fn void many_producers_many_consumers() @test
     // 3 producers x 50 items
     while (sh.received.load(ACQUIRE) < 150) thread::sleep(time::ms(5))!!;
 
-    NodeList left;
+    InnerQueue left;
     mb.close(&left);
     foreach (&t : consumers) t.join()!!;
 
@@ -223,11 +223,11 @@ fn void ConcurrentHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dyn
     self.inside.sub(1, SEQ_CONSISTENT);
 }
 
-fn void ConcurrentHooks.on_put(&self, usz in_pool, Slot* slot, NodeList* extra) @dynamic { }
+fn void ConcurrentHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
 
-fn void ConcurrentHooks.on_close(&self, NodeList* remaining) @dynamic
+fn void ConcurrentHooks.on_close(&self, InnerQueue* remaining) @dynamic
 {
-    while (AnyHandle h = remaining.pop_front())
+    while (Handle h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -288,12 +288,12 @@ fn void a_leaver_hands_the_signal_on() @test
         Msg m;
         msg_init(&m);
         Slot s;
-        s.fill(msg_to_any(&m));
+        s.fill(msg_to_inner(&m));
         if (catch mb.send(&s)) {}
 
         foreach (&t : ts) t.join()!!;
 
-        NodeList left;
+        InnerQueue left;
         mb.close(&left);
         // the item is either with a receiver or still queued; never lost
         always_assert(sh.received.load(ACQUIRE) + left.len() == 1,

@@ -24,9 +24,9 @@ fn Mailbox* new_mailbox()
 *>
 fn void drop_mailbox(Mailbox* mb)
 {
-    NodeList left;
+    InnerQueue left;
     mb.close(&left);
-    while (AnyHandle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    while (Handle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
     mb.release();
 }
 
@@ -42,7 +42,7 @@ fn void a_mailbox_is_an_item() @test
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    AnyHandle h = mailbox::to_any(mb);
+    Handle h = mailbox::to_inner(mb);
     always_assert(h != null, "the mailbox has no handle");
     always_assert(h.type == mailbox::TYPE, "the mailbox carries no identity");
     always_assert(mailbox::of(h) == mb, "the mailbox did not survive the round trip");
@@ -50,9 +50,9 @@ fn void a_mailbox_is_an_item() @test
     // and it sits on a list, beside an item of another type
     Msg m;
     msg_init(&m);
-    NodeList list;
+    InnerQueue list;
     list.push_back(h);
-    list.push_back(msg_to_any(&m));
+    list.push_back(msg_to_inner(&m));
     always_assert(list.len() == 2, "a mailbox would not go on a list");
     always_assert(mailbox::of(list.pop_front()) == mb, "the mailbox came off wrong");
     list.pop_front();
@@ -71,7 +71,7 @@ fn void send_then_poll() @test
     m.id = 5;
 
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
     if (catch mb.send(&s)) { always_assert(false, "send failed on an open mailbox"); }
     always_assert(s.is_empty(), "send did not clear the Slot");
 
@@ -113,7 +113,7 @@ fn void ordinary_items_are_fifo() @test
         ms[i].id = (int)i;
         msg_init(&ms[i]);
         Slot s;
-        s.fill(msg_to_any(&ms[i]));
+        s.fill(msg_to_inner(&ms[i]));
         if (catch mb.send(&s)) { always_assert(false, "send failed"); }
     }
 
@@ -164,7 +164,7 @@ fn void out_of_band_ordering() @test
 fn void send_one(Mailbox* mb, Msg* m, bool oob)
 {
     Slot s;
-    s.fill(msg_to_any(m));
+    s.fill(msg_to_inner(m));
     if (oob)
     {
         if (catch mb.send_oob(&s)) { always_assert(false, "send_oob failed"); }
@@ -215,14 +215,14 @@ fn void receive_the_batch() @test
     Msg[4] ms;
     for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
 
-    NodeList got;
+    InnerQueue got;
     if (catch mb.receive_all(&got)) { always_assert(false, "receive_all failed"); }
 
     always_assert(got.len() == 4, "the batch is the wrong size");
     always_assert(mb.len() == 0, "the mailbox kept something");
     for (usz i = 0; i < 4; i++)
     {
-        always_assert(msg_from_any(got.pop_front()).id == (int)i, "the batch is out of order");
+        always_assert(msg_from_inner(got.pop_front()).id == (int)i, "the batch is out of order");
     }
 }
 
@@ -241,14 +241,14 @@ fn void close_gives_the_remainder_back() @test
     Msg[3] ms;
     for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
 
-    NodeList left;
+    InnerQueue left;
     mb.close(&left);
     always_assert(left.len() == 3, "close did not give the remainder back");
 
     for (usz i = 0; i < 3; i++)
     {
-        AnyHandle h = left.pop_front();
-        always_assert(msg_from_any(h).id == (int)i, "the remainder is out of order");
+        Handle h = left.pop_front();
+        always_assert(msg_from_inner(h).id == (int)i, "the remainder is out of order");
         always_assert(!mtk::is_linked(h), "a returned item kept its links");
     }
     mb.release();
@@ -264,18 +264,18 @@ fn void close_gives_the_remainder_back() @test
 fn void a_closed_mailbox_refuses_everything() @test
 {
     Mailbox* mb = mailbox::create(mem)!!;
-    NodeList left;
+    InnerQueue left;
     mb.close(&left);
     always_assert(left.is_empty(), "an empty mailbox returned a remainder");
 
     Msg m;
     msg_init(&m);
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
 
     always_assert(@catch_is(mb.send(&s), mtk::CLOSED), "a closed mailbox accepted a send");
     always_assert(s.is_full(), "a refused send did not leave the Slot alone");
-    always_assert(s.peek() == msg_to_any(&m), "a refused send changed the Slot");
+    always_assert(s.peek() == msg_to_inner(&m), "a refused send changed the Slot");
 
     always_assert(@catch_is(mb.send_oob(&s), mtk::CLOSED), "a closed mailbox accepted an out-of-band send");
     always_assert(s.is_full(), "a refused send_oob did not leave the Slot alone");
@@ -286,11 +286,11 @@ fn void a_closed_mailbox_refuses_everything() @test
     always_assert(@catch_is(mb.wake_all(), mtk::CLOSED), "a closed mailbox woke waiters");
     always_assert(r.is_empty(), "a refused receive filled the Slot");
 
-    NodeList batch;
+    InnerQueue batch;
     always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox gave a batch");
 
     // and the mailbox is still a valid item
-    always_assert(mailbox::of(mailbox::to_any(mb)) == mb, "a closed mailbox stopped being an item");
+    always_assert(mailbox::of(mailbox::to_inner(mb)) == mb, "a closed mailbox stopped being an item");
 
     s.take();
     mb.release();
@@ -308,11 +308,11 @@ fn void close_is_idempotent() @test
     msg_init(&m);
     send_one(mb, &m, false);
 
-    NodeList first;
+    InnerQueue first;
     mb.close(&first);
     always_assert(first.len() == 1, "the first close did not give the item back");
 
-    NodeList second;
+    InnerQueue second;
     mb.close(&second);
     always_assert(second.is_empty(), "the second close produced items from nowhere");
 
@@ -383,12 +383,12 @@ fn void a_closed_mailbox_is_empty() @test
         msg_init(&m[i]);
         m[i].id = (int)i;
         Slot s;
-        s.fill(msg_to_any(&m[i]));
+        s.fill(msg_to_inner(&m[i]));
         if (catch mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
     }
     always_assert(mb.len() == 3, "the mailbox did not take three");
 
-    NodeList left;
+    InnerQueue left;
     mb.close(&left);
 
     // invariant 34: the close is the only drain, and it drained everything
@@ -401,10 +401,10 @@ fn void a_closed_mailbox_is_empty() @test
     always_assert(@catch_is(mb.receive(&r, time::ms(1)), mtk::CLOSED), "a closed mailbox answered a receive with an item");
     always_assert(r.is_empty(), "a refused acquisition filled the Slot");
 
-    NodeList batch;
+    InnerQueue batch;
     always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox answered a batch receive with items");
     always_assert(batch.is_empty(), "a refused batch receive moved items");
 
-    while (AnyHandle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    while (Handle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
     mb.release();
 }

@@ -11,20 +11,29 @@
 
  The files, and the modules they declare:
 
-   any.c3      module mtk            AnyNode, AnyHandle, Slot, the faults, @check
-   list.c3     module mtk            NodeList and its walker
+   inner.c3    module mtk            Inner, Handle, Slot, is_linked, reset,
+                                     the faults, @check
+   queue.c3    module mtk            InnerQueue and its walker. First-in first-out
+   stack.c3    module mtk            InnerStack. Last-in first-out
    helper.c3   module mtk::helper    <Type> — the border, Part 7.5
    owned.c3    module mtk::owned     <Type> — helper plus create and release
    mailbox.c3  module mtk::mailbox   Mailbox. Part 11.3 to 11.6
    pool.c3     module mtk::pool      Pool, PoolHooks. Part 11.7 to 11.10, Part 12
 
- The first four are the toolkit of Part 17.1 — the one required tool, and the
+ The first five are the toolkit of Part 17.1 — the one required tool, and the
  thing without which there is nothing to port. The last two are the optional
  tools of Part 17.2.
 
- **The containers are submodules on purpose.** A C3 submodule cannot see its
- parent's `@private` declarations, so `mtk::mailbox` and `mtk::pool` are
- structurally outside `mtk`.
+ **The vocabulary is Outer and Inner — R1.** The application's struct is the
+ outer; the structure it embeds is the `Inner`. `Outer` is a category and never
+ a type: no such type is declared anywhere here. The `Any` prefix the port
+ inherited from ztk is gone, and so is `NodeList` — R2 refused a
+ general-purpose list, and the port keeps two ordering primitives instead, a
+ queue for the mailbox and a stack for the pool.
+
+ **The containers are submodules, and the reason is enforcement.** A C3
+ submodule cannot see its parent's `@private` declarations, so `mtk::mailbox`
+ and `mtk::pool` are structurally outside `mtk`.
 
  What that proves, exactly: the core's explicit private boundary is enforced by
  the compiler, not by the authors' discipline. What it does not prove: D1 chose
@@ -32,9 +41,11 @@
  stays possible and stays visible in the source. That half is held by the Part
  17.2 layering rule and the check `run-builds.sh` runs for it.
 
- Specification: matryoshka-specification-001.md.
- Design rulings: 3tk-porting-proposal-001.md, D1 to D16.
+ Specification: matryoshka-specification-002.md, as amended by the core
+ redesign — a specification 003 is authorized in direction and not yet cut.
+ Design rulings: 3tk-porting-proposal-004.md, D1 to D16, and
+ 3tk-core-redesign-proposal-002.md, R1 to R15.
 *>
 module mtk;
 
-const String VERSION = "0.1.0";
+const String VERSION = "0.2.0";

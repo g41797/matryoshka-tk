@@ -14,8 +14,8 @@ fn int main()
     msg_init(&a); msg_init(&b);
 
     Slot s;
-    s.fill(msg_to_any(&a));
-    s.fill(msg_to_any(&b));          // <-- the violation
+    s.fill(msg_to_inner(&a));
+    s.fill(msg_to_inner(&b));          // <-- the violation
 
     io::printn("no check: the full Slot was overwritten");
     return 0;

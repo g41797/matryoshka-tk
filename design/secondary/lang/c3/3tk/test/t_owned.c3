@@ -59,7 +59,7 @@ fn void an_owned_item_is_an_ordinary_item() @test
     Owned* o = mtk::helper::must_from_slot{Owned}(&s);
     o.id = 7;
 
-    NodeList list;
+    InnerQueue list;
     list.push_back_slot(&s);
     always_assert(s.is_empty(), "the transfer did not clear the Slot");
 
@@ -97,7 +97,7 @@ fn void repeated_create_and_release() @test
 *>
 fn void only_the_owning_type_pays() @test
 {
-    always_assert(AnyNode::size == 2 * uptr::size + typeid::size, "the inner grew a field; D3 part 2 is broken");
+    always_assert(Inner::size == uptr::size + typeid::size, "the inner grew a field; D3 part 2 is broken");
     always_assert(Owned::size > Msg::size - 8, "sanity: Owned carries the allocator, Msg does not");
     always_assert(mtk::helper::OFF{Owned} == 8, "Owned's inner moved");
 }

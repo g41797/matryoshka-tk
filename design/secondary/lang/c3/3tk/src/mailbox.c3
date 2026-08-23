@@ -3,8 +3,8 @@
 
  A queue of items, with waiting. Many producers, many consumers, on one object.
 
- Part 17.2: this file uses only the public surface of the core four. It has no
- privileged access to AnyNode, Slot or NodeList, and every crossing it performs
+ Part 17.2: this file uses only the public surface of the core. It has no
+ privileged access to Inner, Slot or InnerQueue, and every crossing it performs
  is one an application could write. That is a testable claim and `run-builds.sh`
  tests it.
 
@@ -37,23 +37,34 @@ import std::atomic::types;
 *>
 struct Mailbox
 {
-    AnyNode node;
+    // Item identity. Part 11.1: the mailbox is itself an item.
+    Inner node;
 
+    // Synchronization.
     Mutex             _mu;
     ConditionVariable _cv;
+
+    // Lifetime. D3: kept for life, and `release` takes no allocator.
     Allocator         _alloc;
+
+    // Container state, from here down.
 
     // Part 15.3: read and set under the mutex. Part 15.4: also readable
     // without it, through the atomic, and ALWAYS re-read under it.
     bool         _closed;
     Atomic{bool} _closed_fast;
 
-    NodeList  _queue;
-
-    // Part 11.3: the anchor at the last out-of-band item, so the out-of-band
-    // insert stays O(1). Null means there is none, and an out-of-band item
-    // then goes at the front.
-    AnyHandle _oob_anchor;
+    // Part 11.3, R7: TWO queues, not one list with an anchor. Out-of-band
+    // items live in their own queue and every take tries `_oob` first, so
+    // absolute priority with first-in first-out inside each class — invariant
+    // 22 — falls out of the structure instead of being maintained by hand.
+    //
+    // The anchor is gone, and with it `insert_after`, `push_front` and the
+    // four sites that kept the anchor honest. Invariant 22 is NOT gone: R9.
+    // It is a promise to callers about order and it stands; only the mechanism
+    // that produced it was deleted.
+    InnerQueue _oob;
+    InnerQueue _regular;
 
     // Part 11.5: the wake generation. Bumped by the waker, captured by each
     // waiter before it waits, compared after every wakeup.
@@ -61,8 +72,8 @@ struct Mailbox
 }
 
 alias init   = mtk::helper::init{Mailbox};
-alias to_any = mtk::helper::to_any{Mailbox};
-alias of     = mtk::helper::from_any{Mailbox};
+alias to_inner = mtk::helper::to_inner{Mailbox};
+alias of     = mtk::helper::from_inner{Mailbox};
 alias TYPE   = mtk::helper::TYPE{Mailbox};
 
 <*
@@ -71,15 +82,28 @@ alias TYPE   = mtk::helper::TYPE{Mailbox};
 
  D3: the allocator is kept for life and `release` takes none.
 
+ **Creation is a transaction.** Every step after the allocation can fail, and
+ each failure undoes exactly what succeeded before it — `defer catch`, in the
+ shape `std::threads::channel` uses for the same problem. Without this, a
+ failing `_cv.init()` leaks the Mailbox and the mutex already initialized, and
+ the caller receives a fault with no way to reach either. Nothing partially
+ constructed is ever returned or observable.
+
  @param a : "the allocator the mailbox keeps for life"
 *>
 fn Mailbox*? create(Allocator a)
 {
     Mailbox* mb = alloc::new_try(a, Mailbox)!;
+    defer catch alloc::free(a, mb);
+
     init(mb);
     mb._alloc = a;
+
     mb._mu.init()!;
+    defer catch mb._mu.destroy();
+
     mb._cv.init()!;
+
     return mb;
 }
 
@@ -115,43 +139,37 @@ fn void Mailbox.release(&self)
 macro bool Mailbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
 <*
- Part 11.3: put an item in at the back, or ahead of every ordinary item.
+ Part 11.3: put an item on the queue its class belongs to.
 
- The out-of-band insert is O(1) because of the anchor: the new item goes after
- the last out-of-band item, or at the front when there is none, and then
- becomes the anchor itself.
+ R7: no branch on an anchor, no insert into the middle of a chain. An ordinary
+ item goes to the back of `_regular`; an out-of-band item goes to the back of
+ `_oob`. Both are O(1) in every build mode.
 *>
-fn void Mailbox.enqueue(&self, AnyHandle h, bool oob) @private
+fn void Mailbox.enqueue(&self, Handle h, bool oob) @private
 {
-    if (!oob)
-    {
-        self._queue.push_back(h);
-        return;
-    }
-    if (self._oob_anchor)
-    {
-        self._queue.insert_after(self._oob_anchor, h);
-    }
-    else
-    {
-        self._queue.push_front(h);
-    }
-    self._oob_anchor = h;
+    if (oob) { self._oob.push_back(h); } else { self._regular.push_back(h); }
 }
 
 <*
- Take the front item, and keep the anchor honest.
+ Take the next item: out-of-band first, then ordinary, first-in first-out
+ within each.
 
- Part 11.3: the anchor is cleared when the last out-of-band item is taken.
- Every out-of-band item sits ahead of every ordinary one and the anchor is the
- last of them, so taking the anchor means the out-of-band run is drained.
+ That single line is invariant 22, and it is now the whole implementation of
+ it. Nothing has to be repaired afterwards, which is what the anchor existed
+ to do.
 *>
-fn AnyHandle Mailbox.dequeue(&self) @private
+fn Handle Mailbox.dequeue(&self) @private
 {
-    AnyHandle h = self._queue.pop_front();
-    if (h && h == self._oob_anchor) self._oob_anchor = null;
-    return h;
+    Handle h = self._oob.pop_front();
+    return h ? h : self._regular.pop_front();
 }
+
+<*
+ Is anything queued at all. Reads both queues, and reading only one is the
+ easiest mistake in this file — §4.4.
+*>
+fn bool Mailbox.has_queued(&self) @private @inline
+    => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
  Send. Part 11.3, Part 19.1.
@@ -169,7 +187,8 @@ fn void? Mailbox.send(&self, Slot* slot) => self.send_at(slot, false);
  first-out among out-of-band items themselves.
 
  Part 11.4 keeps this as ONE priority level. It is not a priority queue, and
- D14 kept it because signals and data share one channel in this design.
+ D14's second clause survives R7 intact: two queues are one priority level with
+ a cleaner home, not two levels.
 
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
  @return? mtk::CLOSED
@@ -214,7 +233,7 @@ fn void? Mailbox.poll(&self, Slot* slot)
 
     if (self._closed) return mtk::CLOSED~;
 
-    AnyHandle h = self.dequeue();
+    Handle h = self.dequeue();
     if (!h) return mtk::EMPTY~;
     slot.fill(h);
 }
@@ -262,7 +281,7 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
         // Part 2.4: re-evaluate from scratch, every turn.
         if (self._closed) return mtk::CLOSED~;
 
-        AnyHandle h = self.dequeue();
+        Handle h = self.dequeue();
         if (h) { slot.fill(h); return; }
 
         if (self._wake_gen != gen) return mtk::WOKEN~;
@@ -278,24 +297,39 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
             if (h) { slot.fill(h); return; }
             if (self._wake_gen != gen) return mtk::WOKEN~;
 
-            // Part 2.6: the leaver hands the signal on.
-            if (!self._queue.is_empty()) self._cv.signal();
+            // Part 2.6, invariant 5: the leaver hands the signal on — and it
+            // must test BOTH queues. A leaver that checked only `_regular`
+            // would consume a signal and leave a queued out-of-band item with
+            // nobody woken. §4.4 names this as the easiest thing in the
+            // redesign to half-fix.
+            if (self.has_queued()) self._cv.signal();
             return mtk::TIMEOUT~;
         }
     }
 }
 
 <*
- Receive the batch. Part 11.3, Part 19.1: a list, possibly empty; CLOSED.
+ Receive the batch. Part 11.3, Part 19.1: a queue, possibly empty; CLOSED.
 
- Part 11.6: the whole list goes to the caller, and releasing the items is the
+ Part 11.6: the whole batch goes to the caller, and releasing the items is the
  caller's work. What they are — items to free, items to give back to a pool —
  is knowledge the mailbox never had.
 
- @param out : "an empty list; every queued item is moved onto it"
+ **The give-back order, R8, one rule for both this call and `close`:**
+
+   Where the mailbox gives items back as a queue, the queue is in the order
+   `receive` would have taken them out.
+
+ So: out-of-band first, then ordinary, first-in first-out within each. It
+ changes nothing — the single queue with its anchor already produced exactly
+ this order — which is the reason to write it down rather than to argue about
+ it. The alternative, ordinary first, would reorder a caller-visible batch to
+ no purpose.
+
+ @param out : "an empty queue; every queued item is moved onto it, in receive order"
  @return? mtk::CLOSED
 *>
-fn void? Mailbox.receive_all(&self, NodeList* out)
+fn void? Mailbox.receive_all(&self, InnerQueue* out)
 {
     if (self.@closed_fast()) return mtk::CLOSED~;
 
@@ -304,8 +338,8 @@ fn void? Mailbox.receive_all(&self, NodeList* out)
 
     if (self._closed) return mtk::CLOSED~;
 
-    out.append_list(&self._queue);
-    self._oob_anchor = null;
+    out.append_queue(&self._oob);
+    out.append_queue(&self._regular);
 }
 
 <*
@@ -331,19 +365,25 @@ fn void? Mailbox.wake_all(&self)
 }
 
 <*
- Close. Part 11.6, Part 19.1: returns what was left, as a list. Cannot fail.
+ Close. Part 11.6, Part 19.1: returns what was left, as a queue. Cannot fail.
 
  Part 11.12: close is callable more than once, and the second call takes
  nothing. The test-and-set of the flag is inside the mutex, so a preempted
  closer cannot race a release.
 
- **The named mistake, Part 11.6:** discarding the list this returns drops the
- items, and those items keep their links, so a later send refuses them. The
- release runs unconditionally; an empty list costs nothing.
+ **The named mistake, Part 11.6:** discarding the queue this returns drops the
+ items, and those items keep their links, so a later send refuses them — and
+ after R6b that refusal is exact, so the mistake is caught at the first reuse
+ rather than at whichever one happened to have a neighbour.
 
- @param out : "an empty list; the remainder is moved onto it"
+ The release runs unconditionally; an empty queue costs nothing.
+
+ **R8, the same rule as `receive_all`:** out-of-band first, then ordinary,
+ first-in first-out within each — the order `receive` would have taken them.
+
+ @param out : "an empty queue; the remainder is moved onto it, in receive order"
 *>
-fn void Mailbox.close(&self, NodeList* out)
+fn void Mailbox.close(&self, InnerQueue* out)
 {
     self._mu.lock();
     defer self._mu.unlock();
@@ -353,8 +393,8 @@ fn void Mailbox.close(&self, NodeList* out)
     self._closed = true;
     self._closed_fast.store(true, RELEASE);
 
-    out.append_list(&self._queue);
-    self._oob_anchor = null;
+    out.append_queue(&self._oob);
+    out.append_queue(&self._regular);
 
     self._cv.broadcast();
 }
@@ -372,5 +412,5 @@ fn usz Mailbox.len(&self)
 {
     self._mu.lock();
     defer self._mu.unlock();
-    return self._queue.len();
+    return self._oob.len() + self._regular.len();
 }

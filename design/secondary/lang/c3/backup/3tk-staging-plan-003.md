@@ -44,7 +44,7 @@ Claude memory.
 ## Standing rules for every stage
 
 - **Cold start.** Each stage is self-contained. Its named inputs plus
-  [3tk-status.md](3tk-status.md) are enough to run it. No stage depends  
+  [3tk-status.md](../3tk-status.md) are enough to run it. No stage depends  
   on conversation carried from the previous one.
 - **Clear advice.** Each stage ends with an explicit recommendation — *clear* or
   *do not clear* — and the reason. Clear when the next stage's inputs are  
@@ -53,7 +53,7 @@ Claude memory.
 - **No rolling.** Finishing a stage does not start the next. The owner names it.
 - **Every stage carries its start command.** The exact line the owner types to
   run it after a context clear is printed under the stage heading, and repeated
-  in [3tk-status.md](3tk-status.md). A stage closes by naming the command for
+  in [3tk-status.md](../3tk-status.md). A stage closes by naming the command for
   the next one. The command names the status file, never a versioned file, so it
   survives every version bump.
 - **Nothing authorized by this plan.** Plan approval is not stage approval.
@@ -63,14 +63,14 @@ Claude memory.
 ## How a stage is started
 
 The owner types one line. The agent reads
-[3tk-status.md](3tk-status.md) and this file, finds the named stage,
+[3tk-status.md](../3tk-status.md) and this file, finds the named stage,
 and runs it. Nothing else is needed — that is what cold start means.
 
 The command for each stage is printed under its heading below.
 
 The agent's first three actions in every stage, in order:
 
-1. Read [3tk-status.md](3tk-status.md).
+1. Read [3tk-status.md](../3tk-status.md).
 2. Read this file, and the section of the named stage.
 3. Read the stage's named inputs. Nothing outside them.
 
@@ -81,8 +81,8 @@ Do not re-run a finished stage without being told.
 
 ### 3TK-0 — this plan
 
-Write this document. Create [3tk-status.md](3tk-status.md) (current  
-state, one screen) and [3tk-log.md](3tk-log.md) (append-only narrative,  
+Write this document. Create [3tk-status.md](../3tk-status.md) (current  
+state, one screen) and [3tk-log.md](../3tk-log.md) (append-only narrative,  
 newest first). *Advice on clear: yes, after.*
 
 ### 3TK-1 — ztk audit
@@ -371,8 +371,8 @@ folder uses the same three-way split. Owner's ruling, 2026-08-23.
 
 Edited in place, no suffix. Entry points, not documents:
 
-- [3tk-status.md](3tk-status.md) — current state. Rewritten every stage.
-- [3tk-log.md](3tk-log.md) — the narrative. Append-only, newest first.
+- [3tk-status.md](../3tk-status.md) — current state. Rewritten every stage.
+- [3tk-log.md](../3tk-log.md) — the narrative. Append-only, newest first.
 
 Versioned, suffix required. Every change makes a new file:
 
@@ -384,11 +384,11 @@ Versioned, suffix required. Every change makes a new file:
 - `3tk-porting-proposal-NNN.md`
 
 A superseded version stays on disk. It is listed in the Superseded section of
-[3tk-status.md](3tk-status.md), naming what replaced it, and every reference to
+[3tk-status.md](../3tk-status.md), naming what replaced it, and every reference to
 it is repointed. Nothing here is deleted.
 
 The plan is versioned, so its filename moves. That is why the start command
-names [3tk-status.md](3tk-status.md) instead: the status file always says which
+names [3tk-status.md](../3tk-status.md) instead: the status file always says which
 plan version is current, and the line the owner types never changes.
 
 The seven pre-existing drafts keep their unsuffixed names. They are frozen
@@ -405,5 +405,5 @@ input, and renaming them is a `git mv`, which is owner-only.
 - `kitchen/tools/check_design.sh` covers `design/`; run it once after 3TK-2 to
   confirm the additions under `secondary/` changed nothing. Expected exit 0.
 - Each stage ends with its file written under `c3/`, a row appended to
-  [3tk-log.md](3tk-log.md), [3tk-status.md](3tk-status.md)  
+  [3tk-log.md](../3tk-log.md), [3tk-status.md](../3tk-status.md)  
   updated, a report to the owner, and the clear-or-not advice.

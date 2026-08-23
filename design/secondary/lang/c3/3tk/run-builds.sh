@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# 3TK-6 verification. The four builds of 3tk-porting-proposal-001.md section 7.2,
+# 3TK-6 verification, as 3TK-11 left it. The four builds of
+# 3tk-porting-proposal-004.md section 7.2,
 # every one of them, plus the negative programs that prove D6 was applied.
 #
 # A stage that reports three builds has not run.
@@ -43,7 +44,7 @@ MODES=("safe -O0::--safe=yes -O0"
        "fast -O3::--safe=no -O3")
 
 # A runtime negative aborts where the checks are live and exits 0 where they are not.
-RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_list insert_linked_item self_move wrong_type_must duplicate_pool_tags)
+RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_item self_move wrong_type_must duplicate_pool_tags)
 
 # A TIER 1 negative aborts in EVERY mode, including --safe=no -O3. Part 11.12 is
 # the one precondition the specification refuses to soften, and this is the only
@@ -178,10 +179,14 @@ for f in mailbox pool; do
         bad "src/$f.c3 is not 'module mtk::$f' — Part 17.2 is no longer compiler-enforced"
     fi
 done
-if grep -nE '\b(unlink_no_repair|@guard_insert)\b' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
-    bad "a container reaches around the NodeList surface"
+# `unlink_no_repair` went with the redesign — the queue and the stack have no
+# unrepaired removal left to reach for. What remains reachable is the insert
+# guard and the link fields themselves, and a container that touched either
+# would be maintaining chains by hand instead of calling the surface.
+if grep -nE '\b(@guard_insert|\.next[[:space:]]*=)\b' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
+    bad "a container reaches around the InnerQueue/InnerStack surface"
 else
-    ok "no container reaches around the NodeList surface"
+    ok "no container reaches around the InnerQueue/InnerStack surface"
 fi
 echo
 

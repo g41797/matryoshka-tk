@@ -35,10 +35,10 @@ fn void rule5_a_transfer_clears_the_slot() @test
     msg_init(&m);
 
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
     always_assert(s.is_full(), "fill left the Slot empty");
 
-    NodeList list;
+    InnerQueue list;
     list.push_back_slot(&s);
 
     always_assert(s.is_empty(), "Part 9.2 rule 5: the transfer did not clear the Slot");
@@ -72,11 +72,11 @@ fn void rule4_a_failed_move_leaves_the_slot_untouched() @test
     twin_init(&t);
 
     Slot s;
-    s.fill(twin_to_any(&t));
+    s.fill(twin_to_inner(&t));
 
     always_assert(msg_move(&s) == null, "a Twin was moved out as a Msg");
     always_assert(s.is_full(), "Part 9.2 rule 4: a failed move emptied the Slot");
-    always_assert(s.peek() == twin_to_any(&t), "a failed move changed the Slot's contents");
+    always_assert(s.peek() == twin_to_inner(&t), "a failed move changed the Slot's contents");
 }
 
 <*
@@ -89,7 +89,7 @@ fn void a_matching_move_returns_and_clears() @test
     msg_init(&m);
 
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
 
     always_assert(msg_move(&s) == &m, "the move did not return the item");
     always_assert(s.is_empty(), "the move did not clear the Slot");
@@ -107,7 +107,7 @@ fn void a_look_is_not_a_take() @test
     msg_init(&m);
 
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
 
     always_assert(msg_from_slot(&s) == &m, "from_slot did not find the item");
     always_assert(s.is_full(), "from_slot emptied the Slot");
@@ -125,11 +125,11 @@ fn void peek_and_take_differ() @test
     job_init(&j);
 
     Slot s;
-    s.fill(job_to_any(&j));
+    s.fill(job_to_inner(&j));
 
-    always_assert(s.peek() == job_to_any(&j), "peek found the wrong handle");
+    always_assert(s.peek() == job_to_inner(&j), "peek found the wrong handle");
     always_assert(s.is_full(), "peek emptied the Slot");
-    always_assert(s.take() == job_to_any(&j), "take returned the wrong handle");
+    always_assert(s.take() == job_to_inner(&j), "take returned the wrong handle");
     always_assert(s.is_empty(), "take did not clear the Slot");
     always_assert(s.take() == null, "take on an empty Slot invented a handle");
 }
@@ -150,9 +150,9 @@ fn void one_place_at_a_time() @test
 
     Slot a;
     Slot b;
-    NodeList list;
+    InnerQueue list;
 
-    a.fill(msg_to_any(&m));
+    a.fill(msg_to_inner(&m));
     always_assert(a.is_full() && b.is_empty() && list.is_empty(), "start state");
 
     list.push_back_slot(&a);

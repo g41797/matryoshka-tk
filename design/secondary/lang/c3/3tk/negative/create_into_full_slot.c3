@@ -14,7 +14,7 @@ module neg;
 import mtk;
 import std::io;
 
-struct Owned { int id; AnyNode node; Allocator alloc; }
+struct Owned { int id; Inner node; Allocator alloc; }
 
 fn int main()
 {
@@ -22,7 +22,7 @@ fn int main()
     msg_init(&m);
 
     Slot s;
-    s.fill(msg_to_any(&m));
+    s.fill(msg_to_inner(&m));
 
     if (catch mtk::owned::create{Owned}(mem, &s)) return 1;   // <-- the violation
 

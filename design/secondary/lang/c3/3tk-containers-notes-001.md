@@ -1,6 +1,6 @@
 # 3tk container notes (001)
 
-Stage 3TK-7 of [3tk-staging-plan-003.md](3tk-staging-plan-003.md).
+Stage 3TK-7 of [3tk-staging-plan-003.md](backup/3tk-staging-plan-003.md).
 
 What writing the mailbox and the pool taught, beyond
 [3tk-porting-proposal-001.md](backup/3tk-porting-proposal-001.md) and

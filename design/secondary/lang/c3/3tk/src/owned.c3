@@ -15,7 +15,7 @@
  So Part 20 decision 2 is answered per type, at the type's own choice, and not
  once for the whole port.
 
-     struct Msg { int id; AnyNode node; Allocator alloc; }
+     struct Msg { int id; Inner node; Allocator alloc; }
 
      alias msg_create  = mtk::owned::create{Msg};
      alias msg_release = mtk::owned::release{Msg};
@@ -62,7 +62,7 @@ fn void? create(Allocator a, Slot* slot)
     Type* item = alloc::new_try(a, Type)!;
     *(Allocator*)((char*)item + AOFF) = a;
     mtk::helper::init{Type}(item);
-    slot.fill(mtk::helper::to_any{Type}(item));
+    slot.fill(mtk::helper::to_inner{Type}(item));
 }
 
 <*

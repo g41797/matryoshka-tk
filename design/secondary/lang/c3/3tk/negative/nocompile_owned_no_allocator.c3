@@ -7,7 +7,7 @@
 module neg_nc;
 import mtk;
 
-struct Plain { int id; AnyNode node; }
+struct Plain { int id; Inner node; }
 
 alias bad = mtk::owned::create{Plain};
 

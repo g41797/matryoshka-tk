@@ -1,39 +1,63 @@
 <*
- The inner, the handle, the Slot, and the port's check macro.
+ The inner, the handle, the Slot, the link test, and the port's check macro.
 
- Matryoshka, the C3 port. Specification: matryoshka-specification-001.md.
- Design rulings: 3tk-porting-proposal-001.md, decisions D1 to D16.
+ Matryoshka, the C3 port. Specification: matryoshka-specification-002.md, as
+ the core redesign amends it — 3tk-core-redesign-proposal-002.md, R1 to R15.
+ Design rulings: 3tk-porting-proposal-004.md, decisions D1 to D16.
 
- inner  — AnyNode, the embedded structure. Part 4.
- handle — AnyHandle, a pointer to an inner, with no type knowledge. Part 10.1.
+ inner  — Inner, the embedded structure. Part 4.
+ handle — Handle, a pointer to an inner, with no type knowledge. Part 10.1.
  Slot   — a container of one handle, or of nothing. Part 9.
- item   — the outer struct, seen by the application.
+ outer  — the application's struct, the one that embeds an inner. A category,
+          never a type: no `Outer` is declared anywhere in this port.
 *>
 module mtk;
 import std::core::env;
 
 <*
- The inner. Part 4.2: exactly two parts, the links and the identity.
+ The inner. Part 4.2: exactly two parts, the linkage and the identity.
+
+ **One link, not two — R5.** `prev` is gone. Nothing in this port ever needed
+ arbitrary removal, arbitrary insertion, backward traversal or a take from the
+ back, and the audit that proved it is §1.1 of the redesign proposal.
 
  A third field is added only with a reason written down, because every item in
- the program pays for it. D3 refused an allocator here for that reason.
+ the program pays for it. D3 refused an allocator here, and R6 refused a
+ membership field.
 
- 24 bytes on a 64-bit target.
+ 16 bytes on a 64-bit target, down from 24. An observation; no code may depend
+ on it.
+
+ **The self-link invariant — R6b, and the redesign turns on it:**
+
+   An item on a chain has a non-null `next`; the last item of a chain points at
+   itself. An item on no chain has `next == null`.
+
+ Every insert and every removal in `queue.c3` and `stack.c3` maintains it, and
+ `is_linked` below reads it. It is what makes the link test EXACT, and an exact
+ link test is what let the O(n) membership walk of the old Part 8.6 be deleted
+ outright. It replaces retired invariant 16.
+
+ The price, stated plainly: `next` carries two meanings, and a walk that forgets
+ to test `n.next == n` loops forever rather than ending. Four sites carry it,
+ and each states the end test in its own body.
 *>
-struct AnyNode
+struct Inner
 {
-    AnyNode* prev;
-    AnyNode* next;
-    typeid   type;
+    Inner* next;
+    typeid type;
 }
 
 <*
  A handle. Transparent, by D4: there is one handle type and no typed variants.
 
- It is an alias and not a typedef, so it converts freely with AnyNode*. The
+ It is an alias and not a typedef, so it converts freely with Inner*. The
  reading aid of Part 10.1 is what it buys; the compiler learns nothing.
+
+ Named `Handle` and not `InnerHandle` — R1. The module prefix already says
+ whose handle it is, and D4's one-handle ruling reads better short.
 *>
-alias AnyHandle = AnyNode*;
+alias Handle = Inner*;
 
 <*
  The Slot. Distinct, by D5.
@@ -43,14 +67,14 @@ alias AnyHandle = AnyNode*;
  here and this Slot's holder is responsible for it.
 
  Distinct rather than an alias, so that Part 9.2 rule 1 has a compile-time
- ally: an AnyHandle does not implicitly become a Slot, and a Slot* does not
- implicitly become an AnyHandle*. The two-star confusion of conflict C4 does
- not typecheck.
+ ally: a Handle does not implicitly become a Slot, and a Slot* does not
+ implicitly become a Handle*. The two-star confusion of conflict C4 does not
+ typecheck.
 
  Part 9.2 rule 2 — a Slot starts empty — is the language's default state. A
  zero-initialized Slot is null, and there is no initializer to forget.
 *>
-typedef Slot = AnyHandle;
+typedef Slot = Handle;
 
 <*
  The outcome sets of Part 19, as C3 faults. D15.
@@ -62,6 +86,8 @@ typedef Slot = AnyHandle;
  The `interrupted` outcome of Part 2.9 is absent. D9 dropped interruption:
  C3 has no interruptible condition wait, and the SHOULD's own text permits the
  drop.
+
+ The redesign adds no fault and removes none. §7.
 *>
 faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN;
 
@@ -98,8 +124,50 @@ macro @check(#cond, $msg)
 
 <*
  True where the checking tiers of D6 are live. Tier 3 guards read this.
+
+ After the redesign the containers have no tier 3 guard left — the insert walk
+ was the only one, and R6b deleted it. `pool.c3`'s duplicate-identity scan at
+ creation is the port's last reader.
 *>
 const bool CHECKED = env::COMPILER_SAFE_MODE;
+
+// --- The link test, and the repair -------------------------------------------
+//
+// These live with the Inner and not with a container, because after R6b they
+// are statements about ONE item and no container is consulted to answer them.
+
+<*
+ The link test. Part 8.7, and **it is now exact** — R6b.
+
+ On a chain, `next` is never null: the last item points at itself. Off a chain,
+ `next` is always null. So this answers *is this item on some chain* with no
+ false negative and no false positive, in O(1), through the public surface.
+
+ The blind spot Part 8.7 used to be a MUST to document — an item ALONE on a
+ list reporting false — is closed, and it cost no field. D12's accepted hole is
+ gone with it, and so is Part 8.6's O(n) walk: a check that refuses an item on
+ ANY chain catches everything the same-container walk caught and more.
+
+ What it does not catch, stated so nobody claims more: a chain corrupted by
+ code that reached around the container surface. It is exact for every path
+ through the public surface.
+*>
+fn bool is_linked(Handle h) @inline => h != null && h.next != null;
+
+<*
+ The repair. Part 8.8.
+
+ After a removal the item's link is cleared, so it passes the link test and can
+ be inserted again. Every removal in `queue.c3` and `stack.c3` calls this for
+ the caller.
+
+ One field to clear now, not two. The wording of Part 8.8 is unchanged.
+*>
+fn void reset(Handle h) @inline
+{
+    if (!h) return;
+    h.next = null;
+}
 
 // --- The Slot's reading shape -----------------------------------------------
 //
@@ -110,29 +178,29 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
 <*
  Part 9.1: empty means the item is elsewhere.
 *>
-fn bool Slot.is_empty(&self) @inline => !(AnyHandle)*self;
+fn bool Slot.is_empty(&self) @inline => !(Handle)*self;
 
 <*
  Part 9.1: full means the item is here, and this Slot's holder is responsible.
 *>
-fn bool Slot.is_full(&self) @inline => (AnyHandle)*self != null;
+fn bool Slot.is_full(&self) @inline => (Handle)*self != null;
 
 <*
  Look at the handle without taking it. The Slot is unchanged.
 
  Null on an empty Slot.
 *>
-fn AnyHandle Slot.peek(&self) @inline => (AnyHandle)*self;
+fn Handle Slot.peek(&self) @inline => (Handle)*self;
 
 <*
  Take the handle out and clear the Slot. Part 9.2 rule 5: a transfer clears it.
 
  Null on an empty Slot, and the Slot stays empty.
 *>
-fn AnyHandle Slot.take(&self) @inline
+fn Handle Slot.take(&self) @inline
 {
-    AnyHandle h = (AnyHandle)*self;
-    *self = (Slot)(AnyHandle)null;
+    Handle h = (Handle)*self;
+    *self = (Slot)(Handle)null;
     return h;
 }
 
@@ -144,7 +212,7 @@ fn AnyHandle Slot.take(&self) @inline
 
  @param h : "the handle to place; must not be null"
 *>
-fn void Slot.fill(&self, AnyHandle h) @inline
+fn void Slot.fill(&self, Handle h) @inline
 {
     @check(h != null, "Slot.fill with a null handle");
     @check(self.is_empty(), "Part 9.2 rule 1: never overwrite a full Slot");
@@ -159,25 +227,26 @@ fn void Slot.fill(&self, AnyHandle h) @inline
  Part 4.4 — one inner per outer — is checked here too, and it is the only
  place it can be checked.
 
- Both messages name the offending type, which is Part 7.4's last clause.
+ Both messages name the offending type, which is Part 7.4's last clause, and
+ both now name `Inner` — R1.
 
  A `return` inside `$foreach` does not end compile-time iteration, so the
  count accumulates and the assertions run afterwards.
 
  @param $Type : "the outer type"
 *>
-macro usz node_offset($Type)
+macro usz inner_offset($Type)
 {
     var $off = -1;
     var $seen = 0;
     $foreach $m : $Type::members:
-        $if $m.type == AnyNode:
+        $if $m.type == Inner:
             $off = $m.offset;
             $seen = $seen + 1;
         $endif
     $endforeach
-    $assert $seen != 0 : "type " +++ $Type::name +++ " has no AnyNode field; it cannot be a Matryoshka item";
-    $assert $seen == 1 : "type " +++ $Type::name +++ " has more than one AnyNode field; Part 4.4 allows exactly one";
+    $assert $seen != 0 : "type " +++ $Type::name +++ " has no Inner field; it cannot be a Matryoshka item";
+    $assert $seen == 1 : "type " +++ $Type::name +++ " has more than one Inner field; Part 4.4 allows exactly one";
     return $off;
 }
 

@@ -7,6 +7,660 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-23 — 3TK-11: the core redesign, in code
+
+Written: [3tk-core-redesign-notes-001.md](3tk-core-redesign-notes-001.md), and
+the port itself. `3tk-status.md` updated. `../common/` untouched, as plan 006
+required. No `git` command run.
+
+**All four builds green — 59 checks, 0 failures. Both sanitizers clean. 85
+tests, up from 77.**
+
+The stage had a specification and did not have a decision to make: R1 to R15,
+ruled question by question the same day. What follows is what the code taught,
+not what it chose.
+
+**`AnyNode` → `Inner`, `AnyHandle` → `Handle`, `NodeList` → `InnerQueue` and a
+new `InnerStack`.** `any.c3` became `inner.c3`; `list.c3` became `queue.c3` and
+`stack.c3`; `t_list.c3` became `t_queue.c3` and `t_stack.c3`. The mechanical
+half was a single pass and the compiler caught every survivor, because none of
+these names is a string. **The real work was five files' worth of doc comments,
+every one of which argued for a shape that no longer exists.**
+
+**The self-link has six sites, not four.** 002 §3.2 counted four — `pop`,
+`push`, `append_queue`, `iter` — and that count was for the queue alone. With
+the stack: `InnerQueue.push_back`, `InnerQueue.pop_front`,
+`InnerQueue.append_queue`, `InnerQueueIterator.next`, `InnerStack.push`,
+`InnerStack.pop`. All six are three lines or fewer, so 001's objection to
+mechanism B — three meanings across eleven sites — stays answered.
+
+**Two of the six are where a translation of the old code goes wrong.**
+`pop_front` has to recognise the sole item by `head == tail`, because with the
+self-link there is no null `next` anywhere on a chain and the old `if (h.next)`
+would read a self-pointer as a real successor. And the walker has to end at
+`n.next == n`, or it yields the last item for ever. Every walk in `t_queue.c3`
+carries a count assertion for that reason: **a hang is a worse test failure than
+a wrong answer, because it reports nothing.**
+
+**Invariant 5 was the one to get wrong, and 002 §4.4 said so in advance.** The
+leaver's signal in `receive`'s timeout path used to read `self._queue`, and the
+mechanical rewrite is `_regular` — which leaves a queued out-of-band item with
+nobody woken. It is written as a named predicate, `Mailbox.has_queued()`, over
+both queues. **No test catches this one**; a missed signal is a timing defect
+and the suite does not provoke it. What protects it is the name and the comment,
+and that is stated rather than papered over.
+
+**Three corrections to 002, in details rather than in decisions.**
+
+- **The stack has five operations, not six.** §5.1's own table lists exactly
+  five — `push`, `push_slot`, `pop`, `is_empty`, `len` — and the sentence above
+  it says six. Twelve operations replace Part 8.2's sixteen; eleven of the
+  sixteen leave the port, not nine.
+- **Tier 2 does not reach a fast build.** §10.3 says the rewritten negative
+  "now aborts in a fast build too, because the check is tier 2". `@check` under
+  `--safe=no` expands to nothing at all — the whole of D6, and of 3TK-4's Q11
+  finding. What R6b bought is the exact check at O(1) in an ordinary safe build,
+  where before it cost an O(n) walk per insert. The abort was always there where
+  the checks are live.
+- **Two `put_all` tests were converted rather than deleted.** §10.2 expected
+  both gone. §6 had named the counter itself — *the caller now writes the loop,
+  with a chance of getting the refusal case wrong and losing items quietly* —
+  and deleting the only tests of the refusal path is the wrong answer to a risk
+  the proposal raised in writing. `t_pool.c3` grew `put_batch`, the seven-line
+  loop `Pool.put`'s doc comment now recommends, and both tests point at it. The
+  behaviour under test did not change; the code under test moved from the port
+  to the caller, so the test moved with it.
+
+**The layering check had to be rewritten, not renamed.** `run-builds.sh`
+guarded Part 17.2 by grepping the containers for `unlink_no_repair|@guard_insert`.
+`unlink_no_repair` no longer exists — with no `remove` and no `pop_back` there
+is no unrepaired removal to reach for. **Grepping for a symbol that cannot
+appear is a check that passes for ever having proved nothing**, which is the
+exact failure `run-builds.sh` already records for `release_open_pool`. It now
+greps for `@guard_insert` and for any assignment to a `.next` field.
+
+**Two tests were supposed to fail and did.** `t_identity.c3` and `t_owned.c3`
+both assert the inner's size against `2 * uptr::size + typeid::size`. They exist
+so a field cannot be added to the inner without someone deciding to, and they
+were the first thing the stage had to change — to `uptr::size + typeid::size`,
+16 bytes.
+
+**Part 18 re-walked: still thirty-four rows.** Row 16 retired — *the link test
+is not a membership test*, which it now is — and the self-link invariant took
+its place. Row 22 **kept**, against plan 006's expectation that two queues would
+delete it: the anchor was the mechanism, the ordering is a promise. Row 13
+strengthened, because insert is O(1) in checking builds too. Rows 1 to 12, 18,
+19, 21 and 23 to 33 untouched, and section 6.2 — creation is a transaction — is
+the one a rewrite loses quietly and did not: both `create` functions keep every
+`defer catch` unchanged.
+
+**One warning for the next port.** A blind rename of `Any` inside identifiers
+turned `remove_from_anywhere` into `remove_from_innerwhere`, in a test that was
+about to be deleted anyway. Rename on word boundaries, and read the diff.
+
+**What this stage did not do, and the plan is why:** `../common/` is
+untouched, so **the port is now ahead of the specification it is written from**.
+A port written from `matryoshka-specification-002.md` today would reproduce
+`prev`, the general list and the anchor. R14 rules that 003 is cut; it is still
+not scheduled, and it is the strongest candidate for what runs next.
+`3tk-porting-proposal-004.md` is not edited either — §10.4 leaves it as the
+record of what was built.
+
+**One open question this stage found and did not answer.**
+[3tk-who-supports-slot.md](3tk-who-supports-slot.md), a note from the owner —
+at `3tk/src/` while the stage ran, moved up to the folder root by the owner
+immediately after — argues the containers should not support the Slot idiom at
+all: that
+`push_back_slot` and `push_slot` belong on `Mailbox` and `Pool`. 3TK-10 did not
+rule on it and 3TK-11 did not act on it. It is in the status file's open
+questions now, because the note uses names the redesign refused and a reader who
+finds it cannot tell whether it is current.
+
+---
+
+## 2026-08-23 — the redesign is ruled, question by question, and proposal 002 is cut
+
+Written: [3tk-core-redesign-proposal-002.md](3tk-core-redesign-proposal-002.md).
+001 to `backup/`, links corrected. `3tk-status.md` updated. **No code touched.**
+
+The owner asked for the questions one at a time rather than as a list, and that
+is why three decisions moved. A list would have been accepted or refused whole.
+
+**R6 refused — no membership field.** 001 wanted a third field, `void* chain`,
+at the same 24 bytes `prev` cost. The owner said: check what is possible with
+`next` alone. It is. **The last item of every chain points at itself**, so
+`is_linked` is `next != null` and it is **exact** — no blind spot, and it still
+deletes `contains` and the O(n) walk on every insert. `Inner` drops to two
+fields and 16 bytes.
+
+**001's argument against the self-link was measured against the wrong
+container.** It said a terminator gives `next` three meanings across eleven
+sites in `list.c3`. Ruling 2 abolishes that container: with nine operations
+deleted, about four sites touch `next`. The field bought one query — *is it on
+__this__ container* — whose only caller, `remove`, is deleted.
+
+**R11 has a reason now, and it is not performance.** 001 recorded the pool's
+reversal to last-in first-out as legal-but-arbitrary under Part 11.10. The
+owner's reason is **defect surfacing**: under first-in first-out, an item given
+back sits at the back of the free list, so code still keeping a pointer to it
+writes to an item nobody has re-taken and nothing conflicts — and if the put
+hook did not reset the contents, the stale writer sees data that still looks
+plausible. Under last-in first-out the **next `get` gives that item to a new
+owner**, so the two writers meet immediately and the defect appears next to its
+cause. Same reasoning as not quarantining freed memory. It goes in the doc
+comment on the pool's stack, because a later reader will otherwise take the
+stack for an arbitrary choice.
+
+**R15 — `put_all` is dropped**, and it retires R4. The owner said it looked
+cumbersome and asked for a real opinion rather than a defence. It is: `Pool.put`
+in a loop, inherited from `pool.zig:394`, no batching and no atomicity. The
+claim that it encodes a fiddly loop once does not survive checking — **it does
+not spare the caller the difficult case, it gives the difficult case back in a
+different shape**, because a caller whose pool closed mid-batch still keeps a
+partly-emptied queue. Its price was a container operation nothing else needs, a
+MUST clause in Part 11.8 and the most awkward contract in the toolkit. Ruling
+2's own principle applies to it, and 001 had applied that principle to
+`NodeList` and not to this. **`InnerQueue` reaches seven operations and is
+genuinely minimal.**
+
+**R8, R9, R12, R13, R14 accepted as proposed.** The give-back order is one
+sentence for both containers. Invariant 22 is kept and only the anchor goes.
+`Pool.close` empties every bucket into **one** `InnerQueue`, flattened — the
+hook never sees buckets — and **no order is promised**, because the hook's loop
+is the same either way. There is no `InnerList`. The specification moves to 003,
+which is ruled and not scheduled.
+
+**A banned word, and a scan scope nobody had noticed.** The owner caught one of
+`rules-049.md` Part 5's banned words in 001. Part 5's own scan skips
+`design/secondary/`, so **no scan has ever covered this folder** — every
+document in it was written unchecked. A full scan against the whole list found
+nine hits, all in 001: three of that word, four custody-sense uses of two
+others, two AI-ish words. `3tk-status.md` and `3tk-log.md` were clean. 002 is
+clean against the whole list. 001 was left as it is, being a record.
+
+Four builds green and sanitizers clean throughout — nothing in `3tk/` moved.
+
+**3TK-11 has no open question in front of it.**
+
+---
+
+## 2026-08-23 — 3TK-10: the core redesign, as a proposal
+
+Written: [3tk-core-redesign-proposal-001.md](backup/3tk-core-redesign-proposal-001.md),
+726 lines. **No code touched.** Four builds green, 59 checks, 0 failures, and
+the sanitizers clean — trivially, because nothing in `3tk/` moved.
+
+The stage read the owner's two documents against `3tk/src/` rather than on
+trust, the way 3TK-8 read its review. That reading is the whole value of the
+stage and it disagreed with its inputs in three places.
+
+**The required-operation audit passes.** Every one of `NodeList`'s sixteen
+operations was grepped for callers. `insert_before`, `remove`, `pop_back`,
+`front` and `back` **have no caller in `src/` at all** — only `t_list.c3` uses
+them. `insert_after` has exactly one, the out-of-band insert. `prev` has exactly
+one job, `unlink_no_repair`, which serves two dead operations. Nothing needs
+arbitrary removal, arbitrary insertion or backward traversal. Ruling 5 is safe.
+
+**The out-of-band semantics are Meaning A**, absolute priority, FIFO within each
+class — `mailbox.c3:143-159`. `3tk-to-fifo-lifo-single-001.md` §4 refused to
+choose two queues before that was measured, and it was right to. Two queues
+reproduce it exactly. `t_mailbox.c3:139-162` does not change.
+
+**The pool is FIFO today, not LIFO** — `pool.c3:263`, `:337`, `:425`. Ruling 3
+is therefore a **behaviour change**, not a container swap. It is legal: Part
+11.10 promises no order, and no test asserts the current one. Recorded rather
+than discovered later.
+
+**Consequence 2 has a better answer than the four the plan listed.** With one
+link the last item of every queue has `next == null`, so the double-insert guard
+fails exactly where it matters. The plan named four mechanisms. The stage
+proposes a fifth reading of the same choice: **`prev` is deleted and a `void*
+chain` field takes its place.** The inner stays three words and 24 bytes, the
+check becomes exact — no blind spot, and membership is `chain == container` in
+O(1) — and **`contains` and the O(n) walk on every insert are deleted outright.**
+Part 8.7's own last bullet says a port that marks membership properly is
+strictly better and pays a field for it; ruling 5 is what makes the field free.
+So the redesign ends up **stronger** than what it replaces, which is not how
+consequence 2 was framed.
+
+**Invariant 22 should not be deleted**, and the plan said it would be. The
+*anchor* dies. The *ordering* is a promise to callers, is asserted by a test,
+and is unchanged by two queues. Delete the mechanism clause of Part 11.3; keep
+the row.
+
+**The close order:** out-of-band first, then ordinary, FIFO within each — for
+`close` and `receive_all` both, stated as one rule. It is the only order that
+changes nothing, because the single queue already produces it.
+
+The cost: every source file changes, about 20 of 77 tests are rewritten and the
+rest renamed, and one negative — `insert_twice_same_list` — gains coverage
+rather than losing it, since its check moves from tier 3 to tier 2 and fires in
+a fast build too.
+
+**Consequence 4: the recommendation is to move the specification to 003**, not
+to declare a 3tk deviation. Nothing in the redesign turns on a C3 capability, so
+it does not belong in a C3 document — and dtk has run no stage, so the cost
+lands where nothing is built. Nine Parts would move; §8.1 names each with its
+marking. `../common/` was not edited. The owner rules.
+
+Fourteen decisions, R1 to R14. Seven are the stage's own. **R6, the `chain`
+field, is the one 3TK-11 cannot start without.**
+
+3TK-11 stays declared and not authorized.
+
+---
+
+## 2026-08-23 — the core redesign is ruled, and 3TK-10 will design it
+
+Written: [3tk-staging-plan-006.md](3tk-staging-plan-006.md), adding **3TK-10**.
+Plan 005 to `backup/`, links corrected. `3tk-status.md` updated. **No code
+touched and no stage run** — this entry exists so the direction survives a
+context clear, because until now it lived only in a conversation.
+
+Two documents arrived in the folder from the owner:
+[3tk-naming-001.md](3tk-naming-001.md), 476 lines, proposing Outer/Inner naming,
+and [3tk-to-fifo-lifo-single-001.md](3tk-to-fifo-lifo-single-001.md), 1058
+lines, arguing that `NodeList` should not be the centre of the design. The owner
+then gave the direction in five lines, and it is the input to 3TK-10 rather
+than a suggestion to be weighed:
+
+1. Drop `Any*` and every inherited ztk name — **Outer / Inner**.
+2. Stop reproducing Zig's `DoublyLinkedList`. No general-purpose list.
+3. **FIFO for the mailbox, LIFO for the pool.**
+4. **Two FIFOs in the mailbox**, ordinary and out-of-band.
+5. **One link, not two.** `next` only.
+
+This is the largest change since the port existed, and it is bigger than 3TK-8
+and 3TK-9 together. It deletes most of Part 8, retires `NodeList`, changes the
+inner that Part 4.2 fixes, and removes D14's anchor. So **3TK-10 ends at a
+proposal and does not touch `3tk/src/`** — the code is 3TK-11.
+
+**The owner confirmed the sequence and asked for it on disk**, so plan 006
+carries both: 3TK-10 authorized, **3TK-11 declared and not authorized**, running
+only after the ruling on the proposal. Writing the second stage down now costs
+nothing and fixes the order against anyone's memory of the conversation. That is this folder's habit and there is no reason to break it for
+the one change most likely to need arguing about first.
+
+Four consequences are written into the stage so a cold session does not have to
+find them:
+
+- **Most of Part 8 goes.** `remove`, `insert_after`, `insert_before`, `pop_back`
+  have no home in a FIFO or a LIFO, and several Part 18 invariants exist only to
+  guard them.
+- **The double-insert guard weakens, and this is the sharp one.** `is_linked`
+  asks `prev != null || next != null`. With one link, the last item in a queue
+  has `next == null` and is **indistinguishable from an item on no queue at
+  all** — so the check fails exactly where it matters. The stage must choose a
+  mechanism rather than discover the problem later.
+- **Two FIFOs delete the anchor and invariant 22** — a real simplification — but
+  raise a question the current design never had: what order `close` returns the
+  two queues in.
+- **It is a specification change, not a port change.** Parts 4, 8 and 11 are in
+  `../common/` and dtk and otk read them. The stage recommends; the owner rules.
+
+The port as it stands is untouched and green — four builds, 59 checks, 77 tests,
+sanitizers clean. Nothing above is stale yet. It is about to be.
+
+---
+
+
+## 2026-08-23 — 3TK-9: the sanitizer found the tests, not the port
+
+Written: [3tk-sanitizer-notes-001.md](3tk-sanitizer-notes-001.md),
+`3tk/run-sanitizers.sh`. Changed: `3tk/test/t_pool.c3`. Plan versioned to
+[005](backup/3tk-staging-plan-005.md); 004 moved to `backup/` with links corrected.
+Four builds green, 59 checks. Sanitizers clean, 3 runs, 0 findings.
+
+The last item on the candidate list that could still find a defect in the port
+rather than in a document. Plan 003 asked for the concurrency tests "under
+whatever sanitizer the toolchain offers" and nobody had measured what that was.
+Three stages later, it found something on the first run.
+
+**The tool was there and the machine was not.** c3c 0.8.3 has
+`--sanitize=address|memory|thread`. The first attempt failed at link — *cannot
+find /usr/lib64/libtsan.so.2.0.0* — and the temptation was to write that down as
+a c3c limitation. Two lines of C said otherwise: plain `cc -fsanitize=thread`
+fails identically, so Fedora simply does not have the runtimes installed. clang
+carries its own, and `c3c --cc clang` points the link at it. No install, no
+root, nothing changed on the machine. A stage that needs the owner to install
+packages is a stage that does not run on a fresh checkout.
+
+**Then: `ThreadSanitizer: reported 4 warnings`.** All four in `TestHooks` —
+`gets++`, `puts++` and the two `last_*_count` writes — with three producers and
+three consumers on one pool. The frames that appear in `src/` are `pool.c3:284`
+and `:396`, the hook call sites, where the pool has **already unlocked**. The
+port put itself in the stack trace by obeying Part 12.3.
+
+**The contract the tests broke is the port's own**, and it is written into
+`PoolHooks`'s doc comment as a contract rather than a warning: *hooks run
+outside the mutex, several at once, and a hook that touches shared state
+protects it itself.* `TestHooks` did not. It had been racing since 3TK-7 while
+every build reported green in four modes — because a data race is precisely the
+defect a passing test suite cannot see. The stage justified itself on its first
+run, and not in the way it expected: it did not find a bug in the toolkit, it
+found the toolkit's own tests failing to keep the toolkit's own rule.
+
+**The wrong fix was one line and would have passed.** Hold the pool's mutex
+across the hook call and all four warnings vanish — along with Part 12.3, which
+exists to keep application code from running under a toolkit lock. A sanitizer
+says *there is a race*. It does not say *which side is wrong*, and that
+judgement is not the tool's. The counters became `Atomic{usz}`, the same
+mechanism the port uses for `_closed_fast`, in the hook where the specification
+puts the responsibility.
+
+After the fix: zero warnings on `thread safe -O0`, zero on `thread fast -O3` —
+the mode where asserts are gone and the optimizer is most aggressive, and the
+one a race would most likely survive into — and AddressSanitizer clean.
+
+**The harness stayed honest.** `run-sanitizers.sh` is a second script, not a row
+in `run-builds.sh`, because the gate requires `c3c` and nothing else and that
+property is worth more than the coverage. It skips loudly and **exits 2** when
+its compiler is absent — *a skip is not a pass* — and it separates *did not
+build* from *found something*, which is 3TK-8's harness lesson applied before it
+could cost anything twice.
+
+**One fact nine stages had missed.** `c3c --help` carries `--test-noleak:
+Disable tracking allocator and memory leak detection for tests.` Leak detection
+has been **on by default** in every `c3c test` run this port has ever made, and
+no document said so. It takes nothing from 3TK-8's `t_alloc.c3` — that finds
+leaks on paths the tests cannot otherwise reach — but a port reading these notes
+should know the default exists before building its own.
+
+*Advice on clear: clear.* The stage is closed and the notes carry everything.
+
+---
+
+## 2026-08-23 — 3TK-8: the review answered, and a leak nobody could reach
+
+Written: [3tk-porting-proposal-004.md](3tk-porting-proposal-004.md), the design
+of record. `3tk/test/t_alloc.c3`, new. `3tk/src/mailbox.c3` and
+`3tk/src/pool.c3`, changed. Proposal 003, the 003 review and addendum 001 moved
+to `backup/`, links corrected in place. Four builds green, 59 checks, 0
+failures, 77 tests.
+
+The input was `3tk-porting-proposal-003-review.md`: 28 items, about design and
+implementation rather than prose. It was read against `3tk/src/` before anything
+was accepted, and that audit changed most of the verdicts — five of its items
+were already true in the code, three of those in better shape than it assumed.
+
+**D1's argument was wrong for three versions, and its ruling was right the whole
+time.** That is why nobody checked it. D1 said hiding the container internals
+must cost Part 11.1's MUST, having weighed two shapes; the review found a third
+that keeps `Pool` an item and hides only the operational state. The review put
+the confusion precisely: Part 11.1 requires *the container is itself an item*,
+and D1 assumed that implies *every byte of its state is inside the public
+struct*. It does not.
+
+The owner ruled the same day, and the reason is better than the one it replaced:
+*"I don't like wars with language. If it does not support the feature + I need
+additional allocation — better not change code and add comment and update
+docs."* Nine measurements now stand behind it. **M5 is the one that decides the
+section** and it came from the owner asking the sharpest version of the
+question — restrict fields, not functions, via a `@private` fields-only struct
+inlined into the container. Six probes say C3 0.8.3 does not deliver it at any
+price: `@private` on a field is refused outright, on a struct it hides the type
+*name* only, and `inline` makes it worse by lifting the members into the outer's
+namespace. So no shape hides container state while leaving it inside the object.
+Hiding costs an allocation per container and buys a convention, not an
+enforcement. The port declines, on the record, on cost — **not** on Part 11.1.
+
+**One real defect, and it is the kind that survives reviews.** Neither
+`Pool.create` nor `Mailbox.create` cleaned up after a partial failure. The pool
+allocated itself, a mutex, a condition variable, then the bucket array — and a
+failure at the last leaked all four. Both are transactions now, `defer catch`,
+in the shape `std::threads::channel` uses for the same problem.
+
+Two stages and two reviews walked past it, and the reason is worth keeping: the
+leak lives in an error path no ordinary test takes, because on Linux `new_try`
+does not fail. The port had no way to make an allocator fail. So 3TK-8 built
+one, in `test/t_alloc.c3` — its own file, on the owner's instruction, because
+`common.c3` is the shared fixture every other test compiles against.
+
+**The test was checked by sabotage, not by passing.** Removing the pool's
+`defer catch` lines turns the suite red. Removing the mailbox's leaves it green
+— its only acquisition through the caller's allocator is the object itself, so
+that path cannot be provoked at all. Both facts are written at the test site.
+A test whose failure is impossible is worse than no test, and the honest thing
+is to say which is which rather than count four tests and call the fix covered.
+
+**Section 6 is the durable half of this stage.** Six implementation invariants
+the port already honoured and no document stated: the pre-lock atomic as a hint
+that may reject but never authorize; creation as a transaction; `close` is not
+`destroy`; the hook unlock/relock contract and the staleness of everything read
+before it; no reference into bucket storage across a hook, with `Pool.get_wait`
+named as the one safe exception and why; and the lock order as a statement about
+today rather than a timeless property. Plus the `AnyHandle`/`Slot` signature
+rule, audited against every public signature, with no violation found — and M4
+under it, because a method cannot attach to a pointer alias, so C3 will only let
+one of the two be an object.
+
+Deferred with the reason written down rather than dropped: the `NodeList`
+mutation core. Removal is already centralized in `unlink_no_repair`; the four
+insert sites are different shapes and collapsing them buys less than it costs
+while every test is green. Rejected: the opaque `char[N]` storage, for the
+reasons the review itself gives against it.
+
+Four text corrections closed the drift the review found: the Part 4.2 mapping
+row and D12 still said "a third field" when the inner has three, the 24 bytes
+read as an invariant in one row when it is an observation, and Part 15.2's lock
+statement was timeless where it should be current.
+
+**No decision moved.** Sixteen decisions, four versions, and D1 reaffirmed after
+its argument was found defective — which is the distinction this folder keeps: a
+ruling and the reason for it are not the same thing, and only one of them was
+wrong.
+
+*Advice on clear: clear.* The stage is closed, the documents carry everything,
+and nothing in context is needed by the candidates for a 3TK-9.
+
+---
+
+
+## 2026-08-23 — 3TK-8's four questions, all ruled before the stage started
+
+The owner answered every open question in the stage, one at a time, so 3TK-8
+begins with nothing outstanding. The rulings, and what each changed:
+
+**D1 stands, and the reason is replaced.** Public direct representation, and no
+code changes for the sake of hiding. The owner's reason is better than the one
+the document currently carries — *no wars with the language.* C3 0.8.3 enforces
+no field privacy at any price (addendum 001, M5), so the port declines to buy an
+allocation and a lifetime rule per container for a boundary the language will
+not keep. A comment marks it instead. The `Impl*` split is rejected on cost, on
+the record, and **not** on Part 11.1 — which is the correction `003-review`
+asked for, reached from the other direction.
+
+**The capability answers live in proposal 004 only.** `c3-capabilities-001.md`
+is the 3TK-4 output and is not amended; no 002 is cut. One home for the
+measurements, beside the decision they support.
+
+**The failing-allocator test gets built, in a file of its own.** The owner's
+advice, and it is better than the plan's first draft: `3tk/test/t_alloc.c3`
+rather than an addition to `common.c3`. `common.c3` is the shared fixture every
+test file compiles against, and an allocator that fails on purpose does not
+belong in it. The allocators also outlive this stage — counting, failing, an
+arena later — and a file named for the subject is where the second one goes
+without a discussion. Verified while writing it down: `project.json` declares
+`"test-sources": [ "test" ]`, so the harness needs no edit at all.
+
+**The 003 review moves to `backup/`** once 004 answers it, as the first review
+did — and only after 004 carries what a current reader needs from it. Until
+then it is input and stays live.
+
+Two of the four rulings changed the plan rather than confirming it: the
+dedicated test file, and D1's replacement reasoning. Both are in
+`3tk-staging-plan-004.md`, and the questions are kept with their answers because
+the reasons are part of the design record.
+
+Still no code touched. `3tk/run-builds.sh` last reported four builds green, 59
+checks, 0 failures.
+
+---
+
+## 2026-08-23 — D1 ruled again, and the reason replaced
+
+The owner closed the review's central question. D1's **ruling** stands — public
+direct representation, `Mailbox` and `Pool` as public structs with their state
+stored directly in them — and **no code changes for the sake of hiding.**
+
+The owner's words, because the reason is better than the one D1 currently
+gives: *"I don't like wars with language. If it does not support the feature and
+I need an additional allocation — better not change code, add a comment and
+update the docs."*
+
+That is the whole argument, and it is stronger than what it replaces. 003 says
+Part 11.11 is skipped because the only mechanism that delivers it costs Part
+11.1's MUST. That was never true, and both `003-review` and addendum 001 M5 show
+why. What is true is narrower and harder: **C3 0.8.3 enforces no field privacy
+at any price.** Not through `@private` on a struct, which hides the type name
+and leaves every field reachable. Not through `inline`, which lifts the fields
+into the outer's namespace and makes it worse. Not through `@private` on a
+field, which the compiler refuses outright. The shapes that *would* hide the
+state — the `Impl*` pointer, the opaque `char[N]` — all work by moving it out
+of the object, and they cost an allocation and a lifetime rule per container.
+
+So the port pays nothing for a boundary the language will not keep, and marks
+it with a comment instead. Reachable fields plus a documented convention, with
+the price visible. The `Impl*` split is rejected **on the record and on cost**,
+not on Part 11.1 — which is exactly the correction the review asked for, now
+arrived at from the other direction.
+
+3TK-8 carries it: D1's argument rewritten, the field-role comments written, the
+documents updated, and no signature moved. One of the stage's four open
+questions is closed; three remain and none blocks it.
+
+---
+
+## 2026-08-23 — how C3 binds methods, and what it will not hide
+
+Written: [3tk-porting-proposal-addendum-001.md](backup/3tk-porting-proposal-addendum-001.md).
+Not a stage and not a revision — an addendum. It moves no decision, changes no
+code, and 3TK-8 folds it into proposal 004.
+
+The owner asked whether C3 supports calling `functionCall(handle, ...)` as
+`handle.functionCall(...)`. Four probes against `c3c` 0.8.3 answered it, and
+the answer was worth keeping.
+
+**No.** C3 has no UFCS: a free function called with dot syntax is a hard error.
+What it has is method functions, `fn void Type.f(&self)`, where the receiver is
+written into the declaration. Every dotted call in `3tk/src/` is one of those.
+D is the language that does the rewrite, which is where the question came from.
+
+Two things fell out that the folder had never written down. A method may be
+declared on a type from **another** module — so no argument about the split
+representation may claim it would force methods into one module. And methods
+attach to named types and **never to a pointer alias**: `alias AnyHandle =
+AnyNode*` can carry no methods, while `typedef Slot` can. The asymmetry between
+handle and Slot in every signature in the port is therefore **partly forced by
+the language**, not purely a design choice — which gives D5 a second leg and is
+the fact the review's §14 signature rule should be stated with.
+
+The probes also reproduced F2 of the toolkit notes from the compiler's own
+mouth: *"'@public' modifiers are ignored for method declarations."*
+
+**M5 came from a second question the same day, and it is the one that matters
+to D1.** The owner wanted field access restricted without restricting
+functions: a `@private` fields-only struct, `inline` inside the public
+container, transparent to `mtk`'s own methods and closed to an application. Six
+probes say C3 0.8.3 does not deliver it. `@private` on a struct is a
+**type-name** rule — another module cannot *name* `MailboxInternals`, which is
+real — but every field inside it stays readable, writable and addressable
+through the outer, and the write lands. `@private` on a field is refused
+outright: *"'@private' cannot be used here."* There is no field-level privacy in
+the language.
+
+`inline` makes it worse rather than better. It lifts the hidden fields into the
+outer's namespace, so `mb.closed` needs no `.guts` at all. And `inline` must be
+the **first** field, which puts it in competition with `AnyNode node` for
+position — survivable, since D2 already lets the inner sit anywhere, and the
+only part of the idea that was.
+
+The consequence is that the review's central dichotomy is now standing on
+measurement instead of inference. **No shape hides container state while
+leaving it inside the object.** Hiding costs an indirection — and it does not
+cost Part 11.1. That is exactly what `003-review` argued, and D1's rewrite in
+proposal 004 can now say it with the probes behind it.
+
+Nothing was touched but documents. `3tk/run-builds.sh` last reported four
+builds green, 59 checks, 0 failures.
+
+---
+
+## 2026-08-23 — a second review, and the plan versioned to 004 for it
+
+Written: [3tk-staging-plan-004.md](backup/3tk-staging-plan-004.md), adding **3TK-8**.
+Plan 003 moved to `backup/` and every link naming it corrected in place.
+`3tk-status.md` updated. Nothing of 3TK-8 has run — no measurement, no
+document, no code.
+
+The input is `3tk-porting-proposal-003-review.md`, which arrived in the folder
+untracked. It reads proposal 003 for **design and implementation** and says so
+in its own scope section: *not advice about improving the document structure or
+prose*. That is a different instrument from the first review, and it earned a
+different answer.
+
+**Why a stage and not a revision.** Proposal 003 came out of a revision — the
+owner accepted the decisions, the review was answered, no plan version was cut.
+This one touches `3tk/src/`, adds tests, and needs a measured answer from `c3c`
+before its central paragraph can be written. Measurement plus code is
+stage-shaped, and the alternative is an unrecorded revision that quietly
+rewrites the port. So it got a row, and the plan got a version.
+
+**The audit came before the plan.** The previous review was written against the
+proposal text and had never opened `3tk/src/`, which is why most of its findings
+were text drift. This one makes claims about the code, so every claim was
+checked against the code before the stage's scope was fixed. What that changed:
+
+*The headline is real.* D1 weighs two shapes — public fields, or
+`typedef Pool = void` — and concludes that hiding must cost Part 11.1's MUST. A
+third shape exists: `struct Pool { AnyNode node; PoolImpl* impl; }`. `Pool` is
+still the type the application names, still embeds `AnyNode`, still crosses
+through `mtk::helper{Pool}`, still sits on a `NodeList`. The review separates
+two requirements D1 collapses — *the container is itself an item*, which Part
+11.1 requires, and *every byte of its state is in the public struct*, which D1
+assumes follows. It does not follow. The ruling stays; the argument goes.
+
+*Five items were already satisfied, and one better than the review assumed.*
+The pre-lock atomic is already a hint with a mandatory re-read. `close` is
+already not `destroy`. And §19 asks that no `PoolBucket*` be carried across a
+hook call — `Pool.put` already re-looks-up by identity in `take_back_handle`
+rather than holding `b` across the unlock. Those become documented invariants,
+which is the cheapest and most durable part of the whole review: the code
+honours them and no document states them, so a later improvement could undo
+them in silence.
+
+*One real defect, and the review could not see it.* §20 asks for `Pool.create`
+to be transactional, reasoning about a design it thought might exist. Read
+against the code, the defect is real and broader than its framing: **neither
+creation path cleans up after a partial failure.** `Pool.create` (`pool.c3:158`)
+allocates the `Pool`, then a failure in `_mu.init()!`, `_cv.init()!` or
+`new_array_try(...)!` propagates out and leaks it, plus whatever was already
+initialized. `Mailbox.create` (`mailbox.c3:78`) is the same shape. The
+duplicate-identity check 003 added runs before any allocation, so that part was
+already transactional — the allocation sequence never was. Two reviews and two
+stages walked past it.
+
+*Four drifts are text-only, and narrower than stated.* Section 1 of 003 already
+states the two-parts/three-fields distinction correctly; only the Part 4.2
+mapping row and D12 kept the old wording. Nothing in `3tk/src/` asserts
+`sizeof(AnyNode) == 24` — checked, not assumed.
+
+*One thing is deferred rather than rejected.* §15 wants a private mutation core
+under `NodeList`. Removal is already centralized in `unlink_no_repair`; the four
+insert sites are genuinely different shapes, and collapsing them buys less than
+it costs while every test is green. Written down so a later stage can take it,
+rather than dropped.
+
+3TK-8's plan section carries the whole audit as a table — what the review
+claimed, and what the code said back — so the stage starts from evidence rather
+than from assertions. Four questions for the owner are in it, and none of them
+blocks it from starting.
+
+`3tk/run-builds.sh` still reports four builds green, 59 checks, 0 failures. No
+code has been touched yet.
+
+---
+
 ## 2026-08-23 — the specification left this folder
 
 Moved: `matryoshka-specification-002.md` and `ztk-audit-001.md` to

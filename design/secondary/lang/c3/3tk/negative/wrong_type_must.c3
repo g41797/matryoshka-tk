@@ -4,7 +4,7 @@
  A mismatch here is a defect of the program, not a runtime condition — the
  checking crossing is what a caller uses when a mismatch is legitimate.
 
- Safe build: aborts in must_from_any.
+ Safe build: aborts in must_from_inner.
  Fast build: returns a Msg* that points at a Job. Exits 0 without reading it.
 *>
 module neg;
@@ -16,7 +16,7 @@ fn int main()
     Job j;
     job_init(&j);
 
-    Msg* m = msg_must(job_to_any(&j));   // <-- the violation
+    Msg* m = msg_must(job_to_inner(&j));   // <-- the violation
 
     io::printfn("no check: a Job crossed as a Msg at %p", (void*)m);
     return 0;

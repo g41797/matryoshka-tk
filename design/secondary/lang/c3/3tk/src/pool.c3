@@ -8,7 +8,29 @@
  lives: the mailbox gives everything back to a caller, and the pool's close
  gives nothing back at all.
 
- Part 17.2: only the public surface of the core four is used here.
+ **`put_all` is gone — R15.** It was `Pool.put` in a loop: no lock kept across
+ iterations, the hook still run once per item, no batching and no atomicity.
+ It did not spare the caller the difficult case, it handed the difficult case
+ back in a different shape — after it returned, the caller still held a partly
+ emptied queue and still had to decide what became of the rest. It cost a
+ container operation nothing else needed, a MUST clause in Part 11.8, and the
+ most awkward contract in the toolkit. A caller giving a batch back writes:
+
+     while (mtk::Handle h = batch.pop_front())
+     {
+         Slot s;
+         s.fill(h);
+         p.put(&s);
+         if (s.is_full()) { batch.push_back(h); break; }   // refused
+     }
+
+ The counter, recorded because it is real: returning a batch from
+ `Mailbox.close` to a pool is a common shape, and the caller now writes that
+ loop itself, with a chance of getting the refusal case wrong and losing items
+ quietly.
+
+ Part 17.2: only the public surface of the core is used here — five types now
+ rather than four, `InnerStack` being the new one.
 *>
 module mtk::pool;
 import mtk;
@@ -57,20 +79,20 @@ interface PoolHooks
 
      @param in_pool : "how many of this identity are held, BEFORE the addition. A hint. Part 12.4"
      @param slot : "full on entry"
-     @param extra : "empty on entry; items added here are taken the same way, with the same checks. Part 12.5, the composite mechanism"
+     @param extra : "an empty queue; items added here are taken the same way, with the same checks. Part 12.5, the composite mechanism"
     *>
-    fn void on_put(usz in_pool, Slot* slot, NodeList* extra);
+    fn void on_put(usz in_pool, Slot* slot, InnerQueue* extra);
 
     <*
      The pool is going down. Part 12.2.
 
-     Called once, with the full list of what remained. The hook is responsible
+     Called once, with everything that remained, as one flat queue. The hook is responsible
      for processing or releasing every item in it. Called OUTSIDE the mutex,
      after the closed flag is already set.
 
-     @param remaining : "everything the pool still held"
+     @param remaining : "everything the pool still held, flattened across every identity. No order is promised — R12"
     *>
-    fn void on_close(NodeList* remaining);
+    fn void on_close(InnerQueue* remaining);
 }
 
 <*
@@ -84,17 +106,26 @@ enum GetMode
 }
 
 <*
- One free list per identity. Part 11.7.
+ One free STACK per identity. Part 11.7, R11.
 
- No count field beside it. Part 11.7 asks for one only where the list's length
- is not O(1), and `NodeList.len` is O(1) here — the list keeps its own count.
- Part 12.4's hint is read from `free.len()` under the lock, at the moment it is
- handed to the hook.
+ A stack and not a queue, and the reason is defect surfacing rather than
+ performance: the item just given back is on top and the next `get` hands it
+ straight to a new owner, so a caller still writing through a stale pointer
+ collides with that owner immediately instead of much later. `stack.c3`'s
+ header carries the argument in full, because a reader who takes the stack for
+ an arbitrary choice will change it back.
+
+ **Part 11.7 promises no order, and Part 11.10 MUST already said so.** What
+ makes the property useful is that no caller is entitled to it.
+
+ No count field beside it. Part 11.7 asks for one only where the container's
+ length is not O(1), and `InnerStack.len` is O(1) here. Part 12.4's hint is
+ read from `free.len()` under the lock, at the moment it is handed to the hook.
 *>
 struct PoolBucket
 {
-    typeid   tag;
-    NodeList free;
+    typeid     tag;
+    InnerStack free;
 }
 
 <*
@@ -106,12 +137,17 @@ struct PoolBucket
 *>
 struct Pool
 {
-    AnyNode node;
+    // Item identity. Part 11.1: the pool is itself an item.
+    Inner node;
 
+    // Synchronization.
     Mutex             _mu;
     ConditionVariable _cv;
+
+    // Lifetime. D3: kept for life, and `release` takes no allocator.
     Allocator         _alloc;
 
+    // Container state, from here down.
     bool         _closed;
     Atomic{bool} _closed_fast;
 
@@ -120,8 +156,8 @@ struct Pool
 }
 
 alias init   = mtk::helper::init{Pool};
-alias to_any = mtk::helper::to_any{Pool};
-alias of     = mtk::helper::from_any{Pool};
+alias to_inner = mtk::helper::to_inner{Pool};
+alias of     = mtk::helper::from_inner{Pool};
 alias TYPE   = mtk::helper::TYPE{Pool};
 
 <*
@@ -131,6 +167,14 @@ alias TYPE   = mtk::helper::TYPE{Pool};
  says a pool cannot exist without them.
 
  The identity set is fixed here and is not empty.
+
+ **Creation is a transaction.** The duplicate check below runs before anything
+ is allocated, so it needs no cleanup. Everything after does: each step's
+ failure undoes exactly what succeeded before it, through `defer catch`, in the
+ shape `std::threads::channel` uses for the same problem. The bucket array is
+ the last thing allocated and the one most likely to fail, and without this a
+ failure there leaks the Pool, the mutex and the condition variable at once.
+ Nothing partially constructed is ever returned or observable.
 
  @param a : "the allocator the pool keeps for life"
  @param tags : "the identities this pool holds. Not empty, and no duplicates — both checked"
@@ -162,11 +206,17 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
     $endif
 
     Pool* p = alloc::new_try(a, Pool)!;
+    defer catch alloc::free(a, p);
+
     init(p);
     p._alloc = a;
     p._hooks = hooks;
+
     p._mu.init()!;
+    defer catch p._mu.destroy();
+
     p._cv.init()!;
+    defer catch p._cv.destroy()!!;
 
     p._buckets = alloc::new_array_try(a, PoolBucket, tags.len)!;
     foreach (i, t : tags)
@@ -241,7 +291,7 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
 
     if (mode != NEW_ONLY)
     {
-        AnyHandle h = b.free.pop_front();
+        Handle h = b.free.pop();
         if (h)
         {
             self._mu.unlock();
@@ -296,6 +346,16 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
     self._mu.lock();
     defer self._mu.unlock();
 
+    // This is the one place in the port that holds a `PoolBucket*` across a
+    // release of the mutex — `wait_until` unlocks while it waits. It is safe,
+    // and the reason is a property of creation rather than of this loop: the
+    // bucket slice is allocated once in `create` and never grown, moved or
+    // reallocated, so the address stays valid for the pool's whole life. Only
+    // the CONTENTS change under the lock, and they are re-read every turn.
+    //
+    // No such pointer may be held across a call into application code. A hook
+    // may put items back, and the rule there is to look the bucket up again by
+    // identity — which is what `take_back_handle` does.
     PoolBucket* b = self.bucket_for(want);
     mtk::@check(b != null, "Pool.get_wait for an identity the pool was not created with");
 
@@ -305,7 +365,7 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
 
         if (b)
         {
-            AnyHandle h = b.free.pop_front();
+            Handle h = b.free.pop();
             if (h) { slot.fill(h); return; }
         }
 
@@ -316,7 +376,7 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
             if (self._closed) return mtk::CLOSED~;
             if (b)
             {
-                AnyHandle h = b.free.pop_front();
+                Handle h = b.free.pop();
                 if (h) { slot.fill(h); return; }
                 // Part 2.6: the leaver hands the signal on.
                 if (!b.free.is_empty()) self._cv.signal();
@@ -348,7 +408,7 @@ fn void Pool.put(&self, Slot* slot)
 
     if (self._closed) { self._mu.unlock(); return; }
 
-    AnyHandle h = slot.peek();
+    Handle h = slot.peek();
     PoolBucket* b = self.bucket_for(h.type);
     mtk::@check(b != null, "Pool.put of an identity the pool was not created with");
     if (!b) { self._mu.unlock(); return; }
@@ -361,7 +421,7 @@ fn void Pool.put(&self, Slot* slot)
     Slot mine;
     mine.fill(slot.take());
 
-    NodeList extra;
+    InnerQueue extra;
 
     self._mu.unlock();                       // Part 12.3
     self._hooks.on_put(in_pool, &mine, &extra);
@@ -373,7 +433,7 @@ fn void Pool.put(&self, Slot* slot)
 
     // Part 12.5: each item of the extra list is added the same way, with the
     // same checks. This is how a composite item gives its parts back.
-    while (AnyHandle e = extra.pop_front()) self.take_back_handle(e);
+    while (Handle e = extra.pop_front()) self.take_back_handle(e);
 
     self._cv.broadcast();
     self._mu.unlock();
@@ -388,49 +448,21 @@ fn void Pool.take_back(&self, Slot* s) @private
     self.take_back_handle(s.take());
 }
 
-fn void Pool.take_back_handle(&self, AnyHandle h) @private
+fn void Pool.take_back_handle(&self, Handle h) @private
 {
     PoolBucket* b = self.bucket_for(h.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
     if (!b) return;
-    b.free.push_back(h);
-}
-
-<*
- Put a list. Part 11.8, Part 19.2.
-
- **Returns nothing. Read the list:** non-empty after the call means the rest was
- refused.
-
- Part 11.8: a list put stops at the first refusal, puts that item back at the
- FRONT of the caller's list, and returns. The restored order after a mid-batch
- close may differ from the original, and the specification says so.
-
- @param items : "the items to give back; anything refused is left here"
-*>
-fn void Pool.put_all(&self, NodeList* items)
-{
-    while (AnyHandle h = items.pop_front())
-    {
-        Slot s;
-        s.fill(h);
-        self.put(&s);
-        if (s.is_full())
-        {
-            // Refused. Back at the front of the caller's list, and stop.
-            items.push_front_slot(&s);
-            return;
-        }
-    }
+    b.free.push(h);
 }
 
 <*
  Close. Part 11.8, Part 12.2, Part 19.2. Cannot fail.
 
  **Nothing comes back to the caller.** Everything the pool held goes to the
- close hook, which is responsible for processing or releasing every item. That
- is the mirror image of the mailbox's close and the sharpest asymmetry in the
- toolkit.
+ close hook, as one flat queue, and the hook is responsible for processing or
+ releasing every item. That is the mirror image of the mailbox's close and the
+ sharpest asymmetry in the toolkit.
 
  Part 11.12: callable more than once. The second call takes nothing and does
  NOT run the hook again. The test-and-set is inside the mutex.
@@ -446,8 +478,23 @@ fn void Pool.close(&self)
     self._closed = true;
     self._closed_fast.store(true, RELEASE);
 
-    NodeList remaining;
-    foreach (&b : self._buckets) remaining.append_list(&b.free);
+    // R12: every bucket is emptied into ONE queue, flattened. The close hook
+    // never sees buckets or per-identity groups — one container, one loop.
+    //
+    // A stack keeps no tail, so the O(1) splice `append_queue` offers is not
+    // available and this is `pop` then `push_back`: O(n) in the items kept,
+    // once, on a pool going down. The loop has a property a splice lacks —
+    // every item passes through `pop` and `push_back`, so its self-link is
+    // repaired on the way, which a splice would have had to walk and do
+    // anyway.
+    //
+    // No order is promised. `push_back` is chosen for being the simplest
+    // write, not for the order it happens to produce.
+    InnerQueue remaining;
+    foreach (&b : self._buckets)
+    {
+        while (Handle h = b.free.pop()) remaining.push_back(h);
+    }
 
     self._cv.broadcast();
     self._mu.unlock();

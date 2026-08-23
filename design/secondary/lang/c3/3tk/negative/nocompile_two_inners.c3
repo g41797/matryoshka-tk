@@ -6,7 +6,7 @@
 module neg_nc;
 import mtk;
 
-struct TwoInners { AnyNode a; int mid; AnyNode b; }
+struct TwoInners { Inner a; int mid; Inner b; }
 
 alias bad = mtk::helper::init{TwoInners};
 
