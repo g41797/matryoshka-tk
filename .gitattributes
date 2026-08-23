@@ -4,5 +4,6 @@
 *.js linguist-detectable=false
 *.zig text eol=lf
 *.py linguist-detectable=false
+*.c3 linguist-detectable=false
 *.cmd linguist-detectable=false
 
