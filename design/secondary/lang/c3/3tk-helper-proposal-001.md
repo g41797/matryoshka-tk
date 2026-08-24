@@ -936,7 +936,7 @@ argues and the owner rules.
 
 **The specification never uses the word.** `owned`, `owning`, `managed`,
 `manage` — not one occurrence anywhere in
-[matryoshka-specification-003.md](../common/matryoshka-specification-003.md).
+[matryoshka-specification-003.md](../common/backup/matryoshka-specification-003.md).
 Part 7.3 says the distinction may be made by *"two generators, an interface, a
 flag, a separate name"*, and Part 7.1 says the spelling is the port's business.
 **This is 3tk's word to choose, and changing it changes no rule.**

@@ -27,14 +27,16 @@ import std::core::mem::alloc;
 import std::atomic::types;
 
 <*
- Part 11.2's internal base, spelled out rather than shared: the inner, a mutex,
- a condition variable, a closed flag, and an allocator kept for life.
+ Part 11.2's five parts, spelled out rather than shared: the inner, a mutex, a
+ condition variable, a closed flag, and an allocator kept for life.
 
- The base is not a public type. Part 11.2 calls it a statement about how the
- two containers are built, not a type the application names, and this port
- takes that literally — `Pool` repeats the five members rather than embedding a
- shared struct. Sharing them would put a second inner in the outer and break
- Part 4.4.
+ They are not a public type, and after 003 they are not a *base* either — V6.
+ 002 said *one internal base*; 003 says what every container has and calls a
+ shared base one mechanism among several, with Part 4.4 as the reason a port
+ may refuse it. This port refuses it: `Pool` repeats the five members rather
+ than embedding a shared struct, because sharing them would put a second inner
+ in the outer and break Part 4.4. **The refusal is now the specification's to
+ allow rather than this port's to justify.**
 *>
 struct Mailbox
 {
@@ -55,7 +57,10 @@ struct Mailbox
     bool         _closed;
     Atomic{bool} _closed_fast;
 
-    // Part 11.3, R7: TWO queues, not one list with an anchor. Out-of-band
+    // Part 11.3, R7: TWO queues, not one list with an anchor. **003 settled
+    // which of those is the rule** — V7: the three ordering guarantees are the
+    // MUST, the anchor is ztk's mechanism and two queues are this port's, and
+    // 11.3 now shows both. Out-of-band
     // items live in their own queue and every take tries `_oob` first, so
     // absolute priority with first-in first-out inside each class — invariant
     // 22 — falls out of the structure instead of being maintained by hand.

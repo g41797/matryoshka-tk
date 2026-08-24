@@ -1,6 +1,9 @@
 <*
  The intrusive stack. Part 8, last-in first-out half.
 
+ Part 8.1 permits it in the plural — *ordering primitives*, as many as Part 11
+ needs, since 003. `queue.c3`'s header carries the argument. V2.
+
  **R2 and R11.** The pool keeps one of these per identity, and it is the only
  `InnerStack` in the port. It never crosses the public surface: what a hook
  receives is always an `InnerQueue` — R13, §5.4.

@@ -7,6 +7,12 @@
  actually needs is two ordering primitives: a queue for the mailbox, and a
  stack for the pool. This is the queue.
 
+ **003 made that a legal reading of Part 8.1 rather than a deviation from it.**
+ 002 said *a doubly-linked list*, singular, and R2 argued against the
+ specification's own noun; 8.1 now says *ordering primitives*, as many as Part
+ 11 needs, and shows one general list and two narrow ones side by side. V2.
+ `stack.c3` is the other half.
+
  Seven operations. Nothing here allocates, the item is the node, and every
  operation is O(1) — including `append_queue`, which splices, and including
  every insert in every build mode, because R6b deleted the walk that used to
@@ -53,7 +59,10 @@ struct InnerQueue
 
  It has one caller outside the tests: `t_identity.c3`'s heterogeneous walk,
  which is Part 6.5's demonstration and the one place the toolkit shows what a
- type-erased container is for. The stack gets no walker: nothing walks a free
+ type-erased container is for. **The dispatch table itself is the
+ application's**, not something the toolkit ships — 003 says so in a sentence
+ 002 left to inference, V18, so this port ships nothing there and has skipped
+ nothing. The stack gets no walker: nothing walks a free
  list, and Part 8.4 is a SHOULD.
 *>
 struct InnerQueueIterator
@@ -66,9 +75,9 @@ struct InnerQueueIterator
 <*
  The insert guard. Tier 2, and after R6b it is ONE check rather than two.
 
- Part 8.6 used to ask for a pair — the link test for a different container, the
- O(n) walk for an item alone on this one — and said in so many words that
- neither alone was enough. With the self-link the link test is exact and
+ 002's Part 8.6 used to ask for a pair — the link test for a different
+ container, the O(n) walk for an item alone on this one — and said in so many
+ words that neither alone was enough. With the self-link the link test is exact and
  refuses an item on ANY chain, this container or another, so it catches
  everything both halves caught. Part 8.6 is deleted from the specification and
  `contains` is deleted from the port.
@@ -137,6 +146,13 @@ fn void InnerQueue.push_back(&self, Handle h)
 <*
  Part 8.2: add at the back, from a Slot. Part 9.2 rule 5: the transfer clears
  the Slot.
+
+ **Required at the public surface, and 003 is why it survived the redesign.**
+ 002 listed sixteen flat operations; 003 splits them into required, required at
+ the public surface, and provided-if-useful, and promotes the Slot-shaped
+ insert into the second group with Part 12.5 as the reason — V3. Part 12.5's
+ composite hook hands a container to the application, so the Slot-shaped insert
+ is the only way in that obeys Part 9.2.
 
  An empty Slot is a defect, not a no-op: rule 6's tolerance is for RELEASE, and
  this is an insert. The check is tier 2, and the early return is ordinary code,

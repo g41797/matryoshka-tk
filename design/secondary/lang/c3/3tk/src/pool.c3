@@ -96,7 +96,9 @@ interface PoolHooks
      after the closed flag is already set.
 
      **Called once by `Pool.close`, and possibly once more with stragglers.**
-     Part 12.2 says *called once*; a `Pool.put` whose hook was still running
+     Part 12.2 says *called once by close, and once more per straggling put* —
+     003 weakened the clause for exactly this, and it is the only MUST 003
+     weakens; a `Pool.put` whose hook was still running
      when the close fired has items the pool must not keep and must not lose,
      and it hands them here. `Pool.put`'s body carries the argument. A hook
      writes the same loop either way — process or release every item — and must
@@ -141,7 +143,11 @@ struct PoolBucket
 }
 
 <*
- Part 11.2's internal base again, and the pool's own state.
+ The five parts of Part 11.2, again, and the pool's own state.
+
+ 003 stopped calling them *one internal base* — V6. They are what every
+ container has; whether a port shares one struct for them is the port's own
+ answer, and this one does not. `Mailbox` carries the argument.
 
  The identity set is fixed at creation and is not empty — Part 11.7 — so the
  buckets are a flat slice allocated once and scanned linearly. A hash map would
@@ -222,8 +228,10 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
     // stay empty forever — a silent halving of the pool rather than a fault.
     //
     // The check is tier 2 of D6. The O(n^2) scan around it is compiled only
-    // where the tiers are live, which is the pairing Part 8.6 uses for the
-    // insert walk. The set is small, fixed, and scanned once at creation.
+    // where the tiers are live. That pairing — an expensive check behind the
+    // tier gate — was Part 8.6's, for the insert walk; **003 deleted Part 8.6**
+    // and the pairing survives it as a technique with no Part left to cite. The
+    // set is small, fixed, and scanned once at creation.
     $if mtk::CHECKED:
         foreach (i, t : tags)
         {
@@ -281,8 +289,11 @@ macro bool Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
  The bucket for an identity, or null. Called under the lock.
 
  Part 11.7: the set is fixed at creation, so an identity that is not in it is a
- defect of the caller rather than a runtime condition. The check is tier 2 and
- the outcome for a fast build is NOT_AVAILABLE, which is the truthful answer.
+ defect of the caller rather than a runtime condition. The check is tier 2, and
+ the outcome for a fast build is `UNKNOWN_IDENTITY` — a fault of its own, named
+ for the defect it reports. It used to be `NOT_AVAILABLE`, which was a Part 19.3
+ violation: 19.3 reserves not-available for the available-only mode, and this
+ site produced it from all three. A3, and 3TK-12's finding P2.
 *>
 fn PoolBucket* Pool.bucket_for(&self, typeid t) @private
 {
@@ -296,13 +307,18 @@ fn PoolBucket* Pool.bucket_for(&self, typeid t) @private
  Part 19.3's asymmetry is here: NOT_AVAILABLE comes only from AVAILABLE_ONLY,
  and NOT_CREATED only from a hook that produced nothing.
 
+ `UNKNOWN_IDENTITY` is the fourth thing this can return and it is not a Part 19
+ outcome. Part 11.7 makes an identity outside the pool's set a caller defect; a
+ checking build aborts on it and a fast build reports it. `inner.c3`'s faultdef
+ carries the argument.
+
  Part 12.3: the hook runs outside the mutex. The pool unlocks, calls, relocks —
  and everything it read before unlocking is stale when it returns.
 
  @param want : "the identity wanted"
  @param mode : "which of Part 11.7's three modes"
  @param slot : "an empty Slot; filled on success"
- @return? mtk::CLOSED, mtk::NOT_AVAILABLE, mtk::NOT_CREATED
+ @return? mtk::CLOSED, mtk::NOT_AVAILABLE, mtk::NOT_CREATED, mtk::UNKNOWN_IDENTITY
 *>
 fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
 {
@@ -316,7 +332,7 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
 
     PoolBucket* b = self.bucket_for(want);
     mtk::@check(b != null, "Pool.get for an identity the pool was not created with");
-    if (!b) { self._mu.unlock(); return mtk::NOT_AVAILABLE~; }
+    if (!b) { self._mu.unlock(); return mtk::UNKNOWN_IDENTITY~; }
 
     if (mode != NEW_ONLY)
     {
@@ -361,10 +377,21 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
  once, before the loop; the state is re-evaluated from scratch; a leaver hands
  the signal on.
 
+ **It reports `UNKNOWN_IDENTITY` too, and 3TK-15 changed it to.** The old
+ behaviour was benign and inside Part 19.2: `b` stayed null, the loop found
+ nothing, and the call timed out. It is changed anyway, on two grounds that are
+ not conformance. First, the two gets must not disagree about the same defect —
+ one caller learns its identity is unknown and the other is told the pool is
+ merely slow, from the same mistake in the same pool. Second, the benign answer
+ costs the caller the whole timeout to deliver a verdict the pool had before it
+ blocked, and a defect that sleeps is a defect that gets diagnosed as a
+ performance problem. The `@check` below is unchanged and still aborts first in
+ a checking build; this is what a fast build now says instead of waiting.
+
  @param want : "the identity wanted"
  @param slot : "an empty Slot; filled on success"
  @param timeout : "how long to wait"
- @return? mtk::CLOSED, mtk::TIMEOUT
+ @return? mtk::CLOSED, mtk::TIMEOUT, mtk::UNKNOWN_IDENTITY
 *>
 fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
 {
@@ -387,29 +414,29 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
     // identity — which is what `take_back_handle` does.
     PoolBucket* b = self.bucket_for(want);
     mtk::@check(b != null, "Pool.get_wait for an identity the pool was not created with");
+    if (!b) return mtk::UNKNOWN_IDENTITY~;      // A3. The `defer` above unlocks.
 
     while (true)
     {
         if (self._closed) return mtk::CLOSED~;
 
-        if (b)
-        {
-            Handle h = b.free.pop();
-            if (h) { slot.fill(h); return; }
-        }
+        // No `if (b)` guard on either pop. The early return above made `b`
+        // non-null for the rest of the function; before A3 these guards were
+        // the whole of the null path, and leaving them would be a reader's
+        // trap — a live-looking branch that cannot be taken.
+        Handle h = b.free.pop();
+        if (h) { slot.fill(h); return; }
 
         if (catch f = self._cv.wait_until(&self._mu, deadline))
         {
             if (f != thread::WAIT_TIMEOUT) return f~;
 
             if (self._closed) return mtk::CLOSED~;
-            if (b)
-            {
-                Handle h = b.free.pop();
-                if (h) { slot.fill(h); return; }
-                // Part 2.6: the leaver hands the signal on.
-                if (!b.free.is_empty()) self._cv.signal();
-            }
+
+            h = b.free.pop();
+            if (h) { slot.fill(h); return; }
+            // Part 2.6: the leaver hands the signal on.
+            if (!b.free.is_empty()) self._cv.signal();
             return mtk::TIMEOUT~;
         }
     }
@@ -481,12 +508,16 @@ fn void Pool.put(&self, Slot* slot)
     // - Invariant 34 holds: nothing lands in a bucket after the flag is set.
     // - Part 11.8 holds: nothing comes back to the caller, and the caller's
     //   Slot stays cleared because the pool did take the item.
-    // - Part 12.2's **called once** is the one clause this bends, and it is
-    //   deliberate. Losing items is worse than a second call, and the
-    //   alternative — restoring the caller's Slot — cannot carry `extra`, whose
-    //   items the caller never had. 3TK-12's V11 records that 002 has no rule
-    //   here at all; specification 003 rules the shape and this is 3tk's answer
-    //   until it does.
+    // - Part 12.2's **called once** is no longer bent, and this comment used to
+    //   say it was. 3TK-12's V11 found 002 had no rule for this window at all,
+    //   and 003 wrote one: Part 12.3 is a new MUST, invariant 35 is new, and
+    //   12.2's clause was weakened to read *called once by close, and once more
+    //   per straggling put* — **the only MUST 003 weakens anywhere**. So the
+    //   code below now obeys 12.2 rather than deviating from it, and the
+    //   deviation that justified it is closed. The reasoning that produced it
+    //   stands: losing items is worse than a second call, and the alternative —
+    //   restoring the caller's Slot — cannot carry `extra`, whose items the
+    //   caller never had.
     //
     // A hook must therefore tolerate a second `on_close` carrying stragglers.
     // It is the same contract it already has for the first one: process or
@@ -506,7 +537,8 @@ fn void Pool.put(&self, Slot* slot)
     // Original or replacement.
     self.take_back(&mine);
 
-    // Part 12.5: each item of the extra list is added the same way, with the
+    // Part 12.5: each item of the extra container is added the same way, with
+    // the
     // same checks. This is how a composite item gives its parts back.
     while (Handle e = extra.pop_front()) self.take_back_handle(e);
 

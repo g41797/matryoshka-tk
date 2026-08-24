@@ -14,7 +14,7 @@ The **D** port of Matryoshka. Fourth in the family: **otk** (Odin), **ztk** (Zig
 this repo, the reference implementation), **3tk** (C3, complete), **dtk** (D).
 
 Ported from
-[the portable specification](../common/matryoshka-specification-003.md), with ztk
+[the portable specification](../common/matryoshka-specification-004.md), with ztk
 as the reference for *behaviour* — never as a template for syntax.
 
 ## Scope — ruled by the owner, 2026-08-23
@@ -36,21 +36,37 @@ These are not proposals. They are settled, and every stage works inside them.
 
 Read these; nothing in this folder replaces them.
 
-- **[matryoshka-specification-003.md](../common/matryoshka-specification-003.md)**
+- **[matryoshka-specification-004.md](../common/matryoshka-specification-004.md)**
   — the source of truth. Self-contained and language-neutral. *A port is written
   from this file alone.* A defect found in it is fixed **there**, once, for every
   port — not patched in a dtk document.
 
-  **This is dtk's input, and it changed on 2026-08-24.** 003 replaced 002, which
-  is now in [`../common/backup/`](../common/backup/). The reason matters to a
-  port that has not started: 002 was written from ztk and stated Zig's
-  *mechanism* where the design has only a *promise*, in fourteen places. A dtk
-  written from 002 would have reproduced a doubly-linked list, a previous link,
-  the mailbox's out-of-band anchor and an inexact link test — and then needed the
-  C3 line's redesign stages run again against it. 003 states the promise and
-  shows both realizations. **Read 003's change log first**: it names every
-  difference and the five assumptions it was written on. No dtk stage has run,
-  so nothing here needs revising for it.
+  **This is dtk's input, and it changed twice on 2026-08-24.** 003 replaced 002
+  and 004 replaced 003; both are now in
+  [`../common/backup/`](../common/backup/). The reason matters to a port that
+  has not started: 002 was written from ztk and stated Zig's *mechanism* where
+  the design has only a *promise*, in fourteen places. A dtk written from 002
+  would have reproduced a doubly-linked list, a previous link, the mailbox's
+  out-of-band anchor and an inexact link test — and then needed the C3 line's
+  redesign stages run again against it. 003 states the promise and shows both
+  realizations. **Read the change log first**: it names every difference and the
+  five assumptions 003 was written on. No dtk stage has run, so nothing here
+  needs revising for it.
+
+  **004 is 3TK-17, and it was cut for dtk's sake specifically.** Part 7.1 was
+  the fifteenth place the same mistake was made, and 003 walked past it: it said
+  *for each outer type there is a helper bound to that one type*, which is
+  Zig's per-type comptime struct written up as though it were the requirement.
+  The C3 port answered the same question with macros over a type parameter —
+  no per-type object at all — and Part 7.1 stopped describing a conformant
+  port. **D's idiomatic answer is templates and mixins: call-site expansion,
+  the same shape as the C3 macro, not a per-type struct.** Had 004 not been cut
+  first, Part 7.1 would have set dtk the identical trap, and a second port would
+  have re-derived this argument from cold. 004's Part 7.1 states the promise —
+  the members of Part 7.2 exist per outer type, generated rather than
+  hand-written — and shows both realizations. **A named per-type helper object
+  is one spelling of it and not the rule.** dtk is free to spell it as D
+  spells it.
 - **[port-flow-001.md](../common/port-flow-001.md)** — how a port is staged,
   recorded and verified. Its three tiers say what transfers from 3tk verbatim,
   what transfers only as a question, and what is shared.

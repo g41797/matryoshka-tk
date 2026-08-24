@@ -1,8 +1,9 @@
 <*
  The inner, the handle, the Slot, the link test, and the port's check macro.
 
- Matryoshka, the C3 port. Specification: matryoshka-specification-002.md, as
- the core redesign amends it — 3tk-core-redesign-proposal-002.md, R1 to R15.
+ Matryoshka, the C3 port.
+ Specification: ../common/matryoshka-specification-003.md, as the core redesign
+ amends it — 3tk-core-redesign-proposal-002.md, R1 to R15.
  Design rulings: 3tk-porting-proposal-004.md, decisions D1 to D16.
 
  inner  — Inner, the embedded structure. Part 4.
@@ -35,8 +36,11 @@ import std::core::env;
 
  Every insert and every removal in `queue.c3` and `stack.c3` maintains it, and
  `is_linked` below reads it. It is what makes the link test EXACT, and an exact
- link test is what let the O(n) membership walk of the old Part 8.6 be deleted
- outright. It replaces retired invariant 16.
+ link test is what let the O(n) membership walk be deleted outright — from
+ this port, and then from the specification: Part 8.6 is a tombstone in 003,
+ V4, and a port without an exact test carries the walk under 8.7 instead. It
+ replaces invariant 16, which 003 retired in place — the row is still numbered
+ 16 and says so, and 16b is this. V12.
 
  The price, stated plainly: `next` carries two meanings, and a walk that forgets
  to test `n.next == n` loops forever rather than ending. Four sites carry it,
@@ -85,11 +89,25 @@ typedef Slot = Handle;
 
  The `interrupted` outcome of Part 2.9 is absent. D9 dropped interruption:
  C3 has no interruptible condition wait, and the SHOULD's own text permits the
- drop.
+ drop. **003 made that legible in the outcome tables** — V13: Parts 19.1 and
+ 19.2 mark *interrupted* conditional on Part 2.9 rather than listing it flat,
+ so a port that drops the SHOULD drops the outcome and is still conforming.
+ The timeout outcome stays, and it does.
 
  The redesign adds no fault and removes none. §7.
+
+ **`UNKNOWN_IDENTITY` is not one of Part 19's outcomes, and that is deliberate.**
+ 3TK-15 added it for assumption A3. Part 11.7 fixes the pool's set of
+ identities at creation, so asking for one that is not in it is a defect of the
+ caller and not a runtime condition — the sentence above about *never defects*
+ does not cover it. It exists because the honest report of that defect used to
+ be `NOT_AVAILABLE`, which Part 19.3 reserves for the available-only mode, and
+ a fast build has no `@check` left to catch the confusion. It is reported by
+ `Pool.get` and `Pool.get_wait` and by nothing else. Part 19.2's own set is
+ untouched: every Part 19 outcome those two operations can produce is still
+ exactly the one Part 19.2 lists.
 *>
-faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN;
+faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN, UNKNOWN_IDENTITY;
 
 <*
  A contract check. Tier 2 of D6.
@@ -139,14 +157,21 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
 <*
  The link test. Part 8.7, and **it is now exact** — R6b.
 
+ 003 turned that from this port's choice into everyone's rule: Part 8.7 says
+ the link test MUST be exact and names the three prices — a terminator, a
+ field, or the O(n) walk. R6b paid the first. V5.
+
  On a chain, `next` is never null: the last item points at itself. Off a chain,
  `next` is always null. So this answers *is this item on some chain* with no
  false negative and no false positive, in O(1), through the public surface.
 
- The blind spot Part 8.7 used to be a MUST to document — an item ALONE on a
- list reporting false — is closed, and it cost no field. D12's accepted hole is
- gone with it, and so is Part 8.6's O(n) walk: a check that refuses an item on
- ANY chain catches everything the same-container walk caught and more.
+ The blind spot 002's Part 8.7 made a MUST to document — an item ALONE on a
+ list reporting false — is closed, and it cost no field. **003 does not
+ document that blind spot; it forbids it**, which is why the sentence above
+ reads as a rule rather than as this port doing better than asked. D12's
+ accepted hole is gone with it, and so is Part 8.6, **deleted outright in 003**
+ along with its O(n) walk: a check that refuses an item on ANY chain catches
+ everything the same-container walk caught and more.
 
  What it does not catch, stated so nobody claims more: a chain corrupted by
  code that reached around the container surface. It is exact for every path

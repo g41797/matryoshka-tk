@@ -7,6 +7,137 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-24 — 3TK-17: Part 7.1 states the promise, and 004 is cut for one Part
+
+**Written: [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md).**
+003 is in `../common/backup/`. **The first stage in this line permitted to edit
+`../common/`, and it edited one Part.**
+
+**What was wrong.** Part 7.1 said *for each outer type there is a helper bound
+to that one type*. That is Zig's per-type comptime struct, written up as though
+it were the requirement. Of its three clauses only that one failed under the C3
+port: macro expansion is compile-time generation from the type, and the identity
+and the crossings still arrive together. **And Part 7.1's own closing sentence
+already set the floor lower** — a port with no compile-time generation writes
+the block by hand and *loses only the typing*. A port that generates but names
+no object sits above that floor on the thing the sentence says matters.
+
+**004 states the promise**: for each outer type the members of Part 7.2 exist,
+specialized to that type, generated rather than hand-written, with the identity
+and the crossings from the one act of generation. Both realizations are shown,
+marked *ztk* and *3tk*, exactly as 003 did for the other fourteen. **A named
+per-type object is one spelling of it and not the rule.** One sentence was added
+that 003 never needed: *helper* is the document's word for the per-type surface,
+whatever a port calls it and wherever the generated code lives — because 7.2,
+7.3, 7.4 and 7.5 go on using the noun and none of them was touched.
+
+**This is the fifteenth instance of 003's own theme, and 003 walked past it.**
+002 stated ztk's mechanism where the design has a promise in fourteen places and
+3TK-13 fixed all fourteen. Part 7.1 reads like a requirement, and nothing
+exposed it until a port answered the question a different way. **It is the first
+specification defect found since 003, and it was found by building, not by
+auditing** — 3TK-16 filed V19 against the Part while obeying neither it nor
+fixing it, and this stage is the one that could.
+
+**The deciding argument was dtk, and dtk has been told.**
+[`../d/dtk-status.md`](../d/dtk-status.md) gains a paragraph under its normative
+inputs: D's idiomatic answer to *generate code per type* is templates and
+mixins — call-site expansion, the same shape as the C3 macro, not a per-type
+struct — so Part 7.1 as written would have set dtk the identical trap, and a
+second port would have re-derived this argument from cold. `d/inputs/README.md`
+and `../common/README.md` were repointed too.
+
+**otk was not told, and that is recorded rather than closed.** `../odin/` holds
+one backport document, no status file and no reference to the specification.
+3TK-13 did not tell it either and said so. The question is still open and this
+stage does not close it silently.
+
+**Nothing else was pending, and that was checked before the cut.** V1 to V18 are
+consumed by 003; V7b is recorded-not-fixed deliberately; A3's debt was code and
+3TK-15 paid it. No second defect was found, and the rule that produced V19 —
+*report it, do not fix it* — did not have to fire twice.
+
+**`3tk/` was not touched**, and the paragraph in `src/helper.c3` telling the
+next reader not to "fix" the file to match Part 7.1 **is now stale and still
+stands**. So do `mtk.c3`'s and `inner.c3`'s citations of 003. Three doc
+comments, and this stage may write no code. Named here and in the status file's
+open questions.
+
+---
+
+## 2026-08-24 — 3TK-15: two debts paid, and one of them was misfiled
+
+**Written: [3tk-debts-notes-001.md](3tk-debts-notes-001.md).** The last stage
+3TK-13 left owing. Both halves were decided before it started and neither was
+re-argued.
+
+**A3 — the port broke a MUST in its own specification, and now does not.**
+`Pool.get` returned `NOT_AVAILABLE` for an identity the pool was not created
+with, from all three modes, where Part 19.3 reserves not-available for the
+available-only mode. A `@check` caught it in a checking build and expanded to
+nothing under `--safe=no` — D6 — so the fault was the observable behaviour of a
+fast build. The port now reports `UNKNOWN_IDENTITY`, a fault of its own,
+**deliberately not a Part 19 outcome**: Part 11.7 makes an identity outside the
+pool's set a caller defect rather than a runtime condition, which is the
+sentence the rest of that faultdef opens with. Part 19.2's sets are untouched.
+
+**`get_wait` changed too, and it did not have to.** Its old fallthrough timed
+out, which Part 19.2 allows, so this half is a quality change and the notes mark
+it as one. Two reasons: the two gets must not disagree about one mistake, and a
+defect that costs the caller a full timeout to discover gets diagnosed as a
+performance problem instead of being fixed. One consequence — the early return
+made the loop's two `if (b)` guards unreachable, and they are removed rather
+than left as a reader's trap.
+
+**The test is a runtime negative and could not have been a test-suite test.**
+A checking build aborts on the `@check` before any assertion runs, and
+`run-builds.sh` runs the suite in all four builds. The negative shape expects
+exactly that: abort where the checks are live, clean run where they are not.
+`negative/pool_unknown_identity.c3` asserts all three get modes plus `get_wait`,
+because *all three* was the whole of the defect. **It was measured to fail with
+the fix removed**, not asserted to. It also found that `@catch_is` belongs to
+the test runner and is unreachable from a negative program, which cost the first
+draft a compile.
+
+**A5 was filed under the wrong noun, and that is the finding.** 003's own
+assumption A5 said the port *cites 002 in roughly forty doc comments*. **There
+was one** — `inner.c3:4` — because 3TK-16 had already repointed `mtk.c3` when it
+rewrote the header. What the port actually had was roughly ninety `Part N.N`
+citations, about sixty of them in Parts 003 changed. The debt was real and the
+grep was never going to find it. **The half A5 called *not mechanical* was all
+of the work**, and a `sed` would have found one line and declared victory.
+
+**Twelve comments changed a claim rather than a path**, in five files, each one
+right about 002 and wrong about 003. Two are worth reading twice. `pool.c3:511`
+said Part 12.2's *called once* was *the one clause this bends* — 003 weakened
+12.2 for exactly this case and added Part 12.3 as a new MUST, so **the code now
+obeys the rule it was written to deviate from**, and the same comment still
+promised an answer *until 003 rules the shape*, written before 003 existed and
+left standing after it did. `pool.c3:233` cited Part 8.6 in the present tense
+for a technique it still uses correctly; the Part is a tombstone and the comment
+now says the technique has no Part left to cite.
+
+**One thing left undone and named rather than done.** `3tk-deviations-001.md`'s
+P2 row is now stale — it records the defect A3 just fixed, and its section ends
+*the audit takes none* of the three answers. The stage's *may not* list does not
+forbid the edit, but 3TK-14's forbade it in the general form and **3TK-16 was
+granted its two rows explicitly rather than by inference**. A permission granted
+to the previous stage is not one this stage assumes. It wants a stage the owner
+names, and V19's treatment: additive, in the audit's own vocabulary.
+
+**Green: `run-builds.sh` 63 checks — up from 59, the new negative adds one per
+build — `run-sanitizers.sh` 3 checks, 87 tests over four builds.** No occurrence
+of `matryoshka-specification-002` remains in `src/`, `test/` or `negative/`.
+Part 19.3 read against `pool.c3` clause by clause and reported conforming.
+
+**`../common/` was not touched.** A3's whole point is that the specification is
+right and the port was wrong.
+
+**Next: 3TK-17**, the last one, and it is the only stage that may touch
+`../common/`.
+
+---
+
 ## 2026-08-24 — 3TK-16: the helper surface, in code
 
 **Written: [3tk-helper-notes-001.md](3tk-helper-notes-001.md).** The mirror of
