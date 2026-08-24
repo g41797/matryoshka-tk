@@ -1,0 +1,7 @@
+
+
+/home/g41797/dev/langs/c3/MANUAL.md
+
+/home/g41797/dev/langs/c3/lib/std
+
+

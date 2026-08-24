@@ -23,12 +23,12 @@ fn void the_stack_is_last_in_first_out() @test
     Msg[8] ms;
     InnerStack st;
 
-    for (usz i = 0; i < 5; i++) { ms[i].id = (int)i; msg_init(&ms[i]); st.push(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 5; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_handle(&ms[i])); }
     always_assert(st.len() == 5, "five went in and the count disagrees");
 
     for (usz i = 5; i > 0; i--)
     {
-        Msg* m = msg_from_inner(st.pop());
+        Msg* m = mtk::helper::from_handle(st.pop(), Msg);
         always_assert(m != null, "an item came off as the wrong type");
         always_assert(m.id == (int)(i - 1), "the stack is not last-in first-out");
     }
@@ -57,19 +57,19 @@ fn void an_empty_stack_answers() @test
 fn void the_bottom_item_points_at_itself() @test
 {
     Msg a; Msg b;
-    msg_init(&a); msg_init(&b);
+    mtk::helper::init(&a); mtk::helper::init(&b);
     a.id = 1; b.id = 2;
 
     InnerStack st;
-    st.push(msg_to_inner(&a));
-    always_assert(msg_to_inner(&a).next == msg_to_inner(&a), "the sole item of a stack is not self-linked");
+    st.push(mtk::helper::to_handle(&a));
+    always_assert(mtk::helper::to_handle(&a).next == mtk::helper::to_handle(&a), "the sole item of a stack is not self-linked");
 
-    st.push(msg_to_inner(&b));
-    always_assert(msg_to_inner(&b).next == msg_to_inner(&a), "the pushed item does not cover the one below");
-    always_assert(msg_to_inner(&a).next == msg_to_inner(&a), "the bottom stopped being self-linked");
+    st.push(mtk::helper::to_handle(&b));
+    always_assert(mtk::helper::to_handle(&b).next == mtk::helper::to_handle(&a), "the pushed item does not cover the one below");
+    always_assert(mtk::helper::to_handle(&a).next == mtk::helper::to_handle(&a), "the bottom stopped being self-linked");
 
-    always_assert(msg_from_inner(st.pop()).id == 2, "pop took the wrong end");
-    always_assert(msg_from_inner(st.pop()).id == 1, "the bottom item was lost");
+    always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 2, "pop took the wrong end");
+    always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 1, "the bottom item was lost");
     always_assert(st.pop() == null, "the stack did not empty");
 }
 
@@ -80,13 +80,13 @@ fn void the_bottom_item_points_at_itself() @test
 fn void the_link_test_is_exact_on_the_stack() @test
 {
     Msg a; Msg b;
-    msg_init(&a); msg_init(&b);
+    mtk::helper::init(&a); mtk::helper::init(&b);
 
     InnerStack st;
-    st.push(msg_to_inner(&a));
+    st.push(mtk::helper::to_handle(&a));
 
-    always_assert(mtk::is_linked(msg_to_inner(&a)), "the bottom of a stack reports unlinked");
-    always_assert(!mtk::is_linked(msg_to_inner(&b)), "an item on no container reports linked");
+    always_assert(mtk::is_linked(mtk::helper::to_handle(&a)), "the bottom of a stack reports unlinked");
+    always_assert(!mtk::is_linked(mtk::helper::to_handle(&b)), "an item on no container reports linked");
 }
 
 <*
@@ -99,7 +99,7 @@ fn void pop_repairs_the_link() @test
 {
     Msg[8] ms;
     InnerStack st;
-    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; msg_init(&ms[i]); st.push(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_handle(&ms[i])); }
 
     Handle top    = st.pop();
     Handle middle = st.pop();
@@ -118,25 +118,6 @@ fn void pop_repairs_the_link() @test
 }
 
 <*
- Part 8.2: adding from a Slot. Part 9.2 rule 5 — the transfer clears it.
-*>
-fn void push_from_a_slot() @test
-{
-    Msg a;
-    msg_init(&a);
-    a.id = 7;
-
-    InnerStack st;
-    Slot s;
-
-    s.fill(msg_to_inner(&a));
-    st.push_slot(&s);
-    always_assert(s.is_empty(), "push_slot did not clear the Slot");
-    always_assert(st.len() == 1, "push_slot did not add the item");
-    always_assert(msg_from_inner(st.pop()).id == 7, "push_slot lost the item");
-}
-
-<*
  Part 8.1 and 8.3: the stack is heterogeneous and speaks in handles, like every
  other Matryoshka container. Invariants 13 and 14.
 
@@ -146,15 +127,15 @@ fn void push_from_a_slot() @test
 fn void one_stack_three_types() @test
 {
     Msg  m; Job  j; Twin t;
-    msg_init(&m); job_init(&j); twin_init(&t);
+    mtk::helper::init(&m); mtk::helper::init(&j); mtk::helper::init(&t);
 
     InnerStack st;
-    st.push(msg_to_inner(&m));
-    st.push(job_to_inner(&j));
-    st.push(twin_to_inner(&t));
+    st.push(mtk::helper::to_handle(&m));
+    st.push(mtk::helper::to_handle(&j));
+    st.push(mtk::helper::to_handle(&t));
 
     always_assert(st.len() == 3, "three types did not fit on one stack");
-    always_assert(twin_from_inner(st.pop()) == &t, "the Twin came back wrong");
-    always_assert(job_from_inner(st.pop()) == &j, "the Job came back wrong");
-    always_assert(msg_from_inner(st.pop()) == &m, "the Msg came back wrong");
+    always_assert(mtk::helper::from_handle(st.pop(), Twin) == &t, "the Twin came back wrong");
+    always_assert(mtk::helper::from_handle(st.pop(), Job) == &j, "the Job came back wrong");
+    always_assert(mtk::helper::from_handle(st.pop(), Msg) == &m, "the Msg came back wrong");
 }

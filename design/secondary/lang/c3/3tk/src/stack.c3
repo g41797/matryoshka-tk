@@ -5,9 +5,19 @@
  `InnerStack` in the port. It never crosses the public surface: what a hook
  receives is always an `InnerQueue` — R13, §5.4.
 
- Five operations, against the queue's seven. There is no walker, because
+ Four operations, against the queue's seven. There is no walker, because
  nothing walks a free list and Part 8.4 is a SHOULD; there is no splice,
  because a stack keeps no tail and `Pool.close` wants a queue anyway.
+
+ **There is no Slot-shaped insert, and the reason is R13 — 3TK-12's P6.**
+ §5.1 kept `push_slot` for *the put hook's `extra`*, and the measurement found
+ that reason belongs to the queue: `extra` is an `InnerQueue`, and the hook that
+ fills it is application code. `InnerStack` never crosses a public signature, so
+ no application can reach it; the pool does not call a Slot-shaped insert either
+ — `take_back` empties the Slot itself and calls `push`. An operation with no
+ caller it could ever acquire was deleted 2026-08-24, on the owner's
+ instruction. `InnerQueue.push_back_slot` stays: Part 12.5's composite mechanism
+ is what needs it.
 
  **Why the pool reuses last-in first-out, which is a behaviour change and not
  a translation.** The old code was first-in first-out — `NodeList.push_back`
@@ -95,20 +105,6 @@ fn void InnerStack.push(&self, Handle h)
     h.next = self.top ? self.top : h;
     self.top = h;
     self.count++;
-}
-
-<*
- Part 8.2: add on top, from a Slot. Part 9.2 rule 5: the transfer clears the
- Slot.
-
- Same pairing as the queue's: a tier 2 check, and an early return that is
- ordinary code and survives a fast build.
-*>
-fn void InnerStack.push_slot(&self, Slot* s)
-{
-    @check(s.is_full(), "push_slot from an empty Slot");
-    if (s.is_empty()) return;
-    self.push(s.take());
 }
 
 // --- Removing ---------------------------------------------------------------------

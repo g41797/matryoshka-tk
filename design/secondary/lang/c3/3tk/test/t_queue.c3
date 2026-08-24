@@ -36,12 +36,12 @@ fn void the_queue_is_first_in_first_out() @test
     Msg[8] ms = fresh_msgs();
     InnerQueue q;
 
-    for (usz i = 0; i < 8; i++) { msg_init(&ms[i]); q.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 8; i++) { mtk::helper::init(&ms[i]); q.push_back(mtk::helper::to_handle(&ms[i])); }
     always_assert(q.len() == 8, "eight went in and the count disagrees");
 
     for (usz i = 0; i < 8; i++)
     {
-        Msg* m = msg_from_inner(q.pop_front());
+        Msg* m = mtk::helper::from_handle(q.pop_front(), Msg);
         always_assert(m != null, "an item came off as the wrong type");
         always_assert(m.id == (int)i, "the queue is not first-in first-out");
     }
@@ -76,8 +76,8 @@ fn void an_empty_queue_answers() @test
 fn void the_last_item_points_at_itself() @test
 {
     Msg m;
-    msg_init(&m);
-    Handle h = msg_to_inner(&m);
+    mtk::helper::init(&m);
+    Handle h = mtk::helper::to_handle(&m);
 
     always_assert(h.next == null, "a fresh item is not off-chain");
 
@@ -105,12 +105,12 @@ fn void the_last_item_points_at_itself() @test
 fn void the_link_test_is_exact() @test
 {
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     InnerQueue q;
-    q.push_back(msg_to_inner(&m));
+    q.push_back(mtk::helper::to_handle(&m));
 
     always_assert(q.len() == 1, "the queue should hold exactly one item");
-    always_assert(mtk::is_linked(msg_to_inner(&m)),
+    always_assert(mtk::is_linked(mtk::helper::to_handle(&m)),
         "Part 8.7: an item alone on a queue reports unlinked — the self-link invariant is broken");
 }
 
@@ -126,11 +126,11 @@ fn void the_link_test_sees_another_container() @test
 {
     Msg[8] ms = fresh_msgs();
     InnerQueue a;
-    for (usz i = 0; i < 2; i++) { msg_init(&ms[i]); a.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 2; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
 
-    always_assert(mtk::is_linked(msg_to_inner(&ms[0])), "the link test missed an item on another queue");
-    always_assert(mtk::is_linked(msg_to_inner(&ms[1])), "the link test missed the tail of another queue");
-    always_assert(!mtk::is_linked(msg_to_inner(&ms[2])), "the link test claimed an item on no queue");
+    always_assert(mtk::is_linked(mtk::helper::to_handle(&ms[0])), "the link test missed an item on another queue");
+    always_assert(mtk::is_linked(mtk::helper::to_handle(&ms[1])), "the link test missed the tail of another queue");
+    always_assert(!mtk::is_linked(mtk::helper::to_handle(&ms[2])), "the link test claimed an item on no queue");
 }
 
 <*
@@ -143,7 +143,7 @@ fn void every_removal_repairs() @test
 {
     Msg[8] ms = fresh_msgs();
     InnerQueue q;
-    for (usz i = 0; i < 3; i++) { msg_init(&ms[i]); q.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 3; i++) { mtk::helper::init(&ms[i]); q.push_back(mtk::helper::to_handle(&ms[i])); }
 
     Handle a = q.pop_front();
     Handle b = q.pop_front();
@@ -171,13 +171,13 @@ fn void the_walk_yields_every_handle() @test
 {
     Msg[8] ms = fresh_msgs();
     InnerQueue q;
-    for (usz i = 0; i < 5; i++) { msg_init(&ms[i]); q.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 5; i++) { mtk::helper::init(&ms[i]); q.push_back(mtk::helper::to_handle(&ms[i])); }
 
     usz seen = 0;
     InnerQueueIterator it = q.iter();
     for (Handle h = it.next(); h; h = it.next())
     {
-        always_assert(msg_from_inner(h).id == (int)seen, "the walk is out of order");
+        always_assert(mtk::helper::from_handle(h, Msg).id == (int)seen, "the walk is out of order");
         seen++;
         always_assert(seen <= 5, "the walk did not end at the self-linked tail");
     }
@@ -193,12 +193,12 @@ fn void the_walk_yields_every_handle() @test
 fn void the_walk_of_one_item() @test
 {
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     InnerQueue q;
-    q.push_back(msg_to_inner(&m));
+    q.push_back(mtk::helper::to_handle(&m));
 
     InnerQueueIterator it = q.iter();
-    always_assert(it.next() == msg_to_inner(&m), "the walk missed the only item");
+    always_assert(it.next() == mtk::helper::to_handle(&m), "the walk missed the only item");
     always_assert(it.next() == null, "the walk of one item did not end");
 }
 
@@ -221,8 +221,8 @@ fn void append_queue_empties_the_other() @test
     Msg[8] ms = fresh_msgs();
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 3; i++) { msg_init(&ms[i]); a.push_back(msg_to_inner(&ms[i])); }
-    for (usz i = 3; i < 6; i++) { msg_init(&ms[i]); b.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 3; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
+    for (usz i = 3; i < 6; i++) { mtk::helper::init(&ms[i]); b.push_back(mtk::helper::to_handle(&ms[i])); }
 
     a.append_queue(&b);
 
@@ -231,7 +231,7 @@ fn void append_queue_empties_the_other() @test
 
     for (usz i = 0; i < 6; i++)
     {
-        always_assert(msg_from_inner(a.pop_front()).id == (int)i, "append_queue scrambled the order");
+        always_assert(mtk::helper::from_handle(a.pop_front(), Msg).id == (int)i, "append_queue scrambled the order");
     }
 }
 
@@ -247,8 +247,8 @@ fn void append_queue_keeps_the_chain_walkable() @test
     Msg[8] ms = fresh_msgs();
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 2; i++) { msg_init(&ms[i]); a.push_back(msg_to_inner(&ms[i])); }
-    for (usz i = 2; i < 4; i++) { msg_init(&ms[i]); b.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 2; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
+    for (usz i = 2; i < 4; i++) { mtk::helper::init(&ms[i]); b.push_back(mtk::helper::to_handle(&ms[i])); }
 
     a.append_queue(&b);
 
@@ -256,7 +256,7 @@ fn void append_queue_keeps_the_chain_walkable() @test
     InnerQueueIterator it = a.iter();
     for (Handle h = it.next(); h; h = it.next())
     {
-        always_assert(msg_from_inner(h).id == (int)seen, "the spliced chain is out of order");
+        always_assert(mtk::helper::from_handle(h, Msg).id == (int)seen, "the spliced chain is out of order");
         seen++;
         always_assert(seen <= 4, "the spliced chain does not end");
     }
@@ -272,7 +272,7 @@ fn void append_queue_at_the_edges() @test
     Msg[8] ms = fresh_msgs();
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 2; i++) { msg_init(&ms[i]); b.push_back(msg_to_inner(&ms[i])); }
+    for (usz i = 0; i < 2; i++) { mtk::helper::init(&ms[i]); b.push_back(mtk::helper::to_handle(&ms[i])); }
 
     a.append_queue(&b);                      // onto an empty queue
     always_assert(a.len() == 2, "append onto an empty queue lost items");
@@ -280,8 +280,8 @@ fn void append_queue_at_the_edges() @test
     a.append_queue(&b);                      // from an empty queue
     always_assert(a.len() == 2, "append from an empty queue changed the count");
 
-    always_assert(msg_from_inner(a.pop_front()).id == 0, "append onto empty did not set the head");
-    always_assert(msg_from_inner(a.pop_front()).id == 1, "append onto empty did not set the tail");
+    always_assert(mtk::helper::from_handle(a.pop_front(), Msg).id == 0, "append onto empty did not set the head");
+    always_assert(mtk::helper::from_handle(a.pop_front(), Msg).id == 1, "append onto empty did not set the tail");
     always_assert(a.is_empty(), "the queue kept more than it was given");
 }
 
@@ -302,14 +302,14 @@ fn void self_move_does_not_destroy_the_queue() @test
     $if !mtk::CHECKED:
         Msg[8] ms = fresh_msgs();
         InnerQueue a;
-        for (usz i = 0; i < 3; i++) { msg_init(&ms[i]); a.push_back(msg_to_inner(&ms[i])); }
+        for (usz i = 0; i < 3; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
 
         a.append_queue(&a);
 
         always_assert(a.len() == 3, "the self-move changed the count");
         for (usz i = 0; i < 3; i++)
         {
-            always_assert(msg_from_inner(a.pop_front()).id == (int)i, "the self-move lost or scrambled an item");
+            always_assert(mtk::helper::from_handle(a.pop_front(), Msg).id == (int)i, "the self-move lost or scrambled an item");
         }
     $endif
 }
@@ -325,17 +325,17 @@ fn void self_move_does_not_destroy_the_queue() @test
 fn void one_queue_three_types() @test
 {
     Msg  m; Job  j; Twin t;
-    msg_init(&m); job_init(&j); twin_init(&t);
+    mtk::helper::init(&m); mtk::helper::init(&j); mtk::helper::init(&t);
 
     InnerQueue q;
-    q.push_back(msg_to_inner(&m));
-    q.push_back(job_to_inner(&j));
-    q.push_back(twin_to_inner(&t));
+    q.push_back(mtk::helper::to_handle(&m));
+    q.push_back(mtk::helper::to_handle(&j));
+    q.push_back(mtk::helper::to_handle(&t));
 
     always_assert(q.len() == 3, "three types did not fit on one queue");
-    always_assert(msg_from_inner(q.pop_front()) == &m, "the Msg came back wrong");
-    always_assert(job_from_inner(q.pop_front()) == &j, "the Job came back wrong");
-    always_assert(twin_from_inner(q.pop_front()) == &t, "the Twin came back wrong");
+    always_assert(mtk::helper::from_handle(q.pop_front(), Msg) == &m, "the Msg came back wrong");
+    always_assert(mtk::helper::from_handle(q.pop_front(), Job) == &j, "the Job came back wrong");
+    always_assert(mtk::helper::from_handle(q.pop_front(), Twin) == &t, "the Twin came back wrong");
 }
 
 <*
@@ -347,21 +347,21 @@ fn void one_queue_three_types() @test
 fn void push_back_from_a_slot() @test
 {
     Msg a; Msg b;
-    msg_init(&a); msg_init(&b);
+    mtk::helper::init(&a); mtk::helper::init(&b);
     a.id = 1;
     b.id = 2;
 
     InnerQueue q;
     Slot s;
 
-    s.fill(msg_to_inner(&a));
+    s.fill(mtk::helper::to_handle(&a));
     q.push_back_slot(&s);
     always_assert(s.is_empty(), "push_back_slot did not clear the Slot");
 
-    s.fill(msg_to_inner(&b));
+    s.fill(mtk::helper::to_handle(&b));
     q.push_back_slot(&s);
     always_assert(s.is_empty(), "push_back_slot did not clear the Slot");
 
-    always_assert(msg_from_inner(q.pop_front()).id == 1, "push_back_slot went to the wrong end");
-    always_assert(msg_from_inner(q.pop_front()).id == 2, "push_back_slot went to the wrong end");
+    always_assert(mtk::helper::from_handle(q.pop_front(), Msg).id == 1, "push_back_slot went to the wrong end");
+    always_assert(mtk::helper::from_handle(q.pop_front(), Msg).id == 2, "push_back_slot went to the wrong end");
 }

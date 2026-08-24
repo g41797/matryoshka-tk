@@ -20,6 +20,7 @@
 *>
 module mtk::mailbox;
 import mtk;
+import mtk::helper;
 import std::thread;
 import std::time;
 import std::core::mem::alloc;
@@ -71,10 +72,27 @@ struct Mailbox
     usz _wake_gen;
 }
 
-alias init   = mtk::helper::init{Mailbox};
-alias to_inner = mtk::helper::to_inner{Mailbox};
-alias of     = mtk::helper::from_inner{Mailbox};
-alias TYPE   = mtk::helper::TYPE{Mailbox};
+<*
+ The container's own identity and crossings, and this container's PUBLIC
+ surface — a Mailbox is an item like any other, Part 11.1, so a caller holding a
+ Handle needs a way back.
+
+ **H0 left no alias to write.** `mtk::helper`'s members are macros, so the two
+ crossings are macros that forward to them, and the identity is C3's own
+ `Mailbox::typeid` under the name this container's callers already use. Nothing
+ here is a per-type instantiation and nothing here is an alias.
+*>
+const typeid TYPE = Mailbox::typeid;
+
+<*
+ From a Mailbox to a handle. Cannot fail.
+*>
+macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle(p);
+
+<*
+ The checking crossing back. Null when the handle names another type.
+*>
+macro Mailbox* of(Handle h) => mtk::helper::from_handle(h, Mailbox);
 
 <*
  Create a mailbox on the heap. Part 3.1: a participant is allocated once and
@@ -96,7 +114,7 @@ fn Mailbox*? create(Allocator a)
     Mailbox* mb = alloc::new_try(a, Mailbox)!;
     defer catch alloc::free(a, mb);
 
-    init(mb);
+    mtk::helper::init(mb);
     mb._alloc = a;
 
     mb._mu.init()!;

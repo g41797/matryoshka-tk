@@ -15,8 +15,8 @@
                                      the faults, @check
    queue.c3    module mtk            InnerQueue and its walker. First-in first-out
    stack.c3    module mtk            InnerStack. Last-in first-out
-   helper.c3   module mtk::helper    <Type> — the border, Part 7.5
-   owned.c3    module mtk::owned     <Type> — helper plus create and release
+   helper.c3   module mtk::helper    macros over $Type — the border, Part 7.5
+   managed.c3  module mtk::managed   helper plus create and release
    mailbox.c3  module mtk::mailbox   Mailbox. Part 11.3 to 11.6
    pool.c3     module mtk::pool      Pool, PoolHooks. Part 11.7 to 11.10, Part 12
 
@@ -41,10 +41,16 @@
  stays possible and stays visible in the source. That half is held by the Part
  17.2 layering rule and the check `run-builds.sh` runs for it.
 
- Specification: matryoshka-specification-002.md, as amended by the core
- redesign — a specification 003 is authorized in direction and not yet cut.
- Design rulings: 3tk-porting-proposal-004.md, D1 to D16, and
- 3tk-core-redesign-proposal-002.md, R1 to R15.
+ **Neither helper module is generic — H0 and H0b.** Their members are macros
+ over `$Type` and the code is generated per call site. No application writes
+ an alias or an instantiation for any type, anywhere.
+
+ Specification: ../common/matryoshka-specification-003.md. Part 7.1 is a known
+ SPECIFICATION defect against this port's shape — 3tk-deviations-001.md V19,
+ reworded by 3TK-17.
+ Design rulings: 3tk-porting-proposal-004.md, D1 to D16;
+ 3tk-core-redesign-proposal-002.md, R1 to R15; and 3tk-helper-proposal-001.md,
+ H0, H0b, H5, H6, H7, H8, H9, H10.
 *>
 module mtk;
 

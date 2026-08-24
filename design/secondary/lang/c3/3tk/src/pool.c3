@@ -31,9 +31,14 @@
 
  Part 17.2: only the public surface of the core is used here — five types now
  rather than four, `InnerStack` being the new one.
+
+ **`Pool.put` re-reads the closed flag after the hook** — 3TK-12's P1, ruled
+ 2026-08-24. Part 12.3 MUST forces the mutex open across a hook, and a close can
+ run to completion inside that window. See the comment in `put`.
 *>
 module mtk::pool;
 import mtk;
+import mtk::helper;
 import std::thread;
 import std::time;
 import std::core::mem::alloc;
@@ -86,9 +91,16 @@ interface PoolHooks
     <*
      The pool is going down. Part 12.2.
 
-     Called once, with everything that remained, as one flat queue. The hook is responsible
+     Called with everything that remained, as one flat queue. The hook is responsible
      for processing or releasing every item in it. Called OUTSIDE the mutex,
      after the closed flag is already set.
+
+     **Called once by `Pool.close`, and possibly once more with stragglers.**
+     Part 12.2 says *called once*; a `Pool.put` whose hook was still running
+     when the close fired has items the pool must not keep and must not lose,
+     and it hands them here. `Pool.put`'s body carries the argument. A hook
+     writes the same loop either way — process or release every item — and must
+     not free its own context on the first call.
 
      @param remaining : "everything the pool still held, flattened across every identity. No order is promised — R12"
     *>
@@ -155,10 +167,27 @@ struct Pool
     PoolHooks    _hooks;
 }
 
-alias init   = mtk::helper::init{Pool};
-alias to_inner = mtk::helper::to_inner{Pool};
-alias of     = mtk::helper::from_inner{Pool};
-alias TYPE   = mtk::helper::TYPE{Pool};
+<*
+ The container's own identity and crossings, and this container's PUBLIC
+ surface — a Pool is an item like any other, Part 11.1, so a caller holding a
+ Handle needs a way back.
+
+ **H0 left no alias to write.** `mtk::helper`'s members are macros, so the two
+ crossings are macros that forward to them, and the identity is C3's own
+ `Pool::typeid` under the name this container's callers already use. Nothing
+ here is a per-type instantiation and nothing here is an alias.
+*>
+const typeid TYPE = Pool::typeid;
+
+<*
+ From a Pool to a handle. Cannot fail.
+*>
+macro Handle to_handle(Pool* p) => mtk::helper::to_handle(p);
+
+<*
+ The checking crossing back. Null when the handle names another type.
+*>
+macro Pool* of(Handle h) => mtk::helper::from_handle(h, Pool);
 
 <*
  Create a pool. Part 3.1, Part 11.7, Part 12.1.
@@ -208,7 +237,7 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
     Pool* p = alloc::new_try(a, Pool)!;
     defer catch alloc::free(a, p);
 
-    init(p);
+    mtk::helper::init(p);
     p._alloc = a;
     p._hooks = hooks;
 
@@ -396,6 +425,11 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
  Part 2.10: this path cannot fail and cannot be interrupted. A worker that must
  give its item back must always be able to.
 
+ **A close that fires while the put hook runs is handled, and the body says
+ how** — P1, and the closed flag is re-read after the hook. The caller sees
+ nothing of it: the Slot was cleared before the hook ran and stays cleared,
+ because the pool did take the item.
+
  @param slot : "a full Slot; cleared if the pool took the item"
 *>
 fn void Pool.put(&self, Slot* slot)
@@ -426,6 +460,47 @@ fn void Pool.put(&self, Slot* slot)
     self._mu.unlock();                       // Part 12.3
     self._hooks.on_put(in_pool, &mine, &extra);
     self._mu.lock();
+
+    // **The late close — 3TK-12's P1, and the re-read is the owner's ruling of
+    // 2026-08-24.**
+    //
+    // Part 12.3 MUST requires the mutex to be released across the hook, so
+    // `Pool.close` can run to completion inside that window: it sets both
+    // flags, drains every bucket into `remaining`, and hands `remaining` to
+    // `on_close` — all before this line relocks. Without this re-read the pool
+    // then pushes into a bucket of a closed and already-drained pool, and the
+    // item is with NOBODY: `slot.take()` above emptied the caller's Slot, so
+    // Part 9.4 tells the caller truthfully that the pool has it, and the close
+    // hook already ran. Invariant 34 and Part 11.8 both break on that window.
+    //
+    // Anything this call is still holding therefore goes to the close hook,
+    // which is where every other item the pool held went. One rule, and it is
+    // the pool's own: **what the pool holds when it discovers it is closed goes
+    // to `on_close`.**
+    //
+    // - Invariant 34 holds: nothing lands in a bucket after the flag is set.
+    // - Part 11.8 holds: nothing comes back to the caller, and the caller's
+    //   Slot stays cleared because the pool did take the item.
+    // - Part 12.2's **called once** is the one clause this bends, and it is
+    //   deliberate. Losing items is worse than a second call, and the
+    //   alternative — restoring the caller's Slot — cannot carry `extra`, whose
+    //   items the caller never had. 3TK-12's V11 records that 002 has no rule
+    //   here at all; specification 003 rules the shape and this is 3tk's answer
+    //   until it does.
+    //
+    // A hook must therefore tolerate a second `on_close` carrying stragglers.
+    // It is the same contract it already has for the first one: process or
+    // release every item.
+    if (self._closed)
+    {
+        InnerQueue stragglers;
+        if (mine.is_full()) stragglers.push_back(mine.take());
+        stragglers.append_queue(&extra);
+
+        self._mu.unlock();                   // Part 12.3, as for every hook call
+        if (!stragglers.is_empty()) self._hooks.on_close(&stragglers);
+        return;
+    }
 
     // Part 12.2: a full Slot on return means one thing — an item is kept.
     // Original or replacement.

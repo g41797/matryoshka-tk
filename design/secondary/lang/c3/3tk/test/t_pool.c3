@@ -54,7 +54,7 @@ fn void TestHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
     self.gets.add(1);
     self.last_get_count.store(in_pool);
     if (self.refuse_to_create) return;             // Part 12.2: an empty Slot is the failure
-    if (catch owned_create(self.alloc, slot)) return;
+    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
 }
 
 fn void TestHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
@@ -66,11 +66,11 @@ fn void TestHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
     for (usz i = 0; i < self.extras_on_put; i++)
     {
         Slot part;
-        if (catch owned_create(self.alloc, &part)) break;
+        if (catch mtk::managed::create(Holder, self.alloc, &part)) break;
         extra.push_back_slot(&part);
     }
 
-    if (self.release_on_put) owned_release(slot);  // released, nothing kept
+    if (self.release_on_put) mtk::managed::release(Holder, slot);  // released, nothing kept
     // otherwise the Slot stays full: kept as it is
 }
 
@@ -86,14 +86,14 @@ fn void TestHooks.on_close(&self, InnerQueue* remaining) @dynamic
     {
         Slot s;
         s.fill(h);
-        owned_release(&s);
+        mtk::managed::release(Holder, &s);
     }
 }
 
 fn Pool* new_pool(TestHooks* hooks)
 {
     hooks.alloc = mem;
-    typeid[1] tags = { OWNED_TYPE };
+    typeid[1] tags = { Holder::typeid };
     return pool::create(mem, &tags, hooks)!!;
 }
 
@@ -133,7 +133,7 @@ fn void a_pool_is_an_item() @test
     Pool* p = new_pool(&h);
     defer { p.close(); p.release(); }
 
-    Handle ph = pool::to_inner(p);
+    Handle ph = pool::to_handle(p);
     always_assert(ph.type == pool::TYPE, "the pool carries no identity");
     always_assert(pool::of(ph) == p, "the pool did not survive the round trip");
     always_assert(pool::TYPE != mailbox::TYPE, "the two containers share an identity");
@@ -152,21 +152,21 @@ fn void get_creates_then_reuses() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
     always_assert(s.is_full(), "get did not fill the Slot");
     always_assert(h.gets.load() == 1, "the get hook did not run");
     always_assert(h.last_get_count.load() == 0, "the count handed to on_get is wrong");
 
-    Owned* first = mtk::helper::must_from_slot{Owned}(&s);
+    Holder* first = mtk::helper::must_from_slot(&s, Holder);
 
     p.put(&s);
     always_assert(s.is_empty(), "put did not clear the Slot");
     always_assert(h.puts.load() == 1, "the put hook did not run");
-    always_assert(p.count_of(OWNED_TYPE) == 1, "the item was not kept");
+    always_assert(p.count_of(Holder::typeid) == 1, "the item was not kept");
 
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "the second get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "the second get failed"); }
     always_assert(h.gets.load() == 1, "the second get called the hook instead of reusing");
-    always_assert(mtk::helper::must_from_slot{Owned}(&s) == first, "a different item came back");
+    always_assert(mtk::helper::must_from_slot(&s, Holder) == first, "a different item came back");
 
     p.put(&s);
 }
@@ -183,7 +183,7 @@ fn void available_only_never_creates() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    always_assert(@catch_is(p.get(OWNED_TYPE, AVAILABLE_ONLY, &s), mtk::NOT_AVAILABLE),
+    always_assert(@catch_is(p.get(Holder::typeid, AVAILABLE_ONLY, &s), mtk::NOT_AVAILABLE),
                   "available-only did not report NOT_AVAILABLE on an empty pool");
     always_assert(h.gets.load() == 0, "available-only called the creation hook");
     always_assert(s.is_empty(), "a failed get filled the Slot");
@@ -199,14 +199,14 @@ fn void new_only_always_creates() @test
     defer { p.close(); p.release(); }
 
     Slot a;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &a)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &a)) { always_assert(false, "get failed"); }
     p.put(&a);
-    always_assert(p.count_of(OWNED_TYPE) == 1, "the item was not stored");
+    always_assert(p.count_of(Holder::typeid) == 1, "the item was not stored");
 
     Slot b;
-    if (catch p.get(OWNED_TYPE, NEW_ONLY, &b)) { always_assert(false, "new-only get failed"); }
+    if (catch p.get(Holder::typeid, NEW_ONLY, &b)) { always_assert(false, "new-only get failed"); }
     always_assert(h.gets.load() == 2, "new-only reused a stored item");
-    always_assert(p.count_of(OWNED_TYPE) == 1, "new-only consumed a stored item");
+    always_assert(p.count_of(Holder::typeid) == 1, "new-only consumed a stored item");
 
     p.put(&b);
 }
@@ -223,7 +223,7 @@ fn void a_hook_that_creates_nothing() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    always_assert(@catch_is(p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s), mtk::NOT_CREATED),
+    always_assert(@catch_is(p.get(Holder::typeid, AVAILABLE_OR_NEW, &s), mtk::NOT_CREATED),
                   "a hook that created nothing did not report NOT_CREATED");
     always_assert(h.gets.load() == 1, "the hook was not called");
     always_assert(s.is_empty(), "a failed get filled the Slot");
@@ -240,11 +240,11 @@ fn void a_put_hook_may_release() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
     p.put(&s);
 
     always_assert(s.is_empty(), "put did not clear the caller's Slot");
-    always_assert(p.count_of(OWNED_TYPE) == 0, "the pool kept an item the hook released");
+    always_assert(p.count_of(Holder::typeid) == 0, "the pool kept an item the hook released");
 }
 
 <*
@@ -262,11 +262,11 @@ fn void the_extra_list_on_put() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
     p.put(&s);
 
     // the item itself, kept, plus three parts
-    always_assert(p.count_of(OWNED_TYPE) == 4, "the extra list was not taken");
+    always_assert(p.count_of(Holder::typeid) == 4, "the extra list was not taken");
 }
 
 <*
@@ -286,7 +286,7 @@ fn void the_waiting_get_never_creates() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    always_assert(@catch_is(p.get_wait(OWNED_TYPE, &s, time::ms(60)), mtk::TIMEOUT),
+    always_assert(@catch_is(p.get_wait(Holder::typeid, &s, time::ms(60)), mtk::TIMEOUT),
                   "the waiting get did not time out on an empty pool");
     always_assert(h.gets.load() == 0, "Part 11.9: the waiting get called the creation hook");
     always_assert(s.is_empty(), "a timed-out get filled the Slot");
@@ -302,11 +302,11 @@ fn void the_waiting_get_takes_a_stored_item() @test
     defer { p.close(); p.release(); }
 
     Slot s;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
     p.put(&s);
 
     Slot w;
-    if (catch p.get_wait(OWNED_TYPE, &w, time::ms(60))) { always_assert(false, "the waiting get found nothing"); }
+    if (catch p.get_wait(Holder::typeid, &w, time::ms(60))) { always_assert(false, "the waiting get found nothing"); }
     always_assert(w.is_full(), "the waiting get did not fill the Slot");
     always_assert(h.gets.load() == 1, "the waiting get created something");
     p.put(&w);
@@ -327,10 +327,10 @@ fn void close_gives_nothing_back() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         p.put(&s);
     }
-    always_assert(p.count_of(OWNED_TYPE) == 3, "the pool did not keep three");
+    always_assert(p.count_of(Holder::typeid) == 3, "the pool did not keep three");
 
     p.close();
 
@@ -369,7 +369,7 @@ fn void a_closed_pool_refuses_a_put() @test
     Pool* p = new_pool(&h);
 
     Slot s;
-    if (catch p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
 
     p.close();
     p.put(&s);
@@ -377,7 +377,7 @@ fn void a_closed_pool_refuses_a_put() @test
     always_assert(s.is_full(), "a closed pool took the item anyway");
     always_assert(h.puts.load() == 0, "a closed pool ran the put hook");
 
-    owned_release(&s);              // the caller still owns it, and says so
+    mtk::managed::release(Holder, &s);              // the caller still owns it, and says so
     p.release();
 }
 
@@ -391,12 +391,12 @@ fn void a_closed_pool_refuses_a_get() @test
     p.close();
 
     Slot s;
-    always_assert(@catch_is(p.get(OWNED_TYPE, AVAILABLE_OR_NEW, &s), mtk::CLOSED), "a closed pool served a get");
-    always_assert(@catch_is(p.get_wait(OWNED_TYPE, &s, time::ms(1)), mtk::CLOSED), "a closed pool served a waiting get");
+    always_assert(@catch_is(p.get(Holder::typeid, AVAILABLE_OR_NEW, &s), mtk::CLOSED), "a closed pool served a get");
+    always_assert(@catch_is(p.get_wait(Holder::typeid, &s, time::ms(1)), mtk::CLOSED), "a closed pool served a waiting get");
     always_assert(s.is_empty(), "a refused get filled the Slot");
 
     // still a valid item, Part 11.12
-    always_assert(pool::of(pool::to_inner(p)) == p, "a closed pool stopped being an item");
+    always_assert(pool::of(pool::to_handle(p)) == p, "a closed pool stopped being an item");
     p.release();
 }
 
@@ -430,7 +430,7 @@ fn void the_give_back_loop_stops_at_the_first_refusal() @test
     for (usz i = 0; i < 4; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         items.push_back_slot(&s);
     }
     always_assert(items.len() == 4, "four items were not gathered");
@@ -446,7 +446,7 @@ fn void the_give_back_loop_stops_at_the_first_refusal() @test
     {
         Slot s;
         s.fill(x);
-        owned_release(&s);
+        mtk::managed::release(Holder, &s);
     }
     p.release();
 }
@@ -464,14 +464,14 @@ fn void the_give_back_loop_takes_the_whole_queue() @test
     for (usz i = 0; i < 4; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         items.push_back_slot(&s);
     }
 
     put_batch(p, &items);
 
     always_assert(items.is_empty(), "the give-back loop left items with the caller");
-    always_assert(p.count_of(OWNED_TYPE) == 4, "the pool did not keep them");
+    always_assert(p.count_of(Holder::typeid) == 4, "the pool did not keep them");
     always_assert(h.puts.load() == 4, "the put hook did not run per item");
 }
 
@@ -494,16 +494,16 @@ fn void the_count_is_read_from_the_right_side() @test
     for (usz i = 0; i < 2; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         items.push_back_slot(&s);
     }
     put_batch(p, &items);
-    always_assert(p.count_of(OWNED_TYPE) == 2, "two were not stored");
+    always_assert(p.count_of(Holder::typeid) == 2, "two were not stored");
     always_assert(h.last_put_count.load() == 1, "on_put was given the count AFTER the addition");
 
     // a new-only get removes nothing, so the hook sees what is left: two
     Slot s;
-    if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+    if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
     always_assert(h.last_get_count.load() == 2, "on_get was given the wrong count");
     p.put(&s);
 }
@@ -523,7 +523,7 @@ fn void no_sequence_guarantee() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         items.push_back_slot(&s);
     }
     put_batch(p, &items);
@@ -532,7 +532,7 @@ fn void no_sequence_guarantee() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, AVAILABLE_ONLY, &s)) break;
+        if (catch p.get(Holder::typeid, AVAILABLE_ONLY, &s)) break;
         got++;
         items.push_back_slot(&s);
     }
@@ -573,21 +573,21 @@ fn void reuse_is_last_in_first_out() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
-        Owned* o = mtk::helper::must_from_slot{Owned}(&s);
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        Holder* o = mtk::helper::must_from_slot(&s, Holder);
         o.id = (int)i;
         items.push_back_slot(&s);
     }
 
     // given back in the order 0, 1, 2 — so 2 is on top
     put_batch(p, &items);
-    always_assert(p.count_of(OWNED_TYPE) == 3, "the pool did not keep three");
+    always_assert(p.count_of(Holder::typeid) == 3, "the pool did not keep three");
 
     for (usz i = 3; i > 0; i--)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, AVAILABLE_ONLY, &s)) { always_assert(false, "an available get failed"); }
-        Owned* o = mtk::helper::must_from_slot{Owned}(&s);
+        if (catch p.get(Holder::typeid, AVAILABLE_ONLY, &s)) { always_assert(false, "an available get failed"); }
+        Holder* o = mtk::helper::must_from_slot(&s, Holder);
         always_assert(o.id == (int)(i - 1),
             "the pool did not hand back the most recently returned item — the bucket is not a stack any more");
         items.push_back_slot(&s);
@@ -618,20 +618,20 @@ fn void a_closed_pool_is_empty() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        if (catch p.get(OWNED_TYPE, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
+        if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
         p.put(&s);
     }
-    always_assert(p.count_of(OWNED_TYPE) == 3, "the pool did not keep three");
+    always_assert(p.count_of(Holder::typeid) == 3, "the pool did not keep three");
 
     p.close();
 
     // invariant 34: nothing is left behind
-    always_assert(p.count_of(OWNED_TYPE) == 0, "a closed pool still holds items");
+    always_assert(p.count_of(Holder::typeid) == 0, "a closed pool still holds items");
     always_assert(h.closed_with.load() == 3, "the drain did not hand over everything");
 
     // and so the outcome is CLOSED rather than one of the three it used to hold
     Slot s;
-    always_assert(@catch_is(p.get(OWNED_TYPE, AVAILABLE_ONLY, &s), mtk::CLOSED),
+    always_assert(@catch_is(p.get(Holder::typeid, AVAILABLE_ONLY, &s), mtk::CLOSED),
         "a closed pool answered a get with an item");
     always_assert(s.is_empty(), "a refused get filled the Slot");
 

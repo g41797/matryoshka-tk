@@ -1,5 +1,5 @@
 <*
- Shared types for the negative programs.
+ Shared types for the negative programs. No aliases — H0.
 
  A negative program provokes one contract violation and is expected to ABORT
  in a checking build. In a fast build the same program must run to the end and
@@ -16,14 +16,6 @@ import mtk::pool;
 
 struct Msg { int id; Inner node; }
 struct Job { Inner node; int pri; }
-
-alias MSG_TYPE   = mtk::helper::TYPE{Msg};
-alias JOB_TYPE   = mtk::helper::TYPE{Job};
-alias msg_init   = mtk::helper::init{Msg};
-alias msg_to_inner = mtk::helper::to_inner{Msg};
-alias msg_must   = mtk::helper::must_from_inner{Msg};
-alias job_init   = mtk::helper::init{Job};
-alias job_to_inner = mtk::helper::to_inner{Job};
 
 <*
  A minimal hook object for the container negatives. Part 12.1: the implementing

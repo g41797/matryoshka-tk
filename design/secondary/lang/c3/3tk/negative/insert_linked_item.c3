@@ -20,14 +20,14 @@ import std::io;
 fn int main()
 {
     Msg a; Msg b;
-    msg_init(&a); msg_init(&b);
+    mtk::helper::init(&a); mtk::helper::init(&b);
 
     InnerQueue one;
     InnerQueue two;
-    one.push_back(msg_to_inner(&a));
-    one.push_back(msg_to_inner(&b));
+    one.push_back(mtk::helper::to_handle(&a));
+    one.push_back(mtk::helper::to_handle(&b));
 
-    two.push_back(msg_to_inner(&a));    // <-- the violation: a is on `one`
+    two.push_back(mtk::helper::to_handle(&a));    // <-- the violation: a is on `one`
 
     io::printn("no check: a linked item was inserted on a second queue");
     return 0;

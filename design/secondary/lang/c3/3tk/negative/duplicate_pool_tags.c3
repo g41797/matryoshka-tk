@@ -24,7 +24,7 @@ fn int main()
 {
     NullHooks hooks;
 
-    typeid[3] tags = { MSG_TYPE, JOB_TYPE, MSG_TYPE };   // <-- the violation
+    typeid[3] tags = { Msg::typeid, Job::typeid, Msg::typeid };   // <-- the violation
 
     Pool* p = pool::create(mem, &tags, &hooks)!!;
 

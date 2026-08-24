@@ -271,6 +271,6 @@ macro usz required_alloc_offset($Type)
             $off = $m.offset;
         $endif
     $endforeach
-    $assert $off >= 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::owned";
+    $assert $off >= 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::managed";
     return $off;
 }

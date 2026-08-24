@@ -14,7 +14,7 @@ The **D** port of Matryoshka. Fourth in the family: **otk** (Odin), **ztk** (Zig
 this repo, the reference implementation), **3tk** (C3, complete), **dtk** (D).
 
 Ported from
-[the portable specification](../common/matryoshka-specification-002.md), with ztk
+[the portable specification](../common/matryoshka-specification-003.md), with ztk
 as the reference for *behaviour* — never as a template for syntax.
 
 ## Scope — ruled by the owner, 2026-08-23
@@ -36,10 +36,21 @@ These are not proposals. They are settled, and every stage works inside them.
 
 Read these; nothing in this folder replaces them.
 
-- **[matryoshka-specification-002.md](../common/matryoshka-specification-002.md)**
+- **[matryoshka-specification-003.md](../common/matryoshka-specification-003.md)**
   — the source of truth. Self-contained and language-neutral. *A port is written
   from this file alone.* A defect found in it is fixed **there**, once, for every
   port — not patched in a dtk document.
+
+  **This is dtk's input, and it changed on 2026-08-24.** 003 replaced 002, which
+  is now in [`../common/backup/`](../common/backup/). The reason matters to a
+  port that has not started: 002 was written from ztk and stated Zig's
+  *mechanism* where the design has only a *promise*, in fourteen places. A dtk
+  written from 002 would have reproduced a doubly-linked list, a previous link,
+  the mailbox's out-of-band anchor and an inexact link test — and then needed the
+  C3 line's redesign stages run again against it. 003 states the promise and
+  shows both realizations. **Read 003's change log first**: it names every
+  difference and the five assumptions it was written on. No dtk stage has run,
+  so nothing here needs revising for it.
 - **[port-flow-001.md](../common/port-flow-001.md)** — how a port is staged,
   recorded and verified. Its three tiers say what transfers from 3tk verbatim,
   what transfers only as a question, and what is shared.

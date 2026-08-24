@@ -32,11 +32,11 @@ import std::io;
 fn int main()
 {
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
 
     InnerQueue q;
-    q.push_back(msg_to_inner(&m));
-    q.push_back(msg_to_inner(&m));   // <-- the violation
+    q.push_back(mtk::helper::to_handle(&m));
+    q.push_back(mtk::helper::to_handle(&m));   // <-- the violation
 
     io::printn("no check: the item was inserted twice");
     return 0;

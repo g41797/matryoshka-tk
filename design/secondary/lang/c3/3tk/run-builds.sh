@@ -6,11 +6,24 @@
 #
 # A stage that reports three builds has not run.
 #
-# Usage:  ./run-builds.sh
+# Usage:  ./run-builds.sh [dir]      dir defaults to this script's own directory
 # Exit 0 only if every build, every test and every negative behaves as specified.
 
 set -u
-cd "$(dirname "$0")"
+
+# The directory to run against. Optional.
+#
+#   ./run-builds.sh            -> the directory this script lives in, as before
+#   ./run-builds.sh <dir>      -> <dir> instead
+#
+# An empty argument is the same as none. `set -u` is on, hence ${1:-}.
+#
+# The `|| exit` is not decoration. There is no `set -e` here, so without it a
+# failed cd would let every command below run in whatever directory the caller
+# happened to be in.
+ROOT=${1:-}
+[ -n "$ROOT" ] || ROOT=$(dirname "$0")
+cd "$ROOT" || { echo "no such directory: $ROOT" >&2; exit 2; }
 
 C3C=${C3C:-c3c}
 PASS=0
@@ -55,7 +68,7 @@ TIER1_NEGATIVES=(release_open_mailbox release_open_pool)
 declare -A NOCOMPILE_EXPECT=(
   [nocompile_no_inner]="NotAnItem"
   [nocompile_two_inners]="TwoInners"
-  [nocompile_owned_no_allocator]="mtk::helper"
+  [nocompile_managed_no_allocator]="mtk::helper"
 )
 
 echo "== c3c =="

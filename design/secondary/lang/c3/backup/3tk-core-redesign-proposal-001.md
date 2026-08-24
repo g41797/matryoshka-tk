@@ -1,7 +1,7 @@
 # The 3tk core redesign proposal (001)
 
 Stage 3TK-10 of `3tk-staging-plan-006.md`. Written against
-`../common/matryoshka-specification-002.md`, `3tk-porting-proposal-004.md`, and
+`../common/backup/matryoshka-specification-002.md`, `3tk-porting-proposal-004.md`, and
 `3tk/src/` as it stands green.
 
 **This document ends at a decision register. It writes no C3.** The code is
@@ -605,7 +605,7 @@ The owner rules.
 
 ## 8.1 What would have to move
 
-`../common/matryoshka-specification-002.md`, and **dtk and otk read it.**
+`../common/backup/matryoshka-specification-002.md`, and **dtk and otk read it.**
 
 | Part | Marking | Change |
 |---|---|---|

@@ -21,8 +21,8 @@ fn int main()
     for (usz i = 0; i < 3; i++)
     {
         ms[i].id = (int)i;
-        msg_init(&ms[i]);
-        a.push_back(msg_to_inner(&ms[i]));
+        mtk::helper::init(&ms[i]);
+        a.push_back(mtk::helper::to_handle(&ms[i]));
     }
 
     a.append_queue(&a);                // <-- the violation
@@ -30,7 +30,7 @@ fn int main()
     always_assert(a.len() == 3, "the early return did not save the queue");
     for (usz i = 0; i < 3; i++)
     {
-        Msg* m = mtk::helper::from_inner{Msg}(a.pop_front());
+        Msg* m = mtk::helper::from_handle(a.pop_front(), Msg);
         always_assert(m != null && m.id == (int)i, "the self-move lost an item");
     }
     io::printn("no check: the early return saved the queue");

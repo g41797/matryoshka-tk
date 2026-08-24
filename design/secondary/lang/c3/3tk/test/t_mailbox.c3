@@ -42,17 +42,17 @@ fn void a_mailbox_is_an_item() @test
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Handle h = mailbox::to_inner(mb);
+    Handle h = mailbox::to_handle(mb);
     always_assert(h != null, "the mailbox has no handle");
     always_assert(h.type == mailbox::TYPE, "the mailbox carries no identity");
     always_assert(mailbox::of(h) == mb, "the mailbox did not survive the round trip");
 
     // and it sits on a list, beside an item of another type
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     InnerQueue list;
     list.push_back(h);
-    list.push_back(msg_to_inner(&m));
+    list.push_back(mtk::helper::to_handle(&m));
     always_assert(list.len() == 2, "a mailbox would not go on a list");
     always_assert(mailbox::of(list.pop_front()) == mb, "the mailbox came off wrong");
     list.pop_front();
@@ -67,17 +67,17 @@ fn void send_then_poll() @test
     defer drop_mailbox(mb);
 
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     m.id = 5;
 
     Slot s;
-    s.fill(msg_to_inner(&m));
+    s.fill(mtk::helper::to_handle(&m));
     if (catch mb.send(&s)) { always_assert(false, "send failed on an open mailbox"); }
     always_assert(s.is_empty(), "send did not clear the Slot");
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll found nothing"); }
-    always_assert(msg_move(&r) == &m, "the wrong item came back");
+    always_assert(mtk::helper::move_from_slot(&r, Msg) == &m, "the wrong item came back");
     always_assert(r.is_empty(), "the claim did not clear the Slot");
 }
 
@@ -111,9 +111,9 @@ fn void ordinary_items_are_fifo() @test
     for (usz i = 0; i < 6; i++)
     {
         ms[i].id = (int)i;
-        msg_init(&ms[i]);
+        mtk::helper::init(&ms[i]);
         Slot s;
-        s.fill(msg_to_inner(&ms[i]));
+        s.fill(mtk::helper::to_handle(&ms[i]));
         if (catch mb.send(&s)) { always_assert(false, "send failed"); }
     }
 
@@ -121,7 +121,7 @@ fn void ordinary_items_are_fifo() @test
     {
         Slot r;
         if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-        always_assert(msg_move(&r).id == (int)i, "the mailbox is not first-in first-out");
+        always_assert(mtk::helper::move_from_slot(&r, Msg).id == (int)i, "the mailbox is not first-in first-out");
     }
 }
 
@@ -142,7 +142,7 @@ fn void out_of_band_ordering() @test
     defer drop_mailbox(mb);
 
     Msg[6] ms;
-    for (usz i = 0; i < 6; i++) { ms[i].id = (int)i; msg_init(&ms[i]); }
+    for (usz i = 0; i < 6; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); }
 
     // ordinary 0, oob 1, ordinary 2, oob 3, ordinary 4
     send_one(mb, &ms[0], false);
@@ -157,14 +157,14 @@ fn void out_of_band_ordering() @test
     {
         Slot r;
         if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-        always_assert(msg_move(&r).id == want[i], "out-of-band ordering is wrong");
+        always_assert(mtk::helper::move_from_slot(&r, Msg).id == want[i], "out-of-band ordering is wrong");
     }
 }
 
 fn void send_one(Mailbox* mb, Msg* m, bool oob)
 {
     Slot s;
-    s.fill(msg_to_inner(m));
+    s.fill(mtk::helper::to_handle(m));
     if (oob)
     {
         if (catch mb.send_oob(&s)) { always_assert(false, "send_oob failed"); }
@@ -189,19 +189,19 @@ fn void the_anchor_is_cleared() @test
     defer drop_mailbox(mb);
 
     Msg[4] ms;
-    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; msg_init(&ms[i]); }
+    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); }
 
     send_one(mb, &ms[0], true);      // oob
     send_one(mb, &ms[1], false);     // ordinary
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-    always_assert(msg_move(&r).id == 0, "the out-of-band item did not come first");
+    always_assert(mtk::helper::move_from_slot(&r, Msg).id == 0, "the out-of-band item did not come first");
 
     // the out-of-band run is drained; the anchor must be gone
     send_one(mb, &ms[2], true);
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-    always_assert(msg_move(&r).id == 2, "the new out-of-band item did not go to the front");
+    always_assert(mtk::helper::move_from_slot(&r, Msg).id == 2, "the new out-of-band item did not go to the front");
 }
 
 <*
@@ -213,7 +213,7 @@ fn void receive_the_batch() @test
     defer drop_mailbox(mb);
 
     Msg[4] ms;
-    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
+    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); send_one(mb, &ms[i], false); }
 
     InnerQueue got;
     if (catch mb.receive_all(&got)) { always_assert(false, "receive_all failed"); }
@@ -222,7 +222,7 @@ fn void receive_the_batch() @test
     always_assert(mb.len() == 0, "the mailbox kept something");
     for (usz i = 0; i < 4; i++)
     {
-        always_assert(msg_from_inner(got.pop_front()).id == (int)i, "the batch is out of order");
+        always_assert(mtk::helper::from_handle(got.pop_front(), Msg).id == (int)i, "the batch is out of order");
     }
 }
 
@@ -239,7 +239,7 @@ fn void close_gives_the_remainder_back() @test
     Mailbox* mb = mailbox::create(mem)!!;
 
     Msg[3] ms;
-    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; msg_init(&ms[i]); send_one(mb, &ms[i], false); }
+    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); send_one(mb, &ms[i], false); }
 
     InnerQueue left;
     mb.close(&left);
@@ -248,7 +248,7 @@ fn void close_gives_the_remainder_back() @test
     for (usz i = 0; i < 3; i++)
     {
         Handle h = left.pop_front();
-        always_assert(msg_from_inner(h).id == (int)i, "the remainder is out of order");
+        always_assert(mtk::helper::from_handle(h, Msg).id == (int)i, "the remainder is out of order");
         always_assert(!mtk::is_linked(h), "a returned item kept its links");
     }
     mb.release();
@@ -269,13 +269,13 @@ fn void a_closed_mailbox_refuses_everything() @test
     always_assert(left.is_empty(), "an empty mailbox returned a remainder");
 
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     Slot s;
-    s.fill(msg_to_inner(&m));
+    s.fill(mtk::helper::to_handle(&m));
 
     always_assert(@catch_is(mb.send(&s), mtk::CLOSED), "a closed mailbox accepted a send");
     always_assert(s.is_full(), "a refused send did not leave the Slot alone");
-    always_assert(s.peek() == msg_to_inner(&m), "a refused send changed the Slot");
+    always_assert(s.peek() == mtk::helper::to_handle(&m), "a refused send changed the Slot");
 
     always_assert(@catch_is(mb.send_oob(&s), mtk::CLOSED), "a closed mailbox accepted an out-of-band send");
     always_assert(s.is_full(), "a refused send_oob did not leave the Slot alone");
@@ -290,7 +290,7 @@ fn void a_closed_mailbox_refuses_everything() @test
     always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox gave a batch");
 
     // and the mailbox is still a valid item
-    always_assert(mailbox::of(mailbox::to_inner(mb)) == mb, "a closed mailbox stopped being an item");
+    always_assert(mailbox::of(mailbox::to_handle(mb)) == mb, "a closed mailbox stopped being an item");
 
     s.take();
     mb.release();
@@ -305,7 +305,7 @@ fn void close_is_idempotent() @test
     Mailbox* mb = mailbox::create(mem)!!;
 
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     send_one(mb, &m, false);
 
     InnerQueue first;
@@ -380,10 +380,10 @@ fn void a_closed_mailbox_is_empty() @test
     Msg[3] m;
     for (usz i = 0; i < 3; i++)
     {
-        msg_init(&m[i]);
+        mtk::helper::init(&m[i]);
         m[i].id = (int)i;
         Slot s;
-        s.fill(msg_to_inner(&m[i]));
+        s.fill(mtk::helper::to_handle(&m[i]));
         if (catch mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
     }
     always_assert(mb.len() == 3, "the mailbox did not take three");

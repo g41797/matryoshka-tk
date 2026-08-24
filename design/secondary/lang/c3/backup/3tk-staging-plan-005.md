@@ -402,7 +402,7 @@ green before the stage closes.
   proposal text alone and never opened the source, which is why most of its
   findings were text drift rather than defects. This one makes claims about the
   code. Every claim is checked against the code before it is accepted.
-- `../common/matryoshka-specification-002.md` Parts 4, 7, 11, 12, 15 — for the
+- `../common/backup/matryoshka-specification-002.md` Parts 4, 7, 11, 12, 15 — for the
   MUSTs the review's central argument turns on.
 - `c3-capabilities-001.md` — Q4 is the measurement D1 was built on, and the
   review's charge is that Q4 asked too few questions.
@@ -755,7 +755,7 @@ could still find a defect in the port rather than in a document.
   is capable of contradicting, and what the suite already covers.
 - `3tk/test/t_concurrency.c3` — the tests that would carry a sanitizer.
 - `3tk/run-builds.sh` — the harness, and the question of whether it gains a row.
-- `../common/matryoshka-specification-002.md` Parts 12, 14, 15 — the memory and
+- `../common/backup/matryoshka-specification-002.md` Parts 12, 14, 15 — the memory and
   locking rules any finding is judged against.
 
 #### What was measured while this plan version was cut

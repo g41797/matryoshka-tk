@@ -12,7 +12,7 @@ import std::core::mem::alloc;
 fn int main()
 {
     NullHooks hooks;
-    typeid[1] tags = { MSG_TYPE };
+    typeid[1] tags = { Msg::typeid };
     Pool* p = pool::create(mem, &tags, &hooks)!!;
 
     p.release();                     // <-- the violation: never closed

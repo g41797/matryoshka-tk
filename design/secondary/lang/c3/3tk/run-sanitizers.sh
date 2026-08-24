@@ -16,11 +16,24 @@
 # carries its own runtimes, and c3c's --cc points the link at it. No install, no
 # root, no change to the machine.
 #
-# Usage:  ./run-sanitizers.sh
+# Usage:  ./run-sanitizers.sh [dir]  dir defaults to this script's own directory
 # Exit 0 only if every sanitizer run is clean.
 
 set -u
-cd "$(dirname "$0")"
+
+# The directory to run against. Optional.
+#
+#   ./run-sanitizers.sh            -> the directory this script lives in, as before
+#   ./run-sanitizers.sh <dir>      -> <dir> instead
+#
+# An empty argument is the same as none. `set -u` is on, hence ${1:-}.
+#
+# The `|| exit` is not decoration. There is no `set -e` here, so without it a
+# failed cd would let every command below run in whatever directory the caller
+# happened to be in.
+ROOT=${1:-}
+[ -n "$ROOT" ] || ROOT=$(dirname "$0")
+cd "$ROOT" || { echo "no such directory: $ROOT" >&2; exit 2; }
 
 C3C=${C3C:-c3c}
 CC=${SAN_CC:-clang}

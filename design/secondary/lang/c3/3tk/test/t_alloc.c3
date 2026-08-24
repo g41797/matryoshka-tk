@@ -131,7 +131,7 @@ fn void pool_create_fails_at_the_object() @test
     FailingAlloc  failing = { .counter = &counter, .budget = 0 };
     TestHooks     hooks;
 
-    typeid[1] tags = { OWNED_TYPE };
+    typeid[1] tags = { Holder::typeid };
     if (catch f = mtk::pool::create(&failing, tags[..], &hooks))
     {
         always_assert(counter.outstanding() == 0, "a failed pool creation leaked");
@@ -153,7 +153,7 @@ fn void pool_create_fails_at_the_buckets() @test
     FailingAlloc  failing = { .counter = &counter, .budget = 1 };
     TestHooks     hooks;
 
-    typeid[1] tags = { OWNED_TYPE };
+    typeid[1] tags = { Holder::typeid };
     if (catch f = mtk::pool::create(&failing, tags[..], &hooks))
     {
         always_assert(counter.acquired == 1, "the Pool itself should have been allocated");
@@ -184,7 +184,7 @@ fn void a_whole_life_leaves_nothing_outstanding() @test
     mb.release();
 
     TestHooks hooks;
-    typeid[1] tags = { OWNED_TYPE };
+    typeid[1] tags = { Holder::typeid };
     Pool* p = mtk::pool::create(&counter, tags[..], &hooks)!!;
     p.close();
     p.release();

@@ -5,7 +5,7 @@ before the portable specification existed and before the owner ruled the scope.
 
 **None of it binds.** Nothing here is a design of record, nothing here has been
 measured against
-[the specification](../../common/matryoshka-specification-002.md), and some of it
+[the specification](../../common/matryoshka-specification-003.md), and some of it
 contradicts the rest. It is here to be mined, not obeyed.
 
 Where an input conflicts with the scope in [`../dtk-status.md`](../dtk-status.md),

@@ -7,6 +7,917 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-24 — 3TK-16: the helper surface, in code
+
+**Written: [3tk-helper-notes-001.md](3tk-helper-notes-001.md).** The mirror of
+3TK-11 — a ruled proposal, built, with no ruling of its own.
+
+**The four accepted items landed.** H0 and H0b: `mtk::helper` and `mtk::owned`
+stop being generic modules and become ordinary ones carrying macros over
+`$Type`, plus `to`/`as`/`must`/`move` as methods on `Handle` and `Slot`. H5: the
+crossings are `to_handle`, `from_handle`, `must_from_handle`, `is_mine`, and the
+word *inner* keeps `Inner`, `inner_offset`, `src/inner.c3` and every line of
+prose. H10: `mtk::owned` is `mtk::managed`, `owned.c3` is `managed.c3`,
+`t_owned.c3` is `t_managed.c3`, and the fixture `struct Owned` is
+`struct Holder`.
+
+**The number that says whether H0 worked is 35 to 0.** Thirty-five `alias`
+lines named the helper — twenty in `test/common.c3`, seven in
+`negative/common.c3`, eight across `mailbox.c3` and `pool.c3`. **There are none
+left, anywhere in `src/`, `test/` or `negative/`.** `test/common.c3` is now four
+struct declarations and a doc comment, and a new outer type costs nothing at all
+before it can be used.
+
+**Green, and the counts are stated rather than inherited.** `run-builds.sh`: 59
+checks, 0 failed, four builds. **87 tests**, up from 85 — the stage added two,
+for M12's method surface, which is five new declarations doing address
+arithmetic and was exercised by nothing. `run-sanitizers.sh`: 3 checks, thread
+and address clean. All three `nocompile_*` negatives still refuse in every
+build and their messages still name the type.
+
+**One line of `run-builds.sh` changed**, the `nocompile_managed_no_allocator`
+array key, exactly as the proposal measured: the expectation string is
+`mtk::helper`, the *alternative* the message names, so the rename left it
+untouched.
+
+**Three edits to a finished stage's output, all additive.**
+[3tk-deviations-001.md](3tk-deviations-001.md) gains **V19** — Part 7.1 is a
+**specification** defect, scope `every port`, and the only verdict this stage
+changed, from C to S. Part 7.3's evidence moves from *two generic modules* to
+*two modules*. Parts 6.3 and 7.2 are repointed at the names H0 and H5 left.
+
+**The named trap held.** Part 7.1 was wrong while the stage ran and the stage
+neither obeyed it nor fixed it. `../common/` is untouched; 3TK-17 rewords it.
+`src/helper.c3`'s header now carries a sentence telling the next reader not to
+"fix" the file to match a Part this folder has ruled defective — the guard
+comes out when 004 is cut.
+
+**Three C3 spellings the proposal's scratch runs did not carry, found again
+here**: `$Type::typeid` and not `$Type.typeid`; `$Typeof(x)::typeid` and not
+`$typeof(x)::typeid`; and `to_handle(null)` is no longer writable at all,
+because the outbound crossing infers its type — it is `to_handle((Msg*)null)`,
+which is what the test always meant.
+
+**And 3TK-11's warning earned its keep.** The rename ran on three axes and
+`inner` was never renamed — `to_inner`, `from_inner` and `must_from_inner` were
+rewritten one shape at a time so that `Inner` and `inner_offset` were
+untouchable by construction. **Four stale words survived the mechanical pass and
+were caught only by reading**, none of them a compiler error. Prose does not
+compile.
+
+**Next: 3TK-15 — the two debts of 3TK-13, A3 and A5.** Then 3TK-17.
+
+---
+
+## 2026-08-24 — plan 009: 3TK-16 and 3TK-17 declared
+
+**Written: [3tk-staging-plan-009.md](3tk-staging-plan-009.md).** 008 moved to
+`backup/` and every link naming it was corrected in place, both directions: the
+live pointers in `3tk-status.md` name 009; the provenance lines in
+`3tk-helper-proposal-001.md` and this log keep naming 008 and now find it at
+`backup/`.
+
+**Neither stage is authorized.** Both exist because 3TK-14 ended at a proposal
+and the owner ruled all twelve of its items the same day, and nothing carried
+those rulings anywhere.
+
+**3TK-16 — the helper surface, in code.** The mirror of 3TK-11: a ruled proposal,
+built. It carries the four accepted items that change code — H0 and H0b, the
+helper becomes macros; H5, the crossings named for the *handle*; H10,
+`mtk::owned` becomes `mtk::managed` and the fixture becomes `struct Holder` —
+plus the **V19** row in `3tk-deviations-001.md` and one line of
+`run-builds.sh`. **They are one stage and not four because they land in the same
+two files**; splitting them means rewriting `helper.c3` and `owned.c3` three more
+times.
+
+**Its named trap is unusual and worth recording: Part 7.1 will be wrong while
+the stage runs, and the stage must neither obey it nor fix it.** E6 ruled it a
+specification defect; 3TK-17 rewords it; 3TK-16 records V19 and leaves
+`../common/` alone. **A stage that "conforms" to a Part its own folder has ruled
+defective has un-ruled a ruling.**
+
+**3TK-17 — Part 7.1 reworded, and specification 004.** The first stage in this
+line permitted to edit `../common/`, scoped to one Part. **V19 is the first
+specification defect found since 003 carried V1 to V18 — and it was found by
+building, not by auditing.** 003's fourteen came from an audit reading the
+specification against the port; this one came from a port answering a question
+a way the specification had not imagined. That is a different instrument and it
+is worth a paragraph in 004's change log.
+
+**Its cost is named in the stage rather than discovered later: a whole
+specification version for one Part**, because the folder's rule is that every
+change makes a new file and the specification is on that list. 004 is therefore
+the cheap moment to batch any other specification change — and none is known.
+V1 to V18 are consumed by 003 and V7b was recorded-not-fixed deliberately. The
+stage re-checks that before cutting 004.
+
+**The order is not the numbering, and plan 009 says so three times because it is
+the one thing to get wrong:**
+
+```
+3TK-16  (code)   →   3TK-15  (the debts)   →   3TK-17  (the specification)
+```
+
+**3TK-15 was declared first and runs third.** Plan 008 ordered it after 3TK-14
+because A5 repoints doc comments in the files 3TK-14 might rewrite. 3TK-14 ran
+and rewrote nothing — it proposed — so that ordering sentence is now satisfied on
+its face and **misleading**. Its own *What this stage may not do* already carried
+the right clause: *"if 3TK-14's proposal has been ruled and built by then, this
+stage runs on top of the result."* **The proposal is ruled and not built.** 009
+amends the section with a note above it and leaves the body unaltered, which is
+this folder's tombstone-in-place habit.
+
+**3TK-17 has a constraint that points outside this folder: before dtk's first
+stage.** dtk has a prepared folder and no stage has run. D's idiomatic answer to
+*generate code per type* is templates and mixins — call-site expansion, the same
+shape as a C3 macro — so Part 7.1 as written sets dtk the identical trap it set
+3tk. Fixing it afterwards means a second port re-deriving this argument cold.
+
+**One stale line was corrected while the plan was open.** The versioning section
+read *"this plan — `3tk-staging-plan-NNN.md`, currently 007"* — in 008, and in
+007 before it. It now reads 009, and says it was stale in both.
+
+**Nothing is authorized.** Plan approval is not stage approval; that is a
+standing rule and it has not moved.
+
+---
+
+## 2026-08-24 — 3TK-14: the helper surface, measured then proposed, then re-measured against the stdlib
+
+**Written: [3tk-helper-proposal-001.md](3tk-helper-proposal-001.md).** A
+proposal. **No file under `3tk/` was changed**, and no item is ruled.
+`run-builds.sh` 59 checks and `run-sanitizers.sh` 3 checks are green, trivially.
+
+**The stage was written around one property of its input and that property paid
+off immediately.** [3tk-helper-alternatives.md](3tk-helper-alternatives.md)
+ranks three shapes and then withdraws its own favourite. Measuring first meant
+finding out that **both** of its non-fallback shapes are unavailable in C3
+0.8.3, not just the one it doubted:
+
+- A generic module cannot declare a method on its type parameter.
+  `fn void Type.init(Type* self)` inside `module mtk::helper <Type>` gives
+  *`'Type' could not be found, did you spell it right?`* — the receiver name is
+  resolved as an ordinary type and a module parameter is not one. The note's
+  correction guessed this.
+- An instantiated generic module cannot be aliased as a namespace.
+  `alias MsgHelper = mtk::helper{Msg};` gives
+  *`'mtk::helper' could not be found`*, and so do three other spellings.
+  **A generic module is not a value and not a type.** It can be named only
+  through one of its declarations — which is the whole reason `test/common.c3`
+  carries one alias per operation, and no alias discipline was ever going to fix
+  it.
+
+**The shape that survived is not in the note.** A generic module may declare a
+*struct*; that struct is generic over the module's parameter; methods hang on it
+normally and their bodies see `Type`. One alias to a `const` of it gives an
+application the entire surface in one line — `alias MSG = mtk::helper::OF{Msg};`
+and then `MSG.init(&m)`, `MSG.to_handle(&m)`, `MSG.from_handle(h)`. It was built
+against a scratch copy of the real `src/`, containers included, and sixteen
+behavioural assertions ran true in a checked build and under `-O3 --safe=no`.
+
+C3 charged two small tolls and both are recorded: a zero-sized struct is not
+permitted, so the helper carries one unused byte in a compile-time constant; and
+an alias to a constant must be ALL-CAPS, so the call site is `MSG.init(&m)` and
+cannot be `msg.init(&m)`.
+
+**Two of the note's opinions did not survive contact with the port.**
+
+The note says keep `TYPE` private, because `is_mine(h)` is the public form of
+the test. True of the crossing, false of the port: **the pool is keyed on the
+identity.** `Pool.create(a, typeid[] tags, ...)`, `Pool.get(typeid want, ...)`,
+`Pool.count_of(typeid)` are all application API, `OWNED_TYPE` is read at 46 call
+sites in `test/`, and two negative tests are built out of `MSG_TYPE` and
+`JOB_TYPE`. An application that cannot name its type's identity cannot create a
+pool. Part 7.2's first member is a *value*, not a predicate.
+
+The note's `OFF` argument — the one the plan flagged as the item touching
+conformance rather than taste — is right in direction and overstated in effect.
+**`mtk::inner_offset` is public at `src/inner.c3:238` and application code can
+do the arithmetic through it today.** That was compiled; it compiles. And it
+cannot be closed, because C3's `@private` is module-scoped and `mtk::helper` is
+a submodule — the same property `run-builds.sh`'s layering checks already rely
+on. So **Part 7.5's MUST is held by convention, review and the layering checks,
+not by visibility, and it always was.** Hiding `OFF` is still proposed, on the
+narrower claim that it removes two alias lines and leaves one file naming an
+offset, with the limit written into the doc comment.
+
+**One check the stage was told to run came back *conforms*.** The note says
+`move_from_slot` should validate before it consumes. It already does —
+`helper.c3:122-126` peeks, tests, and only then takes, so Part 9.2 rule 4 holds
+on the mismatch path. What is left is smaller: the returned pointer is computed
+from `take()`'s result rather than from the handle `peek` saw, an invisible
+dependency on `Slot.take`. One extra line removes it.
+
+**And one was decided against the note by Part 15.5.** Splitting
+`must_from_handle`'s single `@check` into null and wrong-type buys a message and
+costs a branch, and both cases are the same kind of wrong — a contract
+violation, compiled out together in a fast build. Rejected, with the reason to
+go in the doc comment so it does not come back.
+
+**A number in the plan was wrong and is corrected here.** `test/common.c3`
+carries **twenty** alias lines, not seventeen. Under the proposal it carries
+eight — and the figure that matters is the slope, not the total: a new outer
+type costs one line instead of nine, an owning type two.
+
+**`owned` is answered and D10 is not reopened.** `mtk::owned` takes the same
+shape and composes the helper through the instance. Two generic modules stay two
+generic modules; `owned` simply stops re-declaring `OFF`, which it already never
+read.
+
+**One question is left open and named as one.** Whether `mtk::inner_offset`
+should be harder to reach at all is a question about the port's *module
+structure* — `mtk::helper` inside `mtk` rather than beside it — and that touches
+the Part 17.2 layering checks. The stage did not answer it.
+
+## The second input, and it changed the answer
+
+**Mid-stage the owner said: read `std::collections::interfacelist`,
+`std::collections::anylist`, and possibly another sources in std.** That advice
+is why this proposal has an H0.
+
+C3's core already carries Part 6.3's two crossings, for its own type-erased
+value, and it does **not** generate a helper object per type for them.
+`core/builtin.c3:111-134`:
+
+```c3
+macro anycast(any v, $Type) { if (v.type != $Type) return TYPE_MISMATCH~; return ($Type*)v.ptr; }
+macro any.to(self, $Type)   // the checking crossing
+macro any.as(self, $Type)   // the asserting crossing, as a @require contract
+```
+
+Read against Part 7.2 it is the same design: a stored `typeid` compared against
+a type name — that is `is_mine` — and two crossings named apart, `to` and `as`.
+**The type is an argument at the call site. There is no instantiation and no
+alias.** `interfacelist.c3:7-29` and `anylist.c3:21` show the other half of the
+lesson: the stdlib *does* reach for a generic struct inside a generic module,
+with `typedef AnyList = inline InterfaceList {any};` naming one instantiation —
+but it reaches for it for a **container**, which has state. **The helper has no
+state.** Its `Helper` struct under H1 exists only to hang methods on, carries
+one unused byte, and forces an ALL-CAPS alias per type.
+
+So the stage proposes H0: `mtk::helper` becomes an ordinary module of macros
+over `$Type`, with `to`, `as`, `must` and `move` as methods on `Handle` and
+`Slot`.
+
+```c3
+mtk::helper::init(&m);                 // type inferred, no argument
+Handle h = mtk::helper::handle_of(&m); // type inferred
+
+Msg* p = h.to(Msg);
+Msg* q = h.as(Msg);
+Msg* c = s.move(Msg);
+```
+
+**No application writes an alias for any type, ever.** Measured against the real
+`src/` with the containers in place: zero errors, seventeen behavioural
+assertions true including a live mailbox round trip, identical under
+`-O3 --safe=no`, and the eight file-local alias lines in `mailbox.c3` and
+`pool.c3` deleted rather than repointed. `test/common.c3` goes from twenty alias
+lines to none and keeps only its four structs.
+
+**`@require` turned out to be D6's tier 2, natively.** The asserting crossing as
+a doc-comment contract aborts in a safe build — naming the violated condition
+*and the caller's line*, which `mtk::@check` does not — and compiles out
+entirely under `--safe=no`. It also repairs the macro shape's one real weakness:
+an untyped boundary. Passing an `int*` to `handle_of` gives
+*`@require "$defined($Typeof(*item)::members)" violated: 'handle_of wants a
+pointer to a struct that embeds an Inner'`*, at the caller's line, in the port's
+own words.
+
+**One measurement in this stage was wrong and is recorded rather than quietly
+fixed.** That guard was first written `$Typeof(*item).members`, with a dot. It
+compiled, and it rejected *every* type, valid ones included — and because only
+the negative case was run, it read exactly like a guard that worked. `::`, not
+`.`. Both directions are verified now. A guard that always fires is
+indistinguishable from a guard that works until you test the happy path.
+
+**H0's cost is one sentence in the specification and the stage will not spend
+it.** Part 7.1 SHOULD says *for each outer type there is a helper bound to that
+one type, generated at compile time from the type.* Under H0 there is no
+per-type helper object; the code is generated per call site. Every Part 7.2
+member is present, every crossing is still in one file, and Part 7.1's own next
+line says the shape is fixed and generation is the convenience — but the
+sentence stops describing the port. **Accepting H0 means either recording a
+deviation or rewording Part 7.1 in `../common/`, and 3TK-14 was allowed to touch
+neither.** H0b carries a second, smaller one: today a type declares itself
+owning by being instantiated as `mtk::owned{Type}`; under H0b any caller may
+call `mtk::owned::create` on any type with an `Allocator` field. Part 7.3
+permits *a separate name* as the means, so the rule holds — whether the port
+wants the weaker guarantee is a ruling, and D10's *spelling* moves with it.
+
+**H1 to H3 stand as the alternative** if H0 is rejected. They were measured
+first, against the same `src/`, and they are the best shape available without
+macros.
+
+## Ruled the same day, and one item added
+
+**The owner accepted H0 and H0b.** The helper becomes macros; `mtk::owned`
+follows and carries D10's spelling with it. H1 to H3 are withdrawn — they are
+kept unedited in the proposal as the record of what the port would have looked
+like without macros. H4, H6, H8 and H9 turned out to be settled or forced by H0
+rather than separate decisions, and H7 stands as recommended.
+
+**H5 was accepted the same day, and the evidence for it was better than the
+proposal's first draft of it.** The stage had argued H5 as a close call against
+R1, which had renamed `to_any` → `to_inner` one day earlier. Reading what R1
+actually ruled dissolved the objection. Its table,
+`3tk-core-redesign-proposal-002.md:174` and `:182`:
+
+```
+| `AnyHandle`           | **`Handle`**   | Still a transparent alias for `Inner*`. D4 stands |
+| `mtk::helper::to_any` | **`to_inner`** | An inherited name, and it now says the direction  |
+```
+
+**The stated reason is the direction prefix, not the noun — and the same pass,
+in the same table, kept *handle* for the type.** The noun was picked
+mechanically to match `Inner` while de-`Any`-ing the port. `inner` against
+`handle` was never the question that day. **So H5 finishes R1 rather than
+reversing it**, and the *this was ruled yesterday* objection does not survive
+reading the ruling. *inner* keeps `Inner`, `inner_offset`, `src/inner.c3` and
+the prose; it stops naming a handle, which is a `Handle` in every signature that
+returns or takes one.
+
+**And the stage had to correct its own spelling to accept it.** M11 to M13 were
+measured with `handle_of(&m)` — this stage's invention, in neither the note nor
+R1 — which drops the direction prefix that was R1's entire stated reason and
+breaks the symmetry with `from_handle`. The accepted member is `to_handle`.
+
+**The probes were re-run rather than the document edited.** Renaming a thing
+inside your own quoted compiler output is no longer quoting, and this line of
+work has one rule it inherited from 3TK-4: every claim about the language is a
+program that ran. Seventeen assertions true under the new spelling, zero errors,
+identical under `-O3 --safe=no`, and both quoted diagnostics re-verified.
+
+Two lessons are worth keeping, and they are the same lesson twice. **A
+measurement made under an unruled assumption carries the assumption into the
+ruling** — H0 was measured with names H5 had not yet decided. And **a guard that
+always fires is indistinguishable from a guard that works, if you only run the
+negative case** — the `$Typeof(*item).members` slip earlier in this stage. Both
+were caught by running the other half.
+
+**H10 was added on the owner's question — is it time to replace `owned` with
+`managed`?** The specification never uses either word, so nothing constrains it.
+The argument for `managed`: `owned` is passive and invites *owned by whom?*,
+where the answer is nobody — D3 has the item keep **its own** allocator. The
+port's own prose already draws the contrast, at `owned.c3:13`: *takes
+`mtk::helper` and manages its own lifetime.* And the family argument — the only
+place the vocabulary appears in the whole corpus is Zig's, at
+`ztk-audit-001.md:264`, where `Unmanaged` means precisely *does not keep its
+allocator*, which is Part 13.1 inverted.
+
+**The argument against is a cross-port one and it does not go away:** `managed`
+carries garbage-collector baggage, and **dtk is scoped `@nogc`**, so the word
+misfires for exactly one of the four ports. The stage recommends `managed`
+anyway, with one sentence of doc comment aimed at the D and C# reader — cheaper
+than choosing a weaker word to prevent a misreading that a sentence prevents.
+
+**The fixture is a separate question and H10 says so.** `struct Owned` is a test
+type, declared twice and read at 34 sites, and it exists to prove one property —
+*carries an Allocator*. Its three siblings are named for what they prove, not
+for what they use. Recommended: `struct Holder`, which stays true whatever the
+module is called.
+
+**On timing, which is what was actually asked: inside the code stage that
+carries H0b, not before it and not alone.** H0b rewrites `owned.c3` from
+scratch, 3TK-15's A5 repoints doc comments in the same files, and the file's
+25-line header is prose about D3 and D10 that a rename touches anyway. One pass
+instead of three. Every one of the ~93 sites is compiler-caught, with 3TK-11's
+warning still standing: rename on word boundaries and read the diff.
+
+**H10 was accepted the same day, recommendation and sub-question together.**
+`mtk::owned` becomes `mtk::managed`; the test fixture `struct Owned` becomes
+`struct Holder`. The fixture was the part the stage argued separately — it is a
+test type that exists to prove one property, *carries an Allocator*, and its
+three siblings are named for what they prove rather than for what they use.
+`Holder` stays true whatever the module is called.
+
+**The GC connotation is paid for with one sentence, not with a weaker word.**
+`managed` reads .NET to some readers, and **dtk is scoped `@nogc`** — it is the
+port that would meet the word wrong. The module's doc comment will say that
+*managed* here is Zig's sense: the item keeps its allocator and releases itself
+with the kept one, Part 13.1, with no collector and no runtime anywhere in the
+toolkit. Choosing a weaker word to prevent a misreading that a sentence prevents
+is the worse trade.
+
+**The rename was measured after the ruling, not assumed, and it turned up one
+thing worth having checked.** `run-builds.sh:71` keys the compile-time negative
+for an allocator-less type on a literal string. The message at
+`src/inner.c3:274` names **both** modules — *use `mtk::helper` instead of
+`mtk::owned`* — so the rename moves only its second half and **the expectation
+string `mtk::helper` survives untouched**. The harness check passes without
+being edited.
+
+**Filenames were the only live edge, and they are small.** `test/t_owned.c3` is
+free — `c3c test` discovers the suite, and no script names the file.
+`negative/nocompile_owned_no_allocator.c3` is not free: it is a hard-coded key
+at `run-builds.sh:71`, driven from `:161`. Renaming it costs exactly one line,
+and the word in it names the module you tried to use, so leaving it stale is
+worse. **That one line is the whole of what the harness needs for H0, H0b, H5
+and H10 together** — and Part D's earlier flat claim that `run-builds.sh` does
+not change was written before H10 existed and is corrected in place.
+
+## E6 and E7, ruled — and they came out asymmetrically
+
+**E6 — Part 7.1 is a specification defect, not a port deviation.** Of its three
+clauses, only *"for each outer type there is a helper bound to that one type"*
+fails under H0. The other two — *generated at compile time from the type*, and
+*carries the identity and the crossings* — are true. And Part 7.1's own closing
+sentence sets the floor **below** where H0 sits: *a port with no compile-time
+generation writes the same block by hand for each type, and loses only the
+typing.* Hand-written blocks are conformant. H0 generates; what it lacks is a
+**named per-type object**, which is a mechanism and not a promise.
+
+**That failing clause is ztk's mechanism, and this is exactly the disease 3TK-13
+was created to cure.** 002 was written from ztk and stated Zig's mechanism where
+the design has only a promise, in fourteen places. 003 fixed fourteen. **Part
+7.1 is the fifteenth and 3TK-13 missed it.** Worth recording plainly, because
+the audit that produced 003 was thorough and still walked past this one — the
+sentence *reads* like a requirement, and only a port that answers the question
+differently exposes it as a mechanism. **3tk is that port. The gap did not show
+until something tried to fill it another way.**
+
+**The deciding argument was dtk, and it is the argument that moved the
+specification into `../common/` on 2026-08-23.** No stage has run there. D's
+idiomatic answer to *generate code per type* is templates and mixins —
+call-site expansion, the same shape as a C3 macro, not a per-type struct.
+Rewording Part 7.1 inside this consumer's folder would leave the identical trap
+set for D and for Odin behind it.
+
+So it is an **S**, scope `every port`, in the vocabulary
+`3tk-deviations-001.md` already uses — V1, V2 and V3 are the precedent and 003's
+change log shows how a V is consumed. **Not a P.** A P would record the port as
+wrong where the specification overreached, and keeping those apart is the whole
+value of that audit.
+
+**E7 — nothing is lost, and the stage's own premise was wrong.** It had raised
+E7 as *the owning distinction stops being a property of the type*. It was never
+a property of the type in 3tk. `struct Owned` carries no marker, and
+`src/owned.c3:5` says why: *"ztk spells this distinction with a marker constant
+and pays 110 duplicated lines; C3 has no property to branch on and needs
+neither."* **D10 had already moved the decision off the type** — an
+instantiation is a declaration the *application* writes, not a permission the
+type grants. H0b moves it from the alias line to the call line; both are on the
+application's side of the fence. The build-time gate survives, measured under
+the H10 rename: *type Plain has no Allocator field; use mtk::helper instead of
+mtk::managed.* **No change to anything.**
+
+A small lesson, and it is the third of its kind in this stage: **a question
+raised as a risk is still a claim, and it has to be checked like one.** E7 read
+as a real loss until the fixture was actually opened and found to declare
+nothing.
+
+## What is owed, and the one gap
+
+**3TK-14 could write none of the following and did not.** The code stage owes:
+the S/V row for Part 7.1 and the updated Part 7.3 row in
+`3tk-deviations-001.md` — which is 3TK-12's output, and a stage may not rewrite
+a finished stage's output; one line of `run-builds.sh` for the renamed
+`nocompile_` file; the GC sentence in `managed.c3`; and E7's call-site sentence.
+
+**The gap: rewording Part 7.1 in `../common/` has no stage.** Plan 008 declares
+3TK-14 and 3TK-15 and nothing else, and no stage may touch `../common/`. The
+edit is small — state the promise, show both realizations marked *ztk* and
+*3tk*, as 003 did for the other fourteen — but it needs to be declared, and it
+wants to run **before dtk's first stage**, not after.
+
+**Every H item is ruled, E6 and E7 are ruled, and nothing is authorized.** H0,
+H0b, H5 and H10 all land in one code stage alongside 3TK-15's A5 — one pass
+instead of five. No code stage has been named.
+
+---
+
+## 2026-08-24 — plan 008: 3TK-14 and 3TK-15 declared
+
+**Written: [3tk-staging-plan-008.md](backup/3tk-staging-plan-008.md).** 007 moved to
+`backup/` and every link naming it was corrected in place, both directions: the
+live pointers in `3tk-status.md` name 008; the provenance lines in
+`3tk-deviations-001.md`, `../common/matryoshka-specification-003.md` and this
+log keep naming 007 and now find it at `backup/`.
+
+**Neither stage is authorized.** Both were named by the owner after 3TK-13
+reported.
+
+**3TK-14 — the helper surface, re-thought.** The first stage in this line whose
+subject is the *surface* and not the semantics. `helper.c3` was written in 3TK-6
+and has not been questioned since; an application reaches it through one alias
+per operation, and `3tk/test/common.c3` carries **seventeen alias lines** to use
+four types. The shape is conformant — Part 7.1 leaves the spelling to the port —
+so nothing requires this and the owner named it anyway. `owned` rides along as a
+second question.
+
+**Its input is the owner's `3tk-helper-alternatives.md`, and the stage is written
+around one property of that file: it withdraws its own favourite.** The note
+ranks three shapes, calls methods-on-the-generic-type-parameter its clear
+favourite, and then a later *Important correction* section says that is probably
+not legal C3 and must not be relied on without a compiler test. A stage that
+implements the ranking without reading to the end implements something that does
+not compile. **So 3TK-14 measures with c3c first and designs second** — the
+3TK-4 shape, where every claim about the language is a program that ran with its
+output quoted. It ends at a proposal and touches no code.
+
+**One item in that note is about conformance and not taste, and it is called out
+separately**: exporting `OFF` hands application code the address arithmetic Part
+7.5 MUST confines to the helper, and `MSG_OFF` is aliased in `test/common.c3`
+today.
+
+**3TK-15 — the two debts of 3TK-13.** A3 and A5, both already ruled, gathered so
+they are paid rather than drifting. **It runs after 14**, because A5 repoints doc
+comments in the files 14 may rewrite — running it first would repoint comments
+that 14 then rewrites.
+
+**A3 is a real defect and worth naming plainly**: `Pool.get` answers
+`NOT_AVAILABLE` for an identity the pool was not created with, from every mode,
+where Part 19.3 says that outcome comes only from the available-only mode. The
+`@check` above it expands to nothing under `--safe=no`, so this is the observable
+behaviour of a fast build. **The port currently breaks a MUST in its own source
+of truth, knowingly, and has since 3TK-13 chose to leave 003 untouched.** A5 is
+bookkeeping by comparison, with one part that is not mechanical: where 003
+changed the rule a comment cites, the comment's claim changes too, and a comment
+citing Part 8.6 is citing a deleted Part.
+
+---
+
+## 2026-08-24 — the two scripts take an optional directory
+
+**Not a stage.** A tooling change on the owner's instruction, after 3TK-13
+reported. No document of record changed and nothing in `3tk/src/`,
+`3tk/test/` or `3tk/negative/` was touched.
+
+Both `run-builds.sh` and `run-sanitizers.sh` opened with `cd "$(dirname "$0")"`,
+so each always ran against the directory it lived in. Each now takes an optional
+first argument naming the directory to run against. **Absent or empty falls
+through to `$(dirname "$0")` — the same expression that was already there** — so
+every existing invocation, every line of `3tk-status.md` and the cold-session
+gate behave identically. One site changed per script.
+
+**The `cd` is now guarded, and that is the part worth recording.** Neither script
+sets `-e`. A failed `cd` therefore did not stop them: the body would have run in
+whatever directory the caller happened to be in, and `run-builds.sh` removes its
+temporary directory with `rm -rf` at exit. While the target was always
+`dirname "$0"` that was unreachable in practice; a caller-supplied path makes it
+reachable, so it had to become fatal. A bad path prints one line and exits 2
+with nothing else run.
+
+**Verified, all four cases on both scripts**: no argument from an unrelated
+working directory, an empty argument, an explicit directory, and a path that
+does not exist. `run-builds.sh` 59 checks 0 failures on each of the first three,
+`run-sanitizers.sh` 3 clean runs on each, and exit 2 with no work done on the
+fourth.
+
+**A note on how it was verified, because the first attempt was wrong.** Three
+full passes of `run-builds.sh` cost roughly ten minutes and mostly proved that
+c3c works; the three cases differ only in which directory the script lands in.
+The cheap check written to replace it piped the script's prologue into `bash -s`
+and was **invalid**, because that changes `$0` — the one variable under test —
+and it reported the no-argument case landing in the caller's directory. The full
+runs were the honest evidence and they passed. **A test that alters `$0` cannot
+test `dirname "$0"`.**
+
+---
+
+## 2026-08-24 — 3TK-13: specification 003, and the gap closes
+
+**Written: `../common/matryoshka-specification-003.md`.** The first stage of
+this plan to write into `../common/`, and the whole of its risk was that the
+file binds dtk and otk with no stage running on either to catch a mistake.
+
+**Eighteen changes, and fourteen of them are one mistake made repeatedly.** 002
+was written from ztk, and where it described a *mechanism* it described Zig's as
+though it were the rule. Those Parts now state the promise and show both
+realizations side by side, marked *ztk* and *3tk* — 4.2, 8.1, 8.2, 8.7, 11.2,
+11.3, 11.7, 11.8, 12.2, 12.5 and the four Parts the forecast said were
+untouched, 19.1, 19.2, 20, 21 and 22. A reader of 003 cannot mistake either
+realization for the rule, which is the failure 002 could not prevent because it
+had only one.
+
+**Four changes are not that**, and each is worth naming:
+
+- **Part 12.3 gains a MUST that did not exist.** What the pool does with a
+  hook's result if the pool closed while the hook ran: re-read the flag, and
+  send what the call is holding to the close hook. This is the rule P1 fell
+  through, and every port has the same window because every port unlocks across
+  the hook. Invariant 35.
+- **Part 12.2's *called once* is weakened** to *called once by close, and once
+  more per straggling put*. **The only thing 003 weakens**, and the alternative
+  — handing the items back to the caller — has no channel for the parts the
+  caller never had. It is named twice in the change log so nobody meets it by
+  accident.
+- **The pool's *put a list* is deleted**, from Part 11.7 and from Part 19.2's
+  table. Its mid-batch failure mode was the one case with no clean answer.
+- **Part 8.6 is deleted and tombstoned in place.** An exact link test makes the
+  O(n) walk catch nothing. A port that does not reach an exact test still writes
+  the walk — under 8.7, where the price is now stated, not under a Part that no
+  longer exists.
+
+**Nothing renumbered.** Assumption A1 held all the way through: Part 8.6 is a
+tombstone, invariant row 16 says it was retired and 16b replaces it, row 35 is
+new. Roughly forty doc comments in `3tk/src/` cite Part numbers by hand and none
+of them broke.
+
+**No 3tk-only finding reached `../common/`.** That was the split's whole
+purpose. Parts 2.6 and 19.3 are unchanged and the port fails both — P4 and P2 —
+because moving a rule to accommodate a port's defect is how a specification
+stops being one.
+
+**Filing, assumption A5.** 002 moved to a new `../common/backup/`, beside 001,
+and its own two outbound links were fixed for the new depth. Every document that
+named 002 was repointed: the live pointers — `common/README.md`,
+`../d/dtk-status.md`, `../d/inputs/README.md`, this folder's status — now name
+003; the provenance mentions in stage outputs, logs and backups keep naming 002
+and now find it at `backup/`. Both directions, in place.
+
+**dtk was told.** One paragraph in `../d/dtk-status.md` says its input changed
+and why it matters to a port that has not started: a dtk written from 002 would
+have reproduced `prev`, the anchor, the general list and an inexact link test,
+and then needed 3TK-10 and 3TK-11 run again against it. **otk was not told** —
+it has no stage and 3TK-13 was not permitted to touch it.
+
+**Two debts, both recorded rather than paid.** A3: the P2 code change is not
+made, so Part 19.3's MUST is currently unmet by the port. A5: `3tk/src/` still
+cites 002 in its doc comments. Both are in 003's change log and in the status
+file, so neither is a surprise.
+
+`3tk/run-builds.sh` 59 checks, green — nothing in `3tk/` was touched.
+
+---
+
+## 2026-08-24 — five questions before the cut, five defaults recorded
+
+**No code, no documents rewritten.** `3tk-status.md` gains *The assumptions
+3TK-13 starts from*, and the audit's four open questions close.
+
+The owner was asked, before clearing for 3TK-13, whether any question would help
+the stage, and answered five with *take all recommendations, record them as
+assumptions*. **The distinction is the point**: a ruling is the owner's
+judgment, an assumption is a default the stage proceeds on, and 003's change log
+will mark each as the second so a later reader can overturn one without working
+out whether they are contradicting a decision.
+
+**A1 — Parts do not renumber; a deleted Part becomes a tombstone.** The largest
+of the five, and the reason is arithmetic rather than taste: Part numbers are
+cited by hand in the D-register, the R-register, the notes, the audit and around
+forty doc comments in `3tk/src/`. Renumbering after 8.6's deletion would
+silently invalidate every one of them. Part 18's invariant table already works
+this way — row 16 is retired, not removed — so the convention exists and is
+being extended rather than invented.
+
+**A2 — the *ztk* lines stay and *3tk* lines join them where the ports differ.**
+The audit's central finding is that a Zig mechanism was read as the rule. Two
+realizations side by side is what stops the next reader making that mistake in
+either direction, and it is cheap while both ports are fresh. The cost is
+length.
+
+**A3 — P2 is answered in the port, and it is the only default that leaves work
+behind.** `Pool.get` should report a distinct outcome for an identity the pool
+was not created with, rather than `NOT_AVAILABLE`, so Part 19.3's *only* keeps
+its MUST and 003 stays untouched. **3TK-13 does not make that change** — it is a
+document stage — so it wants its own small stage or folding into the next code
+one. Recorded so it is not lost.
+
+**A4 — Part 6.5's dispatch table is the application's**, said in one sentence.
+Every clause in 6.5 describes application code. On that reading 3tk had nothing
+to ship, so P5 stops being a skipped SHOULD with no written why and closes with
+V18.
+
+**A5 — filing and scope.** 002 goes to a new `../common/backup/`, because the
+specification lives in `common/` now and `c3/backup/` is the C3 line's own
+record. **The port's doc comments are not repointed** from 002 to 003: forty
+edits would bury a document stage, so it becomes a later stage's work and 003's
+change log states it as a known debt rather than leaving it to surprise someone.
+One line goes into `../d/dtk-status.md`, because dtk has run no stage and 003 is
+what it has been waiting for.
+
+**3TK-13 now has nothing left to wait on.** All eighteen every-port rows have
+their replacement named, V11's three clauses included.
+
+*Advice on clear: clear now, then run 3TK-13. Its inputs are the audit, the
+specification and this file.*
+
+---
+
+## 2026-08-24 — P1 fixed: the pool no longer loses items to a close
+
+**The audit's most serious finding, ruled and repaired the same day.** Changed:
+`3tk/src/pool.c3`, `3tk/test/t_concurrency.c3`. All four builds green, 59
+checks, all three sanitizer runs clean, **85 tests**.
+
+**The defect, in one paragraph.** Part 12.3 MUST forbids holding the pool's
+mutex across a call into application code, so `Pool.put` releases it around
+`on_put`. A `Pool.close` can therefore run to completion inside that window: set
+both flags, drain every bucket, hand everything to `on_close`. The old `put`
+then relocked and pushed onto a shelf that had just been emptied, in a pool that
+was already down. **The item was with nobody.** `slot.take()` cleared the
+caller's Slot before the hook ran, so Part 9.4 told the caller truthfully that
+the pool had it; the close hook had already run, so it never saw it. Invariant
+34 and Part 11.8 both broke on the one window. The mailbox has no equivalent —
+`send` holds the mutex from the closed test to the enqueue.
+
+**The owner ruled the mechanism first: re-read the closed flag after the hook.**
+That left the destination open, and the audit had already recorded why neither
+candidate was legal under 002 — a second `on_close` is forbidden by Part 12.2's
+*called once*, and handing the items back to the caller has no channel for the
+`extra` parts, which the caller never had and which would leak instead.
+
+**Then the owner ruled the destination: the stragglers go to `on_close`, and a
+second call is acceptable.** So the pool's rule is now one line — *what the pool
+holds when it discovers it is closed goes to the close hook* — and it keeps
+invariant 34 and Part 11.8 intact while bending exactly one clause. **A hook
+must not destroy its own state on the first `on_close`.** The owner's reason,
+plainly: two calls to cleanup beats leaked parts.
+
+**The test was checked both ways, and that is the part worth recording.** The
+audit found P1 by reading, and a defect found by reading is one the suite does
+not provoke — the same class as the missed leaver's signal that 3TK-11's notes
+recorded as untested. `a_close_during_the_put_hook_loses_nothing` makes it
+deterministic: the put hook parks until a second thread has closed the pool and
+returned, so the window is held open rather than raced for. With the fix removed
+it fails on `Violated assert 'p.count_of(OWNED_TYPE) == 0': invariant 34: an
+item is in a closed pool`. A test that passed either way would have been the
+failure mode `run-builds.sh` already records for `release_open_pool`.
+
+The hook waits, which Part 12.3 tells a hook not to do. That is the test being a
+test: it is the only way to hold the window open without calling back into the
+pool from the hook, which is the other half of the same contract. Both the kept
+item and two `extra` parts are asserted to reach the close hook.
+
+**V11 stops being a question.** The audit's one undetermined row — *what the
+pool does with a hook's result when the pool closed while the hook ran* — now
+has three clauses for 003 to write, and the third is the only place 003 weakens
+an existing MUST: Part 12.2's *called once* becomes *once by close, and once
+more per straggling put*. It is every-port because clause 1 is forced by Part
+12.3, which every port obeys, so every port has the same window. **All eighteen
+every-port rows now have their replacement named, and 3TK-13 has nothing left to
+wait on.**
+
+*Advice on clear: clear before 3TK-13. The audit is its input; this repair is
+recorded in it.*
+
+---
+
+## 2026-08-24 — 3TK-12: the audit found what a forecast could not
+
+Written: [3tk-deviations-001.md](3tk-deviations-001.md). **No code touched, and
+`../common/` untouched.** `3tk/run-builds.sh` and `3tk/run-sanitizers.sh` were
+run at the start of the stage and are green — 59 checks, 3 sanitizer checks, 85
+tests over four builds — which is the trivial result the plan expected and is
+recorded so the document says which code it measured.
+
+**96 elements across Parts 1 to 22. 74 conform, 17 specification-should-move, 5
+port-should-move, 8 not applicable.**
+
+**The stage exists because §8.1 was a forecast, and the forecast was
+incomplete.** Nine of its ten rows stand as written. What it missed is one
+pattern repeated five times: a Part that never mentions the list still *points*
+at one. Part 19.2 carries a row for `put a list`. Part 20 carries two open
+decisions that Part 8.6's deletion answers or voids. Part 21's Q11 points at the
+deleted Part 8.6. Part 22's step 5 names two insert checks where there is one.
+§8.1's closing line says Parts 19 to 22 are untouched; four of them are. Part
+8.6 was deleted without a search for its referrers.
+
+Two more the forecast could not have seen because they are words and not
+operations: Part 11.2's *one internal base* reads as a shared type the port
+refuses to build, and Parts 12.2 and 12.5 say *list* for a surface R13 retyped to
+a queue. Both are the plan's third trap — a mechanism written as though it were
+the rule.
+
+**And the finding a forecast cannot make at all: `Pool.put` strands items.**
+`pool.c3:426-428` unlocks for the hook, as Part 12.3 MUST requires, and relocks
+without re-reading the closed flag. A `Pool.close` in that window drains every
+bucket and runs the close hook; `put` then pushes into a closed and drained
+pool. The item is with nobody — the caller's Slot was emptied at `:422`, so Part
+9.4 tells the caller truthfully that the pool has it, and the close hook already
+ran. Invariant 34 and Part 11.8 both break on the one window. The mailbox has no
+equivalent: `send` holds the mutex from the closed test to the enqueue.
+
+**Neither available repair is legal under 002**, and that is the finding's more
+important half. Returning the items to the caller is forbidden by Part 11.8; a
+second close hook is forbidden by Part 12.2's *called once*. So the audit splits
+it: **P1**, a 3tk defect, and **V11**, a rule that does not exist in the
+specification at all — *what the pool does with a hook's result when the pool
+closed while the hook ran*. dtk and otk will write this same code from the same
+silence. V11 is the one row of the eighteen whose replacement wording is not yet
+determined, and it is the reason 3TK-13 wants a ruling before it cuts.
+
+Four smaller port-side findings: `NOT_AVAILABLE` escapes from every get mode on
+an unknown identity, against Part 19.3 MUST and observable in a fast build where
+the `@check` above it is nothing; a condition variable's own fault can escape a
+waiting call, dead code on posix and a contract statement in the port's two
+most-copied loops; the pool's leaver signals on one bucket over a condition
+variable shared by every identity, surviving on `broadcast` rather than on being
+correct — the mailbox got that same line right and 3TK-11's notes named it as the
+easiest one to half-fix; and Part 6.5 is a skipped SHOULD with no written why.
+
+**The open question, and then the owner shrank it the same day.** The audit as
+first written said [3tk-who-supports-slot.md](3tk-who-supports-slot.md) touches
+Part 8.2 — *add at the back from a Slot* is listed there as a list operation —
+and was therefore an every-port question. The owner's answer: it is advice, and
+if 3tk's functionality needs the operation the port should not be made poorer
+for a recommendation; measure whether the current APIs use it.
+
+**Measured, and it splits in two — P6.** Neither container in `3tk/src/` calls a
+Slot-shaped insert. §5.1's stated reason, *`send`, and the put hook's `extra`*,
+is half wrong: `Mailbox.send_at` empties the Slot itself and calls
+`push_back(Handle)`, `mailbox.c3:211` into `:150`, and `Pool.take_back` does the
+same into `push(Handle)` at `:448`/`:456`. But the `extra` half is right and the
+caller is the one that matters — a **hook**, application code, filling `extra`
+from a Slot it just created, `t_pool.c3:70`. That is Part 12.5's composite
+mechanism and it is a real requirement of the public surface. So
+`InnerQueue.push_back_slot` **stays**, Part 8.2 does not change for it, and the
+row leaves the every-port column.
+
+What is left is `InnerStack.push_slot`: no caller in `src/`, one caller outside
+it — `t_stack.c3:133`, the test of the operation itself — and R13 puts
+`InnerStack` out of the application's reach entirely, so it has no caller it
+could ever acquire.
+
+**Ruled and done the same day.** `InnerStack.push_slot` and `t_stack.c3`'s
+`push_from_a_slot` are deleted. **The stack has four operations**, and
+`stack.c3`'s header carries the reason where the next reader will meet it —
+including why the queue keeps its own, so nobody deletes that one by symmetry.
+Part 8.2 loses one operation of the eleven, not of the every-port count: this is
+3tk's own surface and 003 is not affected. It is the only code this line of work
+touched between 3TK-11 and 3TK-13.
+
+*Advice on clear: clear between 3TK-12 and 3TK-13. The audit is the input; the
+walk that produced it is not.*
+
+---
+
+## 2026-08-24 — plan 007: an audit before the specification is cut
+
+Written: [3tk-staging-plan-007.md](backup/3tk-staging-plan-007.md), adding **3TK-12**
+and **3TK-13**. Plan 006 to `backup/`, links corrected. `3tk-status.md` gains a
+section, *The gap between the port and the specification*. **No code touched.**
+
+The owner asked for three things at once, and they turn out to be one thing:
+save what should be done later, confirm what the specification is *for*, and
+record where 3tk differs from it.
+
+**Confirmed: the specification describes ztk.** 3TK-2 wrote
+`../common/backup/matryoshka-specification-002.md` from `../common/ztk-audit-001.md`
+and the three Zig sources; 68 of its lines are marked *ztk*. The document is
+port-neutral **where it states a promise** and Zig-shaped **where it states a
+mechanism** — the doubly-linked list, `prev`, the out-of-band anchor, one free
+list per identity. That is not a fault of 3TK-2; it is what 3TK-10 discovered,
+and R14 already rules it should be fixed.
+
+**So its own claim is currently false for 3tk.** *A port is written from this
+file alone.* A port started from 002 today reproduces `prev`, the general list
+and the anchor, and then needs 3TK-10 and 3TK-11 run again against it. The gap
+opened when 3TK-11 ended and `../common/` was deliberately left untouched.
+
+**Why an audit was added rather than cutting 003 directly.** R14 rules the
+move; it does not say what 003 says. The only list of changes on disk is
+proposal 002 §8.1 — nine Parts — and it is a **forecast written before the code
+existed**. 3TK-11 found three of 002's statements wrong: the stack has five
+operations and not six, tier 2 does not reach a fast build, and two `put_all`
+tests were converted rather than deleted. **None of the three is a decision;
+all three are the kind of detail a specification states as a rule.** A
+specification cut from a forecast carries the forecast's mistakes into dtk and
+otk, which read that file and nothing else and have no stage running to catch
+them.
+
+**The audit's real deliverable is a split, not a list.** Every deviation is
+marked **3tk-only** or **every port**. Only the second kind may reach
+`../common/`. Getting that wrong in either direction is the expensive mistake:
+a 3tk-only row in 003 sends a C3 decision to D and Odin, and an every-port row
+left out of it leaves the same trap set that this whole line of work exists to
+clear. It is why 3TK-13 is declared and not authorized — the split has to be
+ruled before the cut is made.
+
+**Two traps written into the plan in advance**, because they are the ones that
+make an audit worthless: copying §8.1 instead of measuring, and missing the
+Parts the redesign did not aim at. Parts 9, 12.5 and 17.2 were not aimed at and
+all three are touched by a container surface that changed shape. The stage walks
+all 22 Parts, and a missing Part is a failed stage rather than an omission.
+
+**The status file carries the interim record.** Until 3TK-12 runs, *The gap
+between the port and the specification* is the only place the difference is
+written down, and it says of itself that it is a forecast and not an audit.
+After 3TK-12 runs, `3tk-deviations-001.md` is the record and that section points
+at it.
+
+**`3tk-who-supports-slot.md` moved** from `3tk/src/` to the folder root, by the
+owner. It is listed in the status file's *Files* as owner input, open and ruled
+on by nothing, and it stays in *Open questions*.
+
+**`3tk-porting-proposal-005.md` is recorded as a candidate**, on the owner's
+instruction, so it is planned later rather than remembered. It is a **revision**
+and not a stage: 004 is the design of record and it names `AnyNode`,
+`NodeList` and `Pool.put_all`, so a reader of 004 today is reading the port as
+it was before 3TK-11. **It waits on specification 003**, because nearly every
+decision in 004 justifies itself by citing a Part that 003 rewrites.
+
+The note carries one warning, and it is the reason a table row was not enough:
+**do not renumber D1 to D16 and do not merge the D and R registers.** Every
+notes file, every negative program comment, `3tk-log.md` and `3tk-status.md`
+cite decisions by number. A renumber silently falsifies all of them, and with
+`git` off there is no revert. Two registers side by side, with 005 saying which
+R overtook which D — D14's anchor clause by R7, D12's blind spot by R6b, and
+nothing else.
+
+---
+
 ## 2026-08-23 — 3TK-11: the core redesign, in code
 
 Written: [3tk-core-redesign-notes-001.md](3tk-core-redesign-notes-001.md), and
@@ -252,7 +1163,7 @@ field, is the one 3TK-11 cannot start without.**
 
 ## 2026-08-23 — the core redesign is ruled, and 3TK-10 will design it
 
-Written: [3tk-staging-plan-006.md](3tk-staging-plan-006.md), adding **3TK-10**.
+Written: [3tk-staging-plan-006.md](backup/3tk-staging-plan-006.md), adding **3TK-10**.
 Plan 005 to `backup/`, links corrected. `3tk-status.md` updated. **No code
 touched and no stage run** — this entry exists so the direction survives a
 context clear, because until now it lived only in a conversation.

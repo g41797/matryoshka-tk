@@ -23,9 +23,9 @@ fn int main()
 
     // A queued item, so a softened check would also leak it.
     Msg m;
-    msg_init(&m);
+    mtk::helper::init(&m);
     Slot s;
-    s.fill(msg_to_inner(&m));
+    s.fill(mtk::helper::to_handle(&m));
     if (catch mb.send(&s)) return 1;
 
     mb.release();                    // <-- the violation: never closed

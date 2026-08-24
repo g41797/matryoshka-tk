@@ -1,7 +1,7 @@
 # The 3tk core redesign proposal (002)
 
 Stage 3TK-10 of `3tk-staging-plan-006.md`, **as ruled by the owner on
-2026-08-23**. Written against `../common/matryoshka-specification-002.md`,
+2026-08-23**. Written against `../common/backup/matryoshka-specification-002.md`,
 `3tk-porting-proposal-004.md`, and `3tk/src/` as it stands green.
 
 It supersedes [3tk-core-redesign-proposal-001.md](backup/3tk-core-redesign-proposal-001.md),

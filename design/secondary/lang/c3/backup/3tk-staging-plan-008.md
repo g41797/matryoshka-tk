@@ -4,14 +4,36 @@ This file is the plan of record for the 3tk line of work.
 
 Approved by the owner, 2026-08-23.
 
-**Version 006.** It supersedes `3tk-staging-plan-005.md`, and that one 004,
-003, 002 and 001. All stay on disk, in `backup/`. The only change in 006 is the
-addition of **3TK-10 and 3TK-11**, on the owner's instruction of 2026-08-23.
-3TK-10 is authorized; **3TK-11 is declared and not authorized** — it runs only
-after the owner rules on 3TK-10's proposal, and the two are written as one
-sequence so the order cannot drift. Stages 3TK-0 to 3TK-9 are reproduced
-unaltered — they are done, and a plan version does not
-rewrite history.
+**Version 008.** It supersedes `3tk-staging-plan-007.md`, and that one 006, 005,
+004, 003, 002 and 001. All stay on disk, in `backup/`. The only change in 008 is
+the addition of **3TK-14 and 3TK-15**, on the owner's instruction of 2026-08-24.
+**Both are declared and neither is authorized.** Stages 3TK-0 to 3TK-13 are
+reproduced unaltered — they are done, and a plan version does not rewrite
+history. **3TK-12 and 3TK-13 both ran on 2026-08-24**; their sections below are
+left exactly as 007 wrote them, including the words *declared, not authorized*,
+because that is what the plan said at the time. `3tk-status.md` is the live
+record of what is done.
+
+**Why these two, and why now.** 3TK-13 finished the documents and left the port
+in a known state with two kinds of work outstanding.
+
+- **The surface has never been re-examined.** Every stage so far has been about
+  *semantics* — what Matryoshka is, and whether the C3 code realizes it. The
+  helper's public shape was written in 3TK-6 and has not been questioned since,
+  and it now costs **seventeen alias declarations in `3tk/test/common.c3` for a
+  single application type**. That is 3TK-14, and it is a design stage.
+- **Two rulings were made and not carried out.** A3 and A5, both recorded in
+  3TK-13's output as debts rather than decisions. That is 3TK-15, and it is
+  mechanical.
+
+**They are in this order deliberately.** 3TK-14 may change `helper.c3` and every
+call site, and A5's forty doc comments live in those same files. Running 15
+first would repoint comments that 14 then rewrites.
+
+**Why the specification is not in either of them.** Neither stage may touch
+`../common/`. 3TK-14 is about a *spelling* — Part 7 fixes the helper's shape and
+explicitly leaves the spelling to the port — and if 3TK-14 finds it is about
+more than spelling, that is a finding it reports and does not act on.
 
 Each stage output names the plan version it ran under in its opening line.
 Those references are **provenance, not pointers**, and they are not repointed.
@@ -405,7 +427,7 @@ green before the stage closes.
   proposal text alone and never opened the source, which is why most of its
   findings were text drift rather than defects. This one makes claims about the
   code. Every claim is checked against the code before it is accepted.
-- `../common/matryoshka-specification-002.md` Parts 4, 7, 11, 12, 15 — for the
+- `../common/backup/matryoshka-specification-002.md` Parts 4, 7, 11, 12, 15 — for the
   MUSTs the review's central argument turns on.
 - `c3-capabilities-001.md` — Q4 is the measurement D1 was built on, and the
   review's charge is that Q4 asked too few questions.
@@ -758,7 +780,7 @@ could still find a defect in the port rather than in a document.
   is capable of contradicting, and what the suite already covers.
 - `3tk/test/t_concurrency.c3` — the tests that would carry a sanitizer.
 - `3tk/run-builds.sh` — the harness, and the question of whether it gains a row.
-- `../common/matryoshka-specification-002.md` Parts 12, 14, 15 — the memory and
+- `../common/backup/matryoshka-specification-002.md` Parts 12, 14, 15 — the memory and
   locking rules any finding is judged against.
 
 #### What was measured while this plan version was cut
@@ -912,7 +934,7 @@ and it is what will separate what these two get right from what they assume.
 #### Inputs
 
 - The two proposals above.
-- `../common/matryoshka-specification-002.md` **Parts 4, 8, 11** — the inner,
+- `../common/backup/matryoshka-specification-002.md` **Parts 4, 8, 11** — the inner,
   the list, the containers. These are what the direction changes.
 - `3tk-porting-proposal-004.md` — the design of record. D2, D4, D5, D12, D14 and
   section 6 are the parts most affected.
@@ -1049,6 +1071,473 @@ The direction changes the core's shape, not the toolkit's promises. Unless
 *Advice on clear: clear between 3TK-10 and 3TK-11. The proposal is the input;
 the argument that produced it is not.*
 
+### 3TK-12 — the deviation audit
+
+Added in plan version 007, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized.**
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-12 from design/secondary/lang/c3/3tk-status.md
+```
+
+**This stage ends at a document. It touches no code and it does not edit
+`../common/`.**
+
+#### Why it exists, stated once so it is not re-derived
+
+`../common/backup/matryoshka-specification-002.md` says of itself: *This document says
+what Matryoshka is, without naming a language. It is self-contained. A port is
+written from this file alone.* That claim is currently false for 3tk, and it has
+been since 3TK-11 ended.
+
+Three facts, and together they are the whole argument:
+
+1. **The specification was written from ztk.** 3TK-2 produced it from
+   `../common/ztk-audit-001.md` and the three Zig sources, and 68 of its lines
+   are marked *ztk*. Where it describes a mechanism rather than a promise, the
+   mechanism it describes is the Zig one — the doubly-linked list, `prev`, the
+   out-of-band anchor.
+2. **3tk no longer has that mechanism.** R1 to R15 replaced it, and the code is
+   green.
+3. **dtk and otk read this file and nothing else.** A port started from 002
+   today reproduces `prev`, the general list and the anchor, and then needs
+   3TK-10 and 3TK-11 run again against it.
+
+**The gap is not recorded anywhere in a form the code can be checked against.**
+Proposal 002 §8.1 lists nine Parts, and it is a *forecast* written before the
+code existed. 3TK-11 found three of its statements wrong — the stack has five
+operations and not six, tier 2 does not reach a fast build, and two `put_all`
+tests were converted rather than deleted. **None of those three is a decision;
+all three are the kind of detail a specification states as a rule.** That is the
+whole reason this stage runs before 3TK-13 rather than inside it.
+
+#### Inputs
+
+- `../common/backup/matryoshka-specification-002.md` — **all of it**, Parts 1 to 22.
+  Not the nine Parts §8.1 predicted; the audit's job is to find the ones it did
+  not predict.
+- `3tk/src/` — the code as 3TK-11 left it, green. **This is the authority.**
+  Where the code and any document disagree, the code is what the audit records.
+- `3tk-core-redesign-proposal-002.md` — the rulings R1 to R15, and §8.1 as the
+  forecast to be checked rather than copied.
+- `3tk-core-redesign-notes-001.md` — 3TK-11's three corrections, and its Part 18
+  re-walk.
+- `3tk-porting-proposal-004.md` — D1 to D16, for the deviations that predate the
+  redesign and have nothing to do with it.
+
+#### What it does
+
+Walks the specification Part by Part and records, for each, one of four verdicts
+against `3tk/src/`:
+
+- **Conforms.** The port does what the Part says.
+- **Deviates, and the specification should move.** The port is right and 002 is
+  describing ztk's mechanism as though it were the rule. Names the replacement
+  wording.
+- **Deviates, and the port should move.** The port drifted, and the fix belongs
+  in `3tk/`, not in `../common/`. **A stage that finds none of these has
+  probably not looked**, and it says so plainly if that is the honest answer.
+- **Not applicable.** EXCLUDED by Part 16, or a MAY the port skipped, with the
+  reason.
+
+Every deviation carries: the Part and its **marking**, a file and line in
+`3tk/src/`, which ruling caused it — R-number, D-number, or *neither, and it
+drifted* — and whether it is **3tk-only** or **every port**.
+
+That last column is the one the next stage consumes, and it is the one a careless
+audit collapses. A deviation that is 3tk-only belongs in this folder for ever. A
+deviation that binds every port is a specification defect, and 003 carries it.
+
+#### The four traps, named in advance
+
+1. **Copying §8.1 instead of auditing.** The forecast is an input to be checked.
+   An audit whose nine rows are §8.1's nine rows has measured nothing, and the
+   three corrections 3TK-11 already found are the proof that copying is not
+   safe.
+2. **Missing the Parts the redesign did not aim at.** `put_all` went, so Part
+   11.7's *put a list* and Part 11.8's list-put clause went with it — those were
+   forecast. Part 12.5's composite mechanism, Part 9's Slot rules and Part 17.2's
+   layering were *not* aimed at and all three are touched by a container surface
+   that changed. Walk all 22 Parts.
+3. **Reading a promise as a mechanism, or the reverse.** This is the mistake
+   that produced the redesign in the first place. Invariant 22 survived because
+   the anchor was the mechanism and the ordering was the promise; Part 11.7's
+   *one free list per identity* is a mechanism and the pool's silence on order
+   is the promise. **Every row states which it is.**
+4. **Deciding.** The audit **recommends** and the owner rules. It does not edit
+   `../common/`, it does not edit `3tk/src/`, and where it finds a genuine
+   question it asks it rather than answering it — the shape 3TK-10 used, and
+   the reason eleven questions came back as rulings.
+
+#### Output
+
+`3tk-deviations-001.md`. A table first, so the owner can read the shape in one
+screen, then a section per deviation with the evidence.
+
+It must contain, at minimum:
+
+- **Every Part of 1 to 22, with a verdict.** A Part with nothing to say is one
+  row saying *conforms*. Completeness is the deliverable; a partial audit is
+  worth less than none, because the next reader trusts it.
+- **The 3tk-only / every-port split**, for every deviation.
+- **A recommendation for 3TK-13's scope**: which Parts 003 rewrites, and which
+  stay.
+- **What it disagrees with §8.1 about**, listed separately and plainly, as
+  3TK-11's notes listed their three corrections.
+- **The open questions it will not answer**, including
+  [3tk-who-supports-slot.md](3tk-who-supports-slot.md) if the audit finds it
+  touches a Part.
+
+#### What this stage may not do
+
+- **No code.** `3tk/src/`, `3tk/test/` and `3tk/negative/` are read, never
+  written.
+- **No edits to `../common/`.** It measures; 3TK-13 cuts.
+- **It may not rewrite a finished stage's output**, and it does not repoint
+  provenance.
+- It runs no `git` command.
+
+#### Verification
+
+1. `3tk/run-builds.sh` and `3tk/run-sanitizers.sh` still green, trivially,
+   because nothing was touched.
+2. **Every claim about the code carries a file and line**, as 3TK-8's audit and
+   3TK-10's did.
+3. **Every one of Parts 1 to 22 appears in the table.** A missing Part is a
+   failed stage, not an omission.
+4. Every deviation names its marking, so the owner sees whether a MUST or a
+   SHOULD is being moved.
+
+*Advice on clear: clear before starting. Its inputs are the specification and
+the code, and the argument that produced the redesign is not one of them.*
+
+### 3TK-13 — specification 003
+
+Added in plan version 007, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized.** It runs only after the owner has ruled on 3TK-12's
+audit. That is not a formality: the audit's 3tk-only / every-port split is
+exactly what decides this stage's scope, and a cut made before the split is
+ruled is a cut made from a forecast.
+
+**Start after clear** — type this, nothing else, and only after the ruling:
+
+```
+Run 3TK-13 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Inputs
+
+- `3tk-deviations-001.md` — the 3TK-12 output, **as ruled by the owner**. Its
+  every-port rows are this stage's scope, and its 3tk-only rows are explicitly
+  out of it.
+- `../common/backup/matryoshka-specification-002.md` — the document being revised.
+- `3tk-core-redesign-proposal-002.md` §8 — R14, and the forecast, as background
+  rather than as scope.
+
+#### What it does
+
+Writes `../common/matryoshka-specification-003.md`. **This is the first stage of
+this plan that writes into `../common/`**, and that is the whole of its risk:
+the file binds dtk and otk, and neither has a stage running to catch a mistake.
+
+R14 is already ruled — this is a specification move, not a 3tk deviation — so
+the stage does not relitigate it. What it decides is only the wording.
+
+#### What it must preserve
+
+- **The document's own claim about itself.** *A port is written from this file
+  alone.* If 003 leaves any Part describing a mechanism that only ztk has, the
+  claim is still false and the stage has not finished.
+- **The ztk lines stay marked ztk.** 68 lines carry that marker. A Part whose
+  rule moves keeps its *ztk* line, because the realization did not change — ztk
+  still has `prev`. **Part 11.11 already has the shape for this**: it says in
+  its own words that a port can be *better* than ztk, not merely different.
+- **The conformance markings.** A MUST that becomes a SHOULD, or the reverse, is
+  a decision and needs a ruling, not a stage's judgment.
+- **Part 18's row count is not a target.** 3TK-11 retired one invariant and added
+  one; the stage records what is true, not what keeps the number.
+- **The change log at the end**, in the shape 002 used: what moved and why, so
+  the next port can see what a reader of 002 would have got wrong.
+
+#### What this stage may not do
+
+- **No code.** `3tk/` is not touched.
+- **It does not touch `../d/` or the Odin folder.** Telling dtk and otk that
+  their input moved is a separate piece of work and the owner names it.
+- **It may not carry a 3tk-only deviation into `../common/`.** That is the
+  failure mode the audit's split exists to prevent.
+- It runs no `git` command.
+
+#### Verification
+
+1. Every Part the audit marked *every port* is rewritten, and no Part it marked
+   *3tk-only* is.
+2. `3tk/run-builds.sh` still green — nothing in `3tk/` changed.
+3. **A reader can find every difference from 002 in the change log**, without
+   diffing the two files.
+4. 002 goes to `../common/backup/`, and every link naming it is corrected in
+   place, both directions — the rule this folder already uses.
+
+*Advice on clear: clear between 3TK-12 and 3TK-13. The audit is the input; the
+walk that produced it is not.*
+
+### 3TK-14 — the helper surface, re-thought
+
+Added in plan version 008, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized.**
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-14 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+`3tk/src/helper.c3` is a generic module parameterized on the outer type. It
+carries eight functions and two constants, and **an application reaches them
+through one alias per operation**. `3tk/test/common.c3` carries **seventeen
+alias lines** to use four types. Every new application type repeats the bundle
+before it can call anything.
+
+The shape is conformant — Part 7.2 asks for the members and Part 7.1 says the
+spelling is the port's business — so **this is not a defect and no rule requires
+the change.** It is the first stage in this line whose subject is the *surface*
+rather than the semantics, and the owner named it.
+
+**A second question rides along**: `mtk::owned` is a second generic module over
+the same type, carrying `create` and `release` — Part 7.3's optional half. If
+the helper's shape changes, `owned`'s relationship to it is the obvious next
+question, and the stage answers it or says plainly why not.
+
+#### Inputs
+
+- [3tk-helper-alternatives.md](3tk-helper-alternatives.md) — **from the owner.
+  Not produced by any stage, not versioned by this folder, and it is advice, not
+  a ruling** — the same standing as `3tk-naming-001.md` had for 3TK-10. **Read
+  the whole of it, including its own correction near the end**, which withdraws
+  its first and favourite proposal. See the traps below.
+- `3tk/src/helper.c3` and `3tk/src/owned.c3` — the code as it stands.
+- `3tk/test/common.c3` — the alias bundle, and the measurement of what the
+  surface actually costs a caller.
+- `../common/matryoshka-specification-003.md` **Part 7** in full, and Parts 6.3,
+  9.9 and 10.1 — what the helper must carry, and which names are load-bearing.
+- `3tk-porting-proposal-004.md` — D4's one-handle ruling and D10's two-generic-
+  modules ruling. **Both are rulings and this stage does not reopen them without
+  saying so.**
+- `c3-capabilities-001.md` — 3TK-4's measurements. Q1 and Q12 are the relevant
+  ones and **they were measured, so they are evidence, not opinion.**
+
+#### What it does
+
+**Measure first, design second.** That order is the stage.
+
+1. **Measure what C3 actually allows**, with the compiler, on this machine —
+   c3c 0.8.3, `/usr/bin/c3c`, stdlib at `/home/g41797/dev/langs/c3/lib/std/`.
+   The alternatives note asks three questions it could not answer itself:
+   - Can a generic module declare a method on its own type parameter —
+     `fn void Type.init()` inside `module mtk::helper <Type>`? **The note
+     proposes this, then corrects itself and says it probably does not work.**
+   - Can an instantiated generic module be aliased as a namespace —
+     `alias MsgHelper = mtk::helper{Msg}` — so one declaration replaces eight?
+   - What does the diagnostic look like when each fails?
+
+   **Each answer is a compiled program that ran, with its output quoted.** A
+   scratch directory outside `3tk/`, and it is deleted or left unbuilt; the
+   stage adds no file to `3tk/` that `run-builds.sh` does not know about.
+2. **Then propose a surface**, from what compiled rather than from the note's
+   ranking. The note's own order is 1) methods on `Type`, 2) one namespace
+   alias, 3) many aliases as today — and its correction says option 1 is
+   probably unavailable, which would make option 2 the real proposal.
+3. **Answer the questions the note raises that are not about syntax at all**,
+   because these are the ones that outlive whichever spelling wins:
+   - **Should `OFF` and `TYPE` be public?** The note argues that exporting `OFF`
+     hands application code the address arithmetic Part 7.5 MUST confines to the
+     helper — `(Msg*)((char*)h - MSG_OFF)` — and that `is_mine` is the public
+     form of `TYPE`. `MSG_OFF` is aliased in `test/common.c3` today. **Part 7.5
+     is a MUST and this is the one item in the note that touches conformance
+     rather than taste.**
+   - **`inner` or `handle` in public names?** The note prefers `to_handle` /
+     `from_handle`, reserving *inner* for implementation. **Part 10.1 fixes
+     four words and gives each a job**, and *handle* is already one of them —
+     so this is a question about which of two defined words a signature should
+     use, not an invention. Check it against Part 10.1 before agreeing.
+   - **`move_from_slot` should validate before it consumes.** The note observes
+     that peeking, checking and then calling `take()` is more auditable than
+     taking and then subtracting, and that it does not depend on `take()`
+     returning what `peek()` saw. **Check the current code before reporting
+     this**: it may already do it, in which case the row is *conforms* and says
+     so.
+   - **`must_from_inner`'s two failure cases.** Null and wrong-type both fail
+     one `@check` today. Separating them costs a check and buys a diagnostic.
+     Part 15.5's tiers decide it.
+4. **Answer the `owned` question**, or record why it stays shut.
+
+#### The traps, named in advance
+
+1. **Treating the note as a specification.** It is one reader's opinion,
+   written without running the compiler, and **it contradicts itself on
+   purpose** — the *Important correction* section withdraws the design the
+   *My ranking* section calls its clear favourite. A stage that implements the
+   ranking without reading the correction has implemented something that does
+   not compile.
+2. **Designing before measuring.** Every one of the note's three shapes rests on
+   a C3 capability question it did not test. 3TK-4 is the model: measure, quote
+   the compiler, then argue.
+3. **Confusing surface with semantics.** Part 7.2's seven members are a MUST.
+   Renaming them is spelling; dropping one is a rule change and this stage does
+   not make rule changes.
+4. **Quietly reopening D4 or D10.** Both are the owner's rulings. If the best
+   surface needs one of them moved, **the stage says so as a question** and does
+   not answer it — the shape 3TK-10 used, and the reason eleven questions came
+   back as rulings.
+5. **Touching `../common/`.** Not this stage, and not the next one either.
+
+#### Output
+
+`3tk-helper-proposal-001.md`. A proposal, in the shape 3TK-10's was: numbered
+items, each one accept-or-reject on its own, so the owner rules them one at a
+time.
+
+It must contain:
+
+- **The compiler measurements first**, with the exact source, the exact command
+  and the exact output. A claim about C3 without a quoted compiler run is an
+  opinion and is marked as one.
+- **The proposed surface**, with a before-and-after of `test/common.c3`'s
+  seventeen alias lines. That file is the honest measure of what the change
+  buys.
+- **The conformance check.** Every one of Part 7.2's members, present in the
+  proposed surface, named. Plus Part 7.5 against the `OFF` question.
+- **The cost.** How many call sites move, across `src/`, `test/` and
+  `negative/`. `run-builds.sh`'s 59 checks include layering checks that read
+  these names.
+- **The questions it will not answer**, including anything that touches D4, D10
+  or a Part 7 MUST.
+
+#### What this stage may not do
+
+- **No change to `3tk/src/`, `3tk/test/` or `3tk/negative/`.** It is a proposal.
+  The code stage is separate and the owner names it.
+- **No edits to `../common/`.**
+- It may not rewrite a finished stage's output, and it does not repoint
+  provenance.
+- It runs no `git` command.
+
+#### Verification
+
+1. `3tk/run-builds.sh` and `3tk/run-sanitizers.sh` still green, trivially —
+   nothing was touched. Both now take an optional directory; with no argument
+   they behave as they always did.
+2. **Every claim about C3 carries a compiled program and its output.**
+3. **Every claim about the port carries a file and line**, as 3TK-8, 3TK-10 and
+   3TK-12 did.
+4. Every one of Part 7.2's members is accounted for in the proposed surface.
+
+*Advice on clear: clear before starting. Its inputs are the note, the code and
+Part 7, and none of the argument that produced 003 is one of them.*
+
+### 3TK-15 — the two debts of 3TK-13
+
+Added in plan version 008, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized. It runs after 3TK-14**, because A5 repoints doc
+comments in the files 3TK-14 may rewrite.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-15 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+3TK-13 was a documents stage and recorded two things it could not do. Both were
+**already decided**; neither is a question. They are gathered here so they are
+paid explicitly rather than drifting.
+
+#### A3 — the port breaks a MUST in its own specification
+
+**`3tk/src/pool.c3:288-290`. Part 19.3 MUST, and 3TK-12's finding P2.**
+
+`Pool.get` asked for an identity the pool was not created with returns
+`NOT_AVAILABLE` — from **every** mode, including new-only. Part 19.3 says
+not-available comes **only** from the available-only mode. The `@check` above
+the return catches it in a checking build, but under `--safe=no` a `@check`
+expands to nothing — that is D6 — so the fault is the observable behaviour of a
+fast build.
+
+**The ruling is assumption A3 of 3TK-13, and it is recorded in specification
+003's change log**: *the port reports a distinct outcome*, Part 19.3 keeps its
+MUST, and `../common/` is not touched. The three candidate answers were weighed
+by 3TK-12 and this is the one taken; the stage implements it and does not
+re-argue it.
+
+What it does:
+
+- A distinct outcome for *an identity this pool does not serve*, added to the
+  port's fault set.
+- **`get_wait` at `pool.c3:359-360` has the same shape and is benign today** —
+  `b` stays null, the loop finds nothing, the call times out, and Part 19.2
+  allows a timeout there. The stage decides whether it changes too, and says
+  why either way.
+- A test that fails without the change.
+- Every Part 19 outcome the port can now produce, still inside 19.1 and 19.2.
+
+#### A5 — about forty doc comments cite a superseded document
+
+`3tk/src/` cites `matryoshka-specification-002.md` in roughly forty doc
+comments. 002 was superseded on 2026-08-24 and moved to `../common/backup/`.
+Nothing breaks and no rule those comments rely on changed meaning — they are
+stale pointers to an old edition, and 3TK-13 deferred them deliberately so a
+documents stage was not buried in forty comment edits.
+
+What it does:
+
+- Repoint every one to `../common/matryoshka-specification-003.md`.
+- **Where 003 changed the rule the comment cites, fix the comment's claim too.**
+  This is the part that is not mechanical, and it is the reason this is a stage
+  rather than a `sed`. The Parts that moved are listed in 003's change log:
+  4.2, 6.5, 8.1, 8.2, 8.6, 8.7, 11.2, 11.3, 11.7, 11.8, 12.2, 12.3, 12.5, 18,
+  19.1, 19.2, 20, 21 and 22. **A comment citing Part 8.6 is citing a deleted
+  Part** and must say what replaced it.
+- Leave `3tk-status.md`'s and the log's historical mentions alone. Those are
+  provenance.
+
+#### What this stage may not do
+
+- **No edits to `../common/`.** A3's whole point is that the specification is
+  right and the port is wrong.
+- No surface redesign. That was 3TK-14, and if 3TK-14's proposal has been ruled
+  and built by then, this stage runs on top of the result.
+- It runs no `git` command.
+
+#### Output
+
+`3tk/` changed, plus `3tk-debts-notes-001.md` — short. What the new outcome is
+called, what `get_wait` does and why, and which doc comments changed a claim
+rather than a path.
+
+#### Verification
+
+1. `3tk/run-builds.sh` green, and the count is **at least 59**; a new test
+   raises it.
+2. `3tk/run-sanitizers.sh` green, 3 checks.
+3. **A test that fails with the A3 fix removed.** The same standard 3TK-12's P1
+   repair was held to.
+4. **No occurrence of `matryoshka-specification-002` remains in `3tk/src/`,
+   `3tk/test/` or `3tk/negative/`.** One grep, and it is the whole of A5's
+   check.
+5. Part 19.3 read against `pool.c3` and reported as conforming.
+
+*Advice on clear: clear before starting. Both halves are written down here and
+in 003's change log; the conversation that produced them is not needed.*
+
 ## Versioning of the files in this folder
 
 Part 0 of `rules-049.md` forbids overwriting a doc. `design/` exempts two stable
@@ -1062,12 +1551,14 @@ Edited in place, no suffix. Entry points, not documents:
 
 Versioned, suffix required. Every change makes a new file:
 
-- this plan — `3tk-staging-plan-NNN.md`, currently 006
+- this plan — `3tk-staging-plan-NNN.md`, currently 007
 - `ztk-audit-NNN.md`
 - `matryoshka-specification-NNN.md`
 - `3tk-drafts-review-NNN.md`
 - `c3-capabilities-NNN.md`
 - `3tk-porting-proposal-NNN.md`
+- `3tk-core-redesign-proposal-NNN.md`
+- `3tk-deviations-NNN.md`
 
 A superseded version stays on disk. It is listed in the Superseded section of
 [3tk-status.md](3tk-status.md), naming what replaced it, and every reference to

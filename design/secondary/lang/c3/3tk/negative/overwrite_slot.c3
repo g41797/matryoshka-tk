@@ -11,11 +11,11 @@ import std::io;
 fn int main()
 {
     Msg a; Msg b;
-    msg_init(&a); msg_init(&b);
+    mtk::helper::init(&a); mtk::helper::init(&b);
 
     Slot s;
-    s.fill(msg_to_inner(&a));
-    s.fill(msg_to_inner(&b));          // <-- the violation
+    s.fill(mtk::helper::to_handle(&a));
+    s.fill(mtk::helper::to_handle(&b));          // <-- the violation
 
     io::printn("no check: the full Slot was overwritten");
     return 0;

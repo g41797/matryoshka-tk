@@ -9,9 +9,14 @@ written from, and the process every port follows.
 
 ## What is here
 
-- **[matryoshka-specification-002.md](matryoshka-specification-002.md)** — the
+- **[matryoshka-specification-003.md](matryoshka-specification-003.md)** — the
   portable specification. Self-contained and language-neutral. *A port is
   written from this file alone.* Source of truth for all four ports.
+  **003 replaced 002 on 2026-08-24**, from the C3 port's deviation audit: 002
+  described ztk's mechanism as the rule in fourteen places, and a port written
+  from it would have reproduced Zig's doubly-linked list, its anchor and its
+  inexact link test. Two realizations now appear side by side, marked *ztk* and
+  *3tk*. Its change log names every difference, so nothing needs diffing.
 - **[ztk-audit-001.md](ztk-audit-001.md)** — read-only evidence about ztk, the
   reference implementation. Every claim names a file and a line range. It is the
   specification's own input, and it is about Zig, not about any port.

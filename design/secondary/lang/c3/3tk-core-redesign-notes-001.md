@@ -1,6 +1,6 @@
 # 3tk core redesign notes (001)
 
-Stage 3TK-11 of [3tk-staging-plan-006.md](3tk-staging-plan-006.md).
+Stage 3TK-11 of [3tk-staging-plan-006.md](backup/3tk-staging-plan-006.md).
 
 What writing the redesign taught, beyond
 [3tk-core-redesign-proposal-002.md](3tk-core-redesign-proposal-002.md), which
