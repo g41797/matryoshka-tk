@@ -194,9 +194,11 @@ for f in mailbox pool; do
 done
 # `unlink_no_repair` went with the redesign — the queue and the stack have no
 # unrepaired removal left to reach for. What remains reachable is the insert
-# guard and the link fields themselves, and a container that touched either
-# would be maintaining chains by hand instead of calling the surface.
-if grep -nE '\b(@guard_insert|\.next[[:space:]]*=)\b' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
+# guard and the link field itself, and a container that touched either would be
+# maintaining chains by hand instead of calling the surface.
+#
+# The field is `link` since 3TK-18; it was `next`.
+if grep -nE '\b(@guard_insert|\.link[[:space:]]*=)\b' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
     bad "a container reaches around the InnerQueue/InnerStack surface"
 else
     ok "no container reaches around the InnerQueue/InnerStack surface"

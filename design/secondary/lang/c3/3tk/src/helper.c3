@@ -85,7 +85,7 @@ macro bool is_mine(Handle h, $Type) => h != null && h.type == $Type::typeid;
 macro void init(item)
 {
     Inner* n = (Inner*)((char*)item + mtk::inner_offset($Typeof(*item)));
-    n.next = null;
+    n.link = null;
     n.type = $Typeof(*item)::typeid;
 }
 

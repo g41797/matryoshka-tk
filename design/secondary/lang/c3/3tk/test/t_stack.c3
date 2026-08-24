@@ -50,7 +50,7 @@ fn void an_empty_stack_answers() @test
 <*
  The self-link, at the bottom of the stack rather than the end of a queue.
 
- `pop` recognises the sole item by `h.next == h`, so a stack built with a null
+ `pop` recognises the sole item by `h.link == h`, so a stack built with a null
  terminator would either lose the item or leave `top` dangling. Both states are
  visible from here.
 *>
@@ -62,11 +62,11 @@ fn void the_bottom_item_points_at_itself() @test
 
     InnerStack st;
     st.push(mtk::helper::to_handle(&a));
-    always_assert(mtk::helper::to_handle(&a).next == mtk::helper::to_handle(&a), "the sole item of a stack is not self-linked");
+    always_assert(mtk::helper::to_handle(&a).link == mtk::helper::to_handle(&a), "the sole item of a stack is not self-linked");
 
     st.push(mtk::helper::to_handle(&b));
-    always_assert(mtk::helper::to_handle(&b).next == mtk::helper::to_handle(&a), "the pushed item does not cover the one below");
-    always_assert(mtk::helper::to_handle(&a).next == mtk::helper::to_handle(&a), "the bottom stopped being self-linked");
+    always_assert(mtk::helper::to_handle(&b).link == mtk::helper::to_handle(&a), "the pushed item does not cover the one below");
+    always_assert(mtk::helper::to_handle(&a).link == mtk::helper::to_handle(&a), "the bottom stopped being self-linked");
 
     always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 2, "pop took the wrong end");
     always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 1, "the bottom item was lost");

@@ -3,13 +3,13 @@
 
  **This program used to provoke the O(n) walk, and the walk is gone.** It was
  the WALK half of the old Part 8.6 pair: a queue of exactly one member left the
- item with no neighbours, `prev == null && next == null`, so the link test could
- not see it and only a walk of the container could. Part 8.6 said in so many
+ item with no neighbours on either side, both of its link fields null, so the
+ link test could not see it and only a walk of the container could. Part 8.6 said in so many
  words that neither check alone was enough, and D12 recorded the hole as an
  accepted cost.
 
  R6b closed it with no field. The last item of every chain points at ITSELF, so
- the sole item of a queue has `next == this`, `is_linked` returns true, and the
+ the sole item of a queue has `link == this`, `is_linked` returns true, and the
  link test catches the case that used to need the walk. `contains` and the walk
  were deleted outright.
 

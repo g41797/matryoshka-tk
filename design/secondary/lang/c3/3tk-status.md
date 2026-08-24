@@ -3,7 +3,7 @@
 Current state of the 3tk line of work. One screen. Updated after every stage.
 
 This file is the entry point for a cold session. Read it, then the stage named  
-by the owner in [3tk-staging-plan-009.md](3tk-staging-plan-009.md).
+by the owner in [3tk-staging-plan-010.md](3tk-staging-plan-010.md).
 
 ## Scope
 
@@ -78,33 +78,60 @@ show no trace of it.
 
 ## How to continue after a clear
 
-**Every stage of plan 009 has run.** 3TK-0 to 3TK-17. Nothing in this line is
-declared and unstarted, and **the plan is spent.**
+**Every stage of plan 009 has run.** 3TK-0 to 3TK-17, and 009 is in `backup/`.
 
 ```
 3TK-16  (code, DONE)   →   3TK-15  (the debts, DONE)   →   3TK-17  (the specification, DONE)
 ```
 
-**The next thing this repository does is not a 3tk stage.** dtk has a prepared
+**[3tk-staging-plan-010.md](3tk-staging-plan-010.md) is the plan of record**,
+cut 2026-08-24. It reproduces 3TK-0 to 3TK-17 unaltered and adds two stages.
+**Both are declared and neither is authorized.**
+
+```
+3TK-18  (the rename, code)   →   3TK-19  (the debts)
+        HAS RUN                   declared, not authorized
+```
+
+**3TK-18 has run, 2026-08-24.** `Inner.next` is `Inner.link` — the rename the
+owner accepted when they rejected `any` in all three shapes. The ruling is
+[3tk-any-options-001.md](3tk-any-options-001.md); the owner's document behind it
+is [3tk-any-revision.md](3tk-any-revision.md). Two words before, two words
+after: no layout change, no behaviour change, no edit to `../common/`. **It
+wrote no new document**, as the plan said it would not, and what it learned is
+the row in [3tk-log.md](3tk-log.md).
+
+**It also took the one citation it was permitted.** `inner.c3:5` names 004 now,
+so **3TK-19 inherits two stale citations and not three.**
+
+**3TK-19 — the debts below**, as one stage, because each alone is too small for
+a cold start. It is the only 3tk stage declared and unstarted.
+
+```
+Run 3TK-19 from design/secondary/lang/c3/3tk-status.md
+```
+
+**Otherwise the next thing this repository does is not a 3tk stage.** dtk has a prepared
 folder and no stage has run — [../d/dtk-status.md](../d/dtk-status.md) — and
 3TK-17's whole scheduling constraint was to land *before* that. It has landed.
 dtk is now free to start, and it starts from
 [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md).
 
-**Three small things are owed here and each needs an owner-named stage.** None
-of them blocks dtk. They are in the open questions below:
+**Three small things were owed and 3TK-18 paid part of one.** None of them
+blocks dtk. 3TK-19 pays the rest. They are in the open questions below:
 
-1. **Three doc comments in `3tk/src/` still cite 003** — `mtk.c3`, `inner.c3`,
-   and `helper.c3`'s paragraph telling the next reader not to "fix" the file to
-   match Part 7.1, **which 004 has now fixed.** 3TK-17 may write no code.
+1. **Two doc comments in `3tk/src/` still cite 003** — `mtk.c3:48`, and
+   `helper.c3:51`'s paragraph telling the next reader not to "fix" the file to
+   match Part 7.1, **which 004 has now fixed.** `inner.c3:5` was the third and
+   **3TK-18 repointed it.**
 2. **`3tk-deviations-001.md`'s P2 row is stale** — 3TK-15's finding, unchanged.
 3. **otk has never been told the specification exists**, let alone that it
    moved twice.
 
-**`3tk/` is green and untouched by this stage** — `run-builds.sh` **63 checks**
-and 0 failed, four builds green. 3TK-17 wrote no code, so the run is trivially
-green, but **it was run rather than assumed**. The counts are unchanged from
-3TK-15's.
+**`3tk/` is green** — `run-builds.sh` **63 checks** and 0 failed, four builds
+green, **87 tests in every mode**; `run-sanitizers.sh` thread and address clean
+at 87. The counts are 3TK-15's, unchanged: **a rename adds and removes no check
+and no test**, which is this stage's own verification and it holds.
 
 ---
 
@@ -478,7 +505,7 @@ four builds.** Two code changes since 3TK-11, both ruled by the owner on
 open** (P1). 85 tests before, 84 after the deletion, 85 again with the new one.
 
 **Nothing is authorized. 3TK-15 is declared, in
-[3tk-staging-plan-009.md](3tk-staging-plan-009.md), and does not run until the
+[3tk-staging-plan-009.md](backup/3tk-staging-plan-009.md), and does not run until the
 owner types its line. 3TK-14's eleven items are unruled.**
 
 **3TK-15 — the two debts of 3TK-13. This is the one to run next**, and it was
@@ -910,10 +937,10 @@ Edited in place, no suffix — the entry points:
 
 Versioned — a change makes a new file, the old one stays and is listed below:
 
-- **Current plan: [3tk-staging-plan-009.md](3tk-staging-plan-009.md).** It adds
-  **3TK-16 and 3TK-17**, and amends 3TK-15's ordering. **Everything 3TK-0 to
-  3TK-16 has run. 3TK-17 alone is declared and not authorized.** The order was
-  **3TK-16 → 3TK-15 → 3TK-17**, and it was not the numbering.
+- **Current plan: [3tk-staging-plan-010.md](3tk-staging-plan-010.md).** It adds
+  **3TK-18 and 3TK-19** and reproduces everything before them unaltered.
+  **Everything 3TK-0 to 3TK-18 has run. 3TK-19 is declared and not
+  authorized**, and here the order *is* the numbering.
 - [ztk-audit-001.md](../common/ztk-audit-001.md) — the 3TK-1 output.
 - **[matryoshka-specification-004.md](../common/matryoshka-specification-004.md) — the
   portable specification, and the source of truth for every port.** The 3TK-2
@@ -1017,11 +1044,15 @@ folder contains only what a current reader needs.
   [3tk-porting-proposal-003.md](backup/3tk-porting-proposal-003.md) on 2026-08-23, in
   answer to [3tk-porting-proposal-review.md](backup/3tk-porting-proposal-review.md).
   No decision moved.
+- [3tk-staging-plan-009.md](backup/3tk-staging-plan-009.md), replaced by
+  [3tk-staging-plan-010.md](3tk-staging-plan-010.md) on 2026-08-24. The only
+  change is the addition of 3TK-18 and 3TK-19; 3TK-0 to 3TK-17 are reproduced
+  unaltered.
 - [3tk-staging-plan-007.md](backup/3tk-staging-plan-007.md), replaced by
   [3tk-staging-plan-008.md](backup/3tk-staging-plan-008.md) on 2026-08-24. The
   only change is the addition of 3TK-14 and 3TK-15.
 - [3tk-staging-plan-008.md](backup/3tk-staging-plan-008.md), replaced by
-  [3tk-staging-plan-009.md](3tk-staging-plan-009.md) on 2026-08-24. The changes
+  [3tk-staging-plan-009.md](backup/3tk-staging-plan-009.md) on 2026-08-24. The changes
   are the addition of 3TK-16 and 3TK-17, an amendment note on 3TK-15's ordering,
   and one corrected stale line — 008 and 007 both said *currently 007* in the
   versioning section.
@@ -1312,14 +1343,14 @@ is what any of them would be written from.
 
 ## Open questions
 
-- **Three doc comments in `3tk/src/` still cite specification 003, and one of
+- **Two doc comments in `3tk/src/` still cite specification 003, and one of
   them is now wrong.** `helper.c3:51` tells the next reader that Part 7.1 asks
   for a helper object bound to one type, that this is a specification defect,
   and **not to "fix" this file to match it** — 3TK-16 wrote that guard knowing
   3TK-17 would retire it. **004 has now reworded Part 7.1 and the guard is
-  stale.** `mtk.c3:48` and `inner.c3:5` name 003 as the specification. 3TK-17
-  may write no code, so all three stand. **A code stage the owner names**, and
-  it is three comments.
+  stale**, so it is rewritten and not repointed. `mtk.c3:48` names 003 and is a
+  repoint. **`inner.c3:5` was the third and 3TK-18 took it**, under the one
+  permission the plan gave it. **3TK-19 is the stage**, and it is two comments.
 - **`3tk-deviations-001.md`'s P2 row is stale.** 3TK-15's finding, carried
   unchanged: the row records the defect A3 fixed, and its section still ends
   *the audit takes none* of the three answers. It wants the treatment V19 got —

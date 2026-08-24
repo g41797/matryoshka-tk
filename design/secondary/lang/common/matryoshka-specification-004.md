@@ -1,6 +1,6 @@
 # The Matryoshka portable specification (004)
 
-Stage 3TK-17 of [3tk-staging-plan-009.md](../c3/3tk-staging-plan-009.md),
+Stage 3TK-17 of [3tk-staging-plan-009.md](../c3/backup/3tk-staging-plan-009.md),
 written 2026-08-24. **004 changes one Part — 7.1 — and nothing else.** It is
 the first specification defect found since 003, and it was found by building a
 port rather than by auditing one: the C3 port answered *generate code per type*

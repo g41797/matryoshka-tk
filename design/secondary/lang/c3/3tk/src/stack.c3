@@ -49,7 +49,7 @@
  container is a stack; it does not promise most-recently-returned-first.
 
  **The self-link.** As in `queue.c3`: the bottom item points at itself, never
- at null, and `pop` recognises the sole item by `h.next == h`.
+ at null, and `pop` recognises the sole item by `h.link == h`.
 
  Part 19.4: nothing here can fail. A pop from an empty stack returns null.
 *>
@@ -105,7 +105,7 @@ fn usz InnerStack.len(&self) @inline => self.count;
 fn void InnerStack.push(&self, Handle h)
 {
     self.@guard_insert(h);
-    h.next = self.top ? self.top : h;
+    h.link = self.top ? self.top : h;
     self.top = h;
     self.count++;
 }
@@ -121,7 +121,7 @@ fn Handle InnerStack.pop(&self)
 {
     Handle h = self.top;
     if (!h) return null;
-    self.top = (h.next == h) ? null : h.next;
+    self.top = (h.link == h) ? null : h.link;
     self.count--;
     reset(h);
     return h;

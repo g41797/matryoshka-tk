@@ -2,7 +2,7 @@
  The inner, the handle, the Slot, the link test, and the port's check macro.
 
  Matryoshka, the C3 port.
- Specification: ../common/matryoshka-specification-003.md, as the core redesign
+ Specification: ../common/matryoshka-specification-004.md, as the core redesign
  amends it — 3tk-core-redesign-proposal-002.md, R1 to R15.
  Design rulings: 3tk-porting-proposal-004.md, decisions D1 to D16.
 
@@ -31,8 +31,8 @@ import std::core::env;
 
  **The self-link invariant — R6b, and the redesign turns on it:**
 
-   An item on a chain has a non-null `next`; the last item of a chain points at
-   itself. An item on no chain has `next == null`.
+   An item on a chain has a non-null `link`; the last item of a chain points at
+   itself. An item on no chain has `link == null`.
 
  Every insert and every removal in `queue.c3` and `stack.c3` maintains it, and
  `is_linked` below reads it. It is what makes the link test EXACT, and an exact
@@ -42,13 +42,22 @@ import std::core::env;
  replaces invariant 16, which 003 retired in place — the row is still numbered
  16 and says so, and 16b is this. V12.
 
- The price, stated plainly: `next` carries two meanings, and a walk that forgets
- to test `n.next == n` loops forever rather than ending. Four sites carry it,
- and each states the end test in its own body.
+ The price, stated plainly: the link carries two meanings — *the next item*
+ and *this item is the end* — and a walk that forgets to test `n.link == n`
+ loops forever rather than ending. Four sites carry it, and each states the end
+ test in its own body.
+
+ **That price is why the field is named `link` and not `next`.** The name does
+ not remove the second meaning; nothing can, that is R6b's bargain. It stops the
+ name asserting the first one. On the last item of a chain `next` is a false
+ claim, and `link` is true there, on an unlinked item, and everywhere between.
+ `link` is also the word the specification uses: Part 4.2 names the two parts
+ *Linkage* and *Identity*, and 004's *3tk* realization line reads *one link
+ field plus the identity*.
 *>
 struct Inner
 {
-    Inner* next;
+    Inner* link;
     typeid type;
 }
 
@@ -161,9 +170,10 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
  the link test MUST be exact and names the three prices — a terminator, a
  field, or the O(n) walk. R6b paid the first. V5.
 
- On a chain, `next` is never null: the last item points at itself. Off a chain,
- `next` is always null. So this answers *is this item on some chain* with no
- false negative and no false positive, in O(1), through the public surface.
+ On a chain, the link is never null: the last item points at itself. Off a
+ chain, the link is always null. So `h.link != null` answers *is this item on
+ some chain* with no false negative and no false positive, in O(1), through the
+ public surface.
 
  The blind spot 002's Part 8.7 made a MUST to document — an item ALONE on a
  list reporting false — is closed, and it cost no field. **003 does not
@@ -177,7 +187,7 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
  code that reached around the container surface. It is exact for every path
  through the public surface.
 *>
-fn bool is_linked(Handle h) @inline => h != null && h.next != null;
+fn bool is_linked(Handle h) @inline => h != null && h.link != null;
 
 <*
  The repair. Part 8.8.
@@ -191,7 +201,7 @@ fn bool is_linked(Handle h) @inline => h != null && h.next != null;
 fn void reset(Handle h) @inline
 {
     if (!h) return;
-    h.next = null;
+    h.link = null;
 }
 
 // --- The Slot's reading shape -----------------------------------------------

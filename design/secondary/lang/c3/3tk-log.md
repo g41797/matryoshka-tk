@@ -7,6 +7,109 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-24 — 3TK-18: the field is called `link`
+
+**`Inner.next` is `Inner.link`.** Two words before, two words after. Four builds
+green at **63 checks**, **87 tests**, unchanged in every mode; sanitizers thread
+and address clean at 87. No new document — the ruling in
+[3tk-any-options-001.md](3tk-any-options-001.md) was already written, and the
+diff says the rest.
+
+**The permitted citation was taken.** `inner.c3:5` now names
+[`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md).
+**3TK-19 has two debts of the first kind left, not three** — `mtk.c3:48` and
+`helper.c3:51`, and `helper.c3:51` is still the one that matters.
+
+**What the sweep taught, and it is why the row exists:**
+
+- **The measurement was high.** The plan said 59 mentions, 35 of them field
+  accesses, 18 of those in `queue.c3` and `stack.c3`. Counted after the fact:
+  **23 field accesses** — 2 in `inner.c3`, 12 in `queue.c3` and `stack.c3`, 9 in
+  the tests and `helper.c3` — out of 53 mentions of the word. The trap the plan
+  named was real and the arithmetic naming it was not. **Nothing followed from
+  the gap** except that a stage sized for 35 sites did 23.
+- **`run-builds.sh` held a field access, and it is not one of the fourteen
+  files.** Line 199 greps `src/mailbox.c3` and `src/pool.c3` for
+  `\.next[[:space:]]*=` to enforce Part 17.2 — *no container reaches around the
+  InnerQueue/InnerStack surface*. A rename that swept only `.c3` files would
+  have left that check hunting a field that no longer exists, **and it would
+  have gone on printing `ok` for ever.** Repointed to `.link`, and the line now
+  says which name it used to carry.
+- **`unlink` does not exist.** The plan promised the sentence to `is_linked` and
+  `unlink`; the repair of Part 8.8 is named `reset`. Both got it —
+  `h.link != null` reads in `is_linked`, and `reset` clears the link.
+- **The iterator keeps its name.** `InnerQueueIterator.next()` is Part 8.4's
+  walker and has nothing to do with the field. The stage renames one field and
+  may not touch the surface, so **verification 4's literal claim — zero `.next`
+  anywhere — is not reachable and was not attempted.** What is true is the
+  claim it was written for: **zero `.next` field accesses in `src/`, `test/`,
+  `negative/` and the scripts.**
+- **One comment described the design that is gone.**
+  `negative/insert_twice_same_queue.c3:6` explains the old Part 8.6 pair with
+  `prev == null && next == null` — two fields, neither of them current. A blind
+  rename there would have made the retired design read as though it had a
+  `link`. Reworded to name no field at all. The same file's *next* paragraph is
+  about the design that is here, and it says `link == this`.
+
+**The four walk sites, each read against its own body:**
+`InnerQueueIterator.next` — comment `n.link == n`, code `n.link == n`.
+`InnerQueue.pop_front` — comment says the sole item is recognised by
+`head == tail` and not by a null link, code tests `self.head == self.tail`.
+`InnerQueue.append_queue` — comment says `other.tail` is already self-linked and
+needs no repair, code joins and does none. `InnerStack.pop` — the file header
+says the sole item is recognised by `h.link == h`, code tests `h.link == h`.
+
+**`inner.c3` was rewritten by hand and read in full before the mechanical pass
+ran** — the folder's rule, and the one 3TK-11 paid for. Three mentions of
+`next` survive in it, all three in the paragraph that argues for the new name:
+the price of R6b is that the link carries two meanings, and `link` is the name
+that does not assert the wrong one. **No paragraph apologises for a name the
+file no longer uses.**
+
+**No `any`, in any shape. No layout change, no behaviour change, no edit to
+`../common/`.** R6b, the exact link test and Part 8.6's deletion are untouched.
+
+---
+
+## 2026-08-24 — plan 010: the `any` ruling gets a stage, and so do the three debts
+
+**Written: [3tk-staging-plan-010.md](3tk-staging-plan-010.md).** 009 moved to
+`backup/`, and every link that named it was repointed — the status file, this
+file's own 009 row, and specification 004's provenance line in `../common/`.
+**Provenance keeps the name 009; only the link target moved.**
+
+**009 was spent.** 3TK-0 to 3TK-17 had all run, `3tk/` was green at 63 checks
+and four builds, and nothing in the line was declared and unstarted. Two things
+were owed with no stage to run under, and 010 is exactly those two.
+
+**3TK-18 — `Inner.next` becomes `Inner.link`.** The owner ruled `any` within
+`Inner` on 2026-08-24: **rejected in all three shapes, the rename accepted.**
+[3tk-any-options-001.md](3tk-any-options-001.md) carries the ruling and is the
+stage's specification. The stage is the same shape as 3TK-11 and 3TK-16 — a
+ruled document, built — and it re-argues nothing. **The plan names the trap
+rather than leaving it to be discovered:** `queue.c3` and `stack.c3` hold 18 of
+the 35 field accesses, the four walk sites each state the end test in their own
+body, and `next` is a common English word that appears in prose which is not
+about this field. **Rewrite the exemplar first, then sweep** — the rule 3TK-11
+paid for. It writes no new document; the ruling is already written.
+
+**3TK-19 — the three debts.** Stale 003 citations in `3tk/src/`, the stale P2
+row in the deviations audit, and otk never having been told the specification
+exists. **One stage because each alone is too small for a cold start**, and it
+runs after 3TK-18, which is permitted to take `inner.c3`'s citation on the way
+past since it rewrites that file's prose anyway. **`helper.c3:51` is the one
+that matters** — its guard tells the next reader not to "fix" the file to match
+Part 7.1, and 004 reworded Part 7.1 so the file now matches. That paragraph is
+rewritten, not repointed.
+
+**Nothing in 010 touches `../common/`, and 004 stands as cut.** Part 4.2/V1
+already leaves the field count to the realization and 004's *3tk* line already
+reads *one link field plus the identity*, so the rename needs no specification
+change. **Neither stage blocks dtk**, which was freed by 3TK-17 and starts under
+its own plan in `../d/`.
+
+---
+
 ## 2026-08-24 — 3TK-17: Part 7.1 states the promise, and 004 is cut for one Part
 
 **Written: [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md).**
@@ -202,7 +305,7 @@ compile.
 
 ## 2026-08-24 — plan 009: 3TK-16 and 3TK-17 declared
 
-**Written: [3tk-staging-plan-009.md](3tk-staging-plan-009.md).** 008 moved to
+**Written: [3tk-staging-plan-009.md](backup/3tk-staging-plan-009.md).** 008 moved to
 `backup/` and every link naming it was corrected in place, both directions: the
 live pointers in `3tk-status.md` name 009; the provenance lines in
 `3tk-helper-proposal-001.md` and this log keep naming 008 and now find it at
