@@ -28,8 +28,8 @@ was never in question. This document works out what it costs.
 ## What the reading found
 
 The two documents that argued for the direction,
-[3tk-naming-001.md](3tk-naming-001.md) and
-[3tk-to-fifo-lifo-single-001.md](3tk-to-fifo-lifo-single-001.md), were read
+[3tk-naming-001.md](backup/3tk-naming-001.md) and
+[3tk-to-fifo-lifo-single-001.md](backup/3tk-to-fifo-lifo-single-001.md), were read
 against the code rather than on trust, the way 3TK-8 read its review.
 
 - **The required-operation audit passes.** Nothing in `3tk/src/` needs arbitrary

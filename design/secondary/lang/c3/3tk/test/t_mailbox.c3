@@ -44,7 +44,7 @@ fn void a_mailbox_is_an_item() @test
 
     Handle h = mailbox::to_handle(mb);
     always_assert(h != null, "the mailbox has no handle");
-    always_assert(h.type == mailbox::TYPE, "the mailbox carries no identity");
+    always_assert(h.link.type == mailbox::TYPE, "the mailbox carries no identity");
     always_assert(mailbox::of(h) == mb, "the mailbox did not survive the round trip");
 
     // and it sits on a list, beside an item of another type

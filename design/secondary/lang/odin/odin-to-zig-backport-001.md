@@ -1,5 +1,26 @@
 # Odin to Zig — Idiom Mapping
 
+> **otk's normative input is the portable specification**, and this note is the
+> first time this folder says so — added 2026-08-24 by stage 3TK-19, a debt
+> 3TK-13 and 3TK-17 both left open. **otk is ported from
+> [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)
+> alone**: self-contained, language-neutral, and the source of truth for every
+> port in the family — **otk** (Odin), **ztk** (Zig), **3tk** (C3), **dtk** (D).
+> A defect found in it is fixed **there**, once, for every port, and never
+> patched in a folder like this one. The file has moved twice and been recut
+> twice, so the path above is the only one to trust: it was
+> `matryoshka-specification-002.md` inside the C3 folder, then 003, then 004
+> when 3TK-17 reworded Part 7.1, and it moved to `../common/` on 2026-08-23
+> because a shared input inside one consumer's folder is a fork waiting to
+> happen. The superseded versions are in
+> [`../common/backup/`](../common/backup/), and **004's change log names every
+> difference** — it is the thing to read first, because 002 was written from ztk
+> and stated Zig's *mechanism* in fifteen places where the design has only a
+> *promise*. **The document below is not that input.** It maps Odin idiom to
+> Zig idiom and its Zig column is a proposal history overtook; it says nothing
+> about what otk must preserve. Whether otk is brought to the specification is
+> not decided here, and no stage of the 3tk line has decided it.
+
 The complete idiom mapping between the Odin `matryoshka` prototype and the Zig  
 port, extracted from the Zig 0.16 implementation guide when that guide was retired  
 in DOC 23.

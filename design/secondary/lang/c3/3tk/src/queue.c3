@@ -26,8 +26,8 @@
 
  **The self-link.** Every chain here ends at an item pointing at itself, never
  at null. `inner.c3` states the invariant; this file maintains it. Every walk
- in this file ends at `n.link == n`, and a walk written without that test does
- not terminate.
+ in this file ends at `n.points_to() == n`, and a walk written without that
+ test does not terminate.
 
  Part 8.5: this is the layer where the checks live. There is no raw queue
  primitive below it — C3's stdlib has no intrusive list, so Part 8.10's
@@ -111,15 +111,16 @@ fn InnerQueueIterator InnerQueue.iter(&self) @inline => { .cur = self.head };
 <*
  The next handle, or null when the walk is exhausted.
 
- **The end test is `n.link == n`, and it is not optional.** The last item of a
- chain points at itself, so a walker that followed the link blindly would hand
- the last item back for ever. The field is named `link` and not `next` for
- exactly this reason — on the last item it is not the next thing.
+ **The end test is `n.points_to() == n`, and it is not optional.** The last
+ item of a chain points at itself, so a walker that followed the link blindly
+ would hand the last item back for ever. The field is named `link` and not
+ `next` for exactly this reason — on the last item it is not the next thing,
+ and `points_to` is the reader that says so out loud.
 *>
 fn Handle InnerQueueIterator.next(&self)
 {
     Inner* n = self.cur;
-    if (n) self.cur = (n.link == n) ? null : n.link;
+    if (n) self.cur = (n.points_to() == n) ? null : n.points_to();
     return n;
 }
 
@@ -138,8 +139,8 @@ fn Handle InnerQueueIterator.next(&self)
 fn void InnerQueue.push_back(&self, Handle h)
 {
     self.@guard_insert(h);
-    h.link = h;
-    if (self.tail) { self.tail.link = h; } else { self.head = h; }
+    h.repoint_to(h);
+    if (self.tail) { self.tail.repoint_to(h); } else { self.head = h; }
     self.tail = h;
     self.count++;
 }
@@ -190,7 +191,7 @@ fn Handle InnerQueue.pop_front(&self)
     }
     else
     {
-        self.head = h.link;
+        self.head = h.points_to();
     }
     self.count--;
     reset(h);
@@ -220,7 +221,7 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
     if (other == self) return;
     if (other.is_empty()) return;
 
-    if (self.tail) { self.tail.link = other.head; } else { self.head = other.head; }
+    if (self.tail) { self.tail.repoint_to(other.head); } else { self.head = other.head; }
     self.tail = other.tail;
     self.count += other.count;
 

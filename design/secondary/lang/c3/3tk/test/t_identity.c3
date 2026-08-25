@@ -12,7 +12,13 @@ import mtk;
  R5 deleted `prev` and R6 refused the membership field that would have taken
  its place, so the inner is two words rather than three: 16 bytes on
  linux-x64, down from 24. Every item in the program pays for this struct, and
- a third field is added only with a reason written down.
+ a word is added to it only with a reason written down.
+
+ Since 3TK-21 the two parts live in ONE field — `Inner.link`, a C3 `any`,
+ whose `ptr` is the linkage and whose `type` is the identity. The parts did
+ not move and the 16 bytes did not move; only where they are stored did. That
+ is why the assertions below read `.link.type` where they used to read
+ `.type`.
 *>
 fn void inner_is_two_parts() @test
 {
@@ -61,8 +67,8 @@ fn void identity_is_per_type() @test
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
-    always_assert(a.node.type == b.node.type, "Part 5.1: two items of one type differ");
-    always_assert(a.node.type == Msg::typeid, "Part 5.4: the identity is not the stored one");
+    always_assert(a.node.link.type == b.node.link.type, "Part 5.1: two items of one type differ");
+    always_assert(a.node.link.type == Msg::typeid, "Part 5.4: the identity is not the stored one");
 }
 
 <*
@@ -75,7 +81,7 @@ fn void identity_is_stored() @test
     Msg m;
     mtk::helper::init(&m);
     Handle h = mtk::helper::to_handle(&m);
-    always_assert(h.type == Msg::typeid, "the identity is not in the inner");
+    always_assert(h.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
 <*

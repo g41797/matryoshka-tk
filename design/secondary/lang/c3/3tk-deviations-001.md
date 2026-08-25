@@ -67,7 +67,7 @@ excluded, or a MAY the port skipped.
 | 2.2 Two primitives | MUST | C | mutex, `wait_until`, plus 15.4's permitted atomic | |
 | 2.3 Blocking with a timeout | MUST | C | `receive`, `get_wait` take a `Duration`; `poll` never waits | |
 | 2.4 A wakeup carries no meaning | MUST | C | | |
-| 2.5 The deadline is anchored once | MUST | C | `mailbox.c3:271`, `pool.c3:344` | |
+| 2.5 The deadline is anchored once | MUST | C | `mailbox.c3:294`, `pool.c3:400` | |
 | 2.6 Signal hand-off | MUST | P | **P4** — the pool's leaver signals on one bucket, over a shared condition variable | 3tk-only |
 | 2.7 Many producers, many consumers | MUST | C | | |
 | 2.8 Order among receivers | MUST | C | nothing promises fairness | |
@@ -78,13 +78,13 @@ excluded, or a MAY the port skipped.
 | 3.3 Items versus participants | SHOULD | C | | |
 | 4.1 Intrusion | MUST | C | | |
 | 4.2 The inner | MUST | S | **V1** — *two fields, a previous and a next* | every port |
-| 4.3 The field may sit anywhere | SHOULD | C | `helper.c3:29`, any offset | |
-| 4.4 One inner per outer | MUST | C | checked at build time, `inner.c3:249` | |
+| 4.3 The field may sit anywhere | SHOULD | C | `inner.c3:336`, any offset | |
+| 4.4 One inner per outer | MUST | C | checked at build time, `inner.c3:360` | |
 | 5.1 Identity | MUST | C | native `typeid` | |
 | 5.2 What it is not | MUST | C | | |
 | 5.3 Spelling is free | SHOULD | C | the ztk mutable-byte paragraph is a *ztk* line and reads correctly | |
-| 5.4 Stored, not computed | MUST | C | `inner.c3:48` | |
-| 5.5 The uninitialized identity | SHOULD | C | a zeroed `typeid` matches no type; `helper.c3:47` refuses it | |
+| 5.4 Stored, not computed | MUST | C | `inner.c3:77` | |
+| 5.5 The uninitialized identity | SHOULD | C | a zeroed `typeid` matches no type; `helper.c3:76` refuses it | |
 | 6.1 Self-identification | MUST | C | | |
 | 6.2 Where the check runs | MUST | C | all three sites exist | |
 | 6.3 Two forms of the crossing | MUST | C | `from_handle` / `must_from_handle`, and `h.to` / `h.as` — H5, H0 | |
@@ -93,7 +93,7 @@ excluded, or a MAY the port skipped.
 | 7.1 The per-type helper | SHOULD | **S** | **V19** — the Part states ztk's mechanism, not the design's promise | every port |
 | 7.2 What the helper contains | MUST | C | all members present, `helper.c3`, as macros over `$Type` — H0 | |
 | 7.3 Creation and release in the helper | SHOULD | C | D10, **two modules** — `mtk::helper` and `mtk::managed`, neither generic since H0b. Part 7.3's *a separate name* | |
-| 7.4 Validation of the type | SHOULD | C | `inner.c3:248-249`, `:274`, at build time | |
+| 7.4 Validation of the type | SHOULD | C | `inner.c3:359-360`, `:385`, at build time | |
 | 7.5 The border, named once | MUST | C | enforced and tested by `run-builds.sh` | |
 | 8.1 The rule | MUST | S | **V2** — *a doubly-linked list* | every port |
 | 8.2 The surface | SHOULD | S+P | **V3** — sixteen operations become **eleven** across two containers; **P6** — the twelfth had no caller but its own test and was deleted 2026-08-24 | every port + 3tk-only |
@@ -102,38 +102,38 @@ excluded, or a MAY the port skipped.
 | 8.5 The checks live here | MUST | C | and it now applies to two layers | |
 | 8.6 The double check on insert | SHOULD | S | **V4** — deleted; one exact check replaces two partial ones | every port |
 | 8.7 The link test and its blind spot | MUST | S | **V5** — rewritten; the link test is exact | every port |
-| 8.8 The repair | MUST | C | `inner.c3:166`, called by both removals | |
-| 8.9 Moving a list onto itself | SHOULD | C | the pair survives, narrowed to the queue, `queue.c3:201-203` | |
+| 8.8 The repair | MUST | C | `inner.c3:277`, called by both removals | |
+| 8.9 Moving a list onto itself | SHOULD | C | the pair survives, narrowed to the queue, `queue.c3:219-220` | |
 | 8.10 Bridging to the language's own list | MAY | N/A | C3 has no intrusive list; there is no other side | |
 | 8.11 Test access to the raw list | MAY | N/A | not needed | |
 | 9.1 The Slot | MUST | C | | |
-| 9.2 The six rules | MUST | C | all six, and rule 1 is written once, `inner.c3:215` | |
+| 9.2 The six rules | MUST | C | all six, and rule 1 is written once, `inner.c3:329` | |
 | 9.3 The signature shape | MUST | C | | |
 | 9.4 The Slot is the answer | MUST | C | `Pool.put` returns nothing | |
 | 9.5 The one exception | MAY | N/A | C3 has no select mechanism | |
 | 9.6 One place at a time | MUST | C | better guarded than 002 assumed | |
 | 9.7 Cleanup before acquisition | SHOULD | C | `defer`, used at every test site | |
 | 9.8 Creation is an acquisition | SHOULD | C | `owned.c3:59` | |
-| 9.9 The Slot's own type | MAY | C | D5, distinct, with the five readers `inner.c3:181-220` | |
+| 9.9 The Slot's own type | MAY | C | D5, distinct, with the five readers `inner.c3:292-331` | |
 | 10.1 Deliberate synonyms | SHOULD | C | | |
 | 10.2 Why not collapsed | background | C | | |
 | 10.3 The word "object" | SHOULD | C | | |
-| 11.1 They are themselves items | MUST | C | `mailbox.c3:41`, `pool.c3:141` | |
+| 11.1 They are themselves items | MUST | C | `mailbox.c3:43`, `pool.c3:159` | |
 | 11.2 One internal base | SHOULD | S | **V6** — the port repeats the five members and refuses a shared type | every port |
 | 11.3 The mailbox | MUST | S | **V7** — the two anchor bullets. The three ordering guarantees stay | every port |
 | 11.4 Out-of-band is one level | MAY | C | two queues are one level with a cleaner home | |
-| 11.5 Waking every waiter | SHOULD | C | `mailbox.c3:354`, the generation counter | |
+| 11.5 Waking every waiter | SHOULD | C | `mailbox.c3:386-387`, the generation counter | |
 | 11.6 Give-back, mailbox side | MUST | C | including invariant 34 | |
 | 11.7 The pool | MUST | S | **V8** — *one free list per identity*; **put a list** is deleted | every port |
 | 11.8 Give-back, pool side | MUST | S+P | **V9** the list-put clause and the restored-order warning; **P1** the port loses items to a concurrent close | every port + 3tk-only |
-| 11.9 Waiting get never creates | MUST | C | `pool.c3:340-387`, no hook on the path | |
+| 11.9 Waiting get never creates | MUST | C | `pool.c3:396-460`, no hook on the path | |
 | 11.10 No sequence guarantee | MUST | C | and R11 depends on it | |
 | 11.11 Hidden implementation | SHOULD | S | **V7b** — D1 rejects hiding on cost; 002 states C3-style privacy as reachable | 3tk-only, recorded not fixed |
-| 11.12 Close before release | MUST | C | two tier 1 sites, `mailbox.c3:123`, `pool.c3:238` | |
+| 11.12 Close before release | MUST | C | two tier 1 sites, `mailbox.c3:146`, `pool.c3:275` | |
 | 12.1 Hooks as an interface | MUST | C | a C3 `interface`; `ctx` disappears | |
 | 12.2 The three hooks | MUST | S | **V10** — *list* on the give-back surfaces, and **V11**, the missing re-check clause | every port |
 | 12.3 Hook concurrency | MUST | S | **V11** — nothing says what the pool re-reads when a hook returns. This is what P1 falls through | every port |
-| 12.4 The count is a hint | MUST | C | `pool.c3:311`, `:417` | |
+| 12.4 The count is a hint | MUST | C | `pool.c3:354`, `:477` | |
 | 12.5 The extra list on put | SHOULD | C | present, and it is the **only** thing in the port that needs a Slot-shaped insert — §2, P6 | |
 | 13.1 Allocators | SHOULD | C | D3; no release call takes one | |
 | 13.2 Why | background | C | | |
@@ -155,7 +155,7 @@ excluded, or a MAY the port skipped.
 | 18 The invariants | — | S | **V12** — row 16 retired and replaced, row 13 strengthened | every port |
 | 19.1 Mailbox outcomes | — | S+P | **V13** the `interrupted` outcome; **P3** an outcome outside the set can escape | every port + 3tk-only |
 | 19.2 Pool outcomes | — | S | **V14** — the *put a list* row. §8.1 said Part 19 was untouched | every port |
-| 19.3 The asymmetry in get | MUST | P | **P2** — NOT_AVAILABLE is returned from every mode on an unknown identity | 3tk-only |
+| 19.3 The asymmetry in get | MUST | P | **P2** — NOT_AVAILABLE is returned from every mode on an unknown identity. **FIXED 2026-08-24, stage 3TK-15**: the port reports `UNKNOWN_IDENTITY` | 3tk-only |
 | 19.4 The list layer | — | C | no fault type in `queue.c3` or `stack.c3` | |
 | 20 What each port decides | open | S | **V15** — decisions 4 and 10 do not survive Part 8.6's deletion | every port |
 | 21 The capability questionnaire | — | S | **V16** — Q11 points at Part 8.6 | every port |
@@ -259,6 +259,23 @@ the same silence.
 
 ## P2 — NOT_AVAILABLE escapes from every mode. Part 19.3 MUST.
 
+> **RULED AND FIXED, 2026-08-24, after this document was first written.** The
+> owner defaulted assumption **A3** — *a distinct outcome in the port* — and
+> **stage 3TK-15 built it.** `Pool.get` reports `mtk::UNKNOWN_IDENTITY` for an
+> identity the pool was not created with, from all three modes;
+> `pool.c3:333-335`. It is **deliberately not a Part 19 outcome**: Part 11.7
+> makes an identity outside the pool's set a caller defect, not a runtime
+> condition. **Part 19.3 keeps its MUST and 004 is untouched** — this was a
+> **port** defect and it moved the port. `get_wait` took the same fault at
+> `pool.c3:415-417`, where the old fallthrough merely timed out and was
+> therefore inside Part 19.2's set; 3TK-15 changed it as a quality change so
+> that the two gets do not disagree about one mistake.
+> `negative/pool_unknown_identity.c3` holds all four call shapes and was
+> measured to fail with the fix removed. **The finding below is left as it was
+> measured**, P6's precedent: the evidence is what makes the fix safe to read
+> later. **The three answers it says the audit takes none of — the first one
+> was taken.**
+
 **`pool.c3:288-290`.** Neither an R nor a D; it drifted from D6's tier design.
 
 ```c3
@@ -283,7 +300,7 @@ down that Part 19.3's *only* is a checking-build promise. **3tk-only.**
 
 ## P3 — an outcome outside Part 19's set can escape a waiting call.
 
-**`mailbox.c3:289-291` and `pool.c3:372-374`.** From D7's wait loop; it drifted.
+**`mailbox.c3:312-314` and `pool.c3:430-432`.** From D7's wait loop; it drifted.
 
 ```c3
     if (catch f = self._cv.wait_until(&self._mu, deadline))
@@ -306,16 +323,21 @@ shape before it checks its own backend. **3tk-only.**
 
 ## P4 — the pool's leaver signals on one bucket, over a shared condition variable.
 
-**Part 2.6 MUST. `pool.c3:378-383`.** From D7's loop; it drifted.
+**Part 2.6 MUST. `pool.c3:436-439`.** From D7's loop; it drifted.
 
 ```c3
-            if (b)
-            {
-                Handle h = b.free.pop();
-                if (h) { slot.fill(h); return; }
-                if (!b.free.is_empty()) self._cv.signal();
-            }
+            h = b.free.pop();
+            if (h) { slot.fill(h); return; }
+            // Part 2.6: the leaver hands the signal on.
+            if (!b.free.is_empty()) self._cv.signal();
+            return mtk::TIMEOUT~;
 ```
+
+**The block above is re-cut from today's code, 2026-08-25, and the finding is
+unchanged by the re-cut.** As measured on 2026-08-24 the leaver sat inside an
+`if (b)` guard; 3TK-15 deleted that guard as unreachable when it built
+`UNKNOWN_IDENTITY`, which moved the lines without touching what they do. **The
+defect is the `signal` on one bucket and it is still here.**
 
 Part 2.6 says a leaver checks **the container** and signals if it is not empty.
 The pool has one condition variable and *n* buckets. A waiter for identity A,
@@ -325,12 +347,12 @@ nothing and sleeps again.
 
 **Nothing is lost today**, and the reason is worth stating so a repair does not
 get argued as a bug fix: every path that makes an item available — `Pool.put` at
-`pool.c3:438` and `Pool.close` at `:499` — calls `broadcast`, not `signal`. No
+`pool.c3:545` and `Pool.close` at `:606` — calls `broadcast`, not `signal`. No
 signal is ever consumed by one waiter at another's expense, which is the exact
 failure 2.6 exists to prevent.
 
 **The mailbox is not in the same position and got it right**: `has_queued()`
-reads *both* queues, `mailbox.c3:171-172`, and 3TK-11's notes name that as the
+reads *both* queues, `mailbox.c3:194-195`, and 3TK-11's notes name that as the
 easiest line in the redesign to half-fix. The pool is the same line, half-fixed,
 and it survives on `broadcast` rather than on being correct.
 
@@ -370,13 +392,13 @@ it kept both; the reason it gave does not survive contact with the code.
 | **`send`, and the put hook's `extra`***. Both halves were checked.
 
 **`send` is wrong.** `Mailbox.send_at` takes the handle out of the Slot itself
-and hands a `Handle` to the queue — `mailbox.c3:211` into `:150`, which is
+and hands a `Handle` to the queue — `mailbox.c3:221` into `:139`, which is
 `push_back`, not `push_back_slot`. Nothing in `mailbox.c3` calls a Slot-shaped
 insert.
 
 **The put hook's `extra` is right, and it justifies the queue's only.** The pool
 does not use one either: `take_back` empties the Slot itself and calls
-`push(Handle)` — `pool.c3:448` into `:456`. What uses `InnerQueue.push_back_slot`
+`push(Handle)` — `pool.c3:552` into `:105`. What uses `InnerQueue.push_back_slot`
 is the **hook**, which is application code, filling `extra` from a Slot it just
 created — `t_pool.c3:70`, inside `TestHooks.on_put`. That is Part 12.5's
 composite mechanism, written the way Part 9.3 says an acquisition is written,
@@ -386,7 +408,7 @@ and it is a real requirement of the public surface.
 
 | | Callers in `3tk/src/` | Callers outside | Verdict |
 |---|---|---|---|
-| `InnerQueue.push_back_slot` | **none** | `t_pool.c3:70` — a hook filling `extra`, Part 12.5. Plus `t_owned.c3:63`, `t_slot.c3:42`, `:158`, `t_queue.c3:358`, `:362`, and the `put_batch` sites `t_pool.c3:121`, `:434`, `:468`, `:498`, `:527`, `:537`, `:579`, `:593` | **Keep.** The application needs it, and Part 12.5 is why |
+| `InnerQueue.push_back_slot` | **none** | `t_pool.c3:70` — a hook filling `extra`, Part 12.5. Plus `t_managed.c3:63`, `t_slot.c3:42`, `:158`, `t_queue.c3:358`, `:362`, and the `put_batch` sites `t_pool.c3:121`, `:434`, `:468`, `:498`, `:527`, `:537`, `:579`, `:593` | **Keep.** The application needs it, and Part 12.5 is why |
 | `InnerStack.push_slot` | **none** | `t_stack.c3:133-136`, and that test tests this operation. Nothing else | **DELETED 2026-08-24.** `InnerStack` never crosses the public surface — R13 — so no application could call it either |
 
 The stack's is the sharper case: R13 rules that `InnerStack` is the pool's
@@ -410,18 +432,18 @@ audit adds nothing to them beyond the file and line:
 
 | # | Part | The change | Where the code proves it |
 |---|---|---|---|
-| V1 | 4.2 MUST | *Two fields, a previous and a next* becomes one link plus the self-link terminator. The two conceptual parts survive | `inner.c3:45-49` |
-| V2 | 8.1 MUST | *A doubly-linked list* becomes *ordering primitives whose nodes are the inners of Part 4* | `queue.c3:41`, `stack.c3:56` |
+| V1 | 4.2 MUST | *Two fields, a previous and a next* becomes one link plus the self-link terminator. The two conceptual parts survive | `inner.c3:75-78` |
+| V2 | 8.1 MUST | *A doubly-linked list* becomes *ordering primitives whose nodes are the inners of Part 4* | `queue.c3:41`, `stack.c3:59` |
 | V3 | 8.2 SHOULD | Sixteen operations become **eleven**, seven on the queue and four on the stack | `queue.c3`, `stack.c3` |
-| V4 | 8.6 SHOULD | **Deleted.** One exact check replaces two partial ones | `queue.c3:79-83`, `stack.c3:66-70` |
-| V5 | 8.7 MUST | **Rewritten.** Its own last bullet becomes the rule; the self-link is how it is paid for | `inner.c3:155` |
-| V7 | 11.3 MUST | The two anchor bullets go. The three ordering guarantees stay — R9 | `mailbox.c3:66-67`, `:148-165` |
+| V4 | 8.6 SHOULD | **Deleted.** One exact check replaces two partial ones | `queue.c3:88-91`, `stack.c3:79-82` |
+| V5 | 8.7 MUST | **Rewritten.** Its own last bullet becomes the rule; the self-link is how it is paid for | `inner.c3:261` |
+| V7 | 11.3 MUST | The two anchor bullets go. The three ordering guarantees stay — R9 | `mailbox.c3:60-69` |
 | V8 | 11.7 MUST | *One free list per identity* becomes *one stack per identity*; **put a list** is deleted | `pool.c3:125-129` |
 | V9 | 11.8 MUST | The list-put clause and the restored-order warning are deleted | `pool.c3` has no `put_all` |
-| V12 | 18 | Row 16 retired and replaced by the self-link invariant; row 13 strengthened to O(1) in checking builds too | `inner.c3:31-43` |
+| V12 | 18 | Row 16 retired and replaced by the self-link invariant; row 13 strengthened to O(1) in checking builds too | `inner.c3:42-53` |
 
 **Part 8.9 is the row §8.1 got exactly right and the audit is glad to confirm**:
-unchanged in force, narrowed to the queue, `queue.c3:199-213`, and
+unchanged in force, narrowed to the queue, `queue.c3:207-220`, and
 `negative/self_move.c3` still aborts.
 
 ## 3.2 What §8.1 did not forecast — the audit's own eight
@@ -437,7 +459,7 @@ in every case: a Part that never mentions the list still *points* at one.
 | V15b | 20 dec. 4 | open | *Is the link test's blind spot acceptable? A list that marks membership is strictly better and costs a field per item* | the question inverts. The blind spot is closed and costs **no** field. What a port now decides is whether it accepts `next` carrying two meanings at six sites | same |
 | V16 | 21 Q11 | — | *If no: Part 15.5 still holds, and the port decides what the checks cost in production. Part 8.6* | the pointer dangles; Q11 keeps its force and loses its example | same |
 | V17 | 22 step 5 | — | *The list, with both insert checks* | *the queue and the stack, with the link test* | same |
-| V6 | 11.2 | SHOULD | *One internal base... Both are built on the same internal parts* | state the five **required parts**, not a shared type. `Mailbox` and `Pool` repeat them — `mailbox.c3:38-72`, `pool.c3:138-156` — and the port's written reason is Part 4.4 | Part 11.2 was never on §8.1's list because the redesign did not aim at it; the trap the plan named as number 3, a mechanism read as a promise |
+| V6 | 11.2 | SHOULD | *One internal base... Both are built on the same internal parts* | state the five **required parts**, not a shared type. `Mailbox` and `Pool` repeat them — `mailbox.c3:41-78`, `pool.c3:156-174` — and the port's written reason is Part 4.4 | Part 11.2 was never on §8.1's list because the redesign did not aim at it; the trap the plan named as number 3, a mechanism read as a promise |
 | V10 | 12.2, 12.5 | MUST/SHOULD | *the hook may also return an extra **list*** and *called once, with the full **list** of what remained* | *queue*, and say which container. R13 made the transfer container a queue; there is no general list left for the word to name | the redesign changed the surface's *type*, and §8.1 tracked the surface's *operations* |
 | V13 | 19.1 | — | `receive` lists **interrupted** | conditional on Part 2.9, and 2.9 is a SHOULD a port may drop. State the conditionality in the table, as Part 16 row 12 already does for the excluded half | not a redesign consequence at all — a D9 consequence 002 never absorbed |
 
@@ -536,7 +558,7 @@ plan named third: a mechanism written as though it were the rule.
 
 Not a new finding — **3TK-11's notes already corrected it**, and this audit
 confirms the count against the code: `push`, `push_slot`, `pop`, `is_empty`,
-`len`, `stack.c3:66-129`. It is recorded here because 003's Part 8.2 will be
+`len`, `stack.c3:79-128`. It is recorded here because 003's Part 8.2 will be
 written from a count, and the count in the ruled document is wrong. **Eleven
 operations, not thirteen** — twelve as 3TK-11 left them, and eleven after P6 was
 ruled on 2026-08-24. **Twelve of the sixteen leave the port, not nine.**
@@ -544,7 +566,7 @@ ruled on 2026-08-24. **Twelve of the sixteen leave the port, not nine.**
 ### 4. §5.1 says the two Slot inserts serve `send` and the put hook's `extra`; `send` does not use one
 
 **P6.** `Mailbox.send_at` empties the Slot itself and calls `push_back(Handle)`,
-`mailbox.c3:211` into `:150`. The `extra` half is right and it justifies the
+`mailbox.c3:221` into `:139`. The `extra` half is right and it justifies the
 queue's operation — the caller is the **hook**, application code, at
 `t_pool.c3:70`. It justifies nothing on the stack, which the application cannot
 reach at all under R13.
@@ -626,7 +648,9 @@ starts from*.
 3. ~~**P2's answer.**~~ **DEFAULTED 2026-08-24, assumption A3: a distinct
    outcome in the port.** Part 19.3 keeps its MUST and 003 stays untouched.
    **It is a code change and 3TK-13 does not make it** — it wants its own small
-   stage. This is the only one of the four that leaves work behind.
+   stage. This is the only one of the four that leaves work behind. **That
+   stage was 3TK-15 and it has run**: `UNKNOWN_IDENTITY`, in all three get
+   modes and in `get_wait`. Nothing here is open.
 4. ~~**P5's half.**~~ **DEFAULTED 2026-08-24, assumption A4: Part 6.5 is the
    application's**, and 003 says so in one sentence. On that reading 3tk had
    nothing to ship and no skipped SHOULD to explain, so P5 closes with V18.
@@ -639,3 +663,5 @@ starts from*.
 |---|---|---|
 | 001 | 2026-08-24 | First version. Stage 3TK-12. 96 elements measured against `3tk/src/`. 74 conform, 17 specification-should-move, 6 port-should-move, 8 not applicable. |
 | 001, amended | 2026-08-24 | **Stage 3TK-16**, and the only edits it makes to a finished stage's output. Additive, in this document's own vocabulary, not a rewrite of its findings. **V19 filed** — Part 7.1, an **S**, scope `every port`, from E6. Part 7.3's evidence updated from *two generic modules* to *two modules*, from H0b and E7. Parts 6.3 and 7.2's evidence repointed at the names H0 and H5 left. **No verdict changed except 7.1's, from C to S.** |
+| 001, amended | 2026-08-24 | **Stage 3TK-19**, and it is one row. **P2 is marked fixed** — assumption A3 defaulted, stage 3TK-15 built `UNKNOWN_IDENTITY`, and the row recorded a defect the port no longer has. Additive and in this document's own vocabulary: the verdict stays **P**, the scope stays `3tk-only`, and the finding is left as it was measured. **No other row touched, no finding re-argued, and V1 to V19 stand.** |
+| 001, amended | 2026-08-25 | **Citations only, and no stage.** The `pool.c3`, `mailbox.c3`, `queue.c3`, `stack.c3` and `helper.c3` line citations that had drifted since 3TK-12 measured them are repointed — 3TK-26 paid the `inner.c3` ones and reached no further. **Twenty-two citations moved**: the conformance table's evidence, the S-row evidence, the two open findings **P3** and **P4**, and P6's two live claims about `send_at` and `take_back`. `t_owned.c3:63` became `t_managed.c3:63`, the file's name after the module rename. **P4's quoted block is re-cut** from today's code, with a sentence saying so and why the finding does not move. **What quotes code a ruling has since changed is left exactly as measured** — P1's and P2's blocks, and P6's citations of the deleted `InnerStack.push_slot` — because repointing a measurement would falsify it. No verdict, no scope, no finding text and no version changed. |

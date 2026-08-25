@@ -3,7 +3,7 @@
 
  The decision under test: an application item that wants a release with no
  allocator parameter keeps the allocator in its OWN outer, and the inner stays
- two fields wide for every item in the program.
+ two words wide for every item in the program.
 *>
 module mtk_test;
 import mtk;

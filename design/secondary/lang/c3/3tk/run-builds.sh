@@ -198,7 +198,15 @@ done
 # maintaining chains by hand instead of calling the surface.
 #
 # The field is `link` since 3TK-18; it was `next`.
-if grep -nE '\b(@guard_insert|\.link[[:space:]]*=)\b' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
+#
+# The SPELLING of a link write changed with 3TK-21. The inner is one `any`, so
+# a write is `h.repoint_to(x)` or a rebuild through `any_make`, where it used to
+# be `h.link = x`. All three are grepped: `.link =` still catches a hand-written
+# assignment of the whole field, and `any_make` catches the rebuild that would
+# get around `repoint_to`. 3TK-18 hit this same line and its log row says what
+# happens when the spelling moves and the grep does not — the check goes on
+# printing ok for ever.
+if grep -nE '(@guard_insert|\.repoint_to|any_make|\.link[[:space:]]*=)' src/mailbox.c3 src/pool.c3 >/dev/null 2>&1; then
     bad "a container reaches around the InnerQueue/InnerStack surface"
 else
     ok "no container reaches around the InnerQueue/InnerStack surface"

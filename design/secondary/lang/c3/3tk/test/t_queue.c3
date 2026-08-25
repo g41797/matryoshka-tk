@@ -79,14 +79,14 @@ fn void the_last_item_points_at_itself() @test
     mtk::helper::init(&m);
     Handle h = mtk::helper::to_handle(&m);
 
-    always_assert(h.link == null, "a fresh item is not off-chain");
+    always_assert(h.points_to() == null, "a fresh item is not off-chain");
 
     InnerQueue q;
     q.push_back(h);
-    always_assert(h.link == h, "the sole item of a queue is not self-linked");
+    always_assert(h.points_to() == h, "the sole item of a queue is not self-linked");
 
     q.pop_front();
-    always_assert(h.link == null, "the repair did not clear the link");
+    always_assert(h.points_to() == null, "the repair did not clear the link");
 }
 
 <*
@@ -163,7 +163,7 @@ fn void every_removal_repairs() @test
 <*
  Part 8.4: the walk. It yields handles until exhausted, and it does not remove.
 
- The end test is `n.link == n`, so a walker written for a null-terminated chain
+ The end test is `n.points_to() == n`, so a walker written for a null-terminated chain
  would not terminate here. Exhaustion is therefore part of the assertion and
  not an afterthought.
 *>

@@ -100,3 +100,28 @@ macro void release($Type, Slot* slot)
     slot.take();
     alloc::free(a, item);
 }
+
+<*
+ The offset of the outer's Allocator field, for D3's owning helper.
+
+ The assertion is Part 7.4's message clause doing more than it was asked to: a
+ type that took the wrong helper is told at build time which one it should
+ have taken.
+
+ A module-scope `$assert` in a generic module cannot see the module's type
+ parameter, so the check lives here, inside a macro, where `$Type::name`
+ resolves. Nothing else calls this.
+
+ @param $Type : "the outer type"
+*>
+macro usz required_alloc_offset($Type)
+{
+    var $off = -1;
+    $foreach $m : $Type::members:
+        $if $m.type == Allocator:
+            $off = $m.offset;
+        $endif
+    $endforeach
+    $assert $off >= 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::managed";
+    return $off;
+}

@@ -8,7 +8,7 @@ reports *passed 59, failed 0, all four builds green*; `run-sanitizers.sh`
 reports *passed 3, failed 0, sanitizers clean, 85 tests*. Both were run at the
 end of this stage, and both are green trivially, because nothing was touched.
 
-The input is [3tk-helper-alternatives.md](3tk-helper-alternatives.md), from the
+The input is [3tk-helper-alternatives.md](backup/3tk-helper-alternatives.md), from the
 owner. **It is advice, not a ruling.** It contradicts itself on purpose: the
 design its *My ranking* section calls its clear favourite is withdrawn by its
 own *Important correction*. Both halves were tested with the compiler, and the
@@ -240,7 +240,7 @@ negative tests survive the change**, with their alias lines repointed.
 
 This is the measurement that decides H3, and it cuts against the note.
 
-`mtk::inner_offset` is **public**, at `src/inner.c3:238`, and application code
+`mtk::inner_offset` is **public**, at `src/inner.c3:349`, and application code
 can call it today:
 
 ```c3
@@ -389,7 +389,7 @@ macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
 macro Slot.move(&self, $Type) => move_from_slot(self, $Type);
 ```
 
-`Handle` is `alias Handle = Inner*` (`src/inner.c3:59`), so a method on `Inner`
+`Handle` is `alias Handle = Inner*` (`src/inner.c3:144`), so a method on `Inner`
 taking `&self` is reached through a handle directly. The call site:
 
 ```c3
@@ -828,7 +828,7 @@ mismatch path never touches the Slot. That half of the note's row is *conforms*.
 
 What remains is smaller and real: the returned pointer is computed from
 `take()`'s result, so the function silently depends on `Slot.take`
-(`src/inner.c3:200-205`) returning exactly the handle `peek` observed. It does.
+(`src/inner.c3:311-316`) returning exactly the handle `peek` observed. It does.
 But the dependency is invisible at this call site and is exactly the sort of
 thing a future change to `Slot` would break quietly.
 
@@ -854,7 +854,7 @@ check and a wrong-type check, for a better diagnostic.
 
 Part 15.5 decides it, and it decides against. Both cases are the same kind of
 wrong — *a contract violation, a defect of the calling program* — and both
-compile out together in a fast build (`@check`, `src/inner.c3:118-123`). The
+compile out together in a fast build (`@check`, `src/inner.c3:216-221`). The
 tiers do not distinguish them, so splitting buys a message and costs a branch
 in exactly the builds where checks are on and a developer is already at a
 debugger with the handle in hand.
@@ -1071,7 +1071,7 @@ declare -A NOCOMPILE_EXPECT=(
 )
 ```
 
-The message at `src/inner.c3:274` names **both** modules — *use `mtk::helper`
+The message at `src/inner.c3:385` names **both** modules — *use `mtk::helper`
 instead of `mtk::owned`* — so only its second half moves. Under the rename:
 
 ```

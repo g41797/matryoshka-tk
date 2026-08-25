@@ -13,7 +13,7 @@ and nothing here re-argues one.
 
 ### The outcome is called `UNKNOWN_IDENTITY`
 
-`inner.c3:110`. One new member of the port's faultdef, reported by `Pool.get` and
+`inner.c3:190`. One new member of the port's faultdef, reported by `Pool.get` and
 `Pool.get_wait` and by nothing else.
 
 **It is deliberately not a Part 19 outcome, and the faultdef's own comment says
@@ -105,7 +105,7 @@ the mode guard.
 
 ### The path
 
-**One occurrence, not forty.** `src/inner.c3:4` was the only file still naming
+**One occurrence, not forty.** `src/inner.c3:5` was the only file still naming
 `matryoshka-specification-002.md`; `mtk.c3` was repointed by 3TK-16 when it
 rewrote the header, and no other file cited the document by name at all. The
 grep the stage asked for is clean across `src/`, `test/` and `negative/`.
@@ -123,11 +123,11 @@ and would have been wrong about 003 — not a stale pointer.
 
 | file | what the comment claimed | what 003 says | V |
 |---|---|---|---|
-| `inner.c3:39` | the exact link test let the walk be deleted **from this port** | Part 8.6 is deleted from the specification too, and a port without an exact test carries the walk under 8.7 | V4 |
-| `inner.c3:42` | *it replaces retired invariant 16* | still true, and 003 retires row 16 **in place** — it is still numbered 16 and 16b is this | V12 |
-| `inner.c3:90` | the interrupted outcome is *absent*, by D9 | 19.1 and 19.2 mark it **conditional on Part 2.9**, so dropping the SHOULD drops the outcome and still conforms | V13 |
-| `inner.c3:158` | the link test *is now exact* — **R6b's doing** | Part 8.7 MUSTs exactness and names three prices; R6b paid one | V5 |
-| `inner.c3:168` | Part 8.7 *is a MUST to document* the blind spot | 003 does not document it, it **forbids** it | V5 |
+| `inner.c3:48` | the exact link test let the walk be deleted **from this port** | Part 8.6 is deleted from the specification too, and a port without an exact test carries the walk under 8.7 | V4 |
+| `inner.c3:52` | *it replaces retired invariant 16* | still true, and 003 retires row 16 **in place** — it is still numbered 16 and 16b is this | V12 |
+| `inner.c3:170` | the interrupted outcome is *absent*, by D9 | 19.1 and 19.2 mark it **conditional on Part 2.9**, so dropping the SHOULD drops the outcome and still conforms | V13 |
+| `inner.c3:238` | the link test *is now exact* — **R6b's doing** | Part 8.7 MUSTs exactness and names three prices; R6b paid one | V5 |
+| `inner.c3:249` | Part 8.7 *is a MUST to document* the blind spot | 003 does not document it, it **forbids** it | V5 |
 | `queue.c3:11` | R2 argues for two primitives **against** 8.1's singular noun | 8.1 says *ordering primitives*, plural, and shows both shapes | V2 |
 | `queue.c3:64` | Part 6.5's demonstration, unqualified | the dispatch table is **the application's**, said outright, so a port that ships nothing has skipped nothing | V18 |
 | `queue.c3:78` | *Part 8.6 used to ask for a pair* | attributed to **002's** 8.6; 003's is a tombstone | V4 |

@@ -9,7 +9,8 @@
  accepted cost.
 
  R6b closed it with no field. The last item of every chain points at ITSELF, so
- the sole item of a queue has `link == this`, `is_linked` returns true, and the
+ the sole item of a queue has `points_to() == this`, `is_linked` returns true,
+ and the
  link test catches the case that used to need the walk. `contains` and the walk
  were deleted outright.
 

@@ -45,9 +45,10 @@
  over `$Type` and the code is generated per call site. No application writes
  an alias or an instantiation for any type, anywhere.
 
- Specification: ../common/matryoshka-specification-003.md. Part 7.1 is a known
- SPECIFICATION defect against this port's shape — 3tk-deviations-001.md V19,
- reworded by 3TK-17.
+ Specification: ../common/matryoshka-specification-004.md. Part 7.1 was a known
+ SPECIFICATION defect against this port's shape — 3tk-deviations-001.md V19 —
+ and 004 is the rewording that closes it: Part 7.1 now states the promise, and
+ call-site expansion is one of the two realizations it shows.
  Design rulings: 3tk-porting-proposal-004.md, D1 to D16;
  3tk-core-redesign-proposal-002.md, R1 to R15; and 3tk-helper-proposal-001.md,
  H0, H0b, H5, H6, H7, H8, H9, H10.

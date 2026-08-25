@@ -4,40 +4,100 @@ This file is the plan of record for the 3tk line of work.
 
 Approved by the owner, 2026-08-23.
 
-**Version 008.** It supersedes `3tk-staging-plan-007.md`, and that one 006, 005,
-004, 003, 002 and 001. All stay on disk, in `backup/`. The only change in 008 is
-the addition of **3TK-14 and 3TK-15**, on the owner's instruction of 2026-08-24.
-**Both are declared and neither is authorized.** Stages 3TK-0 to 3TK-13 are
-reproduced unaltered — they are done, and a plan version does not rewrite
-history. **3TK-12 and 3TK-13 both ran on 2026-08-24**; their sections below are
-left exactly as 007 wrote them, including the words *declared, not authorized*,
-because that is what the plan said at the time. `3tk-status.md` is the live
-record of what is done.
+**Version 013.** It supersedes `3tk-staging-plan-012.md`, and that one 011, 010,
+009, 008, 007, 006, 005, 004, 003, 002 and 001. All stay on disk, in `backup/`.
 
-**Why these two, and why now.** 3TK-13 finished the documents and left the port
-in a known state with two kinds of work outstanding.
+**013 declares three stages and changes nothing before them.**
 
-- **The surface has never been re-examined.** Every stage so far has been about
-  *semantics* — what Matryoshka is, and whether the C3 code realizes it. The
-  helper's public shape was written in 3TK-6 and has not been questioned since,
-  and it now costs **seventeen alias declarations in `3tk/test/common.c3` for a
-  single application type**. That is 3TK-14, and it is a design stage.
-- **Two rulings were made and not carried out.** A3 and A5, both recorded in
-  3TK-13's output as debts rather than decisions. That is 3TK-15, and it is
-  mechanical.
+```
+3TK-21  (Inner becomes one any)  →  3TK-22  (the findings document)
+3TK-23  (retire what is no longer read) — independent, one exception
+```
 
-**They are in this order deliberately.** 3TK-14 may change `helper.c3` and every
-call site, and A5's forty doc comments live in those same files. Running 15
-first would repoint comments that 14 then rewrites.
+- **3TK-21 — `struct Inner { any link; }`.** The identity and the chain link
+  move into one built-in pair. Meanings unchanged, R6b unchanged, size
+  unchanged. **Internals only.** Ruled by the owner across 2026-08-24 and
+  2026-08-25, and the section carries the whole ruling, including the two
+  methods it adds and the hazard they exist for.
+- **3TK-22 — `3tk-port-findings-002.md`.** The findings document quotes `struct
+  Inner` verbatim and cites `inner.c3` and `helper.c3` by line throughout.
+  **3TK-21 makes the quotation false**, and the new shape is itself something
+  another port would care about. **It runs after 3TK-21**, and the dependency is
+  the quotation, not a preference.
+- **3TK-23 — retire what is no longer read.** Four finished inputs move to
+  `backup/` and every link that named them is repointed. Bookkeeping, at the
+  owner's instruction of 2026-08-25.
 
-**Why the specification is not in either of them.** Neither stage may touch
-`../common/`. 3TK-14 is about a *spelling* — Part 7 fixes the helper's shape and
-explicitly leaves the spelling to the port — and if 3TK-14 finds it is about
-more than spelling, that is a finding it reports and does not act on.
+**Everything before them has run.** 3TK-0 to 3TK-17 under 009 and earlier,
+3TK-18 and 3TK-19 and 3TK-20 on 2026-08-24. Their sections still read as they
+did when each was declared — **a plan version does not rewrite history** — so
+their *declared, not authorized* lines are what was true at the cut that
+declared them, and the header of each names its outcome. `3tk-status.md` is the
+live record of what is done.
+
+**Why 011 declared one stage, kept here because it is the reasoning that
+produced 3TK-20. 3TK-18 had run**, and running it made something visible that no
+stage of this line had a place to put.
+
+- **The redesign produced knowledge that outlives this port.** R1 to R15,
+  3TK-12's late-close window, D6's three checking tiers, the exact link test —
+  each was ruled with a reason, and every reason is recorded across seven
+  documents in this folder rather than in one a stranger could read. **ztk and
+  dtk are both strangers to it.** dtk has run no stage at all and starts from
+  004 alone; ztk predates the redesign and knows none of it. That is
+  **3TK-20**, and it writes one document.
+- **3TK-19 was still owed** — stale 003 citations, a stale P2 row, and otk never
+  having been told the specification exists. 010 declared it, 3TK-18 paid one
+  citation of the three. Bookkeeping, not design. **It has since run**, and
+  neither citation turned out to be the repointing this plan called it.
+
+**The order is the numbering, and there is one constraint.**
+
+```
+3TK-19  (the debts)   →   3TK-20  (what 3tk learned, written down)
+```
+
+**3TK-19 runs first, and the reason is not that it is smaller.** The two write
+no file in common — 3TK-19 corrects doc comments and an audit row, 3TK-20 writes
+one new document — so at the write level they are independent. **But 3TK-20
+reads `3tk/src/` doc comments as an input**, deliberately, because they carry
+reasoning that is in no document. **3TK-19 corrects one that is wrong.**
+
+`helper.c3:51` tells the reader that Part 7.1 *asks for a helper object bound to
+one type*, that this is a **specification defect**, that 3TK-17 will reword it,
+and **not to "fix" this file to match it.** 3TK-17 has run and did reword it, so
+that paragraph now names a future that already happened and warns the next
+reader off a conflict that no longer exists. **3TK-20 is the next reader** — the
+helper surface is exactly the kind of difference it exists to describe, since
+ztk uses per-type compile-time instantiation where this port uses macro
+expansion, which is the difference 004 was cut for. A 3TK-20 that reads that
+guard could carry *specification defect, the port has none* into a document
+meant to be dtk's second input.
+
+**This is a read-after-stale dependency, not a shared write**, and it was missed
+when 011 was first cut — the plan said the order did not matter. It does, and
+**the ordering paid for itself**: 3TK-20's helper section describes a closed
+question instead of quoting a live guard against a dead conflict.
+
+**3TK-18's own constraint is spent.** It ran after nothing and before nothing,
+and it took `inner.c3:5` on the way past as 010 permitted, so 3TK-19 covers two
+citations and not three.
+
+**Neither stage blocks dtk, and dtk does not wait for this plan.** 3TK-17's
+scheduling constraint was to land before dtk's first stage, and it landed. dtk
+is free to start now, from
+[`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md),
+and it starts under its own plan in [`../d/`](../d/dtk-status.md), not this one.
+
+**Nothing in 010 touches `../common/`.** The `any` ruling is explicit that no
+specification change is needed — Part 4.2/V1 leaves the field count to the
+realization, and 004's *3tk* line already reads *one link field plus the
+identity*. **004 stands as cut.**
 
 Each stage output names the plan version it ran under in its opening line.
 Those references are **provenance, not pointers**, and they are not repointed.
 The live pointers — the ones in `3tk-status.md` — are.
+
 ## Context
 
 Matryoshka is becoming a family of ports, named by language initial + `tk`:  
@@ -921,9 +981,9 @@ work out what they cost and what they change — not to relitigate them.
 The two documents that argued for this arrived in the folder from the owner and
 are the stage's reading:
 
-- [3tk-naming-001.md](3tk-naming-001.md) — the Outer/Inner naming proposal, 476
+- [3tk-naming-001.md](backup/3tk-naming-001.md) — the Outer/Inner naming proposal, 476
   lines.
-- [3tk-to-fifo-lifo-single-001.md](3tk-to-fifo-lifo-single-001.md) — *"Stop
+- [3tk-to-fifo-lifo-single-001.md](backup/3tk-to-fifo-lifo-single-001.md) — *"Stop
   treating `NodeList` as the center of the design"*, 1058 lines. Eighteen
   sections, and its §7 is the one that asks why `Inner` needs `prev` at all.
 
@@ -1317,7 +1377,7 @@ question, and the stage answers it or says plainly why not.
 
 #### Inputs
 
-- [3tk-helper-alternatives.md](3tk-helper-alternatives.md) — **from the owner.
+- [3tk-helper-alternatives.md](backup/3tk-helper-alternatives.md) — **from the owner.
   Not produced by any stage, not versioned by this folder, and it is advice, not
   a ruling** — the same standing as `3tk-naming-001.md` had for 3TK-10. **Read
   the whole of it, including its own correction near the end**, which withdraws
@@ -1446,6 +1506,16 @@ Part 7, and none of the argument that produced 003 is one of them.*
 
 Added in plan version 008, 2026-08-24, on the owner's instruction.
 
+> **Amended in 009, 2026-08-24. The section below is unaltered; this note is the
+> amendment.** 3TK-14 ran and ended at a proposal, so *"it runs after 3TK-14"* is
+> satisfied on its face and **misleading**. This stage now runs **after
+> 3TK-16**, which builds 3TK-14's ruled result. The section's own *What this
+> stage may not do* already says the right thing — *"if 3TK-14's proposal has
+> been ruled and built by then, this stage runs on top of the result"* — and
+> that is the clause to read, not the ordering sentence below. **3TK-16 deletes
+> and rewrites `helper.c3` and `owned.c3`; A5's forty doc comments live in those
+> files.**
+
 **Declared, not authorized. It runs after 3TK-14**, because A5 repoints doc
 comments in the files 3TK-14 may rewrite.
 
@@ -1538,6 +1608,1098 @@ rather than a path.
 *Advice on clear: clear before starting. Both halves are written down here and
 in 003's change log; the conversation that produced them is not needed.*
 
+### 3TK-16 — the helper surface, in code
+
+Added in plan version 009, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized.** It runs only on the rulings 3TK-14 already
+carries, and it makes none of its own.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-16 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+3TK-14 ended at a proposal and the owner ruled every item on 2026-08-24. **Four
+accepted items change code and nothing has carried them there.** This is the
+mirror of 3TK-11, which built 3TK-10's ruled proposal — the same sequence, and
+for the same reason: the proposal is the specification of this stage, and this
+stage writes nothing the proposal did not rule.
+
+**They are one stage and not four because they land in the same files.** H0
+rewrites `helper.c3` entirely, H0b rewrites `owned.c3` entirely, H5 names their
+members, H10 renames the file and the module. Splitting them means rewriting the
+same two files three more times.
+
+#### Inputs
+
+- **[3tk-helper-proposal-001.md](3tk-helper-proposal-001.md) — the 3TK-14
+  output, as ruled by the owner. Its accepted items are this stage's
+  specification and are not re-argued.** Read Part B0 (H0, H0b), H5, H10 and
+  **Part F** (E6 and E7, ruled). Parts A and A2 are the measurements behind
+  them — read them for the working code, which is quoted, and for the traps.
+- `3tk-porting-proposal-004.md` — still the design of record for everything the
+  helper does not touch. **D4, D5, D6, D3 are unaffected.** D10 is touched in
+  its *spelling only*, by H0b, and that is already ruled.
+- `../common/matryoshka-specification-003.md` — **Part 7 in full**, and Parts
+  6.3, 10.1, 15.5. Part 7.1 is the one E6 says is wrong; **this stage does not
+  fix it and does not obey it either.** See *the trap* below.
+- `3tk/` as it stands, green.
+- `3tk-deviations-001.md` — for the row vocabulary only. **S/V = specification
+  defect, `every port`. P = port defect, `3tk-only`.** V1 to V18 are consumed by
+  003; E6's row is **V19**.
+
+#### What it does
+
+**Four accepted items, and three rows of bookkeeping.**
+
+1. **H0 — `mtk::helper` becomes an ordinary module of macros.** Part 7.2's
+   members as macros over `$Type`, plus `to`, `as`, `must` and `move` as macro
+   methods on `Handle` and `Slot`. **No application writes an alias for any
+   type.** The working source is quoted in the proposal's M11 and M12; it
+   compiled and ran.
+2. **H0b — `mtk::owned` follows**, as macros, composing the helper through the
+   module rather than through an instantiation.
+3. **H5 — the crossings are named for the handle.** `to_handle`,
+   `from_handle`, `must_from_handle`, `is_mine`. `inner` keeps `Inner`,
+   `inner_offset`, `src/inner.c3` and the prose, and stops naming a handle.
+4. **H10 — `mtk::owned` becomes `mtk::managed`**, `owned.c3` becomes
+   `managed.c3`, and the test fixture `struct Owned` becomes `struct Holder`.
+   **The module's header carries one sentence disarming the GC reading**, aimed
+   at the D and C# reader — the proposal gives the wording.
+5. **E7's sentence**, in the same header: the owning distinction lives at the
+   call site, and D10 is why.
+6. **Two rows in `3tk-deviations-001.md`**: **V19** for Part 7.1, scope
+   `every port`; and Part 7.3's row updated from *two generic modules* to *two
+   modules*. **These are the only edits this stage makes to a finished stage's
+   output, and they are additive rows in the audit's own vocabulary, not a
+   rewrite of its findings.**
+7. **One line of `run-builds.sh`** — the `nocompile_owned_no_allocator` key, if
+   the file is renamed with the module, which the proposal advises. **Measured:
+   the expectation *string* `mtk::helper` survives the rename untouched.**
+
+#### The trap, named in advance
+
+**Part 7.1 will be wrong while this stage runs, and the stage must not obey it
+or fix it.** E6 ruled it a specification defect — V19 — and 3TK-17 is the stage
+that rewords it. This stage builds the ruled surface, records V19 in the audit,
+and leaves `../common/` alone. **A stage that "conforms" to a Part its own
+folder has ruled defective has un-ruled a ruling.**
+
+The second trap is the one 3TK-11 wrote down and paid for: **rename on word
+boundaries, and read the diff.** A blind pass turned `remove_from_anywhere` into
+`remove_from_innerwhere`. This stage renames on three axes at once — `owned` →
+`managed`, `Owned` → `Holder`, `inner` → `handle` in member names only — and
+`inner` is the dangerous one, because it must survive in `Inner`,
+`inner_offset` and `src/inner.c3`.
+
+#### What it may not do
+
+- **No edits to `../common/`.** That is 3TK-17.
+- **It re-opens no ruled item.** H1, H2 and H3 are withdrawn; H4, H6, H8 and H9
+  are settled or forced by H0; H7 stands as recommended. If the code finds a
+  ruling unbuildable, **it stops and reports** — it does not choose a different
+  answer.
+- **It does not do 3TK-15's work.** A5's doc-comment repointing is the next
+  stage. This stage writes correct comments in the files it rewrites and leaves
+  every other file's stale `002` citation alone.
+- It runs no `git` command.
+
+#### Output
+
+`3tk/` changed, plus `3tk-helper-notes-001.md` — what the code taught, in the
+shape of the toolkit, container, sanitizer and redesign notes. It says at
+minimum: how many call sites actually moved against the proposal's estimate,
+what the alias count fell to in each of `test/`, `negative/` and `src/`, and
+anything the compiler refused that the proposal's scratch measurements did not
+meet.
+
+#### Verification
+
+1. `3tk/run-builds.sh` — four builds green, and **the check count is stated, not
+   inherited**. It was 59; a renamed negative keeps it at 59, and the stage says
+   so explicitly rather than repeating the old sentence.
+2. `3tk/run-sanitizers.sh` — thread and address clean, 3 checks.
+3. **The test count is stated.** It was 85. H0 removes no test.
+4. **Part 7.2 re-walked**: all nine members present in the new `helper.c3`, named.
+5. **Zero `alias` lines naming `mtk::helper` or `mtk::managed`** anywhere in
+   `src/`, `test/` or `negative/`. That is H0's whole claim and it is one grep.
+6. The three `nocompile_*` negatives still refuse, and their messages still name
+   the offending type.
+
+*Advice on clear: clear between 3TK-14 and 3TK-16. The ruled proposal is the
+input; the argument that produced it is not, and it is long.*
+
+### 3TK-17 — Part 7.1 reworded, and specification 004
+
+Added in plan version 009, 2026-08-24, on the owner's instruction.
+
+**Declared, not authorized.** **It is the first stage in this line permitted to
+edit `../common/`**, and it is scoped to one Part.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-17 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**E6, ruled 2026-08-24: Part 7.1 states ztk's mechanism where the design has
+only a promise.** Of its three clauses only *"for each outer type there is a
+helper bound to that one type"* fails under a macro port, and Part 7.1's own
+closing sentence already sets the floor lower — *a port with no compile-time
+generation writes the same block by hand for each type, and loses only the
+typing.*
+
+**This is the disease 3TK-13 existed to cure.** 002 was written from ztk and
+stated Zig's mechanism as the rule in fourteen places; 003 fixed fourteen and
+carried V1 to V18. **Part 7.1 is the fifteenth, and 3TK-13 walked past it** —
+the sentence reads like a requirement, and only a port that answers the question
+a different way exposes it as a mechanism. 3tk is that port. **V19 is the first
+specification defect found since 003, and it was found by building, not by
+auditing.** That is worth one paragraph in the change log.
+
+#### The scheduling constraint, and it points outside this folder
+
+**Before dtk's first stage.** dtk has a prepared folder and no stage has run —
+[../d/dtk-status.md](../d/dtk-status.md). D's idiomatic answer to *generate code
+per type* is templates and mixins: call-site expansion, the same shape as a C3
+macro, **not** a per-type struct. Part 7.1 as written sets dtk the identical
+trap it set 3tk. Fixing it afterwards means a second port re-deriving this
+argument from cold.
+
+#### Inputs
+
+- **[3tk-helper-proposal-001.md](3tk-helper-proposal-001.md) Part F — E6, ruled.**
+  That is this stage's specification and it is not re-argued.
+- `../common/matryoshka-specification-003.md` — **Part 7.1**, and its change log,
+  which is the model for how a V is recorded.
+- `3tk-deviations-001.md` — the **V19** row, written by 3TK-16.
+- `3tk/src/helper.c3` **as 3TK-16 leaves it**, as the *3tk* realization to show.
+  **If 3TK-16 has not run, this stage may still run** — the realization is
+  quoted in the proposal's M11 and M12 and it compiled. The stage says which
+  source it used.
+
+#### What it does
+
+- **Rewords Part 7.1 to state the promise**, and shows both realizations marked
+  *ztk* and *3tk*, exactly as 003 did for the other fourteen. The promise, as
+  E6 states it: for each outer type the crossings exist, specialized to that
+  type, generated rather than hand-written, with the identity and the crossings
+  together. **A named per-type object is one realization of that and not the
+  rule.**
+- **Part 7.2, 7.4 and 7.5 are not touched.** The members are a MUST and they are
+  unaffected; H0 carries all nine.
+- **A change-log entry in the shape 003 uses**, naming V19, what 002/003 said,
+  and what 004 says instead.
+- **Every link naming 003 is corrected in place, both directions**, and 003 goes
+  to `../common/backup/`. The folder's rule, and 3TK-13's precedent.
+- **Tells the other ports.** 003's precedent: 3TK-13 wrote one paragraph into
+  `../d/dtk-status.md` and that was the whole of what it was permitted outside
+  `../common/`. This stage does the same, and **says plainly whether otk was
+  told** — 3TK-13 did not tell it, recorded that it did not, and left it to the
+  owner. That question is still open and this stage does not close it silently.
+
+#### What it may not do
+
+- **One Part.** It is not a specification revision. If it finds a second defect,
+  **it reports it and does not fix it** — that is the rule that produced V19 in
+  the first place, and it worked.
+- **No code.** `3tk/` is not touched. `run-builds.sh` and `run-sanitizers.sh` are
+  green trivially and the stage says so.
+- It runs no `git` command.
+
+#### Output
+
+`../common/matryoshka-specification-004.md`, with 003 in `../common/backup/`.
+
+**The cost, stated so it is not a surprise: a whole specification version for one
+Part.** The folder's versioning rule is *every change makes a new file*, and the
+specification is on that list. If other specification changes are wanted, **004
+is the cheap moment to batch them** — but none are known: V1 to V18 are consumed
+by 003, and V7b was recorded-not-fixed deliberately. The stage checks that this
+is still true before cutting 004, and reports what it found.
+
+#### Verification
+
+1. **Part 7.1 states a promise and no mechanism**, and a reader of it cannot
+   tell which language the port is in until the *ztk* and *3tk* lines.
+2. **Every difference from 003 is in the change log**, so nothing needs diffing.
+   003's own standard.
+3. **No Part renumbered and no invariant row renumbered.** 003's rule, and
+   roughly forty doc comments depend on it.
+4. Every link naming 003 corrected, both directions; nothing dangling.
+5. `3tk/` untouched and green.
+
+*Advice on clear: clear before starting. Its inputs are E6's ruling, Part 7.1 and
+003's change log — none of the argument that produced the ruling is one of them.*
+
+### 3TK-18 — `Inner.next` becomes `Inner.link`
+
+Added in plan version 010, 2026-08-24, on the owner's ruling of the same day.
+
+**HAS RUN, 2026-08-24.** The row is in [3tk-log.md](3tk-log.md). The section
+below is reproduced as it was declared.
+
+**Declared, not authorized.**
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-18 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**The owner ruled `any` within `Inner` on 2026-08-24 and nothing carries the
+ruling into the code.** The ruling is two sentences: **`any` is rejected in all
+three shapes**, and **the rename is accepted.**
+
+```c3
+struct Inner
+{
+    Inner* link;    // was: next
+    typeid type;
+}
+```
+
+**`any` was not rejected on taste.** There are exactly two facts an inner must
+store and neither is derivable — the link, and the type. **This item's outer
+address is derivable in O(1) from the handle alone**, which is what
+`must_from_handle` already computes. A truthful `any` is a `{ptr, type}` pair
+whose `ptr` points at a value *of that type*, so a truthful `any` here would
+have to evict a non-derivable fact to store a derivable one. **In two words the
+pair is structurally never a valid `any`** — arithmetic, not preference. That
+closed the question, and this stage does not re-open it.
+
+**The rename is accepted because `next` makes a claim the field does not keep.**
+Under R6b the last item of a chain points at itself, so on that item `next` is
+not the next thing. `inner.c3:45` already confesses this in the port's own
+words. `link` stays true on the last item, on an unlinked item, and everywhere
+between. **And `link` is the specification's own word** — Part 4.2 names the two
+parts *Linkage* and *Identity*, and 004's *3tk* realization line reads *one link
+field plus the identity*. After the rename the code stops being the only place
+that calls it something else.
+
+#### Inputs
+
+- **[3tk-any-options-001.md](backup/3tk-any-options-001.md) — the ruling, and this
+  stage's specification.** Its measurements are the stage's estimates and its
+  rejections are not re-argued.
+- [3tk-any-revision.md](backup/3tk-any-revision.md) — the owner's document, the input
+  the ruling answered. **Read for the aim that survives the rejection**, which
+  is what the rename serves. A companion file `3tk-any-as-inner.md` was deleted
+  by the owner and **is not an input**.
+- `3tk/` as it stands, green — **63 checks, four builds.**
+- `../common/matryoshka-specification-004.md` — **Part 4.2 only**, for the two
+  names. Read, not edited.
+
+#### What it does
+
+**One rename, and about two dozen paragraphs of prose that argue about the
+name.**
+
+1. **`Inner.next` becomes `Inner.link`** in `3tk/src/inner.c3`, and every field
+   access follows. **Measured: 59 mentions across 14 files, 35 of them `.next`
+   field accesses** — mechanical, and every one compiler-checked.
+2. **The R6b prose is rewritten, not substituted.** About half the remaining
+   ~24 mentions are the paragraphs at `inner.c3:34`, `:45` and `:164` that argue
+   about the name itself. A paragraph explaining why `next` carries two meanings
+   reads differently once the field is called `link`: **the confession becomes an
+   argument for the new name rather than an apology for the old one.** The rename
+   does not remove the two meanings — nothing can, that is R6b's bargain — it
+   stops the name asserting the wrong one.
+3. **`is_linked` and `unlink` get the sentence they always wanted.** `h.link !=
+   null` is the phrasing their doc comments already use.
+4. **Permitted, and only this one:** `inner.c3:5`'s citation of specification
+   **003 may be repointed to 004** while the file's header is open. It is one of
+   3TK-19's three debts and this is the cheap moment. **The stage says whether it
+   took it**; if it does not, 3TK-19 takes all three.
+
+#### The trap, named in advance
+
+**`queue.c3` and `stack.c3` hold 18 of the 35 field accesses, and the four walk
+sites each state the end test in their own body.** That is exactly where a
+careless mechanical pass leaves a comment disagreeing with its code.
+
+**Rewrite the exemplar first, then sweep** — the folder's own rule, and the one
+3TK-11 paid for by turning `remove_from_anywhere` into `remove_from_innerwhere`.
+`inner.c3` is the exemplar. It is rewritten by hand, read, and only then does the
+mechanical pass run over the other thirteen files. **Rename on word boundaries,
+and read the diff.**
+
+`next` is a common English word and it appears in prose that is not about this
+field. **A blind `next` → `link` over comments is wrong.** The field accesses are
+`.next` and the compiler checks them; the prose is read.
+
+#### What it may not do
+
+- **No `any`, in any of the three shapes.** A, B and C are all rejected and the
+  reasons are in the ruling. If the code finds the rename unbuildable, **it stops
+  and reports** — it does not choose a different answer.
+- **No edits to `../common/`.** No specification change is needed and none is
+  permitted here. **004 stands as cut.**
+- **No layout change and no behaviour change.** Two words before, two words
+  after. R6b, the exact link test and Part 8.6's deletion are untouched.
+- **It does not do 3TK-19's work**, beyond the one permitted citation above.
+- It runs no `git` command.
+
+#### Output
+
+`3tk/` changed. **No new document** — the ruling is already written, and a stage
+that only renames a field has nothing to teach that the diff does not say. A row
+in [3tk-log.md](3tk-log.md) and an updated [3tk-status.md](3tk-status.md), as
+every stage.
+
+**If the sweep does teach something** — a walk site whose comment was already
+wrong before the rename, a mention the measurement missed — it goes in the log
+row, named, and not in a new file.
+
+#### Verification
+
+1. `3tk/run-builds.sh` — four builds green, and **the check count is stated, not
+   inherited.** It was 63. A rename adds and removes no check, so **63 is the
+   expected number and a different one is a finding.**
+2. `3tk/run-sanitizers.sh` — thread and address clean.
+3. **The test count is stated.** The suite should pass **unchanged** — that is
+   this stage's own verification, and the ruling says so: no behaviour changes.
+4. **Zero occurrences of `.next` in `3tk/src/`, `3tk/test/` and
+   `3tk/negative/`.** One grep, and it is the whole mechanical claim.
+5. **The four walk sites read** — two in `queue.c3`, two in `stack.c3` — and
+   each one's end-test comment agrees with its code. **Named individually in the
+   report**, not asserted in aggregate.
+6. **`inner.c3` read in full.** No paragraph apologises for a name the file no
+   longer uses.
+
+*Advice on clear: clear before starting. The inputs are the ruling and the code;
+the argument that produced the ruling is long, and it is finished.*
+
+### 3TK-19 — the three debts of 3TK-15 and 3TK-17
+
+Added in plan version 010, 2026-08-24.
+
+**HAS RUN, 2026-08-24.** All three debts paid, no new document. The row is in
+[3tk-log.md](3tk-log.md), and it records where the section below was wrong:
+**neither surviving citation was a repointing.** The section is reproduced as it
+was declared.
+
+**Declared, not authorized.** **Bookkeeping, not design.** It rules nothing and
+it decides nothing.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-19 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**Three things were owed by finished stages and each was left for a stage the
+owner names.** They are small, they are unrelated to each other, and they are
+one stage because each alone is too small to be worth a cold start. **None of
+them blocks dtk**, and none of them touches `3tk/`'s behaviour.
+
+#### Inputs
+
+- [3tk-status.md](3tk-status.md) — the three open questions, which state them.
+- `3tk/src/mtk.c3`, `src/inner.c3`, `src/helper.c3` — the citations.
+- `../common/matryoshka-specification-004.md` — **Part 7.1 as 004 words it**,
+  which is what makes debt 1 a debt.
+- [3tk-deviations-001.md](3tk-deviations-001.md) — the **P2** row.
+- `../odin/` — as it stands, for debt 3. **Read.**
+
+#### What it does
+
+1. **The stale 003 citations.** `mtk.c3:48`, `inner.c3:5` and `helper.c3:51`
+   still name specification 003. **`helper.c3:51` is the one that matters**: its
+   paragraph tells the next reader not to "fix" the file to match Part 7.1, and
+   **004 has now reworded Part 7.1 so that the file matches it.** The guard is
+   not merely stale, it argues against a conflict that no longer exists — so it
+   is **rewritten, not repointed.** The other two are repointed. **If 3TK-18
+   already took `inner.c3:5`, this stage says so and takes the other two.**
+2. **`3tk-deviations-001.md`'s P2 row is stale** — 3TK-15's finding, unchanged
+   since. The row is corrected **in the audit's own vocabulary** — S/V =
+   specification defect, `every port`; P = port defect, `3tk-only` — and **as a
+   correction, not a rewrite of the audit's findings.** 3TK-16's precedent: rows
+   are edited in place and additively, and the file does not get a new version
+   for one row unless the stage finds the correction is not one row.
+3. **otk is told the specification exists.** `../odin/` holds one backport
+   document, no status file and no reference to the specification, which has
+   now moved twice. 3TK-13 did not tell it, said so, and left it open; 3TK-17
+   did the same. **This stage closes it** — one paragraph naming
+   [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)
+   as otk's normative input, in the shape 3TK-13 and 3TK-17 used for
+   `../d/dtk-status.md`.
+
+#### What it may not do
+
+- **No refactor of otk**, and no audit of it. **One paragraph.** Whether otk is
+  brought to the specification is a stage the owner names, and it is not this
+  one. **If the paragraph cannot be written without deciding something, the
+  stage reports and does not decide.**
+- **No edits to `../common/`.** All three debts are on this side of the line.
+- **No code behaviour.** It edits doc comments. `3tk/` must still be green, and
+  the stage runs the builds rather than assuming them.
+- **It re-opens no deviation.** V1 to V19 stand. P2 is *corrected*, not
+  re-argued.
+- It runs no `git` command.
+
+#### Output
+
+`3tk/src/` doc comments corrected, `3tk-deviations-001.md`'s P2 row corrected,
+one paragraph in `../odin/`. A log row and an updated status.
+
+**If P2 turns out to be more than a row**, the stage reports that and cuts
+`3tk-deviations-002.md` under the folder's versioning rule — the audit is on the
+versioned list. **It does not edit a finished audit's findings in place to avoid
+a version bump.**
+
+#### Verification
+
+1. **Zero occurrences of `003` naming the specification anywhere in `3tk/src/`.**
+   One grep, and it is debt 1's whole claim.
+2. **`helper.c3:51`'s paragraph read against 004's Part 7.1**, and quoted in the
+   report. Repointing it would have been the wrong fix and the report says why.
+3. **P2 read against the code it describes**, and the corrected row quoted.
+4. `../odin/`'s new paragraph names 004 by its path in `../common/`, and the
+   link resolves.
+5. `3tk/run-builds.sh` — four builds green, **count stated.** Doc comments do not
+   move it.
+
+**3TK-20 depends on debt 1 being paid.** It reads `3tk/src/` doc comments, and
+`helper.c3:51` is wrong rather than merely stale — it warns the reader off a
+conflict 004 removed. That is the whole reason this stage runs first, and it
+raises debt 1 above the other two: **debts 2 and 3 block nothing.**
+
+*Advice on clear: clear before starting. Its three inputs are disjoint from
+3TK-18's and from each other.*
+
+### 3TK-20 — what 3tk learned, written where another port can read it
+
+Added in plan version 011, 2026-08-24, on the owner's ruling of the same day.
+
+**HAS RUN, 2026-08-24.**
+[3tk-port-findings-001.md](backup/3tk-port-findings-001.md) is written, under the name
+this section proposed. The row is in [3tk-log.md](3tk-log.md), and it records
+what the section below could not: **the line numbers in its material had
+drifted**, and ztk's pool turned out to be last-in first-out already. The
+section is reproduced as it was declared.
+
+**Declared, not authorized.**
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-20 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**The redesign decided things with reasons, and the reasons are scattered across
+seven documents in this folder.** R1 to R15 are ruled in
+`3tk-core-redesign-proposal-002.md`; the late-close window is 3TK-12's P1 and
+lives in a comment in `pool.c3`; the three checking tiers are D6 in
+`3tk-porting-proposal-004.md` and a doc comment in `inner.c3`; the exact link
+test is R6b in two places at once. **A reader who wants to know what this port
+does differently and why has to read the whole folder and assemble it.**
+
+**Two ports are that reader.** dtk has run no stage, starts from
+[`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)
+alone, and has no way to learn that the C3 port deleted a field, deleted a walk
+and weakened a MUST. ztk predates all of it. **Neither of them should have to
+read seven documents, and neither should have to re-derive a ruling the owner
+already made.**
+
+So: one document, in this folder, describing what 3tk does and the reasoning
+that produced it, selected down to what another port would find interesting.
+
+#### The ruling this stage runs under, and it is the whole shape of the file
+
+**Description and reasoning. Not recommendations.** The owner ruled this on
+2026-08-24 and it is not a preference about tone — it decides what the document
+is for.
+
+- **A recommendation is a decision, and it is not this port's to make.** If this
+  file says *ztk should adopt R6b*, then 3tk has ruled for ztk, and ztk's own
+  plan is reduced to executing a verdict reached somewhere else. **The document
+  informs; the owner rules.**
+- **A description survives and a recommendation does not.** *3tk deleted `prev`
+  because the required-operation audit found nothing needed it, and the
+  self-link made the link test exact at no per-item cost* is true permanently.
+  *ztk should delete `prev`* is true only against today's ztk, and only if
+  ztk's constraints match this port's — **which they do not.** 3tk was free to
+  redesign. ztk is the published reference with users, and R11 and the late
+  close both change promises it makes in writing. Weighing that is exactly what
+  ztk's own plan exists to do.
+- **dtk is what proves the shape.** dtk has run no stage. A file of
+  recommendations about ztk would be worth nothing to it. A file of *what 3tk
+  decided and why* is what it needs, and needs whether ztk ever changes a line.
+  **Writing it descriptively is what makes it serve two consumers instead of
+  one** — and it is also why it stays a 3tk document rather than moving to
+  `../common/`: it is one port's record, read by others, not a shared normative
+  input. `ztk-audit-001.md` sat in this folder for twelve stages before 3TK-17
+  proved it bound every port. That question is not this stage's to answer.
+
+**What this rules out, named so a careful stage does not do it by habit:** no
+ranking by urgency or by cost of leaving alone, no severity marks, no
+defect-versus-cleanup split, no *should*, and no verdict that any port is
+non-conforming. **The late close and the mailbox anchor appear as peers.** Here
+is what 3tk does, here is why, here is where the specification stands after it.
+
+#### Inputs
+
+Everything below is read and none of it is re-argued. **The rulings are
+finished** — this is the constraint 3TK-18 ran under, and it holds here.
+
+- `3tk-core-redesign-proposal-002.md` — **R1 to R15, the ruling table at the
+  end**, and §1.1's required-operation audit, §1.2's out-of-band measurement,
+  §1.3's owner's reason for last-in first-out, §3's refusal of the membership
+  field.
+- `3tk-porting-proposal-004.md` — **D1 to D16**, and D6's three tiers.
+- `3tk-deviations-001.md` — the audit's vocabulary, and its findings.
+- `../common/matryoshka-specification-004.md` — **its change log**, which is
+  where the port's decisions became everyone's rules. Read, not edited.
+- `3tk/src/` — the code, and its doc comments, which carry reasoning that is in
+  no document. **This is why 3TK-19 runs first**: `helper.c3:51`'s guard is
+  wrong until 3TK-19 rewrites it, and it is a guard about the helper surface,
+  which is one of the differences this stage is most likely to describe. **If
+  3TK-19 has not run, the stage says so and treats every `003` citation in
+  `3tk/src/` as suspect** rather than quoting it.
+- `src/*.zig` at the repository root — **the ztk source. Read, never written.**
+- `../d/dtk-status.md` — for what dtk already knows, which is nearly nothing.
+
+#### What it does
+
+**Writes one document: `3tk-port-findings-001.md`, in this folder.**
+
+*The name follows the folder's convention and was proposed rather than ruled. If
+the owner wants another, the stage uses it and says so.*
+
+Its subject is 3tk's implementation. Its selection filter is *would another port
+care*. **A 3tk decision that is purely about C3 — macro expansion, `faultdef`,
+the submodule trick that enforces Part 17.2 — is out of scope unless the
+reasoning behind it transfers.**
+
+**The material already gathered, so the stage does not start cold.** These were
+found by reading both sources on 2026-08-24 and are the stage's raw material,
+**not its outline and not a ranking** — the stage decides the shape.
+
+1. **The late close.** `pool.c3:490-532` — the pool releases the mutex across
+   `on_put`, and `Pool.close` can run to completion in that window. What the
+   pool is still holding when it relocks goes to `on_close` as stragglers.
+   3TK-12's P1 found it; 003 wrote the rule rather than the port deviating from
+   one — **Part 12.3 is a new MUST, invariant 35 is new, and 12.2 was weakened
+   to read *called once by close, and once more per straggling put*, the only
+   MUST 003 weakens anywhere.** ztk's shape is `pool.zig:354`, where the
+   post-hook work sits inside `if (!self.closed) { ... }` with no else branch,
+   and `pool.zig:426` documents *`on_close` runs once*.
+2. **The exact link test.** R6b: the last item of a chain points at itself, so
+   `link != null` answers *is this item on some chain* with no false negative
+   and no false positive, in O(1). It cost no field — `Inner` went from 24 bytes
+   to 16 — and it **deleted the O(n) insert walk and `contains` outright**, then
+   deleted Part 8.6 from the specification and made exactness a MUST at Part
+   8.7. The price is that the link carries two meanings, which is why 3TK-18
+   renamed the field to `link`. ztk's shape is `polynode.zig:84`, where
+   `is_linked` is `prev != null or next != null`, `polynode.zig:79` names the
+   blind spot in the port's own words, and `_checkInsert` at `:411` pairs an
+   inexact test with an O(n) walk because neither is complete alone.
+3. **The checking tiers.** D6, and `@check` at `inner.c3:145`: in a safe build
+   it is `always_assert`; under `--safe=no` it expands to **nothing at all**, so
+   the condition is not evaluated and **nothing is handed to the optimizer as a
+   promise**. 3TK-4's Q11 probe segfaulted on the alternative. The transferable
+   part is the distinction — *a removed check* versus *an assumption*, and a
+   violated assumption is undefined behaviour rather than a missed diagnostic.
+   ztk guards its contracts with `std.debug.assert`, which is `unreachable` in
+   `ReleaseFast`.
+4. **The mailbox has two queues and no anchor.** R7. §1.2 measured the existing
+   out-of-band semantics as Meaning A — absolute priority, first-in first-out
+   within each class — and proved two queues reproduce it **exactly, with no
+   observable change**, deleting the anchor's bookkeeping from every send and
+   every receive. R8 then fixed the order for `close` and `receive_all` both.
+   ztk's shape is `mailbox.zig:46-50`: one `list`, plus `oob_count` and
+   `oob_last`.
+5. **What was dropped, and what was refused.** R15 dropped `Pool.put_all` —
+   it is `Pool.put` in a loop and it cost a container operation and a MUST
+   clause — along with `push_front` and `push_front_slot`, which retired R4.
+   R3 deleted nine of Part 8.2's sixteen operations. **R6 was refused**, and the
+   refusal has a reason worth carrying: a membership field is 24 bytes and an
+   exact answer, and the self-link is 16 bytes and the same answer. ztk's
+   `put_all` is `pool.zig:394`.
+6. **Not yet read, and the stage reads it rather than assuming.** Whether ztk's
+   pool is first-in first-out — 3tk's was, and **R11 changed it to last-in first
+   out for defect surfacing and not for performance**, which is a behaviour
+   change with an owner's reason attached — and whether ztk's `close` has R12's
+   shape.
+
+#### What it may not do
+
+- **No recommendations.** The ruling above, and it is the stage's first
+  constraint rather than a note at the end.
+- **It writes no code, in any language.** `3tk/` is untouched. **`src/*.zig` at
+  the repository root is read and never written** — the storage rule and the
+  plan's own verification both already say so.
+- **No edits to `../common/`.** 004 stands as cut.
+- **It re-argues nothing that is ruled.** R1 to R15 and D1 to D16 are quoted and
+  cited, never reopened. A stage that finds itself arguing has left its scope.
+- **It does not plan anything for ztk or dtk**, and it declares no stage in any
+  line. **The document is an input and it terminates there.** ztk's plan is the
+  owner's to cut, when and where they choose.
+- It runs no `git` command.
+
+#### The trap, named in advance
+
+**The material is interesting and the temptation is to conclude.** Every one of
+the six items above has an obvious next sentence about what somebody ought to
+do, and **that sentence is the one thing this document may not contain.** The
+test to apply to any paragraph: *would this still be true if ztk never changed a
+line, and if dtk chose the opposite?* If not, it is a recommendation wearing
+description's clothes.
+
+**The second trap is scope.** Reading `src/*.zig` to describe a difference is in
+scope. Auditing `src/*.zig` is not — this is not `ztk-audit-002.md`, and the
+stage that audits ztk against 004 is ztk's own, if the owner ever cuts it.
+
+**One assumption is written in and the owner may overrule it:** the document
+**states ztk facts** — *ztk does X at `pool.zig:354`; 3tk does Y; here is the
+reasoning that produced Y* — because that is description, and without it the
+file is a 3tk changelog rather than something another port can use. **It draws
+no conclusion from the difference.** If the owner wants the document to describe
+only 3tk and leave every comparison to the consuming port, that is a smaller and
+still coherent file, and the stage is told before it starts.
+
+#### Output
+
+**`3tk-port-findings-001.md`** in this folder. A row in
+[3tk-log.md](3tk-log.md) and an updated [3tk-status.md](3tk-status.md), as every
+stage. **Nothing else changes anywhere in the repository.**
+
+#### Verification
+
+1. **Every claim about 3tk carries its citation** — a document section, a
+   ruling number, or a `file:line` in `3tk/src/`. One unanchored claim is a
+   finding.
+2. **Every claim about ztk carries a `file:line`**, and it was read rather than
+   remembered.
+3. **The word *should* does not appear directing any port**, and no section is
+   ordered by urgency, severity or cost. **One grep and one read.**
+4. **Every ruled decision the document describes is quoted from its ruling**,
+   not restated from memory, and the ruling is cited.
+5. **`3tk/` untouched**, and `src/` at the repository root untouched.
+   `run-builds.sh` green, **63 checks, 87 tests, count stated** — a formality,
+   run rather than assumed.
+6. **The document is readable by someone who has read only 004.** It defines
+   what it uses, or it cites where the definition lives. dtk is that reader and
+   it is not hypothetical.
+
+*Advice on clear: clear before starting. Its inputs are ruled documents and two
+codebases; the discussion that produced this stage is finished and is in the
+plan.*
+
+### 3TK-21 — `Inner` becomes one `any`
+
+Added in plan version 013, 2026-08-25, on the owner's rulings of 2026-08-24 and
+2026-08-25, given across one session.
+
+**Declared, not authorized.**
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-21 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### The shape, ruled
+
+```c3
+struct Inner
+{
+    any link;
+}
+```
+
+**`link.type` is the identity — Part 5, unchanged. `link.ptr` is the chain
+link — R6b, unchanged.** The two meanings do not move; only where they are
+stored moves. C3's `any` is a `typeid` and a `void*`, which is the pair the
+`Inner` of today already carries in two named fields, in the other order.
+
+**R6b is untouched and is not re-argued.** On a chain the link is never null and
+the last item points at itself; off a chain it is null; `is_linked` stays exact
+and O(1); the walks still end at *this item points at itself*.
+
+**It is not a size change.** `Inner` is 16 bytes on linux-x64 today and 16 bytes
+after — R6b won those eight bytes when it deleted `prev`. **A stage that reports
+a saving has measured something else.** As always the number is an observation
+and no code may depend on it.
+
+**The owner ruled `any` within `Inner` on 2026-08-24 — rejected in all three
+shapes then offered — and has now ruled this shape in.** The stage records that
+it is a reversal and does not re-argue either side. **It does not read
+`3tk-any-options-001.md`**: the owner gave that instruction directly, on the
+ground that everything the stage needs was provided in the session that produced
+this plan and is written below. A stage that goes looking for the old argument
+has left its scope.
+
+#### Why the writes are not field assignments
+
+**`any`'s halves are read-only.** They are read by name — `link.ptr`,
+`link.type` — and a whole `any` is built with a constructor. The stdlib was read
+for this plan and it never assigns a half anywhere:
+
+| macro | keeps | replaces | where |
+|---|---|---|---|
+| `any_make(void* ptr, typeid type)` | — | both | `core/builtin.c3:399`, `@builtin`, no import |
+| `any.retype_to(typeid)` | the pointer | the type | `core/builtin.c3:405` |
+| `any.as_inner()` | the pointer | the type, derived | `core/builtin.c3:413` |
+| **what this port needs** | **the type** | **the pointer** | **not in the stdlib** |
+
+`any` itself is not declared in the stdlib at all — no struct, no typedef. It is
+compiler-owned.
+
+**So every link write is a rebuild of the whole field that carries the identity
+through by hand**, and that is the one genuinely new hazard in this change:
+
+```c3
+// today: two fields, and a link write cannot touch the identity
+self.tail.link = h;
+
+// the same line, written out under the new shape
+self.tail.link = any_make(h, self.tail.link.type);
+```
+
+**The identity on that line is `self.tail`'s, not `h`'s, and both are on the
+line.** `any_make(h, h.link.type)` compiles, runs, passes every test, and gives
+the tail `h`'s type. Nothing checks it: the identity is written once at
+initialization and read at every crossing, so the damage appears later,
+elsewhere, as a wrong-type refusal on an item that was never wrong.
+
+**There are nine link writes**: the two `push_back` arms, `push`, the two
+`pop_front` arms, `pop`, `append_queue`, `reset`, and `init`.
+
+#### The two methods, ruled
+
+```c3
+fn void Inner.repoint_to(&self, Handle to) @inline
+    => self.link = any_make(to, self.link.type);
+
+fn Handle Inner.points_to(&self) @inline => (Handle)self.link.ptr;
+```
+
+- **The names come from the language, not from this port.** `retype_to` keeps
+  the pointer and swaps the type; `repoint_to` keeps the type and swaps the
+  pointer. It is the fourth corner of the stdlib's own table and a C3 reader
+  already knows which is which — the same argument `inner.c3` makes for `to` and
+  `as`, and the same one 3TK-18 ruled on.
+- **`points_to` makes the walk sites say what the design has always said in
+  prose.** `n.points_to() == n` is *the last item of a chain points at itself*,
+  word for word.
+- **They are methods on `Inner`, not an extension of `any` — the owner's ruling,
+  2026-08-25.** The alternative was `macro any.repoint_to(...)`, which is more
+  faithful to the family and adds a method to a **builtin type** visible to every
+  module that imports `mtk`. That is a wider surface than this change is allowed
+  to have.
+- **Both `@private` if the containers are in module `mtk` proper.** The stage
+  **verifies that and does not assume it** — one grep at the top. C3's
+  `@private` does not reach a submodule, which is why `mtk::@check` is public
+  (F3, D6), and the same test decides this.
+- **`helper.c3` is a submodule and reads `h.link.type` directly.** Reads are
+  safe — a read cannot destroy the identity — so no public accessor is added for
+  it. **This is deliberate**: an identity reader would have to be public for
+  `mtk::helper` to see it, and that is a name on the public surface that this
+  change may not add.
+
+#### Inputs
+
+- This section. **It is the specification** — the rulings are finished and
+  nothing below is a proposal.
+- `3tk/src/inner.c3`, `queue.c3`, `stack.c3`, `helper.c3`, `mtk.c3` — the code.
+- `3tk/test/`, `3tk/negative/`, `3tk/run-builds.sh`.
+- `/home/g41797/dev/langs/c3/lib/std/core/builtin.c3` — `any_make` and its two
+  neighbours, if the stage wants to read them; the table above is what they say.
+- `3tk-core-redesign-proposal-002.md` §3 — R6b, **for what must not change.**
+
+#### What it does
+
+1. **The probes, first, and they are small.** `@private`'s reach to wherever
+   `InnerQueue` and `InnerStack` live; `$sizeof(any)` inside a struct; a zeroed
+   `any` — Part 5.5 needs its typeid to match no type, and `as_inner`'s own
+   contract, `@require (bool)self.type`, says a zeroed one is falsy; and
+   whether anything differs under `--safe=no`. **If a probe refuses, the stage
+   stops and reports.** It does not invent a workaround for a language it has
+   just measured.
+2. **`inner.c3` is rewritten by hand and read in full before any mechanical pass
+   runs.** The folder's rule, paid for by 3TK-11 and again by 3TK-18. The struct,
+   `is_linked`, `reset`, the two new methods, and **every paragraph that
+   describes two fields.**
+3. **Then the sweep**, site by site: `queue.c3`'s two `push_back` arms, its
+   `pop_front`, `append_queue` and the iterator; `stack.c3`'s `push` and `pop`
+   and the header prose that states the end test; `helper.c3`'s `is_mine` and
+   `init`; `mtk.c3`'s header prose; the tests and the negatives.
+4. **`run-builds.sh:199`.** It greps `src/mailbox.c3` and `src/pool.c3` for the
+   field-assignment spelling to enforce Part 17.2 — *no container reaches around
+   the InnerQueue/InnerStack surface*. **The spelling changes.** 3TK-18 hit this
+   exact line and its log row says what happens when it is missed: the check goes
+   on printing `ok` for ever. Repointed, and the line says which spelling it used
+   to carry.
+5. **`negative/insert_twice_same_queue.c3`** explains the retired Part 8.6 pair
+   and then the design that is here. 3TK-18 reworded both halves; this stage
+   reads them again rather than assuming.
+
+#### What it may not do
+
+- **No public surface change.** `Handle` stays `Inner*`; `Slot`, `InnerQueue`,
+  `InnerStack`, `inner_offset`, the faults, `Inner.to` and `Inner.as` are
+  untouched. **Internals only**, read strictly.
+- **No behaviour change.** R6b, D6's tiers, R11's stack, R12, R7's two queues
+  and Part 8.7's exactness all stand. **63 checks and 87 tests, unchanged** — a
+  field reshuffle adds and removes neither.
+- **No edit to `../common/`.** Part 4.2/V1 leaves the field count to the
+  realization and 004's *3tk* line reads *one link field plus the identity*,
+  which stays literally true — one link field, one identity, nested rather than
+  adjacent. **If the stage finds a sentence in 004 that is genuinely false, it
+  reports and does not edit.**
+- **It re-argues nothing.** R1 to R15 and D1 to D16 stand, and so does the
+  reversal above.
+- **It writes no new document.** 3TK-18's precedent: the ruling is already
+  written, and it is written here. **If the probes or the sweep produce more
+  than a log row can hold, the stage says so and the owner names a notes
+  stage** — it does not cut one on its own.
+- It runs no `git` command.
+
+#### Output
+
+`3tk/src/` and `3tk/test/`, `3tk/negative/` and `run-builds.sh` on the new
+shape. A row in [3tk-log.md](3tk-log.md) and an updated
+[3tk-status.md](3tk-status.md).
+
+#### Verification
+
+1. **The probe results are reported**, each with what it measured, not with what
+   was expected.
+2. **`grep any_make` over `3tk/src/` — every occurrence but one reads
+   `.link.type` as its second argument, and the one that does not is in
+   `helper.c3`'s `init`.** That is the whole claim that the identity is written
+   once and never again, and it is one grep.
+3. **`grep '\.link\.ptr'` over `3tk/src/` — it appears in `points_to` and
+   `repoint_to` and nowhere else**, so the `void*` cast lives in one place. If a
+   site had to be excepted, the stage names it and says why.
+4. **The four walk sites read individually** — two in `queue.c3`, two in
+   `stack.c3` — each one's end-test comment agreeing with its code. **Named one
+   by one in the report**, not asserted in aggregate. 3TK-18's verification, and
+   it is the one that found things.
+5. **`inner.c3` read in full. No paragraph describes two fields**, and no
+   paragraph apologises for a layout the struct no longer has.
+6. **`run-builds.sh`'s Part 17.2 grep repointed**, quoted in the report, and the
+   line names the spelling it used to carry.
+7. **`3tk/run-builds.sh` — four builds green, 63 checks, 87 tests, count
+   stated.** A stage that reports three builds has not run.
+8. **`3tk/run-sanitizers.sh` — thread and address clean at 87.** **This one is
+   not a formality and it is not optional**: the change moves what sits at which
+   offset inside every item in the toolkit. 3TK-18 could skip it because a rename
+   moves nothing; this cannot.
+
+*Advice on clear: clear before starting. This section is the specification and
+the session that produced it is finished.*
+
+### 3TK-22 — the findings document, against the shape it now describes
+
+Added in plan version 013, 2026-08-25.
+
+**Declared, not authorized. It runs after 3TK-21**, and the dependency is not a
+preference: the document quotes the struct.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-22 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**`3tk-port-findings-001.md` §1 quotes `struct Inner` verbatim**, states its two
+fields, and cites `inner.c3:58-62`. It cites `inner.c3` and `helper.c3` by line
+throughout §1, §7 and §8. **3TK-21 makes the quotation false and moves most of
+those lines.** The document was written to be dtk's and ztk's second input, and
+a second input whose central code block is wrong is worse than none.
+
+**There is also something new to describe, and it is the reason this is not
+merely a repair.** *A port that stores the identity and the chain link as one
+built-in type-erased pair, because the language ships that pair and the code the
+port would otherwise write by hand is exactly it* is a port decision another
+port would care about — and dtk is the reader who would, since D answers the
+same question with different machinery. **It is described, with its cost named:
+the halves are read-only, so a link write rebuilds the whole value and carries
+the identity by hand, which is a hazard the two-field shape did not have and is
+why `repoint_to` exists.**
+
+#### The ruling it runs under, unchanged from 3TK-20
+
+**Description and reasoning. Not recommendations.** The owner ruled it on
+2026-08-24 and it decides what the document is for. No ranking, no severity, no
+*should* directing any port, and no conclusion drawn from a difference with ztk.
+**The trap is the same one**: every fact in this stage has an obvious next
+sentence about what somebody ought to do, and that sentence is the one thing the
+document may not contain.
+
+#### Inputs
+
+- `3tk-port-findings-001.md` — the document, and its own §10 for what it is not.
+- `3tk/src/` **as 3TK-21 leaves it** — every citation re-read, not remembered.
+- `src/*.zig` at the repository root — **read, never written.** ztk has not
+  changed, but the citations are re-verified rather than carried over: 3TK-20
+  found the numbers it was handed had drifted.
+- 3TK-21's log row, for what the change taught.
+
+#### What it does
+
+**Cuts `3tk-port-findings-002.md`.** The document is on the folder's versioned
+list — 012 put it there — so a change makes a new file. **001 goes to
+`backup/`**, and every reference to it is repointed: the status file, this
+plan's own list, and any other live document that names it.
+
+Beyond the mechanical repair: **§1 gains the new material above**, and the
+change log gains a row saying what moved and why. **Nothing else is rewritten.**
+002 is 001 with a corrected §1 and corrected citations, not a second attempt at
+the document.
+
+#### What it may not do
+
+- **No recommendations**, and no *should* directing a port.
+- **No audit of ztk**, and no new ztk material beyond re-verifying what 001
+  already cites. This is not `ztk-audit-002.md`.
+- **It writes no code in any language.** `3tk/` is untouched and `src/*.zig` at
+  the repository root is read and never written.
+- **No edit to `../common/`.**
+- It runs no `git` command.
+
+#### Output
+
+`3tk-port-findings-002.md`, `3tk-port-findings-001.md` in `backup/`, a row in
+[3tk-log.md](3tk-log.md), an updated [3tk-status.md](3tk-status.md).
+
+#### Verification
+
+1. **The `struct Inner` block in §1 matches `inner.c3` character for
+   character**, pasted rather than typed.
+2. **Every `file:line` in the document was printed and read** — both sides,
+   3tk's and ztk's. One unverified citation is a finding.
+3. **The word *should* does not appear directing any port**, and no section is
+   ordered by urgency, severity or cost. One grep and one read. **001 contained
+   the word nowhere at all**; 002 states its own count.
+4. **Every ruled decision the document describes is quoted from its ruling.**
+5. **`3tk/` untouched and `src/` at the repository root untouched.**
+   `run-builds.sh` green, 63 checks, 87 tests, count stated — a formality, run
+   rather than assumed.
+6. **The document is still readable by someone who has read only 004.**
+
+*Advice on clear: clear before starting. Its inputs are one document and two
+codebases.*
+
+### 3TK-23 — retire what is no longer read
+
+Added in plan version 013, 2026-08-25, on the owner's instruction of the same
+day.
+
+**Declared, not authorized. Bookkeeping, not design.** It rules nothing.
+
+**It does not depend on 3TK-21 or 3TK-22** and may run before, between or after
+them, with one exception named below.
+
+**Start after clear** — type this, nothing else:
+
+```
+Run 3TK-23 from design/secondary/lang/c3/3tk-status.md
+```
+
+#### Why it exists
+
+**The folder's rule is that the live folder is what is current and `backup/` is
+the record.** Twenty-one documents sit in the live folder and four of them are
+finished inputs that no stage will read again. A reader who opens the folder
+cold cannot tell which four, and two of them argue for designs that were
+carried out and superseded — the worst kind of stale, because they read as
+current proposals.
+
+**Nothing is ever deleted.** Retiring means moving to `backup/` and repointing
+every link that named the file, in both directions. That is the whole of the
+work, and the links are the part that is easy to get wrong.
+
+#### The four, proposed with the sentence that retires each
+
+**The status file already says three of these are spent; the stage quotes it
+rather than judging.**
+
+| File | Why it is finished | Who links it |
+|---|---|---|
+| `3tk-naming-001.md` | Owner's input to 3TK-10. The status file: *carried out by 3TK-10 and 3TK-11 and are history now* | the redesign proposal, the status, the log, this plan |
+| `3tk-to-fifo-lifo-single-001.md` | Same sentence, same stages. Its §9 and §17 set the required-operation audit that §1.1 then ran | the redesign proposal, the status, the log, this plan |
+| `3tk-helper-alternatives.md` | Owner's first input to 3TK-14. *Advice, not a ruling*, and it withdraws its own favourite proposal near the end. 3TK-14 measured both its shapes and the compiler refused both | the helper proposal, the status, the log, this plan |
+| `3tk-any-revision.md` | The owner's document behind the `any` ruling of 2026-08-24, consumed by `3tk-any-options-001.md` | the any ruling, the status, this plan |
+
+#### What stays, and the reasons are not the same
+
+- **`3tk-who-supports-slot.md` stays.** The status file says it is **open and
+  ruled on by nothing.** An open question is not a finished input.
+- **`3tk-any-options-001.md` stays, and this is the exception to the ordering
+  above.** 3TK-21 reverses part of what it ruled. **If 3TK-21 has not run, this
+  stage leaves it alone; if it has, whether it is retired is the owner's call and
+  not this stage's**, because a ruling that was reversed is exactly the kind of
+  document a later reader needs to find.
+- **Every proposal, audit, notes and capability document stays.** They are cited
+  as current inputs by the plan, the status, or `3tk-port-findings`.
+
+#### What it does
+
+1. **Moves the four to `backup/`.**
+2. **Repoints every link that named them**, in the live documents and in the
+   moved documents' own text where it points back at the folder. **Provenance
+   keeps the name; only the target moves** — the folder's rule, and the one the
+   plan cuts already follow.
+3. **Reports the count** and quotes, for each file, the sentence that retired it.
+
+#### What it may not do
+
+- **It deletes nothing**, and it deletes nothing in `backup/` either.
+- **It retires nothing not in the table above.** A file the stage thinks is also
+  finished is **named in the report and left where it is** — deciding a document
+  is spent is the owner's call, and 3TK-19's precedent is that a stage which
+  finds itself deciding reports instead.
+- **It edits no document's content** beyond the link targets. A retired
+  document is moved, not annotated.
+- **No code, no `3tk/`, no `../common/`, no `git`.**
+
+#### Output
+
+Four files in `backup/`, every link repointed, a row in
+[3tk-log.md](3tk-log.md), an updated [3tk-status.md](3tk-status.md) whose
+document list reflects the move.
+
+#### Verification
+
+1. **`grep` for each of the four names across the live folder — every hit
+   resolves**, and the stage runs the resolve check rather than eyeballing it.
+   The plan cuts of 011, 012 and 013 all did this and it is one loop.
+2. **Nothing in `backup/` was overwritten.** The four names do not already exist
+   there.
+3. **`3tk-who-supports-slot.md` is still in the live folder**, and the report
+   says so in one line.
+4. **`3tk/` untouched.** `run-builds.sh` green, 63 checks, 87 tests, count
+   stated — a formality, run rather than assumed.
+
+*Advice on clear: clear before starting. Its input is the table above and the
+folder.*
+
+*A known imperfection, recorded rather than fixed here: the superseded plans in
+`backup/` carry relative links written for the live folder — `](3tk-status.md)`
+— which do not resolve from inside `backup/`. 009, 010 and 011 all do it, so it
+is the folder's practice and not any one cut's slip. **This stage does not fix
+it and does not make it worse**: the four files it moves get the same treatment
+every earlier retirement got. Whether retired documents owe their reader working
+links is a rule, and it is the owner's.*
+
 ## Versioning of the files in this folder
 
 Part 0 of `rules-049.md` forbids overwriting a doc. `design/` exempts two stable
@@ -1551,7 +2713,10 @@ Edited in place, no suffix. Entry points, not documents:
 
 Versioned, suffix required. Every change makes a new file:
 
-- this plan — `3tk-staging-plan-NNN.md`, currently 007
+- this plan — `3tk-staging-plan-NNN.md`, currently **013**. *(008 and 007 both
+  carried this line reading `currently 007`. It was stale in both; corrected in
+  009 and kept current in every version since — the line is worth one edit per
+  version.)*
 - `ztk-audit-NNN.md`
 - `matryoshka-specification-NNN.md`
 - `3tk-drafts-review-NNN.md`
@@ -1559,6 +2724,13 @@ Versioned, suffix required. Every change makes a new file:
 - `3tk-porting-proposal-NNN.md`
 - `3tk-core-redesign-proposal-NNN.md`
 - `3tk-deviations-NNN.md`
+- **`3tk-port-findings-NNN.md`** — currently **001**, the 3TK-20 output. **Added
+  to this list in 012 and it is the whole of that version.** It is versioned for
+  the same reason the audit and the specification are: it is read by ports other
+  than this one, and a document another line cites may not change under the
+  citation. It is a **3tk** document and stays in this folder — one port's
+  record of what it decided, read by others, not a shared normative input, which
+  is what `../common/` is for.
 
 A superseded version stays on disk. It is listed in the Superseded section of
 [3tk-status.md](3tk-status.md), naming what replaced it, and every reference to
@@ -1583,6 +2755,21 @@ input, and renaming them is a `git mv`, which is owner-only.
   confirm the additions under `secondary/` changed nothing. Expected exit 0 —
   and it exits 1, for a cause that predates this line of work. The status file's
   open questions carry it. Not a regression, and no stage of this plan fixes it.
+- **3TK-18, 3TK-19 and 3TK-20 write no file under `../common/`**, and 3TK-18
+  wrote no new document at all — the ruling it built was already written. All
+  three still end with `3tk/run-builds.sh` green and the check count stated.
+- **3TK-20 writes no code in any language.** It does not touch `3tk/`, and it
+  does not touch `src/` at the repository root, which is the ztk Zig source.
+  Its build run is therefore a formality, and it is run rather than assumed.
+- **3TK-21 writes C3 under `3tk/`** and ends with four builds green at 63 checks
+  and 87 tests, **and with `run-sanitizers.sh` thread and address clean at 87** —
+  the one stage since 3TK-9 for which the sanitizer run is not a formality,
+  because it moves what sits at which offset inside every item.
+- **3TK-22 and 3TK-23 write no code in any language**, do not touch `3tk/`, and
+  do not touch `src/` at the repository root. Their build runs are formalities
+  and are run rather than assumed.
+- **3TK-21, 3TK-22 and 3TK-23 write no file under `../common/`.** 004 stands as
+  cut, and Part 4.2/V1 already leaves the field count to the realization.
 - Each stage ends with its file written under `c3/`, a row appended to
   [3tk-log.md](3tk-log.md), [3tk-status.md](3tk-status.md)  
   updated, a report to the owner, and the clear-or-not advice.

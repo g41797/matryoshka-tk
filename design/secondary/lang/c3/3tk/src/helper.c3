@@ -48,10 +48,18 @@
  rather than buried**: a type that is declared but never crossed with is never
  validated, because there is no instantiation to force Part 7.4's check.
 
- Part 7.1 as `matryoshka-specification-003.md` words it asks for a helper
- object bound to one type. This port has none, and that sentence is a
- SPECIFICATION defect, not a port defect — E6, and `3tk-deviations-001.md`
- V19. 3TK-17 rewords it. Do not "fix" this file to match it.
+ Part 7.1 as `matryoshka-specification-004.md` words it asks for the members
+ of Part 7.2, specialized to one type and generated from the type rather than
+ hand-written. **This file is that, and there is nothing left to reconcile.**
+ 004 names the two realizations in its own text — ztk's per-type structure, and
+ this port's macros over a type parameter with no per-type object at all.
+
+ It reads that way because 003 did not. 003 asked for *a helper bound to that
+ one type*, which is ztk's mechanism written up as the rule, and this file was
+ a SPECIFICATION defect against it rather than a port defect — E6, and
+ `3tk-deviations-001.md` V19. **3TK-17 cut 004 for that one Part and the
+ conflict is gone.** The history is kept because a reader who meets this file
+ next to 003 should know which way the correction ran.
 *>
 module mtk::helper;
 import mtk;
@@ -65,14 +73,21 @@ import mtk;
 
  @param $Type : "the outer type"
 *>
-macro bool is_mine(Handle h, $Type) => h != null && h.type == $Type::typeid;
+macro bool is_mine(Handle h, $Type) => h != null && h.link.type == $Type::typeid;
 
 <*
  Part 7.2's initializer. Writes the identity into the inner. Part 5.4: the
  identity is stored, not computed.
 
- The link is cleared as well — one field now, not two — so a freshly
- initialized item passes the exact link test of Part 8.7 and can be inserted.
+ The link is cleared in the same write, so a freshly initialized item passes
+ the exact link test of Part 8.7 and can be inserted.
+
+ **One write, because the inner is one `any`.** `link.ptr` is the chain link
+ and `link.type` is the identity, and `any_make` is how a whole `any` is built
+ — its halves cannot be assigned. **This is the ONE `any_make` in the port
+ whose second argument is not an existing `link.type`**: everywhere else the
+ identity is carried through unchanged by `Inner.repoint_to`. That is the whole
+ of Part 5.4's *written once* claim, and it is one grep.
 
  Every creation site calls this, including the ones that do not allocate.
  Part 5.5. It stays a separate call and is not folded into construction — H8.
@@ -85,8 +100,7 @@ macro bool is_mine(Handle h, $Type) => h != null && h.type == $Type::typeid;
 macro void init(item)
 {
     Inner* n = (Inner*)((char*)item + mtk::inner_offset($Typeof(*item)));
-    n.link = null;
-    n.type = $Typeof(*item)::typeid;
+    n.link = any_make(null, $Typeof(*item)::typeid);
 }
 
 <*

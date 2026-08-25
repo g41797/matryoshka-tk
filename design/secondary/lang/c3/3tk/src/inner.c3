@@ -18,21 +18,31 @@ import std::core::env;
 <*
  The inner. Part 4.2: exactly two parts, the linkage and the identity.
 
+ **One field, and it is a built-in pair.** C3's `any` is a `void*` and a
+ `typeid`, which is exactly the pair Part 4.2 asks an inner to carry:
+
+   `link.ptr`  is the linkage — R6b's chain link, below.
+   `link.type` is the identity — Part 5, stored and never computed.
+
+ **The two meanings did not move; only where they are stored moved.** The port
+ carried them as two named fields until 2026-08-25 — `Inner* link` and
+ `typeid type`, in the other order. Nothing about R6b, Part 5, Part 8.7 or the
+ public surface changed with them. **It is not a size change either**: 16 bytes
+ before, 16 bytes after, because R6b had already won those eight when it
+ deleted `prev`. An observation; no code may depend on it.
+
  **One link, not two — R5.** `prev` is gone. Nothing in this port ever needed
  arbitrary removal, arbitrary insertion, backward traversal or a take from the
  back, and the audit that proved it is §1.1 of the redesign proposal.
 
- A third field is added only with a reason written down, because every item in
+ A second field is added only with a reason written down, because every item in
  the program pays for it. D3 refused an allocator here, and R6 refused a
  membership field.
 
- 16 bytes on a 64-bit target, down from 24. An observation; no code may depend
- on it.
-
  **The self-link invariant — R6b, and the redesign turns on it:**
 
-   An item on a chain has a non-null `link`; the last item of a chain points at
-   itself. An item on no chain has `link == null`.
+   An item on a chain has a non-null link; the last item of a chain points at
+   itself. An item on no chain has `link.ptr == null`.
 
  Every insert and every removal in `queue.c3` and `stack.c3` maintains it, and
  `is_linked` below reads it. It is what makes the link test EXACT, and an exact
@@ -43,9 +53,9 @@ import std::core::env;
  16 and says so, and 16b is this. V12.
 
  The price, stated plainly: the link carries two meanings — *the next item*
- and *this item is the end* — and a walk that forgets to test `n.link == n`
- loops forever rather than ending. Four sites carry it, and each states the end
- test in its own body.
+ and *this item is the end* — and a walk that forgets to test
+ `n.points_to() == n` loops forever rather than ending. Four sites carry it,
+ and each states the end test in its own body.
 
  **That price is why the field is named `link` and not `next`.** The name does
  not remove the second meaning; nothing can, that is R6b's bargain. It stops the
@@ -53,13 +63,74 @@ import std::core::env;
  claim, and `link` is true there, on an unlinked item, and everywhere between.
  `link` is also the word the specification uses: Part 4.2 names the two parts
  *Linkage* and *Identity*, and 004's *3tk* realization line reads *one link
- field plus the identity*.
+ field plus the identity* — still literally true, one link and one identity,
+ nested now rather than adjacent.
+
+ **Part 5.5's uninitialized inner still refuses to be claimed.** A zeroed
+ `Inner` is a zeroed `any`: measured 2026-08-25, its typeid matches no type,
+ not even `void`, and is falsy — which is `any.as_inner`'s own contract,
+ `@require (bool)self.type`. `helper::is_mine` reads that and refuses an item
+ whose `init` was never called, exactly as it did with a bare `typeid` field.
 *>
 struct Inner
 {
-    Inner* link;
-    typeid type;
+    any link;
 }
+
+// --- Writing and reading the link -------------------------------------------
+//
+// **`any`'s halves are read-only.** They are read by name — `link.ptr`,
+// `link.type` — and a whole `any` is built by `any_make`; the stdlib never
+// assigns a half anywhere, it rebuilds the value. So every link write is a
+// rebuild that has to carry the identity through by hand, and a site that
+// hands over the WRONG identity compiles, runs, and passes every test while
+// silently destroying an item's type. The identity is written once at
+// initialization and read at every crossing, so that damage would surface
+// later and elsewhere, as a wrong-type refusal on an item that was never
+// wrong.
+//
+// These two methods are why no other site in this port spells the rebuild
+// out. There are nine link writes and every one of them goes through
+// `repoint_to` except `helper::init`, which is the one place the identity is
+// supposed to change.
+//
+// **Methods on `Inner`, not an extension of `any` — the owner's ruling,
+// 2026-08-25.** `macro any.repoint_to(...)` is more faithful to the stdlib's
+// family, and it would add a method to a BUILTIN type visible to every module
+// that imports `mtk`. That is a wider surface than this change is allowed to
+// have.
+//
+// **Neither is `@private`, and the language decided that, not this port.**
+// C3 ignores `@private` on a method declaration and warns that it does —
+// measured 2026-08-25, before the sweep. So they sit on the public surface
+// beside `mtk::helper`'s `Inner.to` and `Inner.as`, and what keeps them honest
+// is the same thing that keeps the fields honest: D1 chose public structs with
+// public fields, and Part 17.2's layering rule plus `run-builds.sh`'s grep is
+// what holds a container to the InnerQueue/InnerStack surface.
+
+<*
+ Keep the identity, swap the chain link. R6b's write, in one place.
+
+ It is the fourth corner of the stdlib's own table: `any_make` replaces both
+ halves, `any.retype_to` keeps the pointer and swaps the type, `any.as_inner`
+ keeps the pointer and derives the type — and this keeps the TYPE and swaps
+ the pointer, which the stdlib does not offer. The name is `retype_to` read
+ the other way round, so a C3 reader already knows which is which. It is the
+ argument `helper.c3` makes for `to` and `as`, and the one 3TK-18 ruled on.
+
+ @param to : "the handle this item now links to; itself, if it is the end"
+*>
+fn void Inner.repoint_to(&self, Handle to) @inline
+    => self.link = any_make(to, self.link.type);
+
+<*
+ The chain link this item points at. Null if it is on no chain.
+
+ The reader half, and it is what lets the four walk sites say what the design
+ has always said in prose: `n.points_to() == n` is *the last item of a chain
+ points at itself*, word for word.
+*>
+fn Handle Inner.points_to(&self) @inline => (Handle)self.link.ptr;
 
 <*
  A handle. Transparent, by D4: there is one handle type and no typed variants.
@@ -171,9 +242,9 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
  field, or the O(n) walk. R6b paid the first. V5.
 
  On a chain, the link is never null: the last item points at itself. Off a
- chain, the link is always null. So `h.link != null` answers *is this item on
- some chain* with no false negative and no false positive, in O(1), through the
- public surface.
+ chain, the link is always null. So `h.points_to() != null` answers *is this
+ item on some chain* with no false negative and no false positive, in O(1),
+ through the public surface.
 
  The blind spot 002's Part 8.7 made a MUST to document — an item ALONE on a
  list reporting false — is closed, and it cost no field. **003 does not
@@ -187,7 +258,7 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
  code that reached around the container surface. It is exact for every path
  through the public surface.
 *>
-fn bool is_linked(Handle h) @inline => h != null && h.link != null;
+fn bool is_linked(Handle h) @inline => h != null && h.points_to() != null;
 
 <*
  The repair. Part 8.8.
@@ -196,12 +267,17 @@ fn bool is_linked(Handle h) @inline => h != null && h.link != null;
  be inserted again. Every removal in `queue.c3` and `stack.c3` calls this for
  the caller.
 
- One field to clear now, not two. The wording of Part 8.8 is unchanged.
+ One link to clear now, not two. The wording of Part 8.8 is unchanged.
+
+ It clears the LINK and not the identity: `repoint_to(null)` keeps the type, so
+ an item that has left a container is still the type it always was and can be
+ handed back to `Pool.put` or inserted again. Part 5.4's identity is written
+ once, by `helper::init`, and nothing here rewrites it.
 *>
 fn void reset(Handle h) @inline
 {
     if (!h) return;
-    h.link = null;
+    h.repoint_to(null);
 }
 
 // --- The Slot's reading shape -----------------------------------------------

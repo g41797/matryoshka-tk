@@ -360,7 +360,7 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
     self._hooks.on_get(want, in_pool, slot);
 
     if (slot.is_empty()) return mtk::NOT_CREATED~;
-    mtk::@check(slot.peek().type == want, "Part 12.2: the get hook returned an item of a different identity");
+    mtk::@check(slot.peek().link.type == want, "Part 12.2: the get hook returned an item of a different identity");
 }
 
 <*
@@ -470,7 +470,7 @@ fn void Pool.put(&self, Slot* slot)
     if (self._closed) { self._mu.unlock(); return; }
 
     Handle h = slot.peek();
-    PoolBucket* b = self.bucket_for(h.type);
+    PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "Pool.put of an identity the pool was not created with");
     if (!b) { self._mu.unlock(); return; }
 
@@ -557,7 +557,7 @@ fn void Pool.take_back(&self, Slot* s) @private
 
 fn void Pool.take_back_handle(&self, Handle h) @private
 {
-    PoolBucket* b = self.bucket_for(h.type);
+    PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
     if (!b) return;
     b.free.push(h);
