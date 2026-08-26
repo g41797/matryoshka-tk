@@ -1,20 +1,15 @@
-<*
- The intrusive queue. First-in first-out.
-
- Nothing here allocates. The item is the node, and every operation is O(1).
- This is the port's transfer container: what crosses the public surface is
- always an `InnerQueue`.
- Every chain ends at an item pointing at itself, never at null.
- Nothing here can fail. A take from an empty queue returns null.
-*>
-// [3tk: R2, R6b, R13, V2, Part 8, Part 8.1, Part 8.5, Part 8.10, Part 19.4]
 module mtk;
 
 <*
- The queue header.
+ The intrusive queue. First-in first-out.
 
- The count is kept, so `len()` is O(1).
+ The transfer container.
+ Nothing here allocates, and every operation is O(1).
+ Every chain ends at an item pointing at itself, never at null.
+ Nothing in the queue can fail.
+ The count is kept, so `len` is O(1).
 *>
+// [3tk: R2, R6b, R13, V2, Part 8, Part 8.1, Part 8.5, Part 8.10, Part 19.4]
 // [3tk: Part 8.1, Part 11.7]
 struct InnerQueue
 {
@@ -24,10 +19,9 @@ struct InnerQueue
 }
 
 <*
- A walker over the queue.
+ A walker over a queue.
 
- Taken from the queue, and yields handles one at a time.
- Exhausted when it returns null.
+ Exhausted when `next` returns null.
  Removing the current item during a walk is not supported.
 *>
 // [3tk: V18, Part 6.5, Part 8.4]
@@ -41,8 +35,9 @@ struct InnerQueueIterator
 <*
  The insert guard.
 
- Refuses a null handle, and an item already on any chain.
- Tier 2, so it is gone from a fast build.
+ A null handle is a defect.
+ An item already on any chain is a defect.
+ Both are gone from a fast build.
 *>
 // [3tk: R6b, V4, Part 8.6]
 macro InnerQueue.@guard_insert(&self, Handle h)
@@ -67,7 +62,7 @@ fn bool InnerQueue.is_empty(&self) @inline => self.count == 0;
 fn usz InnerQueue.len(&self) @inline => self.count;
 
 <*
- A walker over the queue, taken from it.
+ A walker, taken from the queue.
 *>
 // [3tk: Part 8.4]
 fn InnerQueueIterator InnerQueue.iter(&self) @inline => { .cur = self.head };
@@ -86,7 +81,7 @@ fn Handle InnerQueueIterator.next(&self)
 // --- Adding --------------------------------------------------------------------
 
 <*
- Adds the item at the back.
+ Adds at the back.
 
  There is no front insert.
 *>
@@ -147,7 +142,7 @@ fn Handle InnerQueue.pop_front(&self)
  Moves every item of another queue onto the back of this one. O(1).
 
  That queue is empty afterwards.
- A queue cannot be moved onto itself.
+ A queue moved onto itself is a defect.
 
  @param other : "the queue to empty onto this one; empty afterwards"
 *>

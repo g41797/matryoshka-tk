@@ -464,7 +464,8 @@ makes `is_linked` exact.
 
 ### The API — the queue
 
-First-in first-out. Nothing here allocates, and every operation is O(1).
+The intrusive queue. First-in first-out. Nothing here allocates, and every
+operation is O(1).
 
 ```c3
 fn bool   InnerQueue.is_empty(&self)
@@ -477,7 +478,9 @@ fn InnerQueueIterator InnerQueue.iter(&self)
 fn Handle InnerQueueIterator.next(&self)
 ```
 
-- `is_empty` / `len` — the count is kept, so `len` is O(1).
+- `is_empty` — true if the queue holds nothing.
+- `len` — how many items the queue holds. O(1).
+  - The count is kept, so `len` is O(1).
 - `push_back` — adds at the back. There is no front insert.
 - `push_back_slot` — the same, taking the item from a Slot.
   - The Slot is empty afterwards.
@@ -490,6 +493,7 @@ fn Handle InnerQueueIterator.next(&self)
   - That queue is empty afterwards.
   - A queue moved onto itself is a defect.
 - `iter` / `next` — a walker, taken from the queue.
+  - `next` — the next handle, or null when the walk is exhausted.
   - Exhausted when `next` returns null.
   - Removing the current item during a walk is not supported.
 
@@ -506,7 +510,8 @@ Nothing in the queue can fail.
 
 ### The API — the stack
 
-Last-in first-out. Four operations: no walker, and no splice.
+The intrusive stack. Last-in first-out. Four operations: no walker, and no
+splice.
 
 ```c3
 fn bool   InnerStack.is_empty(&self)
@@ -515,12 +520,18 @@ fn void   InnerStack.push(&self, Handle h)
 fn Handle InnerStack.pop(&self)
 ```
 
+- `is_empty` — true if the stack holds nothing.
+- `len` — how many items the stack holds. O(1).
+  - The count is kept, so `len` is O(1).
+  - There is no tail, so flattening the stack is O(n).
 - `push` — adds on top. There is no Slot-shaped insert.
 - `pop` — takes the item on top.
   - Null on an empty stack.
   - The returned item's chain link is cleared.
 
 The order is not promised. No caller is entitled to which item comes back.
+
+Nothing in the stack can fail.
 
 The stack is the pool's private storage. It does not cross the pool's public
 surface.
@@ -1008,6 +1019,7 @@ fn usz  Pool.count_of(&self, typeid t)
   - Everything the pool held goes to `on_close`, as one flat queue.
   - Callable more than once. The second call takes nothing and does not run the
     hook again.
+  - The hook is called once, outside the mutex, after the closed flag is set.
 - `is_closed` — true when it is closed.
 - `count_of` — how many of one identity are free.
   - A hint. It is stale by the time you read it.
@@ -1079,7 +1091,8 @@ fn void on_close(InnerQueue* remaining);
 | `TIMEOUT` | `get_wait` waited the whole timeout |
 | `UNKNOWN_IDENTITY` | the identity is not one the pool was created with |
 
-`UNKNOWN_IDENTITY` is the one that is also a defect.
+`UNKNOWN_IDENTITY` is the one that is also a defect. It comes only from `Pool.get` and
+`Pool.get_wait`.
 
 ### Where to go deeper
 
@@ -1260,8 +1273,8 @@ Where the items go.
 
 One macro on each tool is visible but not for you.
 
-- `Mailbox.@closed_fast` and `Pool.@closed_fast` read the closed flag before
-  taking the lock.
+- `Mailbox.@closed_fast` and `Pool.@closed_fast` are the two. Each reads the
+  closed flag before taking the lock.
 - They are a hint. Every caller that gets false re-reads the flag under the
   lock.
 - Call `is_closed` instead.
@@ -1300,7 +1313,7 @@ One import gives the toolkit.
 import mtk;
 ```
 
-`module mtk` is declared by three files, and the rest are submodules of it.
+`module mtk` is declared by four files, and the rest are submodules of it.
 
 | module | what is in it |
 |---|---|

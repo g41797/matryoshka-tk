@@ -1,11 +1,8 @@
 <*
- The managing helper: `mtk::helper`, plus a create and a release.
+ One helper allocates and frees, and only if your struct carries the allocator itself.
 
- An item created here keeps the allocator it was created with, so its release
- takes none.
- The outer must carry an `Allocator` field; a type without one fails to compile.
- An item that does not want to pay for that field takes `mtk::helper` instead.
- No type declares itself managed. The choice is made at the call site.
+ No type declares itself managed.
+ The choice is made at the call site.
 *>
 // [3tk: D3, D10, E7, H0b, H10, Part 4.2, Part 7.2, Part 7.3, Part 7.4, Part 20]
 module mtk::managed;
@@ -14,10 +11,10 @@ import mtk::helper;
 import std::core::mem::alloc;
 
 <*
- Allocates an outer with the given allocator, initializes it, and fills the Slot.
+ Allocates the outer, initializes it, and fills the Slot.
 
- The item keeps the allocator; its release takes none.
- On an allocation failure the Slot is left untouched and the fault is returned.
+ The item keeps the allocator for life.
+ On an allocation failure the Slot is untouched and the fault is returned.
 
  @param $Type : "the outer type, which must carry an Allocator field"
  @param a : "the allocator the item keeps for life"
@@ -37,8 +34,8 @@ macro void? create($Type, Allocator a, Slot* slot)
 <*
  Frees the item with the allocator it kept.
 
- No release call takes an allocator as a parameter.
- A no-op on an empty Slot, so a defer registered before the acquisition is safe.
+ It takes no allocator.
+ A no-op on an empty Slot, so a `defer` registered before the acquisition is safe.
  The Slot is empty afterwards.
 
  @param $Type : "the outer type, which must carry an Allocator field"
@@ -55,10 +52,10 @@ macro void release($Type, Slot* slot)
 }
 
 <*
- The offset of the outer's `Allocator` field.
+ Finds the `Allocator` field at compile time.
 
- A type with no `Allocator` field fails to compile, and is told to take
- `mtk::helper` instead.
+ A type with no `Allocator` field does not compile.
+ The message tells you to take the plain helper instead.
 
  @param $Type : "the outer type"
 *>

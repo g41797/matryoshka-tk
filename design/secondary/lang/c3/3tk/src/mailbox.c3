@@ -1,9 +1,10 @@
 <*
  The mailbox. A queue of items, with waiting.
 
- Many producers, many consumers, on one object.
+ Many producers, many consumers, on one mailbox.
+ The mailbox keeps items. It never touches them.
  A mailbox is itself an item: it can travel through another mailbox.
- It uses only the public surface of the core, and `run-builds.sh` tests that.
+ The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
  The fields named with a leading underscore are internal. Do not read them.
 *>
 // [3tk: D1, F2, Part 11.1, Part 11.3, Part 11.4, Part 11.5, Part 11.6, Part 17.2, Part 19.1]
@@ -16,10 +17,12 @@ import std::core::mem::alloc;
 import std::atomic::types;
 
 <*
- The mailbox itself.
+ The tool itself.
 
- Two queues, one for out-of-band items and one for ordinary ones.
- The allocator is kept for life.
+ Created on the heap, with an allocator it keeps for life.
+ Inside it are two queues.
+ One for out-of-band items.
+ One for ordinary items.
 *>
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 struct Mailbox
@@ -41,13 +44,13 @@ struct Mailbox
 }
 
 <*
- The identity of a Mailbox as an item.
+ The identity of a `Mailbox` as an item.
 *>
 // [3tk: H0, Part 11.1]
 const typeid TYPE = Mailbox::typeid;
 
 <*
- From a Mailbox to a handle. Cannot fail.
+ From a `Mailbox*` to a `Handle`. Cannot fail.
 *>
 macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle(p);
 
@@ -57,11 +60,11 @@ macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle(p);
 macro Mailbox* of(Handle h) => mtk::helper::from_handle(h, Mailbox);
 
 <*
- Create a mailbox on the heap.
+ Allocates a mailbox and returns it.
 
- The allocator is kept for life, and `release` takes none.
- Nothing partially constructed is ever returned: every step undoes what
- succeeded before it.
+ The allocator is kept for life.
+ Nothing partially constructed is ever returned.
+ Every step undoes what succeeded before it.
 
  @param a : "the allocator the mailbox keeps for life"
 *>
@@ -83,11 +86,11 @@ fn Mailbox*? create(Allocator a)
 }
 
 <*
- Frees the mailbox.
+ Frees the mailbox, with the allocator it kept.
 
- Close it first. Releasing an open mailbox aborts in every build mode,
- including `--safe=no`.
- Takes no allocator.
+ Close it first. Releasing an open mailbox aborts in every build mode.
+ It takes no allocator.
+ The mailbox must be closed.
 *>
 // [3tk: D6, Part 11.12, Part 13.1]
 fn void Mailbox.release(&self)
@@ -101,29 +104,24 @@ fn void Mailbox.release(&self)
 }
 
 <*
- The pre-lock read of the closed flag.
+ Reads the closed flag before taking the lock.
 
- A hint only. Every caller that gets `false` re-reads `_closed` under the lock.
+ A hint. Every caller that gets false re-reads the flag under the lock.
+ Call `is_closed` instead.
 *>
 // [3tk: D16, Part 15.4]
 macro bool Mailbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
-<*
- Puts an item on the queue its class belongs to.
-
- O(1) in every build mode.
-*>
+// Puts the item on the ordinary queue, or ahead of every ordinary item.
+// O(1) in every build mode. Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R7, Part 11.3]
 fn void Mailbox.enqueue(&self, Handle h, bool oob) @private
 {
     if (oob) { self._oob.push_back(h); } else { self._regular.push_back(h); }
 }
 
-<*
- Takes the next item.
-
- Out-of-band first, then ordinary, first-in first-out within each.
-*>
+// Takes the next item.
+// Out-of-band first, then ordinary, first-in first-out within each.
 // [3tk: R7, R9, Part 11.3]
 fn Handle Mailbox.dequeue(&self) @private
 {
@@ -131,17 +129,16 @@ fn Handle Mailbox.dequeue(&self) @private
     return h ? h : self._regular.pop_front();
 }
 
-<*
- True if anything is queued at all. Reads both queues.
-*>
+// True if anything is queued at all. Reads both queues.
 fn bool Mailbox.has_queued(&self) @private @inline
     => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
- Sends an item.
+ Puts the item on the ordinary queue.
 
- The Slot is the answer: cleared on success, untouched on `CLOSED`, and the
- sender still has the item.
+ The Slot is the answer. Cleared on success.
+ Untouched on `CLOSED`, and the sender still has the item.
+ An empty Slot is a defect.
 
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
  @return? mtk::CLOSED
@@ -181,7 +178,7 @@ fn void? Mailbox.send_at(&self, Slot* slot, bool oob) @private
 <*
  Takes an item if one is queued. Never waits.
 
- Reports `EMPTY` where `receive()` with a zero timeout would report `TIMEOUT`.
+ Reports `EMPTY` where `receive` with a zero timeout would report `TIMEOUT`.
 
  @param slot : "an empty Slot; filled on success"
  @return? mtk::CLOSED, mtk::EMPTY
@@ -207,8 +204,8 @@ fn void? Mailbox.poll(&self, Slot* slot)
 <*
  Takes an item, waiting up to the timeout.
 
- Reports `CLOSED`, `TIMEOUT` or `WOKEN` when it takes nothing.
- The deadline is anchored once: a spurious wakeup does not restart it.
+ Every other outcome is a fault, and the Slot stays empty.
+ The deadline is anchored once. A spurious wakeup does not restart it.
  There is no interruption. C3 has no interruptible condition wait.
 
  @param slot : "an empty Slot; filled on success"
@@ -257,10 +254,10 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
 }
 
 <*
- Moves every queued item onto the caller's queue.
+ Moves every queued item onto your queue.
 
- Releasing the items is the caller's work.
- The queue is in the order `receive()` would have taken them out.
+ The queue is in the order `receive` would have taken them out.
+ Releasing the items is your work.
 
  @param out : "an empty queue; every queued item is moved onto it, in receive order"
  @return? mtk::CLOSED
@@ -305,7 +302,7 @@ fn void? Mailbox.wake_all(&self)
  Closes the mailbox and gives back what was left. Cannot fail.
 
  Callable more than once. The second call takes nothing.
- The queue is in the order `receive()` would have taken them out.
+ The queue is in the order `receive` would have taken them out.
  Discarding that queue drops the items, and a later send refuses them.
 
  @param out : "an empty queue; the remainder is moved onto it, in receive order"
@@ -328,14 +325,14 @@ fn void Mailbox.close(&self, InnerQueue* out)
 }
 
 <*
- True if the mailbox is closed.
+ True when it is closed.
 *>
 fn bool Mailbox.is_closed(&self) => self.@closed_fast();
 
 <*
  How many items are queued.
 
- A hint. It is stale by the time the caller reads it.
+ A hint. It is stale by the time you read it.
 *>
 // [3tk: Part 12.4]
 fn usz Mailbox.len(&self)

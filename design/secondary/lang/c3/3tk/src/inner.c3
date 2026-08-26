@@ -1,15 +1,13 @@
-<*
- The inner, the handle, the Slot, the link test, and the port's check macro.
-*>
-// [3tk: D1 to D16, R1 to R15, Part 4, Part 9, Part 10.1]
 module mtk;
 import std::core::env;
 
 <*
- The inner. Exactly two parts, the linkage and the identity.
+ The inner, the handle, the Slot, the link test, and the port's check macro.
 
- `link.ptr` is the chain link; `link.type` is the identity.
+ The field you embed.
+ The chain link and the identity, in one.
 *>
+// [3tk: D1 to D16, R1 to R15, Part 4, Part 9, Part 10.1]
 // [3tk: R5, R6, R6b, D3, V12, Part 4.2, Part 5]
 struct Inner
 {
@@ -19,7 +17,9 @@ struct Inner
 // --- Writing and reading the link -------------------------------------------
 
 <*
- Keep the identity, swap the chain link.
+ Keeps the identity, swaps the chain link.
+
+ The containers call it.
 
  @param to : "the handle this item now links to; itself, if it is the end"
 *>
@@ -28,40 +28,48 @@ fn void Inner.repoint_to(&self, Handle to) @inline
     => self.link = any_make(to, self.link.type);
 
 <*
- The chain link this item points at. Null if it is on no chain.
+ The item this one links to.
+
+ Null if it is on no chain.
 *>
 // [3tk: R6b]
 fn Handle Inner.points_to(&self) @inline => (Handle)self.link.ptr;
 
 <*
- A handle. One handle type, and it converts freely with `Inner*`.
+ A pointer to an embedded `Inner`.
+
+ One item, with the type forgotten.
+ Everything 3tk transports is a `Handle`.
+ It is an alias, so it converts freely with `Inner*` and costs nothing.
 *>
 // [3tk: D4, R1, Part 10.1]
 alias Handle = Inner*;
 
 <*
- The Slot. A container of one handle, or of nothing.
+ A box that holds one handle, or nothing.
 
- Empty means the item is elsewhere. Full means the item is here.
+ Zero or one item.
  A Slot starts empty.
 *>
 // [3tk: D5, Part 9.1, Part 9.2 rule 1, Part 9.2 rule 2]
 typedef Slot = Handle;
 
 <*
- The outcome sets, as C3 faults.
+ The faults are outcomes a correct program reaches.
 
- These are runtime conditions, never defects. A correct program reaches them.
- `UNKNOWN_IDENTITY` comes only from `Pool.get` and `Pool.get_wait`.
+ A 3tk call that can fail returns `void?`.
+ A defect is not a fault.
+ A defect aborts.
+ `UNKNOWN_IDENTITY` is the one that is also a defect.
+ It comes only from `Pool.get` and `Pool.get_wait`.
 *>
 // [3tk: D9, D15, A3, V13, Part 15.5, Part 19]
 faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN, UNKNOWN_IDENTITY;
 
 <*
- A contract check.
+ Aborts in a safe build and names the message.
 
- In a safe build it aborts and names the message.
- Under `--safe=no` it expands to nothing, and the condition is not evaluated.
+ Under `--safe=no` it expands to nothing.
 
  @param #cond : "the condition that must hold"
  @param $msg : "a compile-time message, named at the call site"
@@ -75,7 +83,9 @@ macro @check(#cond, $msg)
 }
 
 <*
- True where the checking tiers are live. Tier 3 guards read this.
+ True where those checks are live.
+
+ Guard an expensive check with it.
 *>
 // [3tk: D6]
 const bool CHECKED = env::COMPILER_SAFE_MODE;
@@ -83,18 +93,19 @@ const bool CHECKED = env::COMPILER_SAFE_MODE;
 // --- The link test, and the repair -------------------------------------------
 
 <*
- True if the handle is on some chain. Exact, and O(1).
+ True when the handle is on some chain.
 
+ Exact, and O(1).
  False for a null handle.
 *>
 // [3tk: R6b, D12, V4, V5, Part 8.6, Part 8.7]
 fn bool is_linked(Handle h) @inline => h != null && h.points_to() != null;
 
 <*
- Clear the chain link, so the item can be inserted again.
+ Clears the chain link so the item can be inserted again.
 
- Every removal in `queue.c3` and `stack.c3` calls it for the caller.
  It clears the link and not the identity.
+ Every removal in the queue and the stack calls it for you.
 *>
 // [3tk: Part 5.4, Part 8.8]
 fn void reset(Handle h) @inline
@@ -106,19 +117,19 @@ fn void reset(Handle h) @inline
 // --- The Slot's reading shape -----------------------------------------------
 
 <*
- True if the Slot holds nothing.
+ Which of the two states it is in.
 *>
 // [3tk: Part 9.1, Part 9.9]
 fn bool Slot.is_empty(&self) @inline => !(Handle)*self;
 
 <*
- True if the Slot holds a handle.
+ Which of the two states it is in.
 *>
 // [3tk: Part 9.1, Part 9.9]
 fn bool Slot.is_full(&self) @inline => (Handle)*self != null;
 
 <*
- Look at the handle without taking it. The Slot is unchanged.
+ Look without taking.
 
  Null on an empty Slot.
 *>
@@ -128,7 +139,7 @@ fn Handle Slot.peek(&self) @inline => (Handle)*self;
 <*
  Take the handle out and clear the Slot.
 
- Null on an empty Slot, and the Slot stays empty.
+ Null on an empty Slot.
 *>
 // [3tk: Part 9.2 rule 5, Part 9.9]
 fn Handle Slot.take(&self) @inline
@@ -139,7 +150,10 @@ fn Handle Slot.take(&self) @inline
 }
 
 <*
- Put a handle in. Never overwrite a full Slot.
+ Put a handle in.
+
+ A null handle is a defect.
+ Overwriting a full Slot is a defect.
 
  @param h : "the handle to place; must not be null"
 *>
@@ -155,9 +169,12 @@ fn void Slot.fill(&self, Handle h) @inline
 // --- Compile-time discovery of the outer's fields ----------------------------
 
 <*
- The offset of the outer's `Inner` field.
+ It reads the offset out of your type at compile time.
 
- A type with no `Inner` field, or with more than one, fails to compile.
+ It walks `$Type::members` and looks for the one of type `Inner`.
+ A type with no `Inner` field does not compile.
+ A type with two `Inner` fields does not compile.
+ The message names your type.
 
  @param $Type : "the outer type"
 *>
@@ -179,9 +196,10 @@ macro usz inner_offset($Type)
 }
 
 <*
- The offset of the outer's `Allocator` field, for the owning helper.
+ Finds the `Allocator` field at compile time.
 
- A type with no `Allocator` field fails to compile.
+ A type with no `Allocator` field does not compile.
+ The message tells you to take the plain helper instead.
 
  @param $Type : "the outer type"
 *>

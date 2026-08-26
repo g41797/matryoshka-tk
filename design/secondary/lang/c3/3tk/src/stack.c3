@@ -1,21 +1,19 @@
-<*
- The intrusive stack. Last-in first-out.
-
- The pool's private storage. It never crosses the public surface.
- Four operations: no walker, and no splice.
- The order is not promised. No caller is entitled to which item comes back.
- Every chain ends at an item pointing at itself, never at null.
- Nothing here can fail. A pop from an empty stack returns null.
-*>
-// [3tk: P6, R2, R11, R13, R14, V2, Part 8, Part 8.1, Part 8.4, Part 11.7, Part 11.10, Part 19.4]
 module mtk;
 
 <*
- The stack header.
+ The intrusive stack. Last-in first-out.
 
- The count is kept, so `len()` is O(1).
+ The pool's private storage.
+ It does not cross the pool's public surface.
+ Four operations: no walker, and no splice.
+ The order is not promised.
+ No caller is entitled to which item comes back.
+ Every chain ends at an item pointing at itself, never at null.
+ Nothing in the stack can fail.
+ The count is kept, so `len` is O(1).
  There is no tail, so flattening the stack is O(n).
 *>
+// [3tk: P6, R2, R11, R13, R14, V2, Part 8, Part 8.1, Part 8.4, Part 11.7, Part 11.10, Part 19.4]
 // [3tk: R12, Part 8.1, Part 12.4]
 struct InnerStack
 {
@@ -26,8 +24,9 @@ struct InnerStack
 <*
  The insert guard.
 
- Refuses a null handle, and an item already on any chain.
- Tier 2, so it is gone from a fast build.
+ A null handle is a defect.
+ An item already on any chain is a defect.
+ Both are gone from a fast build.
 *>
 // [3tk: R6b, Part 8.6]
 macro InnerStack.@guard_insert(&self, Handle h)
@@ -54,7 +53,7 @@ fn usz InnerStack.len(&self) @inline => self.count;
 // --- Adding --------------------------------------------------------------------
 
 <*
- Adds the item on top.
+ Adds on top.
 
  There is no Slot-shaped insert.
 *>
@@ -72,7 +71,7 @@ fn void InnerStack.push(&self, Handle h)
 <*
  Takes the item on top.
 
- Null on an empty stack, which is an answer and not a fault.
+ Null on an empty stack.
  The returned item's chain link is cleared.
 *>
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
