@@ -13,3 +13,22 @@ PCI 9060 Bus Master Interface
 
 Example of creation of module description doc
     /home/g41797/dev/langs/c3/lib/std/core/test.c3
+
+Runs
+
+    For a declaration's descriptor — three modes, judged, one file per round, after a clear:
+
+      Read design/secondary/lang/c3/3tk-status.md.
+      Run doc-loop check on pool.c3.              # reports only, edits nothing
+      Run doc-loop from-reference on pool.c3.     # reference -> the <* *> blocks
+      Run doc-loop to-reference on pool.c3.       # the <* *> blocks -> reference
+
+      check takes no direction — it is one-way by construction, and it is what both directions are verified with.
+
+    For a module description — not judged, so the direction is a script argument instead of a prompt argument:
+
+      set cd to c3
+
+      ./3tk/move-module-docs.sh in  [module ...]
+      ./3tk/move-module-docs.sh out [module ...]
+      ./3tk/move-module-docs.sh roundtrip

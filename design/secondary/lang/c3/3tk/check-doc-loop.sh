@@ -5,7 +5,7 @@
 # The invariant:
 #
 #     Every descriptor line in `3tk/src` appears in
-#     `design/secondary/lang/c3/ref/3tk-reference-001.md`.
+#     `design/secondary/lang/c3/ref/3tk-reference-002.md`.
 #
 # One direction only. The reference is allowed to say more — Usual flow, the
 # diagrams, the whole of Part 6. The source is a subset of it, never the
@@ -13,7 +13,7 @@
 # reference does not.
 #
 # The procedure this script serves is
-# `design/secondary/lang/c3/ref/3tk-doc-loop-001.md`. Read it before acting on
+# `design/secondary/lang/c3/ref/3tk-doc-loop-003.md`. Read it before acting on
 # anything printed here. This script reports. It rules on nothing, and it
 # rewrites nothing.
 #
@@ -26,7 +26,7 @@
 set -u
 
 ROOT=$(cd "$(dirname "$0")" && pwd) || exit 2
-REF=${REF:-$ROOT/../ref/3tk-reference-001.md}
+REF=${REF:-$ROOT/../ref/3tk-reference-002.md}
 RULES=${RULES:-$ROOT/../../../../rules-049.md}
 PY=${PYTHON:-python3}
 
@@ -45,8 +45,8 @@ else
     done
 fi
 
-"$PY" - "$REF" "$ROOT/src" "$RULES" "${FILES[@]}" <<'PYEOF'
-import glob, os, re, sys
+PYTHONPATH=$ROOT "$PY" - "$REF" "$ROOT/src" "$RULES" "${FILES[@]}" <<'PYEOF'
+import difflib, glob, os, re, sys
 
 ref_path, src_dir, rules_path = sys.argv[1], sys.argv[2], sys.argv[3]
 files = sys.argv[4:]
@@ -124,6 +124,46 @@ def match(sentence):
     return None
 
 
+# --- the module-block check ---
+#
+# The second kind of check, and the one 3TK-47 added. A module description is
+# not judged and not matched sentence by sentence: it is a copy of the
+# reference's labelled block, and the check is a `diff`. The transformation is
+# one leading space per line and nothing else. `doc_blocks.py` holds it, and
+# `ref/3tk-doc-loop-003.md` rules on it under *Moving a module description*.
+#
+# The two checks report separately and the exit status covers both.
+
+import doc_blocks as db
+
+print('== module blocks ==')
+REF_BLOCKS = db.ref_blocks(REF_TEXT)
+print('  %d labelled block%s in the reference' % (
+    len(REF_BLOCKS), '' if len(REF_BLOCKS) == 1 else 's'))
+differing = 0
+for path in files:
+    text = open(path).read()
+    got = db.source_block(text)
+    name = got[0] if got else None
+    base = os.path.basename(path)
+    if name is None:
+        print('  %-12s declares no module' % base)
+        continue
+    if name not in REF_BLOCKS:
+        print('  %-12s %-14s NO LABELLED BLOCK in the reference' % (base, name))
+        differing += 1
+        continue
+    want = db.to_source(REF_BLOCKS[name])
+    have = got[3]
+    if have == want:
+        print('  %-12s %-14s same, %d lines' % (base, name, len(have)))
+    else:
+        print('  %-12s %-14s DIFFERS' % (base, name))
+        for d in difflib.unified_diff(want, have, 'reference', base, lineterm=''):
+            print('    %s' % d)
+        differing += 1
+print('  -- %d differing block%s' % (differing, '' if differing == 1 else 's'))
+
 # --- the descriptor check ---
 
 total = found = missing = 0
@@ -191,5 +231,5 @@ for path in files + [ref_path]:
         print('  %s: 0' % name)
 print('  -- %d hits' % hits)
 
-sys.exit(1 if (missing or hits) else 0)
+sys.exit(1 if (missing or hits or differing) else 0)
 PYEOF

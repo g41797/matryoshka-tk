@@ -32,8 +32,8 @@ fn void inner_is_two_parts() @test
 *>
 fn void inner_at_any_offset() @test
 {
-    always_assert(mtk::inner_offset(Msg) != 0, "Msg's inner should not be at offset zero");
-    always_assert(mtk::inner_offset(Job) == 0, "Job's inner should be at offset zero");
+    always_assert(mtk::inner::inner_offset(Msg) != 0, "Msg's inner should not be at offset zero");
+    always_assert(mtk::inner::inner_offset(Job) == 0, "Job's inner should be at offset zero");
 
     Msg m;
     Job j;

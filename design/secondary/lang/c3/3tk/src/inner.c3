@@ -1,5 +1,26 @@
-module mtk;
-import std::core::env;
+<*
+ The inner, the handle, the Slot, and the link.
+
+ `Inner` is the field you embed.
+ The chain link and the identity, in one.
+ The identity sits in the same field as the chain link.
+ The identity says what the outer type is.
+ `Handle` is a pointer to an embedded `Inner`: one item, with the type forgotten.
+ Everything 3tk transports is a `Handle`.
+ It is an alias, so it converts freely with `Inner*` and costs nothing.
+ `Slot` is a box that holds one handle, or nothing.
+ A Slot starts empty.
+
+ The Slot is how the toolkit tells you where an item went.
+ Read the Slot after every call that gives or takes an item.
+
+ The chain link is the other half of `Inner`.
+ `reset` clears the chain link and not the identity.
+ Every chain ends at an item pointing at itself, never at null.
+ That is what makes `is_linked` exact.
+*>
+module mtk::inner;
+import mtk;
 
 <*
  The inner, the handle, the Slot, the link test, and the port's check macro.
@@ -53,42 +74,6 @@ alias Handle = Inner*;
 *>
 // [3tk: D5, Part 9.1, Part 9.2 rule 1, Part 9.2 rule 2]
 typedef Slot = Handle;
-
-<*
- The faults are outcomes a correct program reaches.
-
- A 3tk call that can fail returns `void?`.
- A defect is not a fault.
- A defect aborts.
- `UNKNOWN_IDENTITY` is the one that is also a defect.
- It comes only from `Pool.get` and `Pool.get_wait`.
-*>
-// [3tk: D9, D15, A3, V13, Part 15.5, Part 19]
-faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN, UNKNOWN_IDENTITY;
-
-<*
- Aborts in a safe build and names the message.
-
- Under `--safe=no` it expands to nothing.
-
- @param #cond : "the condition that must hold"
- @param $msg : "a compile-time message, named at the call site"
-*>
-// [3tk: D6, Q11, Part 17.2]
-macro @check(#cond, $msg)
-{
-    $if env::COMPILER_SAFE_MODE:
-        always_assert(#cond, $msg);
-    $endif
-}
-
-<*
- True where those checks are live.
-
- Guard an expensive check with it.
-*>
-// [3tk: D6]
-const bool CHECKED = env::COMPILER_SAFE_MODE;
 
 // --- The link test, and the repair -------------------------------------------
 
@@ -160,9 +145,9 @@ fn Handle Slot.take(&self) @inline
 // [3tk: D6, Part 9.2 rule 1, Part 9.9]
 fn void Slot.fill(&self, Handle h) @inline
 {
-    @check(h != null, "Slot.fill with a null handle");
+    mtk::@check(h != null, "Slot.fill with a null handle");
     // [3tk: Part 9.2 rule 1]
-    @check(self.is_empty(), "never overwrite a full Slot");
+    mtk::@check(self.is_empty(), "never overwrite a full Slot");
     *self = (Slot)h;
 }
 

@@ -1,10 +1,30 @@
-module mtk;
+<*
+ The intrusive stack. Last-in first-out.
+
+ The storage container.
+ Where the queue carries items across, the stack holds them still.
+ The pool keeps one per identity, and it is the only stack 3tk owns.
+ No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
+ A caller who wants a stack declares one.
+ Four operations: no walker, and no splice.
+ The order is not promised.
+ No caller is entitled to which item comes back.
+ Every chain ends at an item pointing at itself, never at null.
+ Nothing in the stack can fail.
+ The count is kept, so `len` is O(1).
+ There is no tail, so flattening the stack is O(n).
+*>
+module mtk::stack;
+import mtk;
+import mtk::inner;
 
 <*
  The intrusive stack. Last-in first-out.
 
- The pool's private storage.
- It does not cross the pool's public surface.
+ The storage container.
+ Where the queue carries items across, the stack holds them still.
+ The pool keeps one per identity, and it is the only stack 3tk owns.
+ No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
  Four operations: no walker, and no splice.
  The order is not promised.
  No caller is entitled to which item comes back.
@@ -31,9 +51,9 @@ struct InnerStack
 // [3tk: R6b, Part 8.6]
 macro InnerStack.@guard_insert(&self, Handle h)
 {
-    @check(h != null, "insert of a null handle");
+    mtk::@check(h != null, "insert of a null handle");
     // [3tk: Part 8.7]
-    @check(!is_linked(h), "the item is already on a chain");
+    mtk::@check(!mtk::inner::is_linked(h), "the item is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -81,6 +101,6 @@ fn Handle InnerStack.pop(&self)
     if (!h) return null;
     self.top = (h.points_to() == h) ? null : h.points_to();
     self.count--;
-    reset(h);
+    mtk::inner::reset(h);
     return h;
 }

@@ -15,7 +15,7 @@ the sentence is wrong and should be fixed rather than footnoted.
   every assert and contract copied from the source with its `file:line`. Read
   it to check that this page is telling the truth. Do not read it to learn the
   toolkit.
-- [3tk-decisions-001.md](3tk-decisions-001.md) — why any of it is the way it
+- [3tk-decisions-002.md](3tk-decisions-002.md) — why any of it is the way it
   is.
 
 ---

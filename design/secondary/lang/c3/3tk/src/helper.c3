@@ -1,11 +1,23 @@
 <*
  Every crossing between a typed pointer and a `Handle` lives in one file.
 
+ `to_handle` goes from your pointer to a `Handle`.
+ Null in, null out.
+ `from_handle` goes from a `Handle` to `$Type*`, and is null on an identity mismatch.
+ A mismatch is an answer, not a failure.
+ `must_from_handle` is the same, and it aborts on a mismatch.
+ The abort names your line.
+ The same three take the item from a Slot, and five of them appear again as methods.
+ `from_slot` looks, and the Slot is unchanged.
+ `move_from_slot` takes, and on success the Slot is left empty.
+ None of these moves an item.
+ Reading an identity and casting a pointer leave every container alone.
  No alias to declare, no instantiation, no registration.
 *>
 // [3tk: D2, H0, Q2, E6, V19, Part 7, Part 7.1, Part 7.2, Part 7.4, Part 7.5, Part 15.5]
 module mtk::helper;
 import mtk;
+import mtk::inner;
 
 <*
  True when the handle names `$Type`.
@@ -30,7 +42,7 @@ macro bool is_mine(Handle h, $Type) => h != null && h.link.type == $Type::typeid
 // [3tk: H8, Part 5.4, Part 5.5, Part 7.2]
 macro void init(item)
 {
-    Inner* n = (Inner*)((char*)item + mtk::inner_offset($Typeof(*item)));
+    Inner* n = (Inner*)((char*)item + mtk::inner::inner_offset($Typeof(*item)));
     n.link = any_make(null, $Typeof(*item)::typeid);
 }
 
@@ -45,7 +57,7 @@ macro void init(item)
 *>
 // [3tk: H5, Part 7.2]
 macro Handle to_handle(item)
-    => item ? (Handle)((char*)item + mtk::inner_offset($Typeof(*item))) : null;
+    => item ? (Handle)((char*)item + mtk::inner::inner_offset($Typeof(*item))) : null;
 
 <*
  From a `Handle` to `$Type*`.
@@ -59,7 +71,7 @@ macro Handle to_handle(item)
 macro from_handle(Handle h, $Type)
 {
     if (!is_mine(h, $Type)) return ($Type*)null;
-    return ($Type*)((char*)h - mtk::inner_offset($Type));
+    return ($Type*)((char*)h - mtk::inner::inner_offset($Type));
 }
 
 <*
@@ -74,7 +86,7 @@ macro from_handle(Handle h, $Type)
  @require is_mine(h, $Type) : "the handle is not of this type"
 *>
 // [3tk: H7, Part 5.5, Part 6.3, Part 15.5]
-macro must_from_handle(Handle h, $Type) => ($Type*)((char*)h - mtk::inner_offset($Type));
+macro must_from_handle(Handle h, $Type) => ($Type*)((char*)h - mtk::inner::inner_offset($Type));
 
 <*
  Same as `from_handle()`, taking the item from a Slot.
@@ -111,7 +123,7 @@ macro move_from_slot(Slot* s, $Type)
     Handle h = s.peek();
     if (!is_mine(h, $Type)) return ($Type*)null;
     s.take();
-    return ($Type*)((char*)h - mtk::inner_offset($Type));
+    return ($Type*)((char*)h - mtk::inner::inner_offset($Type));
 }
 
 <*
@@ -127,7 +139,7 @@ macro Inner.to(&self, $Type) => from_handle((Handle)self, $Type);
  @param $Type : "the outer type asserted"
  @require is_mine((Handle)self, $Type) : "the handle is not of this type"
 *>
-macro Inner.as(&self, $Type) => ($Type*)((char*)self - mtk::inner_offset($Type));
+macro Inner.as(&self, $Type) => ($Type*)((char*)self - mtk::inner::inner_offset($Type));
 
 <*
  Same as `from_slot()`, as a method on the Slot.

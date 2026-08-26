@@ -110,7 +110,7 @@ fn void the_link_test_is_exact() @test
     q.push_back(mtk::helper::to_handle(&m));
 
     always_assert(q.len() == 1, "the queue should hold exactly one item");
-    always_assert(mtk::is_linked(mtk::helper::to_handle(&m)),
+    always_assert(mtk::inner::is_linked(mtk::helper::to_handle(&m)),
         "Part 8.7: an item alone on a queue reports unlinked — the self-link invariant is broken");
 }
 
@@ -128,9 +128,9 @@ fn void the_link_test_sees_another_container() @test
     InnerQueue a;
     for (usz i = 0; i < 2; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
 
-    always_assert(mtk::is_linked(mtk::helper::to_handle(&ms[0])), "the link test missed an item on another queue");
-    always_assert(mtk::is_linked(mtk::helper::to_handle(&ms[1])), "the link test missed the tail of another queue");
-    always_assert(!mtk::is_linked(mtk::helper::to_handle(&ms[2])), "the link test claimed an item on no queue");
+    always_assert(mtk::inner::is_linked(mtk::helper::to_handle(&ms[0])), "the link test missed an item on another queue");
+    always_assert(mtk::inner::is_linked(mtk::helper::to_handle(&ms[1])), "the link test missed the tail of another queue");
+    always_assert(!mtk::inner::is_linked(mtk::helper::to_handle(&ms[2])), "the link test claimed an item on no queue");
 }
 
 <*
@@ -149,9 +149,9 @@ fn void every_removal_repairs() @test
     Handle b = q.pop_front();
     Handle c = q.pop_front();
 
-    always_assert(!mtk::is_linked(a), "pop_front left the head's link set");
-    always_assert(!mtk::is_linked(b), "pop_front left a middle item's link set");
-    always_assert(!mtk::is_linked(c), "pop_front left the last item's self-link set");
+    always_assert(!mtk::inner::is_linked(a), "pop_front left the head's link set");
+    always_assert(!mtk::inner::is_linked(b), "pop_front left a middle item's link set");
+    always_assert(!mtk::inner::is_linked(c), "pop_front left the last item's self-link set");
 
     // and a repaired item can be inserted again, which is the point of the repair
     q.push_back(a);

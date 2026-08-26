@@ -249,7 +249,7 @@ fn void close_gives_the_remainder_back() @test
     {
         Handle h = left.pop_front();
         always_assert(mtk::helper::from_handle(h, Msg).id == (int)i, "the remainder is out of order");
-        always_assert(!mtk::is_linked(h), "a returned item kept its links");
+        always_assert(!mtk::inner::is_linked(h), "a returned item kept its links");
     }
     mb.release();
 }

@@ -3,14 +3,14 @@
 Current state of the 3tk line of work. One screen. Updated after every stage.
 
 This file is the entry point for a cold session. Read it, then the stage named  
-by the owner in [3tk-staging-plan-018.md](3tk-staging-plan-018.md).  
-[3tk-staging-plan-017.md](3tk-staging-plan-017.md) is spent — all five of its  
-stages have run, and so have all six of  
+by the owner. **[3tk-staging-plan-018.md](3tk-staging-plan-018.md) is spent** —  
+all five of its stages have run, and so have all five of  
+[3tk-staging-plan-017.md](3tk-staging-plan-017.md)'s and all six of  
 [3tk-staging-plan-016.md](3tk-staging-plan-016.md)'s.  
 For what else is in this folder and who reads it, see [README.md](README.md).
 
 **For what was decided about the port and where it lives in the code, read  
-[ref/3tk-decisions-001.md](ref/3tk-decisions-001.md).** One common section and  
+[ref/3tk-decisions-002.md](ref/3tk-decisions-002.md).** One common section and  
 one per source file, every entry with its marker and its `file:line`. It is  
 read instead of travelling through the folder. This file stays the first read:  
 it holds state, and the decisions file holds none.
@@ -25,13 +25,19 @@ table: every assert and every contract clause copied from `3tk/src` with its
 `file:line`. **Not the page to learn from** — that is what 002 exists to fix.
 
 **To read the toolkit as a book, read
-[ref/3tk-reference-001.md](ref/3tk-reference-001.md).** Seven parts, in 042's
+[ref/3tk-reference-002.md](ref/3tk-reference-002.md).** Seven parts, in 042's
 shape, with Parts 3 to 5 repeating one order. It covers the same surface as
-002 and says the same things in a different arrangement. Whether 002 stays is
-the owner's call.
+[ref/3tk-api-002.md](ref/3tk-api-002.md) and says the same things in a
+different arrangement. Whether that file stays is the owner's call.
+
+**Part 7 of the reference also holds the eight labelled module blocks**, under
+*The modules, one by one*, each between `<!-- 3tk:module X -->` and
+`<!-- /3tk:module -->`. Written by 3TK-46, and **moved into `3tk/src` by 3TK-47**
+— one leading space per line and no other change. **The two sides are equal
+today**, and `./3tk/check-doc-loop.sh` diffs them on every run.
 
 **`ref/` holds two kinds of document.** The four above are the toolkit's
-content. **[ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) is the procedure
+content. **[ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) is the procedure
 that keeps that content and the `<* *>` blocks in `3tk/src` saying the same
 thing.** Read it before editing either side. It is not a stage and writes no
 row here.
@@ -133,10 +139,13 @@ show no trace of it.
 | 3TK-36 | the reference, in 042's shape | [ref/3tk-reference-001.md](ref/3tk-reference-001.md) | DONE 2026-08-26 — **seven parts, 1,375 lines**, Parts 3 to 5 in one repeated order. **All 88 declaration names present by grep**, every example compiled against `3tk/src`. Ban scan run live, 5 hits reworded. `3tk/src` untouched |
 | 3TK-37 | the comments, moved out of the reference | `3tk/src/helper.c3` | DONE 2026-08-26 — the exemplar only. **14 doc blocks, 32 descriptor lines, every sentence found in the reference by grep**. 17 contracts identical. One missing sentence added to the reference, not invented here. `formatDocText` run over all 14 blocks. Four builds green. The other seven outstanding |
 | 3TK-38 | the preview script | [`3tk/preview-docs.sh`](3tk/preview-docs.sh) | DONE 2026-08-26 — **the data is embedded, so `fetch` is never reached and `marked` is never loaded**. Three `c3-lang.org` URLs remain and no server can help them. Generates into `mktemp -d`, so `3tk/` stays clean and `.gitignore` needed no line. Four builds green, 63 checks, 87 tests. No source touched |
-| 3TK-39 | the doc loop, as a document | [ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) + [`3tk/check-doc-loop.sh`](3tk/check-doc-loop.sh) | DONE 2026-08-26 — one invariant, three modes. **The checker reproduces 3TK-37 over `helper.c3`: 33 sentences, 0 missing.** Over all eight, **161 of 317 missing** — the drift 3TK-40 to 3TK-42 close. Three ban hits in doc comments, reported. Four builds green, 63 checks, 87 tests. No source touched |
+| 3TK-39 | the doc loop, as a document | `ref/3tk-doc-loop-001.md` + [`3tk/check-doc-loop.sh`](3tk/check-doc-loop.sh) | DONE 2026-08-26 — one invariant, three modes. **The checker reproduces 3TK-37 over `helper.c3`: 33 sentences, 0 missing.** Over all eight, **161 of 317 missing** — the drift 3TK-40 to 3TK-42 close. Three ban hits in doc comments, reported. Four builds green, 63 checks, 87 tests. No source touched |
 | 3TK-40 | `from-reference`: `mtk.c3`, `inner.c3`, `managed.c3` | `3tk/src` + [ref/3tk-reference-001.md](ref/3tk-reference-001.md) | DONE 2026-08-26 — **47 missing sentences to 1**. `mtk.c3` 0, `managed.c3` 0, `inner.c3` 1 — the merged file header, which the owner rules on. **Contracts character-identical**, 6 in `inner.c3` and 6 in `managed.c3`. Two reference defects repaired at source. **No `<* *>` above `module mtk;` in `inner.c3`.** `formatDocText` run over all 21 blocks. Ban scan 0. Four builds green, 63 checks, 87 tests |
 | 3TK-41 | `from-reference`: `queue.c3`, `stack.c3` | `3tk/src` + [ref/3tk-reference-001.md](ref/3tk-reference-001.md) | DONE 2026-08-26 — **32 missing sentences to 0**, both files. **`c3c docgen` now gives `mtk.c3`'s description over a bare `src/` and again with `stack.c3` passed first** — 3TK-38's defect closed. Six reference defects repaired at source, one of them worth a second look. Contracts character-identical. `formatDocText` run over 19 blocks. Ban scan 0. Four builds green, 63 checks, 87 tests |
 | 3TK-42 | `from-reference`: `mailbox.c3`, `pool.c3` | `3tk/src` + [ref/3tk-reference-001.md](ref/3tk-reference-001.md) | DONE 2026-08-26 — **83 missing sentences to 0**, both files. **Across all eight, every remaining gap is outside these two.** The three known ban hits are gone, and the whole-tree ban scan is 0. Two reference defects repaired at source. **Five private helpers moved from `<* *>` to `//`** — reported, and the one ruling this stage asks for. 33 contracts character-identical. `formatDocText` run over all 33 blocks, 125 lines. Four builds green, 63 checks, 87 tests |
+| 3TK-43 | the flow document | [ref/3tk-doc-loop-002.md](ref/3tk-doc-loop-002.md) | DONE 2026-08-26 — **`001` carried forward whole, plus the register, both renderers measured, and the rules for moving a module description.** `001` moved to `backup/`. **This file 1,592 lines to 1,506** by the move, one pointer line where the register was; 1,556 with this stage's own record written. Ban scan run live: 5 in `002`, all carried from `001` and all in rule text or a record row. Trailing `\` 0 in both. Four builds green, 63 checks, 87 tests. No source touched |
+| 3TK-45 | the stack is public | `3tk/src/stack.c3` + [ref/3tk-reference-001.md](ref/3tk-reference-001.md) + [ref/3tk-decisions-002.md](ref/3tk-decisions-002.md) | DONE 2026-08-26 — **the owner ruled the stack available to an external caller, and the definitions that said otherwise were fixed in the stage**: `R13`'s middle clause and §5.4's *out of the application's surface entirely*, both in `3tk-core-redesign-proposal-002.md`. Four prose places rewritten, **the stack given its own reason — the storage container** — in the reference first and moved to the source. `3tk-deviations-001.md`'s `push_slot` grounds corrected — `R15` stands, the deletion is not reopened. Decisions `001` to `002`. `check-doc-loop.sh stack.c3` 25 of 25, 0 missing; whole tree 7 of 337, unchanged. Ban scan 0. Four builds green, 63 checks |
+| 3TK-46 | eight sections, eight labels | [ref/3tk-reference-002.md](ref/3tk-reference-002.md) | DONE 2026-08-26 — **reference `001` to `002`, `001` to `backup/`.** Part 7 has a new *The modules, one by one*: **eight labelled blocks, eight open, eight close, eight distinct names**, counted by a fence-aware script. Five modules that had no section of their own have one. **Parts 3 to 5 untouched.** Part 7's module layout corrected to the eight-module split 3TK-44 left standing. *Usual flow* answered per module: six had none, and `mtk::mailbox` and `mtk::pool` carry the one-line summary while the numbered list stays out. **`formatDocText` run under `node` over all eight — one rendered line per source line**; the same eight rendered as CommonMark — flowing paragraphs, 0 hard breaks, labels invisible. `check-doc-loop.sh` 330 of 337, the same 7. Ban scan 0. **Four builds green, 63 checks, 87 tests each**, re-run after a first run read `mtk.c3` mid-save |
 
 ### 3TK-35 ran, and this is what it left
 
@@ -379,7 +388,7 @@ fixes one script and not `c3c docgen`. `3tk/preview-docs.sh` does not carry it.
 **Done 2026-08-26.** A document, a script, and this row. No source was touched
 — not `3tk/src`, not `ref/3tk-reference-001.md`, not `../common/`.
 
-**[ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md)** — the procedure. One
+**`ref/3tk-doc-loop-001.md`** — the procedure. One
 invariant: *every descriptor line in `3tk/src` appears in the reference*. The
 check runs one way only, and that one check drives both directions.
 
@@ -649,7 +658,7 @@ dropped. `mailbox.c3`'s enqueue and dequeue carry a line naming this stage.
 **The rule this implies, if the owner takes it**: the invariant binds the `<* *>`
 blocks, which are the public page, and an internal helper is documented with
 `//`. That is a rule of the doc loop and belongs in
-[ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) — **which this stage did not
+`ref/3tk-doc-loop-001.md` — **which this stage did not
 edit**, because the loop's rules are not a stage's to write.
 
 #### What this stage moved and did not keep
@@ -697,47 +706,432 @@ interface that declares them, and the largest doc surface in the port: 111
 sentences, all of them already in the reference or repairable there in two
 edits.
 
+### 3TK-43 ran, and this is what it left
+
+**Done 2026-08-26.** `ref/3tk-doc-loop-002.md` written, `001` moved to
+`backup/`. **No source touched.**
+
+**`002` carries all of `001`**, and adds four things that had no home.
+
+- **The register for a source comment.** Moved out of this file. It was ruled
+  2026-08-25 and it was never state.
+- **What both renderers do, measured.** What `formatDocText` renders, and what
+  it does not — numbered lists are not implemented, there are no tables, no
+  blockquotes, and no nested bullets.
+- **The intersection, and the three restrictions that make a copy safe.** One
+  sentence per line is the one that bites: re-flowing is not reversible, so a
+  block destined for a module is written unwrapped in the reference.
+- **How a module description moves.** One module, one labelled block, the
+  label carrying the module's name. A declaration's descriptor is judged and
+  checked as a subset. **A module block is copied whole and checked with a
+  `diff`** — which revises `001`'s *neither direction is automated*, for module
+  blocks only. *Descriptor and contracts, nothing else* binds a declaration,
+  not a module.
+
+**Two rows left `002`'s table of rules held by link.** They pointed at this
+file. They are in `002` now, and the table says so.
+
+**The private-helper question is recorded in `002` and not answered.** 3TK-42
+asked for the ruling and the owner has not given it, so `002` holds it under
+*What is waiting for a ruling* rather than as a rule. **Still the owner's.**
+
+#### What this stage measured rather than assumed
+
+- **The checker, run live**: 335 sentences, 328 found, 7 missing. Six are the
+  owner's probe in `mtk.c3` and the seventh is `inner.c3`'s merged file header.
+  Unchanged, as it must be — no descriptor was touched.
+- **The ban scan, run live over both files.** `002` has 5, every one carried
+  from `001`: `unlock` twice as a stdlib name, `object` once in the rule text
+  that names the ban, and the three rows recording 3TK-39's hits. This file has
+  13, all in lines this stage did not write. **None fixed** — Part 5 says a
+  scan is reported, and it exempts a row that names a word to record its
+  removal.
+- **Trailing `\`: 0 in both files**, fenced blocks skipped.
+- **The blank-line-before-a-list rule is mkdocs's**, and this folder does not
+  ship through mkdocs. 99 lines of this file predate the stage and break it.
+  Left as it stands.
+
+### 3TK-44 ran, and this is what it left
+
+**Done 2026-08-26.** `3tk/src`, and the callers in `3tk/test` and
+`3tk/negative`. **No documentation written, not a sentence of it.**
+
+**Four modules are eight.** `inner.c3` is `module mtk::inner;`, `queue.c3` is
+`module mtk::queue;`, `stack.c3` is `module mtk::stack;`, and `mtk.c3` holds
+`module mtk;` alone. Eight files, eight modules, and **three of them now have a
+description to be given** that they could not hold before.
+
+**3TK-38's defect is retired rather than fixed.** *`c3c docgen` keeps whichever
+file it reaches first* needs a module with two files, and there is none.
+
+**Nine declarations live in `mtk.c3` now**, moved from `inner.c3` with their
+`<* *>` blocks and markers unchanged: the one `faultdef` line with the seven
+faults, `macro @check`, and `const bool CHECKED`. `import std::core::env;` went
+with them. **90 call sites did not move because of it** — 65 `mtk::` fault
+names, 23 `mtk::@check`, 2 `mtk::CHECKED`, counted live.
+
+**Two spellings changed for a caller**, both named in plan 018:
+`mtk::inner::inner_offset` and `mtk::inner::required_alloc_offset`.
+`mtk::is_linked` became `mtk::inner::is_linked` in three test files.
+
+**Four call sites plan 018's table did not count**, found by compiling: bare
+`reset` in `queue.c3` and `stack.c3`, and `@check` twice inside `inner.c3`'s
+`Slot.fill`. All four are qualified now. **The table undercounted; it is not
+re-derived, it is corrected here.**
+
+**`mtk.c3`'s probe block says `module mtk` is declared by four files.** After
+this stage it is declared by one. **The stage left the sentence standing** —
+3TK-44 writes no documentation, and that block is the owner's markdown probe,
+which **3TK-47 replaces wholesale with Part 1 of the reference.** Reported, not
+repaired.
+
+**`inner.c3`'s merged file header still names the check macro that has left the
+file.** That is 3TK-40's open question, and this stage moved the block
+unchanged rather than answering it. **Still the owner's.**
+
+#### What this stage measured rather than assumed
+
+- **`c3c docgen` run twice, the files passed in a different order the second
+  time.** Eight modules both times, each with the same description.
+  `mtk::inner`, `mtk::queue` and `mtk::stack` carry none — their headers are
+  still merged onto their structs, which is the gap 3TK-46 and 3TK-47 fill.
+- **Contracts as sorted lines across all eight files: identical.** 63 before,
+  63 after.
+- **`./3tk/check-doc-loop.sh`: 335 sentences, 328 found, 7 missing.**
+  Unchanged, as it must be — no descriptor was touched. Ban scan 0 over all
+  eight files and the reference.
+- **`3tk/run-builds.sh` green.** Four builds, 63 checks, 87 tests.
+- **Part 17.2's layering checks read, not assumed.** They grep that
+  `mailbox.c3` and `pool.c3` say `module mtk::<name>;` and that neither writes
+  a link by hand. Both pass, and neither file was touched. **Their stated
+  reason is weaker than their wording** — there is no `@private` left in the
+  core to be out of reach of — but the greps are the check, and rewording one
+  is not this stage's to do.
+
+### 3TK-45 ran, and this is what it left
+
+**Done 2026-08-26.** It stopped once, on `R13`, and the owner lifted the stop
+with a ruling: **the stack is available to an external client, not only to mtk's
+own modules, and a definition that disables that is fixed by the stage.**
+
+**What the three markers said, and what happened to each.**
+
+- `R2` — *No general list. `InnerQueue` and `InnerStack`.* Names the two
+  containers, rules nothing about visibility. **Untouched.**
+- `R11` — *Pool reuse becomes last-in first-out, for defect surfacing, and Part
+  11.7 stays silent on order.* About the pool's storage and its order, with
+  §1.3's reason. **Untouched.**
+- `R13` — *Four public signatures take `InnerQueue*`. **`InnerStack` is internal
+  to the pool.** There is no `InnerList`.* Its middle clause is the one that
+  disabled the stack, and **it was rewritten**: `InnerStack` is on no signature
+  3tk publishes, `Pool` is its only user inside the toolkit, and it is available
+  to a caller like the queue.
+
+**§5.4 was rewritten with it.** *Keeping the split is what keeps `InnerStack`
+out of the application's surface entirely* became *off every signature 3tk
+publishes*, with a REVISED note saying which reading was ever meant. **`R13`'s
+first clause never moved** — the four container-typed signatures still take an
+`InnerQueue*`, and the ruling does not ask for one to take a stack.
+
+**The stack has its own reason now, and it is not *the pool uses it*.** The
+queue is the **transfer** container; the stack is the **storage** container.
+*Where the queue carries items across, the stack holds them still.* Written in
+`ref/3tk-reference-001.md` first, then moved to `stack.c3` — the loop's
+direction, and nothing was composed in the source.
+
+**The four places, before and after.**
+
+- `stack.c3:8-9` — *The pool's private storage. / It does not cross the pool's
+  public surface.* → *The storage container. / Where the queue carries items
+  across, the stack holds them still. / The pool keeps one per identity, and it
+  is the only stack 3tk owns. / No 3tk signature passes one: the four that take
+  a container take an `InnerQueue*`.*
+- `ref/3tk-reference-001.md`, Participants — *`InnerStack` — many items,
+  last-in first-out. The pool's private storage.* → *… The storage container.*
+- `ref/3tk-reference-001.md`, closing *The API — the stack* — the two private
+  sentences → *The stack is the storage container. Items rest in it until they
+  are wanted again, and the newest is the one that comes back first.* plus the
+  pool-keeps-one and no-signature-passes-one pair, and *A caller who wants a
+  stack declares one.*
+- `ref/3tk-decisions-001.md:438` → **`ref/3tk-decisions-002.md`.** The entry
+  keeps *the pool keeps one per identity, and it is the only `InnerStack` in the
+  port*; *It never crosses the public surface* is gone. A new entry carries the
+  stack's own reason. `001` is superseded.
+
+**Two more places said it and were fixed.** *What it is not* in the reference
+now ends *and a caller may use either one directly*. `3tk/test/t_stack.c3`'s
+file header said *never crosses the public surface* and no longer does.
+
+**One consequence was reported and then corrected the same day.**
+`InnerStack.push_slot` was deleted 2026-08-24 on two grounds, and only the
+weaker one fell. **`R15` is the ground that stands**: its only caller was ever
+`pool.c3:451`, `put_all`'s refusal path, and 002 dropped `put_all` — the
+queue's `push_front_slot` went with it. The ruling retires the second ground
+only, that no application could reach a stack. **The deletion is not reopened.**
+What a public stack raises instead is a new question: whether the stack should
+carry a Slot-shaped insert for **symmetry** with `InnerQueue.push_back_slot`,
+which is kept because Part 12.5 hands a hook an `InnerQueue* extra` and no 3tk
+surface hands anyone a stack. `3tk-deviations-001.md` and
+`ref/3tk-decisions-002.md` say this; **nothing is open unless the owner asks for
+the symmetry.**
+
+**What this stage did not do.** It changed no signature, no body and no
+visibility keyword: nothing in the core is `@private`, and this was a stage
+about what is written. It did not touch `../common/`, and it wrote no `git`.
+
+**Verification.** `./3tk/check-doc-loop.sh stack.c3` — 25 sentences, 25 found,
+0 missing. Whole tree 330 of 337, **the same 7 as before**: six are the owner's
+markdown probe in `mtk.c3` and the seventh is `inner.c3`'s merged file header.
+Ban scan 0 over all eight sources and the reference, and run live over the new
+prose in the decisions file, the deviations file, the proposal and the test
+header. **`./3tk/run-builds.sh` green — four builds, 63 checks, 0 failed.** The
+per-build test tally scrolled out of the captured output and was not re-run;
+the checks and the four-build verdict are what this stage read.
+
+### 3TK-46 ran, and this is what it left
+
+**Done 2026-08-26.** `ref/` only. **Not one byte of `3tk/src`.**
+
+**`ref/3tk-reference-001.md` became `002`, and `001` is in `backup/`.** A stage
+that revises the reference versions it; a loop run does not. Live pointers were
+repointed and historical rows were not: `README.md`, all four links in
+`ref/3tk-doc-loop-002.md`, this file's header pointer and its open question
+about `ref/3tk-api-002.md`, and **`3tk/check-doc-loop.sh`'s `REF` default** —
+the last one is outside `ref/` and was changed because a moved reference breaks
+the checker for every later stage. It is a script beside `run-builds.sh`, not a
+file in `3tk/src`.
+
+**Part 7 has one new subsection: *The modules, one by one*.** Plan 018 said only
+three modules have a section a description *could come from*. That is what the
+word *from* was doing: **all eight blocks are derived text, none is a section
+lifted whole**, so all eight were written into one new place rather than three
+of them being labelled where they sit. Part 7 already holds the module layout,
+and putting them there is what left **Parts 3 to 5 exactly as they were** —
+their repeated order is untouched. Part 7's opening went from three things to
+four.
+
+**Eight open, eight close, eight distinct names.** Counted by a fence-aware
+script. `mtk`, `mtk::inner`, `mtk::queue`, `mtk::stack`, `mtk::helper`,
+`mtk::managed`, `mtk::mailbox`, `mtk::pool`. **The worked example in the prose
+says `mtk::NAME`** so that a counter never finds a ninth.
+
+**Where each block came from.**
+
+| block | written from | *Usual flow* |
+|---|---|---|
+| `mtk` | Part 1 — *What 3tk is*, *What it is for*, *What it is not*, plus Part 7's module layout | Part 1 has none |
+| `mtk::inner` | Part 3 — *What this is*, *Participants*, *The API — the Slot*, *The API — the link* | none of its own; Part 3's belongs to the core |
+| `mtk::queue` | Part 3 — *The API — the queue* | none of its own |
+| `mtk::stack` | Part 3 — *The API — the stack*, as 3TK-45 rewrote it | none of its own |
+| `mtk::helper` | Part 3 — *The API — crossing* | none of its own |
+| `mtk::managed` | Part 3 — *The API — allocating an item for you* | none of its own |
+| `mtk::mailbox` | Part 4 — *What this is*, *Participants*, *Usual flow* | **list left out, summary carried** |
+| `mtk::pool` | Part 5 — *What this is*, *Participants*, *Usual flow* | **list left out, summary carried** |
+
+**The *Usual flow* ruling, per module and not once for all.** Six modules have
+no *Usual flow* of their own, so there was nothing to decide about. For the two
+that do, the flow is a numbered list with nested bullets and **neither shape
+survives `formatDocText`**. **No list was reshaped into flat bullets.** Its
+one-line summary is a single reference sentence that already survives — *Create,
+send, receive, close, release.* and *Write the hooks, create, get, put, close,
+release.* — and it was carried instead, together with the plain sentences that
+sit under each step. Flattening as well would have put two spellings of one fact
+on the same page.
+
+**Two of Part 1's five groups were left out of `mtk`'s block, and this is
+why.** *Who it is for* and *What the reader needs before starting* are about
+reading the book, not about calling the module. The other three are on the
+module's page.
+
+**No bold in any block.** The intersection allows `**bold**`; the register
+forbids it; the register is the narrower rule and it wins. The four module
+blocks already in `3tk/src` carry none either.
+
+**One divergence found by writing a block.** `pool.c3`'s module block opens its
+`put_all` fence with `while (mtk::Handle h = ...)`. **There is no `mtk::Handle`**
+— `Handle` is declared in `mtk::inner`, and that spelling is its only occurrence
+across `3tk/src`, `3tk/test` and `3tk/negative`. Part 5 says `Handle`. The block
+follows the reference, so **3TK-47's copy corrects the source.**
+
+**One fact was corrected in the reference rather than copied out of it.** Part
+7's module layout still said `module mtk` is declared by four files, listed five
+modules, and put `InnerQueue` and `InnerStack` inside `mtk`. **3TK-44 made it
+eight modules and reported that it left this sentence standing.** The table is
+now eight rows — module, file, contents — with a REVISED note naming what `001`
+said and which stage changed it. Nothing was invented: the split is recorded
+state in this file.
+
+#### What this stage measured rather than assumed
+
+- **`formatDocText` extracted from a freshly generated `docs.html` and run
+  under `node`** over all eight blocks in their source form, one leading space
+  per line. **One rendered line per source line, eight for eight.**
+  `mtk::pool`'s fence renders as a single highlighted `<pre><code>`.
+- **The same eight rendered as CommonMark.** Flowing paragraphs, **zero hard
+  breaks**, and every label invisible in the output.
+- **`./3tk/check-doc-loop.sh`: 337 sentences, 330 found, 7 missing.** The same
+  seven as 3TK-45 left, which is what touching no source has to mean.
+- **Ban scan 0** over the eight sources and over `3tk-reference-002.md`, and 0
+  over `README.md`. Run live over this file and `3tk-log.md` as well: every hit
+  there is pre-existing prose that names a banned word or quotes the list.
+- **`3tk/run-builds.sh` green. Four builds, 63 checks, 0 failed, and 87 tests
+  in each of the four.** The tally was captured this time, not left to scroll.
+  The first run of the stage read `mtk.c3` mid-save and reported 29 passed and
+  34 failed; see *How to continue* below.
+
+### 3TK-47 ran, and this is what it left
+
+**Done 2026-08-26.** The first stage that moved a module description with a
+script instead of a reading. **Plan 018 is spent.**
+
+**Two new files beside `run-builds.sh`, and one revised.**
+
+- **`3tk/doc_blocks.py`** — the two sides and the one transformation, in one
+  place. A labelled block in the reference; the `<* *>` block directly above
+  `module X;`; one leading space per line added going in, stripped coming out,
+  and a blank line left blank. It parses and rules on nothing.
+- **`3tk/move-module-docs.sh`** — the copy. `in` writes `src/*.c3`, `out`
+  writes the reference, `roundtrip` writes neither and compares bytes.
+- **`3tk/check-doc-loop.sh`** — now two checks. **A labelled block is
+  transformed and `diff`ed**, any difference named by module and printed.
+  **Everything else is the sentence-subset check, unchanged.** They report
+  separately and the exit status covers both.
+
+**The eight blocks are in `3tk/src`, `mtk` first.** Three of the eight were
+insertions: `inner.c3`, `queue.c3` and `stack.c3` had no module block at all
+and each has one now, above its `module` line. **No `// [3tk: ...]` mark was
+touched, and no declaration's `<* *>` was read or written.**
+
+**The round trip is byte-exact.** In and back out on a copy of both sides:
+`diff` over the reference reports nothing. Run twice, before and after the real
+move.
+
+**Two changes the copy made to `3tk/src`, both intended.**
+
+- **The owner's markdown probe in `mtk.c3` is gone.** Part 1's block replaces
+  it, and six of the seven missing sentences went with it.
+- **`pool.c3`'s `put_all` fence says `Handle`, not `mtk::Handle`.** That
+  spelling now occurs nowhere in `3tk/src`, `3tk/test` or `3tk/negative`.
+
+**`mtk.c3` was edited under the stage again.** The move wrote it at 17:47:28
+and an editor wrote the probe back at 17:47:33. The move was re-run for `mtk`
+alone and the builds re-run after it. **The `alias` experiment 3TK-46 reported
+is no longer in the file**, and 47 neither removed it nor ruled on it.
+
+#### The one thing this stage reports rather than fixes
+
+**`ref/3tk-doc-loop-002.md` was behind the script in two places, and 47 reported
+both rather than revising it** — plan 018 gave 47 no flow-document work.
+**The owner ruled the same day: revise it to `003`.** *The checker script* said
+two reports where there are three, and *The module header* held a rule written
+when four files declared `module mtk;`. **`ref/3tk-doc-loop-003.md` is the live
+file and `002` is in `backup/`.** See *The flow document is 003* below.
+
+#### What this stage measured rather than assumed
+
+- **`c3c docgen` run, and the eight module pages read out of the generated
+  page**, not out of the source. **Eight modules with a description**, where
+  three had none before. `mtk` carries 26 doc lines and its page opens with
+  *An item-transfer and item-reuse toolkit for concurrent C3 programs.*
+- **`formatDocText` extracted from that page and run under `node`** over all
+  eight blocks in their source form. **One rendered line per source line, eight
+  for eight**, and `mtk::pool`'s fence one `<pre><code>`.
+- **`./3tk/check-doc-loop.sh`: 0 differing blocks over eight**, and **439
+  sentences, 438 found, 1 missing.** The count rose because the blocks are
+  longer. **The one missing is `inner.c3`'s merged file header**, 3TK-40's
+  question — the six probe sentences are retired.
+- **Ban scan 0**, run live over the eight sources and `3tk-reference-002.md`.
+- **`3tk/run-builds.sh` green. Four builds, 63 checks, 0 failed, 87 tests in
+  each of the four.**
+
+#### The flow document is 003
+
+**Revised the same day, on the owner's word, after 3TK-47 reported it.** Not a
+stage: it writes no row of its own, and this is its record.
+**`ref/3tk-doc-loop-002.md` is in `backup/`.**
+
+**Two sections changed, and nothing else.** The invariant, the three modes, the
+register and the rules for moving a module description are `002`'s word for
+word.
+
+- ***The checker script*** — it listed two reports and the script has three.
+  **The module-block `diff` is named first now**, the descriptor check second,
+  the ban scan third, and the exit status covers all three. The mover and
+  `doc_blocks.py` have a subsection of their own: **`in` is `from-reference`,
+  `out` is `to-reference`, and the direction is an argument for the same reason
+  it is one in a mode.**
+- ***The module header, and the one description C3 gives*** — `002` forbade a
+  `<* *>` block above `module mtk;` in `inner.c3`, `queue.c3` and `stack.c3`.
+  **3TK-44 removed the premise**: those three declare their own modules now, so
+  no two files collide over one description. Left standing it read as a
+  prohibition 3TK-47 broke. **The measurement is kept and the rule is rewritten:
+  one module block per file, above that file's own `module` line**, with `002`'s
+  prohibition named as what returns if two files ever declare one module again.
+
+**Its *Where it stood* section now leads with the state after 3TK-47** — 0
+differing blocks, 439 sentences, 438 found, 1 missing — and 3TK-43's numbers are
+kept below it as what `002` was written against.
+
+**Live pointers repointed, records left alone.** `README.md`, this file's header
+pointer and its live guidance, `ref/3tk-reference-002.md`'s two links,
+`3tk/check-doc-loop.sh`, `3tk/move-module-docs.sh` and `3tk/doc_blocks.py`.
+**Rows recording what 3TK-39, 3TK-43 and 3TK-46 did keep the name they were
+written with.**
+
+**One judgement worth naming.** Repointing two links inside
+`ref/3tk-reference-002.md` touched the reference, and the rule is that a stage
+revising the reference versions it. **This was not a revision of its content** —
+two link targets, no sentence changed, and the checker reports 0 differing
+blocks and the same 438 of 439 afterwards. **The reference stays `002`.**
+
 ## How to continue after a clear
 
-**3TK-42 has run and plan 017 is spent. All five of its stages are DONE, and
-so are plan 016's six.**
-**[3tk-staging-plan-018.md](3tk-staging-plan-018.md) is written and declares
-3TK-43 to 3TK-47. None is authorized** — the owner names a stage before it runs.
+**3TK-47 has run, and plan 018 is spent.** Plan 016's six, plan 017's five and
+plan 018's five have all run. **There is no declared stage waiting.** The next
+thing that runs is either a loop round on a file, or a stage the owner declares
+in a new plan.
 
-**3TK-43 is the first, and this is the line to continue with:**
-
-```
-Read design/secondary/lang/c3/3tk-status.md. Run 3TK-43.
-```
-
-**Clear the context before it.** 3TK-43 writes `ref/3tk-doc-loop-002.md` and
-takes the register and the renderer facts out of this file. Its inputs are this
-file, plan 018's 3TK-43 section, [ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md),
-and [../../../rules-049.md](../../../rules-049.md) Parts 4 to 6.
-
-**What 018 is for, in one line.** The reference is the toolkit as one page for
-plain reading; the doc comments are the same content as many pages, one per
-module. 018 makes a module description move between them mechanically, and
-splits the core into modules so that each part has a page to move into.
+**Nothing in plan 018 is unfinished.** What it deliberately left to the owner is
+listed in [3tk-staging-plan-018.md](3tk-staging-plan-018.md) under *What this
+plan deliberately leaves to the owner*, and the open questions are under
+*What is waiting for a ruling* below.
 
 **What a cold session should know before anything is named.**
 
-- **The invariant holds across `3tk/src`.** `./3tk/check-doc-loop.sh` reports 7
-  missing of 335. **Six of the seven are the owner's markdown probe in
-  `mtk.c3`'s module header**, which renders correctly and is not drift. A probe
-  is not a descriptor, so the reference does not hold it and should not. Read
-  *`mtk.c3`'s block is the owner's probe* above before acting on that six.
-  **3TK-47 is what replaces it**, with Part 1 of the reference.
-- **The seventh is `inner.c3`'s merged file header**, 3TK-40's open question:
-  leave it, reword it to the struct, or file it in the reference. **3TK-44
-  moves that block unchanged and does not answer it.**
+- **Eight files, eight modules, since 3TK-44.** `mtk`, `mtk::inner`,
+  `mtk::queue`, `mtk::stack`, `mtk::helper`, `mtk::managed`, `mtk::mailbox`,
+  `mtk::pool`. The faults, `@check` and `CHECKED` are in `mtk.c3`.
+- **Every one of the eight has a module description now, and all eight are
+  copies of the reference.** 3TK-46 wrote them, 3TK-47 moved them, and
+  `./3tk/check-doc-loop.sh` reports **0 differing blocks**. Three of them —
+  `mtk::inner`, `mtk::queue`, `mtk::stack` — had no description at all before
+  47.
+- **A module block is copied and `diff`ed. A declaration's descriptor is judged
+  and checked as a subset.** Two kinds of move, and
+  [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) rules on both under
+  *Moving a module description*. **The declaration direction is not automated
+  and is not going to be.**
+- **`3tk/move-module-docs.sh` is the mover**, `3tk/doc_blocks.py` is the format,
+  and the round trip is byte-exact. Never hand-edit a module block on one side
+  only: move it.
+- **The invariant is 439 sentences, 438 found, 1 missing.** **The one missing is
+  `inner.c3`'s merged file header**, 3TK-40's open question: leave it, reword it
+  to the struct, or file it in the reference. It now names a macro that has left
+  the file. **The owner's markdown probe is gone** — 47 replaced it with Part 1.
 - **The ban scan is 0** over all eight files and over the reference.
 - **Five private helpers carry `//` comments instead of `<* *>` blocks**, and
-  whether that becomes a rule of the loop is the ruling 3TK-42 asked for. See
-  *3TK-42 ran* above. **3TK-43 is where it would be written down.**
+  whether that becomes a rule of the loop is the ruling 3TK-42 asked for.
+  **3TK-43 recorded the question in
+  [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) and did not answer it.**
+- **The flow document is [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md).**
+  `002` is in `backup/`. Two sections were brought up to what is true: the
+  checker's three reports, and the module header rule, whose premise 3TK-44
+  removed. **Nothing else in it changed.**
+- **`mtk.c3` has been edited under two stages running.** Check that it compiles
+  before starting anything that verifies against the tree.
 
 **The loop is the standing procedure now, not a stage.**
-[ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) says how a round is invoked:
+[ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) says how a round is invoked:
 
 ```
 Read design/secondary/lang/c3/3tk-status.md.
@@ -748,8 +1142,16 @@ Run doc-loop from-reference on <file>.c3.
 now: every file has been written from the reference, so the whole tree is the
 useful run.
 
+**Moving a module description is a command, not a reading.**
+
+```
+./3tk/move-module-docs.sh in  [module ...]   # reference -> src
+./3tk/move-module-docs.sh out [module ...]   # src -> reference
+./3tk/move-module-docs.sh roundtrip          # writes neither, compares bytes
+```
+
 **Look at the page.** `3tk/preview-docs.sh` opens the rendered comments in a
-browser, and all eight files are in it.
+browser, and all eight modules have a description in it.
 
 **Clear first, always.** A stage's inputs are this file, its plan's section for
 that stage, and the `ref/` documents. Not a transcript.
@@ -784,16 +1186,17 @@ finishes.
 ### Plan 018's five, and where each one stops
 
 ```
-3TK-43   the flow document                  -> declared
-3TK-44   the split, and what moves to mtk   -> declared
-3TK-45   the stack is public                -> declared
-3TK-46   eight sections, eight labels       -> declared
-3TK-47   the move, and the checker          -> declared
+3TK-43   the flow document                  -> DONE (no source touched)
+3TK-44   the split, and what moves to mtk   -> DONE (8 modules, builds green)
+3TK-45   the stack is public                -> DONE (R13 revised, 0 missing)
+3TK-46   eight sections, eight labels       -> DONE (8 labels, ref 001 to 002)
+3TK-47   the move, and the checker          -> DONE (8 moved, 0 differing)
 ```
 
-**Declared, not authorized.** The owner names one before it runs, and they run
-in number order — 43 writes the format 46 obeys, 44 decides how many blocks
-there are, 45 decides what one of them says.
+**All five have run, and plan 018 is spent.** **43 wrote the format 46 obeys.
+44 answered how many blocks there are: eight.** 45 decided what one of them
+says, **46 wrote all eight**, and **47 moved them and taught the checker to
+diff them.**
 
 ### Why the plan is shaped this way
 
@@ -808,99 +1211,13 @@ notes.
 Write the reference. Move the comments out of it. **Only the middle one invents
 wording**, and it is a markdown file that can be refused without a rebuild.
 
-### The register for a source comment is ztk's, not this folder's
+### The register, and the two renderers, are in the flow document
 
-**Ruled by the owner 2026-08-25**, after refusing 3TK-31's first version as
-*aish prose, not descriptors*.
+**Moved out by 3TK-43.** Both were rules, not state, and this file holds state.
+Read [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) — *The register for a
+source comment is ztk's, not this folder's*, *What the two renderers do*, and
+*Moving a module description*.
 
-**The model is `src/*.zig`** - ztk's own doc comments. Read them before writing
-a comment in `3tk/src`.
-
-- The first line is a descriptor. `Clears the intrusive list links.`
-- No bold. Not one `**` in 1,771 lines of ztk source.
-- One fact per line. `Never modifies the node.`
-- A variant says `Same as X().` then only its difference.
-- Rationale only where short and non-obvious. No argument, ever.
-
-**What does NOT port from ztk, measured against `c3c docgen` 2026-08-25.**
-The renderer is `formatDocText` inside the generated `docs.html`. It is not
-CommonMark and `marked` is referenced but never loaded, so every doc comment
-goes through that function.
-
-- **A trailing `\` is not a hard break.** It renders as a literal backslash.
-  The C3 stdlib uses it zero times in `lib/std`. ztk needs it because Zig
-  autodoc *is* CommonMark. 3tk must not use it.
-- **It is not needed.** Every non-blank line inside a paragraph already gets a
-  `<br>`. Consecutive lines break on their own.
-- **So one source line is one rendered line.** There is no soft wrap. A
-  sentence wrapped across two source lines renders broken in half. **Every
-  line must stand alone** - which is what the register asks for anyway.
-- **Code goes in a ` ```c3 ` fence**, the C3 stdlib's own convention, 44 fence
-  lines in `lib/std`. The renderer gives it `<pre><code>` and C3 syntax
-  highlighting. An indented block gets none of that.
-- **Two underscores in a bare word are eaten as italics.**
-  `must_from_handle()` renders as *mustfromhandle()*. **Wrap every identifier
-  in backticks** - inline code is extracted before the italic rule runs.
-- `-` bullets, `#` headings and `**bold**` are supported. The register bans the
-  bold anyway.
-
-**What the renderer does support, measured 2026-08-26.** The owner put a probe
-into `mtk.c3`'s module header — a heading, a subheading, a link and a list —
-ran it, and every one converted to correct HTML. The rest of this list is
-`formatDocText` read line by line and run under `node` against each shape.
-
-- **Paragraphs from blank lines.** A blank line closes the `<p>` and the next
-  non-blank opens a new one.
-- **`#` to `######` headings**, `<h1>` to `<h6>` by the count of hashes.
-- **`-`, `*` and `+` bullets.** Each becomes one `<div class="bullet-item">`
-  with a literal bullet character. **There is no `<ul>` and there is no
-  nesting** — an indented sub-bullet renders at the same level as its parent.
-- **`` `code` `` spans**, `**bold**`, `__bold__`, `*italic*`, `_italic_`, and
-  `[text](url)` links.
-- **` ```c3 ` fences**, with C3 syntax highlighting.
-
-**What it does not support, and where a reader would expect otherwise.**
-
-- **Numbered lists are not implemented.** `1. one` falls through to the
-  paragraph branch and renders as the literal text *1. one*. It is in the
-  common markdown subset and it is not in this renderer.
-- **No tables.** A `|` row renders as its own literal text.
-- **No blockquotes.** `> quote` renders as `&gt; quote`.
-- **No soft wrap**, which is the trailing-`\` fact above from the other side.
-
-### Text may be copied between the reference and a `<* *>` block
-
-**Confirmed by measurement, 2026-08-26.** The two renderers are different —
-the reference is read as CommonMark, a doc comment goes through
-`formatDocText` — but a sentence written inside the intersection means the same
-thing in both, and may be moved either way without rewording.
-
-**The intersection is what both render identically**: paragraphs from blank
-lines, `-` bullets, `` `code` `` spans, `**bold**`, `*italic*`, `[text](url)`
-links, `#` headings, and ` ```c3 ` fences.
-
-**Three restrictions make the copy safe, and all three are already the
-register's.**
-
-- **One sentence per line, and never a wrapped one.** CommonMark joins wrapped
-  lines into a paragraph; `formatDocText` puts a `<br>` between them. **A
-  sentence wrapped across two lines is the one shape that changes meaning in
-  transit**, and it is the shape the reference uses everywhere. A copy out of
-  the reference re-joins it to one line; a copy in may wrap it again.
-- **Every identifier in backticks.** Bare, `must_from_handle()` loses its
-  underscores to the italic rule here and keeps them under CommonMark.
-  Backticked, both are right.
-- **No trailing `\`.** A hard break in CommonMark, a literal backslash here.
-
-**And two shapes that are the reference's alone**: numbered lists and tables.
-Neither survives the crossing, and neither belongs in a `<* *>` block anyway.
-
-**This is what the doc loop's checker already assumes.** It collapses
-whitespace on both sides before comparing, which is exactly the re-join above,
-and it is why a wrapped reference sentence matches a one-line comment.
-
-**The argument goes in [ref/3tk-decisions-001.md](ref/3tk-decisions-001.md)**,
-and the `// [3tk: ...]` mark points at it.
 
 ### The 3tk API reference should have 042's shape
 
@@ -930,9 +1247,9 @@ Read design/secondary/lang/c3/3tk-status.md. Run 3TK-43.
 
 **Whether an internal helper is documented with `//` rather than `<* *>`.**
 3TK-42 took that reading over five private helpers so the invariant could reach
-0. If the owner keeps it, it is a rule of
-[ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) and that file gets a new
-number.
+0. **3TK-43 recorded the question in
+[ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) and did not answer it.** If
+the owner keeps it, it becomes a rule there and that file gets a new number.
 
 **How long `mtk.c3`'s markdown probe stays.** The owner's own, and it renders
 correctly. It costs six lines in the checker's count and nothing else.
@@ -957,7 +1274,7 @@ report and not rule. `Pool.put` now carries the reference's own short form —
 *A close that arrives while `on_put` runs is handled.* Whether the thirty lines
 come back is the owner's.
 
-**Whether `ref/3tk-api-002.md` is retired** once `3tk-reference-001.md` exists.
+**Whether `ref/3tk-api-002.md` is retired** once `3tk-reference-002.md` exists.
 3TK-36 reports the overlap and does nothing about it.
 
 **Every stage writes its own continue line here before it finishes** — the

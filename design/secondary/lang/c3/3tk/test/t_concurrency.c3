@@ -4,13 +4,6 @@
  Part 18 invariants 3, 4, 5, 28, 30, 31, 32, 33.
 *>
 module mtk_test;
-import mtk;
-import mtk::pool;
-import mtk::mailbox;
-import std::thread;
-import std::time;
-import std::core::mem::alloc;
-import std::atomic::types;
 
 struct Shared
 {
@@ -446,3 +439,14 @@ fn int late_closer(void* arg)
     a.h.close_done.store(1, RELEASE);
     return 0;
 }
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import mtk::pool;
+import mtk::mailbox;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+import std::atomic::types;

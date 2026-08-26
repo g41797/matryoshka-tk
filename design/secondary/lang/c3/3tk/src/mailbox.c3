@@ -1,20 +1,27 @@
 <*
  The mailbox. A queue of items, with waiting.
 
+ Transfer of an item between threads.
+ Create, send, receive, close, release.
  Many producers, many consumers, on one mailbox.
  The mailbox keeps items. It never touches them.
  A mailbox is itself an item: it can travel through another mailbox.
+
+ The allocator is kept for life.
+ Nothing partially constructed is ever returned.
+ On send the Slot is the answer: cleared means the mailbox has the item, untouched means the mailbox is closed and you still have the item.
+ On receive an empty Slot goes in, and a full Slot comes back on success.
+ Every other outcome is a fault, and the Slot stays empty.
+ On close what was left comes back to you, as one queue.
+ Releasing those items is your work.
+ The mailbox never knew what they were.
+ Close it first. Releasing an open mailbox aborts in every build mode.
+
  The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
  The fields named with a leading underscore are internal. Do not read them.
 *>
 // [3tk: D1, F2, Part 11.1, Part 11.3, Part 11.4, Part 11.5, Part 11.6, Part 17.2, Part 19.1]
 module mtk::mailbox;
-import mtk;
-import mtk::helper;
-import std::thread;
-import std::time;
-import std::core::mem::alloc;
-import std::atomic::types;
 
 <*
  The tool itself.
@@ -341,3 +348,13 @@ fn usz Mailbox.len(&self)
     defer self._mu.unlock();
     return self._oob.len() + self._regular.len();
 }
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import mtk::helper;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+import std::atomic::types;

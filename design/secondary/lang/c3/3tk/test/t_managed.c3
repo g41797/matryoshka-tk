@@ -6,8 +6,6 @@
  two words wide for every item in the program.
 *>
 module mtk_test;
-import mtk;
-import std::core::mem::alloc;
 
 <*
  Part 13.1's sharp clause: no release call takes an allocator as a parameter.
@@ -99,5 +97,11 @@ fn void only_the_owning_type_pays() @test
 {
     always_assert(Inner::size == uptr::size + typeid::size, "the inner grew a field; D3 part 2 is broken");
     always_assert(Holder::size > Msg::size - 8, "sanity: Holder carries the allocator, Msg does not");
-    always_assert(mtk::inner_offset(Holder) == 8, "Holder's inner moved");
+    always_assert(mtk::inner::inner_offset(Holder) == 8, "Holder's inner moved");
 }
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import std::core::mem::alloc;

@@ -25,10 +25,10 @@ moment its stage ran. **These are the opposite: they are alive.** A change to
 | File | What it is | Who reads it |
 |---|---|---|
 | [ref/3tk-api-002.md](ref/3tk-api-002.md) | Using the toolkit: what each thing is for, when to reach for it, what it refuses | **Anyone calling the port.** The page to learn it from |
-| [ref/3tk-decisions-001.md](ref/3tk-decisions-001.md) | What was decided, its marker, and where it lives in the code. Nine sections | The owner, and any AI, **instead of travelling through this folder** |
+| [ref/3tk-decisions-002.md](ref/3tk-decisions-002.md) | What was decided, its marker, and where it lives in the code. Nine sections | The owner, and any AI, **instead of travelling through this folder** |
 | [ref/3tk-api-003.md](ref/3tk-api-003.md) | The same surface as a verification table: every assert and contract with its `file:line` | Anyone checking that 002 is true. **Not a page to learn from** |
-| [ref/3tk-reference-001.md](ref/3tk-reference-001.md) | The toolkit as a book. Seven parts, in 042's shape | Anyone reading the port end to end |
-| [ref/3tk-doc-loop-001.md](ref/3tk-doc-loop-001.md) | **Not content — procedure.** How the reference and the `<* *>` blocks in `3tk/src` are kept saying the same thing | Any stage editing either side, before it edits |
+| [ref/3tk-reference-002.md](ref/3tk-reference-002.md) | The toolkit as a book. Seven parts, in 042's shape, with the eight labelled module blocks in Part 7 | Anyone reading the port end to end |
+| [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) | **Not content — procedure.** How the reference and the `<* *>` blocks in `3tk/src` are kept saying the same thing | Any stage editing either side, before it edits |
 
 ## Read from elsewhere
 
@@ -85,13 +85,16 @@ the compile-failure cases.
 ```
 ./3tk/run-builds.sh        # four builds, exits non-zero on any failure
 ./3tk/preview-docs.sh      # the doc comments as a reader sees them, in a browser
-./3tk/check-doc-loop.sh    # every descriptor line, against the reference
+./3tk/check-doc-loop.sh    # every descriptor line, and every module block, against the reference
+./3tk/move-module-docs.sh  # a module description, reference <-> src, copied and diffed
 ./3tk/run-sanitizers.sh    # thread on two builds, address on one; exits 2 if its compiler is missing
 ```
 
 The two build scripts take an optional directory; with no argument each runs
 against its own. `check-doc-loop.sh` takes source file names, and with no
-argument reads all eight.
+argument reads all eight. `move-module-docs.sh` takes a direction — `in`, `out`
+or `roundtrip` — and module names, and with none moves all eight. The format it
+copies lives in `3tk/doc_blocks.py`, which both scripts read.
 
 `backup/` holds superseded versions and what is no longer read. **The owner
 empties it periodically, so nothing here points into it.**

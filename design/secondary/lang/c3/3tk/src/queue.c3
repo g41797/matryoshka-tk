@@ -1,4 +1,21 @@
-module mtk;
+<*
+ The intrusive queue. First-in first-out.
+
+ The transfer container.
+ Nothing here allocates, and every operation is O(1).
+ The count is kept, so `len` is O(1).
+ `push_back` adds at the back.
+ There is no front insert.
+ `pop_front` takes the item at the front, and null on an empty queue is an answer and not a fault.
+ `append_queue` moves every item of another queue onto the back of this one, in O(1).
+ `iter` and `next` are a walker, taken from the queue.
+ Removing the current item during a walk is not supported.
+ Every chain ends at an item pointing at itself, never at null.
+ Nothing in the queue can fail.
+*>
+module mtk::queue;
+import mtk;
+import mtk::inner;
 
 <*
  The intrusive queue. First-in first-out.
@@ -42,9 +59,9 @@ struct InnerQueueIterator
 // [3tk: R6b, V4, Part 8.6]
 macro InnerQueue.@guard_insert(&self, Handle h)
 {
-    @check(h != null, "insert of a null handle");
+    mtk::@check(h != null, "insert of a null handle");
     // [3tk: Part 8.7]
-    @check(!is_linked(h), "the item is already on a chain");
+    mtk::@check(!mtk::inner::is_linked(h), "the item is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -104,7 +121,7 @@ fn void InnerQueue.push_back(&self, Handle h)
 // [3tk: V3, Part 8.2, Part 9.2, Part 12.5]
 fn void InnerQueue.push_back_slot(&self, Slot* s)
 {
-    @check(s.is_full(), "push_back_slot from an empty Slot");
+    mtk::@check(s.is_full(), "push_back_slot from an empty Slot");
     if (s.is_empty()) return;
     self.push_back(s.take());
 }
@@ -132,7 +149,7 @@ fn Handle InnerQueue.pop_front(&self)
         self.head = h.points_to();
     }
     self.count--;
-    reset(h);
+    mtk::inner::reset(h);
     return h;
 }
 
@@ -149,9 +166,9 @@ fn Handle InnerQueue.pop_front(&self)
 // [3tk: Part 8.2, Part 8.9]
 fn void InnerQueue.append_queue(&self, InnerQueue* other)
 {
-    @check(other != null, "append_queue with a null queue");
+    mtk::@check(other != null, "append_queue with a null queue");
     // [3tk: Part 8.9]
-    @check(other != self, "a queue cannot be moved onto itself");
+    mtk::@check(other != self, "a queue cannot be moved onto itself");
     if (other == self) return;
     if (other.is_empty()) return;
 

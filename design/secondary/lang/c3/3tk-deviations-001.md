@@ -409,12 +409,24 @@ and it is a real requirement of the public surface.
 | | Callers in `3tk/src/` | Callers outside | Verdict |
 |---|---|---|---|
 | `InnerQueue.push_back_slot` | **none** | `t_pool.c3:70` — a hook filling `extra`, Part 12.5. Plus `t_managed.c3:63`, `t_slot.c3:42`, `:158`, `t_queue.c3:358`, `:362`, and the `put_batch` sites `t_pool.c3:121`, `:434`, `:468`, `:498`, `:527`, `:537`, `:579`, `:593` | **Keep.** The application needs it, and Part 12.5 is why |
-| `InnerStack.push_slot` | **none** | `t_stack.c3:133-136`, and that test tests this operation. Nothing else | **DELETED 2026-08-24.** `InnerStack` never crosses the public surface — R13 — so no application could call it either |
+| `InnerStack.push_slot` | **none** | `t_stack.c3:133-136`, and that test tests this operation. Nothing else | **DELETED 2026-08-24.** Its only caller was ever `put_all`, dropped by `R15` — see the note below |
 
-The stack's is the sharper case: R13 rules that `InnerStack` is the pool's
-private storage and never appears on a public signature. An operation on a
-container the application cannot reach, which the pool does not call, has no
-caller it could ever acquire. **3tk-only, and it was two lines plus one test.**
+The stack's was the sharper case, and the deletion rested on two grounds.
+**The first is `R15`: `push_slot`'s only caller was ever `pool.c3:451`,
+`put_all`'s refusal path**, and 002 dropped `put_all` — §5.1's row says so, and
+the queue's `push_front_slot` went with it for the same reason. The second, from
+`3tk-port-findings-003.md`, was that no application could reach an `InnerStack`
+at all. **3tk-only, and it was two lines plus one test.**
+
+**CLARIFIED 2026-08-26.** The owner's ruling that the stack is available to a
+caller **retires the second ground and leaves the first untouched**. `R15` is
+sufficient on its own: the caller is gone and is not coming back, so **the
+deletion is not reopened by the ruling.** What a public stack raises instead is
+a new question and not a reversal — whether the stack should carry a
+Slot-shaped insert for **symmetry** with `InnerQueue.push_back_slot`. The
+queue's has a concrete reason the stack has no equivalent of: Part 12.5 hands a
+hook an `InnerQueue* extra`, and no 3tk surface hands anyone a stack. **Nothing
+here is open unless the owner asks for that symmetry.**
 
 ---
 

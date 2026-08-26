@@ -458,9 +458,16 @@ release each item.
 
 **A queue and not a stack in all four**, including the pool's. What a hook
 receives is a batch to walk and release in order, not a store for reuse. The
-queue is the port's **transfer** container; the stack is the pool's **storage**
-container, and keeping the split is what keeps `InnerStack` out of the
-application's surface entirely.
+queue is the port's **transfer** container; the stack is the port's **storage**
+container, and keeping the split is what keeps `InnerStack` off every signature
+3tk publishes.
+
+**REVISED 2026-08-26, on the owner's ruling.** *Off every signature* is what
+this section ever meant, and *out of the application's surface entirely* is what
+it used to say. **Both containers are available to a caller**, exactly as the
+queue always was: `Pool` is the only user of a stack inside the toolkit, and
+that is a fact about the toolkit, not a restriction on the application. `R13`
+is revised in the same move.
 
 `PoolBucket.free` — `pool.c3:97` — is the only `InnerStack` in the port.
 
@@ -613,7 +620,7 @@ R, for redesign, so nothing collides with proposal 004's D1 to D16.
 | R10 | Invariant 16 is retired and replaced by the self-link invariant | **ACCEPTED.** §5.5 |
 | R11 | Pool reuse becomes last-in first-out, **for defect surfacing**, and Part 11.7 stays silent on order | **ACCEPTED**, with the owner's reason. §1.3 |
 | R12 | `Pool.close` empties every bucket into one `InnerQueue`, `pop` then `push_back`, O(n) once, **no order promised** | **ACCEPTED.** §5.3 |
-| R13 | Four public signatures take `InnerQueue*`. `InnerStack` is internal to the pool. There is no `InnerList` | **ACCEPTED.** §5.4 |
+| R13 | Four public signatures take `InnerQueue*`. `InnerStack` is on no signature 3tk publishes, and `Pool` is its only user inside the toolkit — **it is available to a caller like the queue**. There is no `InnerList` | **ACCEPTED**, and its middle clause **REVISED 2026-08-26** on the owner's ruling. §5.4 |
 | R14 | The specification moves to 003. Part 11.7 stays silent on order | **ACCEPTED.** §8 |
 | R15 | **`Pool.put_all` is dropped**, with `push_front` and `push_front_slot` | **RULED 2026-08-23.** §6 |
 

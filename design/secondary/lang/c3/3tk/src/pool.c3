@@ -1,15 +1,29 @@
 <*
  Reuse of an item, decided by your hooks. A keeper of free items, grouped by type identity.
 
+ Write the hooks, create, get, put, close, release.
  Policy is not in the pool. Policy is in the hooks.
  The pool answers whether a reusable item is free right now.
  A pool is itself an item: it can travel through a mailbox.
+
+ One bucket per identity, in a flat slice allocated once at creation.
+ The identity set is fixed at creation.
+ It is not empty, and it has no duplicate. Both are checked.
+ A stack and not a queue, and the reason is defect surfacing.
+ The implementing struct is the context. There is no `ctx` parameter.
+ The hooks are a parameter of creation. A pool cannot exist without them.
+ On get an empty Slot goes in, and a full Slot comes back on success.
+ A free item is taken, or `on_get` is asked to make one.
+ On put the Slot is the answer: cleared means the pool took the item, unchanged means it was refused and you still have the item.
+ On close nothing comes back to you. Everything goes to `on_close`.
+ Close it first. Releasing an open pool aborts in every build mode.
  The mailbox gives everything back to a caller.
  The pool's close gives nothing back at all.
+
  There is no `put_all`. A caller giving a batch back writes the loop.
 
  ```c3
- while (mtk::Handle h = batch.pop_front())
+ while (Handle h = batch.pop_front())
  {
      Slot s;
      s.fill(h);
@@ -22,12 +36,6 @@
 *>
 // [3tk: R15, Part 11.7, Part 11.8, Part 11.9, Part 11.10, Part 12, Part 17.2, Part 19.2]
 module mtk::pool;
-import mtk;
-import mtk::helper;
-import std::thread;
-import std::time;
-import std::core::mem::alloc;
-import std::atomic::types;
 
 <*
  Three methods. Implement them to give a pool its policy.
@@ -494,3 +502,14 @@ fn usz Pool.count_of(&self, typeid t)
     PoolBucket* b = self.bucket_for(t);
     return b ? b.free.len() : 0;
 }
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import mtk::helper;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+import std::atomic::types;
+

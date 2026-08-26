@@ -1,9 +1,9 @@
 <*
  Part 8 — the intrusive stack. New with the redesign, R2 and R11.
 
- It is the pool's storage container and never crosses the public surface, so
- what is tested here is the container itself: order, the self-link at the
- bottom, the repair, and the heterogeneity every Matryoshka container has.
+ It is the storage container, available to a caller like the queue, so what is
+ tested here is the container itself: order, the self-link at the bottom, the
+ repair, and the heterogeneity every Matryoshka container has.
 
  Part 18 invariants 13, 14, 15, 17, and the self-link invariant.
 *>
@@ -86,8 +86,8 @@ fn void the_link_test_is_exact_on_the_stack() @test
     InnerStack st;
     st.push(mtk::helper::to_handle(&a));
 
-    always_assert(mtk::is_linked(mtk::helper::to_handle(&a)), "the bottom of a stack reports unlinked");
-    always_assert(!mtk::is_linked(mtk::helper::to_handle(&b)), "an item on no container reports linked");
+    always_assert(mtk::inner::is_linked(mtk::helper::to_handle(&a)), "the bottom of a stack reports unlinked");
+    always_assert(!mtk::inner::is_linked(mtk::helper::to_handle(&b)), "an item on no container reports linked");
 }
 
 <*
@@ -106,9 +106,9 @@ fn void pop_repairs_the_link() @test
     Handle middle = st.pop();
     Handle bottom = st.pop();
 
-    always_assert(!mtk::is_linked(top), "pop left the top's link set");
-    always_assert(!mtk::is_linked(middle), "pop left a middle item's link set");
-    always_assert(!mtk::is_linked(bottom), "pop left the bottom's self-link set");
+    always_assert(!mtk::inner::is_linked(top), "pop left the top's link set");
+    always_assert(!mtk::inner::is_linked(middle), "pop left a middle item's link set");
+    always_assert(!mtk::inner::is_linked(bottom), "pop left the bottom's self-link set");
 
     // the shape Pool.close uses: pop off the stack, push onto a queue
     InnerQueue q;

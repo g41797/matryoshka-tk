@@ -20,7 +20,7 @@ that changes it. A file under `ref/` that contradicts `3tk/src` is a defect of
 the stage that changed the source. The rule binds every file under `ref/`.
 
 **It does not argue.** No ruling markers, no history, no alternatives that were
-refused. Those live in [3tk-decisions-001.md](3tk-decisions-001.md).
+refused. Those live in [3tk-decisions-002.md](3tk-decisions-002.md).
 
 **Every contract and every check below is copied from `3tk/src`**, with its
 `file:line`. None is inferred from what a declaration ought to check.

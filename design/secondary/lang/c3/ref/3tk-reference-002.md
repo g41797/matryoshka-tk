@@ -17,6 +17,11 @@ A part learned once is a part learned everywhere.
 Deep dive is not this book's job. For that the reader goes to `3tk/src` or to a
 test under `3tk/test`.
 
+**This is 002, written by 3TK-46.** It carries all of `001`, and adds Part 7's
+*The modules, one by one* — the eight labelled module blocks — and corrects
+Part 7's module layout for the eight-module split 3TK-44 made. `001` is in
+`backup/`.
+
 ---
 
 ## Part 1 — Introduction
@@ -58,7 +63,7 @@ That gives a concurrent program with no lock around application data.
 Plain scope limits.
 
 - Not a container library. The queue and the stack exist because the mailbox
-  and the pool need them.
+  and the pool need them, and a caller may use either one directly.
 - Not an allocator. Every item is allocated and freed by your code, or by your
   hooks.
 - Not a garbage collector. The toolkit never frees an item you gave it, except
@@ -236,7 +241,7 @@ struct InnerQueueIterator { ... }
   - Zero or one item.
   - A Slot starts empty.
 - `InnerQueue` — many items, first-in first-out. The transfer container.
-- `InnerStack` — many items, last-in first-out. The pool's private storage.
+- `InnerStack` — many items, last-in first-out. The storage container.
 - `InnerQueueIterator` — a walker over a queue.
 
 Two words name the two sides.
@@ -513,6 +518,8 @@ Nothing in the queue can fail.
 The intrusive stack. Last-in first-out. Four operations: no walker, and no
 splice.
 
+Where the queue carries items across, the stack holds them still.
+
 ```c3
 fn bool   InnerStack.is_empty(&self)
 fn usz    InnerStack.len(&self)
@@ -533,8 +540,12 @@ The order is not promised. No caller is entitled to which item comes back.
 
 Nothing in the stack can fail.
 
-The stack is the pool's private storage. It does not cross the pool's public
-surface.
+The stack is the storage container. Items rest in it until they are wanted
+again, and the newest is the one that comes back first.
+
+The pool keeps one per identity, and it is the only stack 3tk owns. No 3tk
+signature passes one: the four that take a container take an `InnerQueue*`. A
+caller who wants a stack declares one.
 
 ### The API — the insert guards
 
@@ -1299,9 +1310,11 @@ An item is in exactly one of four states.
 
 ## Part 7 — Beyond the toolkit
 
-Three things outside the three tools.
+Four things outside the three tools.
 
 - The module layout — what an import gives you.
+- The modules, one by one — the eight module descriptions, labelled for the
+  doc loop.
 - Master — the coordination role, and why it is not a type.
 - The build modes, and what changes between them.
 
@@ -1313,18 +1326,24 @@ One import gives the toolkit.
 import mtk;
 ```
 
-`module mtk` is declared by four files, and the rest are submodules of it.
+`module mtk` is declared by one file, and the rest are submodules of it.
 
-| module | what is in it |
-|---|---|
-| `mtk` | `Inner`, `Handle`, `Slot`, the faults, `@check`, `InnerQueue`, `InnerStack` |
-| `mtk::helper` | every crossing between a typed pointer and a `Handle` |
-| `mtk::managed` | `create` and `release`, for an outer that carries an allocator |
-| `mtk::mailbox` | `Mailbox` |
-| `mtk::pool` | `Pool` and `PoolHooks` |
+| module | file | what is in it |
+|---|---|---|
+| `mtk` | `mtk.c3` | `VERSION`, the faults, `@check`, `CHECKED` |
+| `mtk::inner` | `inner.c3` | `Inner`, `Handle`, `Slot`, and the link |
+| `mtk::queue` | `queue.c3` | `InnerQueue` and `InnerQueueIterator` |
+| `mtk::stack` | `stack.c3` | `InnerStack` |
+| `mtk::helper` | `helper.c3` | every crossing between a typed pointer and a `Handle` |
+| `mtk::managed` | `managed.c3` | `create` and `release`, for an outer that carries an allocator |
+| `mtk::mailbox` | `mailbox.c3` | `Mailbox` |
+| `mtk::pool` | `pool.c3` | `Pool` and `PoolHooks` |
 
-- The core is one module spread over `mtk.c3`, `inner.c3`, `queue.c3` and
-  `stack.c3`.
+- Eight files, eight modules, one module per file. **REVISED by 3TK-46.** `001`
+  said the core was one module spread over `mtk.c3`, `inner.c3`, `queue.c3` and
+  `stack.c3`, and that `module mtk` was declared by four files. 3TK-44 split it,
+  and 3TK-44's own report named this sentence as one it left standing. The table
+  above is the state after that split.
 - The mailbox and the pool use only the public surface of the core, and
   `run-builds.sh` tests that.
 
@@ -1336,6 +1355,268 @@ core + mailbox                  identity + transfer between threads
 core + pool                     identity + item reuse
 core + mailbox + pool           transfer + item reuse
 ```
+
+### The modules, one by one
+
+**Eight modules, eight labelled blocks. Written by 3TK-46.**
+
+Each block below is one module's description. It is delimited by an HTML
+comment carrying the module's name, which is invisible in the rendered page and
+exact when parsed.
+
+```
+<!-- 3tk:module mtk::NAME -->
+...
+<!-- /3tk:module -->
+```
+
+**A block is the whole correlation.** The source side is the `<* *>` block
+directly above `module X;` in `3tk/src`. Moving one is a copy in either
+direction — strip one leading space per line, or add one — and the check is a
+`diff`. [3tk-doc-loop-003.md](3tk-doc-loop-003.md) says so under *Moving a
+module description*.
+
+**Every block is written in the intersection of the two renderers.** One
+sentence per line, never wrapped, every identifier in backticks, no trailing
+`\`, no numbered list, no table, no bold. The three restrictions are
+[3tk-doc-loop-003.md](3tk-doc-loop-003.md)'s, and the no-bold is the register's.
+
+**These eight are the only labelled blocks in this file.** A declaration's
+descriptor is not labelled and is not copied — it is judged, and checked as a
+subset. That is the other kind of move.
+
+#### `mtk`
+
+From Part 1. No *Usual flow* exists in Part 1, so there was none to decide
+about.
+
+<!-- 3tk:module mtk -->
+An item-transfer and item-reuse toolkit for concurrent C3 programs.
+
+Three small tools, each one usable on its own.
+The core is type identity for an item, and two containers that never allocate.
+`mtk::mailbox` is transfer of an item between threads.
+`mtk::pool` is reuse of an item, decided by your hooks.
+Mailbox and pool are both optional.
+The core alone is a valid use.
+
+Share by communicating.
+Do not share access to an item, move the item.
+One place has the item at a time.
+That gives a concurrent program with no lock around application data.
+
+Not a container library.
+The queue and the stack exist because the mailbox and the pool need them, and a caller may use either one directly.
+Not an allocator.
+Every item is allocated and freed by your code, or by your hooks.
+Not a garbage collector.
+The toolkit never frees an item you gave it, except through a hook you wrote.
+Not a coordinator.
+There is no `Master` type.
+
+One import gives the toolkit.
+`module mtk` is declared by one file, and the rest are submodules of it.
+This module holds `VERSION`, the faults, `@check` and `CHECKED`.
+<!-- /3tk:module -->
+
+#### `mtk::inner`
+
+From Part 3's *What this is*, *Participants*, *The API — the Slot* and *The API
+— the link*. Part 3's *Usual flow* is the core's, not this module's, and it is
+a numbered list with nested bullets: **left out.**
+
+<!-- 3tk:module mtk::inner -->
+The inner, the handle, the Slot, and the link.
+
+`Inner` is the field you embed.
+The chain link and the identity, in one.
+The identity sits in the same field as the chain link.
+The identity says what the outer type is.
+`Handle` is a pointer to an embedded `Inner`: one item, with the type forgotten.
+Everything 3tk transports is a `Handle`.
+It is an alias, so it converts freely with `Inner*` and costs nothing.
+`Slot` is a box that holds one handle, or nothing.
+A Slot starts empty.
+
+The Slot is how the toolkit tells you where an item went.
+Read the Slot after every call that gives or takes an item.
+
+The chain link is the other half of `Inner`.
+`reset` clears the chain link and not the identity.
+Every chain ends at an item pointing at itself, never at null.
+That is what makes `is_linked` exact.
+<!-- /3tk:module -->
+
+#### `mtk::queue`
+
+From Part 3's *The API — the queue*. No *Usual flow* of its own: **none to
+decide about.**
+
+<!-- 3tk:module mtk::queue -->
+The intrusive queue. First-in first-out.
+
+The transfer container.
+Nothing here allocates, and every operation is O(1).
+The count is kept, so `len` is O(1).
+`push_back` adds at the back.
+There is no front insert.
+`pop_front` takes the item at the front, and null on an empty queue is an answer and not a fault.
+`append_queue` moves every item of another queue onto the back of this one, in O(1).
+`iter` and `next` are a walker, taken from the queue.
+Removing the current item during a walk is not supported.
+Every chain ends at an item pointing at itself, never at null.
+Nothing in the queue can fail.
+<!-- /3tk:module -->
+
+#### `mtk::stack`
+
+From Part 3's *The API — the stack*, as 3TK-45 rewrote it. No *Usual flow* of
+its own: **none to decide about.**
+
+<!-- 3tk:module mtk::stack -->
+The intrusive stack. Last-in first-out.
+
+The storage container.
+Where the queue carries items across, the stack holds them still.
+The pool keeps one per identity, and it is the only stack 3tk owns.
+No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
+A caller who wants a stack declares one.
+Four operations: no walker, and no splice.
+The order is not promised.
+No caller is entitled to which item comes back.
+Every chain ends at an item pointing at itself, never at null.
+Nothing in the stack can fail.
+The count is kept, so `len` is O(1).
+There is no tail, so flattening the stack is O(n).
+<!-- /3tk:module -->
+
+#### `mtk::helper`
+
+From Part 3's *The API — crossing*. No *Usual flow* of its own: **none to
+decide about.**
+
+<!-- 3tk:module mtk::helper -->
+Every crossing between a typed pointer and a `Handle` lives in one file.
+
+`to_handle` goes from your pointer to a `Handle`.
+Null in, null out.
+`from_handle` goes from a `Handle` to `$Type*`, and is null on an identity mismatch.
+A mismatch is an answer, not a failure.
+`must_from_handle` is the same, and it aborts on a mismatch.
+The abort names your line.
+The same three take the item from a Slot, and five of them appear again as methods.
+`from_slot` looks, and the Slot is unchanged.
+`move_from_slot` takes, and on success the Slot is left empty.
+None of these moves an item.
+Reading an identity and casting a pointer leave every container alone.
+No alias to declare, no instantiation, no registration.
+<!-- /3tk:module -->
+
+#### `mtk::managed`
+
+From Part 3's *The API — allocating an item for you*. No *Usual flow* of its
+own: **none to decide about.** Its worked example is a ```c3 fence, which does
+survive the crossing, and it is left in the reference because it belongs to a
+group of declarations rather than to the module.
+
+<!-- 3tk:module mtk::managed -->
+One helper allocates and frees, and only if your struct carries the allocator itself.
+
+`create` allocates the outer, initializes it, and fills the Slot.
+The item keeps the allocator for life.
+On an allocation failure the Slot is untouched and the fault is returned.
+`release` frees the item with the allocator it kept.
+It takes no allocator.
+It is a no-op on an empty Slot, so a `defer` registered before the acquisition is safe.
+No type declares itself managed.
+The choice is made at the call site.
+<!-- /3tk:module -->
+
+#### `mtk::mailbox`
+
+From Part 4's *What this is*, *Participants* and *Usual flow*. Part 4's *Usual
+flow* is a numbered list with nested bullets, and neither shape survives:
+**the list is left out, and its one-line summary — *Create, send, receive,
+close, release.* — is carried, together with the plain sentences under each
+step.** The fence is left in the reference: it is the book's worked example and
+it repeats what the sentences already say.
+
+<!-- 3tk:module mtk::mailbox -->
+The mailbox. A queue of items, with waiting.
+
+Transfer of an item between threads.
+Create, send, receive, close, release.
+Many producers, many consumers, on one mailbox.
+The mailbox keeps items. It never touches them.
+A mailbox is itself an item: it can travel through another mailbox.
+
+The allocator is kept for life.
+Nothing partially constructed is ever returned.
+On send the Slot is the answer: cleared means the mailbox has the item, untouched means the mailbox is closed and you still have the item.
+On receive an empty Slot goes in, and a full Slot comes back on success.
+Every other outcome is a fault, and the Slot stays empty.
+On close what was left comes back to you, as one queue.
+Releasing those items is your work.
+The mailbox never knew what they were.
+Close it first. Releasing an open mailbox aborts in every build mode.
+
+The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
+The fields named with a leading underscore are internal. Do not read them.
+<!-- /3tk:module -->
+
+#### `mtk::pool`
+
+From Part 5's *What this is*, *Participants* and *Usual flow*. Part 5's *Usual
+flow* is a numbered list with nested bullets: **the list is left out, and its
+one-line summary — *Write the hooks, create, get, put, close, release.* — is
+carried, together with the plain sentences under each step.** The block keeps
+one ```c3 fence, the `put_all` loop, which was already in the source and is
+there because it replaces a call the toolkit does not have. The hooks example
+stays in the reference.
+
+**One divergence found and resolved toward the reference.** The fence in
+`pool.c3`'s module block today opens `while (mtk::Handle h = ...)`. There is no
+`mtk::Handle` — `Handle` is declared in `mtk::inner`, and `mtk::Handle` is the
+only occurrence of that spelling anywhere in `3tk/src`, `3tk/test` or
+`3tk/negative`. Part 5 says `Handle`, and the block above says `Handle`. **The
+source's spelling is a defect that 3TK-47's move corrects by copying.**
+
+<!-- 3tk:module mtk::pool -->
+Reuse of an item, decided by your hooks. A keeper of free items, grouped by type identity.
+
+Write the hooks, create, get, put, close, release.
+Policy is not in the pool. Policy is in the hooks.
+The pool answers whether a reusable item is free right now.
+A pool is itself an item: it can travel through a mailbox.
+
+One bucket per identity, in a flat slice allocated once at creation.
+The identity set is fixed at creation.
+It is not empty, and it has no duplicate. Both are checked.
+A stack and not a queue, and the reason is defect surfacing.
+The implementing struct is the context. There is no `ctx` parameter.
+The hooks are a parameter of creation. A pool cannot exist without them.
+On get an empty Slot goes in, and a full Slot comes back on success.
+A free item is taken, or `on_get` is asked to make one.
+On put the Slot is the answer: cleared means the pool took the item, unchanged means it was refused and you still have the item.
+On close nothing comes back to you. Everything goes to `on_close`.
+Close it first. Releasing an open pool aborts in every build mode.
+The mailbox gives everything back to a caller.
+The pool's close gives nothing back at all.
+
+There is no `put_all`. A caller giving a batch back writes the loop.
+
+```c3
+while (Handle h = batch.pop_front())
+{
+    Slot s;
+    s.fill(h);
+    p.put(&s);
+    if (s.is_full()) { batch.push_back(h); break; }
+}
+```
+
+The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
+<!-- /3tk:module -->
 
 ### Master — not part of the API
 
