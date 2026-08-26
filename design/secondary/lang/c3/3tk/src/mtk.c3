@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
+// SPDX-License-Identifier: MIT
+
 <*
  An item-transfer and item-reuse toolkit for concurrent C3 programs.
 

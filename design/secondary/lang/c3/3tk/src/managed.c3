@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
+// SPDX-License-Identifier: MIT
+
 <*
  One helper allocates and frees, and only if your struct carries the allocator itself.
 

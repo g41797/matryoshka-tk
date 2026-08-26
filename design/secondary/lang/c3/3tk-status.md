@@ -3,11 +3,22 @@
 Current state of the 3tk line of work. One screen. Updated after every stage.
 
 This file is the entry point for a cold session. Read it, then the stage named  
-by the owner. **[3tk-staging-plan-018.md](3tk-staging-plan-018.md) is spent** —  
-all five of its stages have run, and so have all five of  
+by the owner. **[3tk-staging-plan-019.md](3tk-staging-plan-019.md) is the live  
+plan.** It declares **3TK-48 to 3TK-50** — the rules for an example, the pattern  
+catalog, and the examples tree. **Declared, not authorized**; the owner names a  
+stage before it runs, and the continue line is below.
+
+**[3tk-staging-plan-018.md](3tk-staging-plan-018.md) is spent** — all five of  
+its stages have run, and so have all five of  
 [3tk-staging-plan-017.md](3tk-staging-plan-017.md)'s and all six of  
 [3tk-staging-plan-016.md](3tk-staging-plan-016.md)'s.  
 For what else is in this folder and who reads it, see [README.md](README.md).
+
+**To start the next stage:**
+
+```
+Read design/secondary/lang/c3/3tk-status.md. Run 3TK-48.
+```
 
 **For what was decided about the port and where it lives in the code, read  
 [ref/3tk-decisions-002.md](ref/3tk-decisions-002.md).** One common section and  
@@ -1839,6 +1850,22 @@ started. What is left is what is genuinely open.
   mailbox got the same line right. Smallest repair: `broadcast`, or a predicate
   over every bucket in the shape `has_queued` uses. **Both are `3tk-only` and
   neither is ruled.**
+
+- **The port says `Item` where the owner's word is `Outer`.** Ruled 2026-08-26:
+  **new work says Outer, and the existing tree is not searched and replaced.**
+  3tk has priority over the repair. Counted live that day: **124 in `3tk/src`,
+  203 in `3tk/test` and `3tk/negative`, 346 in `ref/`, and 164 in
+  [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)**.
+  The last is the shared input binding otk, ztk and dtk, and **3tk does not
+  reword a `common/` document for the other three ports** — which is why this is
+  a separate ruling and not a stage. **The deadline is dtk's first stage**:
+  [../d/dtk-status.md](../d/dtk-status.md) has a prepared folder and no stage
+  run, and dtk builds from the specification alone, so the first dtk stage bakes
+  the word into a fourth port. The secondary trigger is a specification `005`
+  written for any other reason. **If it is ever repaired, it is repaired
+  whole** — renaming `ref/` but not `src/`, or `src/` but not the
+  specification, splits the two words along an invisible line, which is worse
+  than today's line of new work against old. Filed by plan 019.
 
 - **Whether otk gets a status file.** `../odin/` holds one backport document.
   **The pointer at the specification is written** — 3TK-19, 2026-08-24, one

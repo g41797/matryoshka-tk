@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
+// SPDX-License-Identifier: MIT
+
 <*
  Reuse of an item, decided by your hooks. A keeper of free items, grouped by type identity.
 

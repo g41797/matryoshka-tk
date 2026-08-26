@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026 g41797
+// SPDX-License-Identifier: MIT
+
 <*
  Every crossing between a typed pointer and a `Handle` lives in one file.
 

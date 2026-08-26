@@ -7,6 +7,109 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-26 — plan 019, written
+
+**Written after plan 018 was spent**, from a conversation with the owner rather
+than from a stage. No source touched, no reference edited: the plan file, and
+the pointers to it.
+
+**What the conversation was about.** The toolkit is written down and the way to
+use it is not. Two gaps the owner named, and a third found by measuring the 87
+tests against ztk's scenario lists.
+
+**Three gaps, measured live rather than argued.**
+
+- **33 declaration lines in six test files put an outer on the stack, 41
+  outers in all.** `managed::create` has 13 call sites, 10 of them in `test/`.
+  A stack outer cannot be released, so the cleanup half of every pattern in
+  `patterns-029.md` is invisible.
+- **`switch` occurs 0 times** in `3tk/src`, `3tk/test` and `3tk/negative`,
+  though 3TK-4 measured that C3 does what ztk cannot and the probe printed
+  `switch: Job`. That probe predates 3TK-21 and the `any`-shaped `Inner`.
+- **Every pool in `3tk/test` is built with exactly one identity** —
+  `typeid[1] tags = { Holder::typeid }`, at all six sites. The only multi-tag
+  array in the tree is the negative that exists to be refused. **So
+  `on_get(typeid want, ...)` has never had to choose**, and that is why the
+  second gap is there: nothing in the suite forces a dispatch.
+
+**What the owner ruled in that conversation**, each named in the plan so no
+stage re-opens it.
+
+- **`std.Io` is out.** `Future`, `Io.Group`, `io.concurrent`, `Io.Select` and
+  `error.Canceled` are Zig's. Roughly half of `patterns-029.md` goes with them,
+  and `ItemList` with it.
+- **The existing 87 tests are not touched**, and neither is `test/common.c3`.
+  They probe the implementation; the examples demonstrate it.
+- **The examples are separated from the tests**, and the reason is the one that
+  settles it: **a pattern has to be showable in documentation**, and a file
+  carrying `@test` and `always_assert` cannot be shown. A fourth tree beside
+  `src/`, `test/` and `negative/`, supermodule `exm`.
+- **A file name carries a numeric prefix**, as ztk's do, so it correlates with a
+  numbered entry in a list.
+- **3tk's rules for its own examples go under `ref/`**, editable, so a later
+  stage follows them instead of re-deriving them.
+- **The catalog comes before the mapping.** Which pattern lands in which file is
+  decided after the catalog exists.
+- **Never `Item` or `Items`. Always `Outer` and `Outers`** — in everything these
+  stages write.
+- **LE import order and the SPDX header bind `src/` and nothing else.**
+- **3tk has priority over the terminology drift**, which is written down rather
+  than fixed.
+
+**Two of the port's own conventions were found by reading, and one of them
+corrects a claim made in the conversation.**
+
+- **C3 permits imports at the bottom, and three `src/` files already do it** —
+  `pool.c3` 512-517 of 518, `mailbox.c3` 358-363 of 363, `managed.c3` 85-88 of
+  88. Five others put them at the top. **The claim that C3 requires imports at
+  the top was false**, and the owner caught it. The port follows ztk's LE rule
+  in part of `src/` without ever having stated it.
+- **The SPDX header is on 8 of 8 `src/*.c3` and on nothing else** — not
+  `test/`, not `negative/`, not the scripts. The owner adds them. **The mover
+  leaves them alone**: `doc_blocks.py`'s `source_block` bounds the block at its
+  own `<*` and never walks above it, checked by reading.
+
+**What ztk's `examples/` tree taught, read the same day.** `items.zig` is not a
+bag of structs — `freeItem` is the item-first chain, `createByTag` and
+`destroyByTag` are the tag-first chains, and the closing `else` is `unreachable`
+with the reason beside it. **The dispatch chains are written once and reused by
+every example.** `helpers/` holds the check that survives every build mode, and
+`hooks/` holds reusable pool hooks, one of which is backpressure — ztk scenario
+78, which 3tk has no test for. All three announce themselves as scaffolding in
+their own doc comment.
+
+**And one C3 constraint the tree must respect, which this folder has already
+paid for.** 3TK-44 split `module mtk` across four files into eight one-file
+modules because C3 gives a module one description and `c3c docgen` keeps
+whichever file it reaches first. **One file per module under `examples/`**, so
+the demo outers are one `outers.c3` and not four files.
+
+**`rules-049.md` was read for its tests, examples and Master material**, so a
+3tk rule with a ztk precedent is inherited rather than re-derived. Two of its
+rules changed the plan: **completeness** — a get-then-put example with no source
+and no destination is not a pattern — which the exemplar as first drafted failed;
+and **no testing API inside an example**, whose 3tk answer is neither `assert`
+nor `always_assert` but a shared `expect` taking a fault the example declares.
+**One inverts**: *No switch over tags — MUST* rests on a tag being a
+linker-assigned address, and C3's `typeid` has no such problem.
+
+**The terminology drift is recorded and not repaired.** Counted live: 124 in
+`3tk/src`, 203 in `3tk/test` and `3tk/negative`, 346 in `ref/`, and **164 in
+`../common/matryoshka-specification-004.md`**. The last is the shared input
+binding otk, ztk and dtk, and 3tk does not reword a `common/` document for the
+other three ports. **The deadline is dtk's first stage** — dtk builds from the
+specification alone, so the first dtk stage bakes the word into a fourth port.
+
+**Three stages, in a forced order.** 48 writes the rules 49 and 50 obey; 49
+decides which patterns exist and therefore how many files there are; 50 cannot
+run before either. **The pattern groups are not in this plan** — how many stages
+they need depends on 49's classification, and a plan 020 declares them.
+
+**Declared, not authorized.** The continue line for 3TK-48 is in
+[3tk-status.md](3tk-status.md).
+
+---
+
 ## 2026-08-26 — the flow document is 003
 
 **Not a stage.** A revision on the owner's word, the same day 3TK-47 reported
