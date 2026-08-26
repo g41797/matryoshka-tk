@@ -13,7 +13,7 @@ It re-describes no document's content and rules on nothing.
 | File | What it is | Who reads it |
 |---|---|---|
 | [3tk-status.md](3tk-status.md) | Where the work stands. Edited in place | **Anyone opening this folder, first.** A cold session starts here |
-| [3tk-staging-plan-017.md](3tk-staging-plan-017.md) | The current plan. Holds only what has not run | **The owner**, to authorize a stage; **a stage**, to run it |
+| [3tk-staging-plan-019.md](3tk-staging-plan-019.md) | The current plan. Holds only what has not run | **The owner**, to authorize a stage; **a stage**, to run it |
 | [3tk-log.md](3tk-log.md) | The narrative, append-only, newest first | Anyone asking *when did this happen, and why* |
 
 ## `ref/` — revised with the source, not frozen
@@ -29,6 +29,8 @@ moment its stage ran. **These are the opposite: they are alive.** A change to
 | [ref/3tk-api-003.md](ref/3tk-api-003.md) | The same surface as a verification table: every assert and contract with its `file:line` | Anyone checking that 002 is true. **Not a page to learn from** |
 | [ref/3tk-reference-002.md](ref/3tk-reference-002.md) | The toolkit as a book. Seven parts, in 042's shape, with the eight labelled module blocks in Part 7 | Anyone reading the port end to end |
 | [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) | **Not content — procedure.** How the reference and the `<* *>` blocks in `3tk/src` are kept saying the same thing | Any stage editing either side, before it edits |
+| [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) | **Not content — procedure.** What an example under `3tk/examples/` must be, and what binds a stage that adds one | Any stage writing an example or the pattern catalog, before it writes |
+| [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md) | The pattern catalog: 62 shapes a person assembles the toolkit into, every code block compiled | **Anyone writing an application on 3tk**, after the API page; any stage writing an example |
 
 ## Read from elsewhere
 

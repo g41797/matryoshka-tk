@@ -14,11 +14,64 @@ its stages have run, and so have all five of
 [3tk-staging-plan-016.md](3tk-staging-plan-016.md)'s.  
 For what else is in this folder and who reads it, see [README.md](README.md).
 
+**3TK-48 and 3TK-49 have run.** The rules are in
+[ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and the catalog is
+in [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **3TK-50 is the last of
+plan 019**, and it is the first stage that writes code under `3tk/examples/`.
+
 **To start the next stage:**
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. Run 3TK-48.
+Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
 ```
+
+## Resuming after an interruption
+
+**An INTR stage is important work that is not part of this flow**, and it runs
+whenever the owner needs it. It may edit `3tk/src`, `test/`, `negative/`, or
+nothing here at all. **This section is what the 3tk flow resumes from
+afterwards**, so nothing has to be reconstructed from a conversation that was
+cleared.
+
+**Exactly one 3tk stage is unfinished: 3TK-50.** Nothing else in plans 016 to
+019 is outstanding. 3TK-48 and 3TK-49 are done and their outputs are on disk.
+
+**To resume, read three files in this order**, and nothing else is needed:
+
+1. this file,
+2. [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) — normative,
+   binds the stage,
+3. [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md) — the catalog 3TK-50
+   draws its one worked pattern from.
+
+Then [3tk-staging-plan-019.md](3tk-staging-plan-019.md)'s *3TK-50* section, which
+holds the charter, the three probes and the verification list.
+
+```
+Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
+```
+
+**Re-measure before trusting any number in this file.** An INTR stage may have
+moved the tree under it, and the live-scan rule means a scan counts only when it
+has just been run. **These four are the ones later stages depend on**, and all
+four were true when 3TK-49 finished:
+
+```
+./3tk/run-builds.sh        # four builds green, 63 checks, 87 tests
+./3tk/check-doc-loop.sh    # 0 differing blocks, 439 sentences, 438 found, 1 missing
+grep -roiwE 'items?' 3tk/src ref            # 124 and 360
+c3c compile-only --safe=yes -O0 <blocks> 3tk/src/*.c3   # the catalog's 48 c3 blocks
+```
+
+**Two rulings are owed before plan 020 can be written**, and 3TK-50 is barred
+from taking either: **the numbering** of the catalog against ztk's scenario
+numbers, and **the grain** — how many example files the 62 patterns become.
+Both are listed under *What this plan deliberately leaves to the owner* in
+[3tk-staging-plan-019.md](3tk-staging-plan-019.md).
+
+**If an INTR stage changed `3tk/src`, the doc loop runs before 3TK-50 does.**
+[ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) is the procedure, and
+`check-doc-loop.sh` says whether it is owed.
 
 **For what was decided about the port and where it lives in the code, read  
 [ref/3tk-decisions-002.md](ref/3tk-decisions-002.md).** One common section and  
@@ -52,6 +105,20 @@ content. **[ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md) is the procedure
 that keeps that content and the `<* *>` blocks in `3tk/src` saying the same
 thing.** Read it before editing either side. It is not a stage and writes no
 row here.
+
+**To find out what to build with the toolkit, read
+[ref/3tk-patterns-001.md](ref/3tk-patterns-001.md).** 62 numbered shapes, each
+with *when to use*, a compiled code shape and *why*. It is the layer between the
+reference and an application, and it is **descriptive** — a rule is changed in
+the rules file and nowhere else. Its input was ztk's `patterns-029.md`, and every
+one of that file's 75 entries is classified in it: 38 carry over, 16 change
+shape, 1 inverts, 20 drop, and 7 shapes are 3tk's own.
+
+**[ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) is the second
+procedure.** What an example under `3tk/examples/` must be, and what binds a
+stage that adds one. Written by 3TK-48, and it binds 3TK-49, 3TK-50 and every
+later example stage. **Its first rule is that new work says Outer and never
+`Item`.** Like the doc loop, it is not a stage and writes no row here.
 
 ## Scope
 
@@ -157,6 +224,8 @@ show no trace of it.
 | 3TK-43 | the flow document | [ref/3tk-doc-loop-002.md](ref/3tk-doc-loop-002.md) | DONE 2026-08-26 — **`001` carried forward whole, plus the register, both renderers measured, and the rules for moving a module description.** `001` moved to `backup/`. **This file 1,592 lines to 1,506** by the move, one pointer line where the register was; 1,556 with this stage's own record written. Ban scan run live: 5 in `002`, all carried from `001` and all in rule text or a record row. Trailing `\` 0 in both. Four builds green, 63 checks, 87 tests. No source touched |
 | 3TK-45 | the stack is public | `3tk/src/stack.c3` + [ref/3tk-reference-001.md](ref/3tk-reference-001.md) + [ref/3tk-decisions-002.md](ref/3tk-decisions-002.md) | DONE 2026-08-26 — **the owner ruled the stack available to an external caller, and the definitions that said otherwise were fixed in the stage**: `R13`'s middle clause and §5.4's *out of the application's surface entirely*, both in `3tk-core-redesign-proposal-002.md`. Four prose places rewritten, **the stack given its own reason — the storage container** — in the reference first and moved to the source. `3tk-deviations-001.md`'s `push_slot` grounds corrected — `R15` stands, the deletion is not reopened. Decisions `001` to `002`. `check-doc-loop.sh stack.c3` 25 of 25, 0 missing; whole tree 7 of 337, unchanged. Ban scan 0. Four builds green, 63 checks |
 | 3TK-46 | eight sections, eight labels | [ref/3tk-reference-002.md](ref/3tk-reference-002.md) | DONE 2026-08-26 — **reference `001` to `002`, `001` to `backup/`.** Part 7 has a new *The modules, one by one*: **eight labelled blocks, eight open, eight close, eight distinct names**, counted by a fence-aware script. Five modules that had no section of their own have one. **Parts 3 to 5 untouched.** Part 7's module layout corrected to the eight-module split 3TK-44 left standing. *Usual flow* answered per module: six had none, and `mtk::mailbox` and `mtk::pool` carry the one-line summary while the numbered list stays out. **`formatDocText` run under `node` over all eight — one rendered line per source line**; the same eight rendered as CommonMark — flowing paragraphs, 0 hard breaks, labels invisible. `check-doc-loop.sh` 330 of 337, the same 7. Ban scan 0. **Four builds green, 63 checks, 87 tests each**, re-run after a first run read `mtk.c3` mid-save |
+| 3TK-48 | the rules for an example | [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) | DONE 2026-08-26 — **the first of plan 019's three, and no code was written.** A 341-line procedure document beside the doc loop: the Outer rule with its scope paragraph, the four trees, `NNN-name.c3` against `module exm::name;`, what an example is, completeness, two levels, the description register, the `test/` wrapper, an index that routes, dispatch, and what binds a stage. **The four `Item` counts re-run live at the moment of the claim — 124, 203, 346, 164 — all four unchanged.** **Three ztk rules inverted or refused on the record**: the `switch` prohibition becomes a permitted shape, the quoted-identifier ban and the doc-size rule are tooling defects 3tk does not have, and every `Io.*` Master rule is out with `std.Io`. Ban scan 0 over the new file; the only `Item` hits are the rule naming the word to ban it. Every link printed and read, 0 dead. `run-builds.sh` green, 63 checks, 87 tests. `check-doc-loop.sh` unchanged: 0 differing blocks, 439 sentences, 438 found, 1 missing. **No byte of `3tk/src`, `test/` or `negative/` touched** |
+| 3TK-49 | the pattern catalog | [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md) | DONE 2026-08-26 — **the second of plan 019's three, and no code was written.** **All 75 entries of ztk's `patterns-029.md` classified: 38 carry over, 16 change shape, 1 inverts, 20 drop**, and 7 shapes are 3tk's own — 62 numbered patterns with an opening index that routes and never copies. **The inversion measured live**: `switch (h.link.type)` with `case Event::typeid:` prongs compiles in all four builds, so ztk's *No switch over tags* MUST becomes a permitted 3tk shape. **All 48 fenced `c3` blocks compiled** as one scratch module against `3tk/src`, in all four builds; the scratch output was removed and no `headers/` was generated. Ban scan 0 over the new file. Every link and all 62 index anchors printed and checked, 0 dead. The `ref/` `Item` count re-run live and moved 346 to 360 — **all 14 in the two files the rule itself produced, none in the old tree**. `run-builds.sh` green, 63 checks, 87 tests. `check-doc-loop.sh` unchanged: 0 differing blocks, 439 sentences, 438 found, 1 missing. **No byte of `3tk/src`, `test/` or `negative/` touched** |
 
 ### 3TK-35 ran, and this is what it left
 
@@ -1095,17 +1164,89 @@ revising the reference versions it. **This was not a revision of its content** �
 two link targets, no sentence changed, and the checker reports 0 differing
 blocks and the same 438 of 439 afterwards. **The reference stays `002`.**
 
+### 3TK-49 ran, and this is what it left
+
+**Done 2026-08-26.** The second of plan 019's three. **`ref/` only, and no code
+under `3tk/` changed.**
+
+**[ref/3tk-patterns-001.md](ref/3tk-patterns-001.md)** — 62 numbered patterns,
+each with *when to use*, a code shape and *why*, and an opening index that is a
+number, a name and a hook. **The index routes and never copies**, which is
+[ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md)'s rule and the
+reason it is a table in the catalog and not a second file.
+
+**The classification is the work, and it is a count.** ztk's
+`../../../patterns-029.md` has 75 entries. **38 carry over in meaning, 16 change
+shape in C3, 1 inverts, 20 drop.** That leaves 55 crossing, and **7 shapes are
+3tk's own** — the allocator in the outer, an identity that costs no
+registration, the optional-declaration walk, the guarded expensive check, the
+`extra` queue for a composite outer, the two tiers of a fast build, and the hook
+object that *is* the context.
+
+**The 20 that drop are listed one by one at the end of the file.** Nine
+`Io.Select`, four `Io.Group`, two `Future`, three cancellation, and two
+whole-system shapes built on the event loop. **`ItemList` is not among them** —
+3tk's batch type is `InnerQueue`, so the entries that walked one changed shape.
+
+**The inversion was measured, not asserted.** ztk's *No switch over tags* is a
+MUST that rests on a Zig tag being a linker-assigned address. `switch
+(h.link.type)` with `case Event::typeid:` prongs **compiles in all four
+builds**, so in 3tk the prohibition is a permitted shape. It is entry 19, and
+the block that proves it is in the file.
+
+**One C3 detail cost a rewrite and is worth keeping.** `Msg.typeid` does not
+compile; the spelling is `Msg::typeid`. `run-builds.sh` already carried that
+finding in a comment, from the day `release_open_pool` passed for weeks having
+proved nothing.
+
+**All 48 fenced ` ```c3 ` blocks compiled**, by 3TK-30b's method: one scratch
+module built against `3tk/src`, every block drawn from it by script rather than
+by hand, **in all four builds**. The scratch output was removed and no
+`headers/` was generated.
+
+**Three claims the compiler corrected while the file was being written.**
+
+- **The demo outers all carry an `Allocator`**, and not for symmetry. A shared
+  release function is a dispatch chain, and every branch calls
+  `mtk::managed::release` — so an outer with no `Allocator` field cannot appear
+  in one at all. The build says so by name.
+- **`Pool.create` copies the identity list into its buckets**, so a local
+  `typeid[3]` at the call site is right and does not dangle.
+- **The fault-return operator is `~`**, twice.
+
+**One thing the catalog reports rather than smooths over.** 3tk's
+`mailbox::create` and `pool::create` give back a pointer, so ztk's acquisition
+Slot, its detach line and the window between them all go away — **and so does
+what that window bought.** A coordinator acquiring two resources has no
+`errdefer` shape to lean on, and entry 51 says so instead of showing a leak.
+
+**The `Item` count in `ref/` was re-run live and moved 346 to 360.** All 14 are
+in the two files the rule itself produced: 8 in the rules document, every one
+the rule naming the word in order to ban it, and 6 in the catalog — one
+restating the rule, five ztk entry titles quoted as titles. **Nothing was added
+to the old tree.** The rules document and this file's *Open questions* both
+carry the new number and the reason.
+
+**One pointer corrected in the rules document.** 3TK-48 wrote *it is not linked
+here because it does not exist yet*. It exists, so the sentence is now the link.
+**No rule was changed**, and the document stays `001`.
+
+**Verification.** `run-builds.sh` green — 63 checks, 87 tests, four builds.
+`check-doc-loop.sh` unchanged: 0 differing blocks, 439 sentences, 438 found, 1
+missing. Ban scan 0 over the new file. Every link and all 62 index anchors
+printed and checked, 0 dead. **No byte of `3tk/src`, `3tk/test` or
+`3tk/negative` touched.**
+
 ## How to continue after a clear
 
-**3TK-47 has run, and plan 018 is spent.** Plan 016's six, plan 017's five and
-plan 018's five have all run. **There is no declared stage waiting.** The next
-thing that runs is either a loop round on a file, or a stage the owner declares
-in a new plan.
+**3TK-49 has run. Plans 016, 017 and 018 are spent, and plan 019 has one stage
+left: 3TK-50.** See *Resuming after an interruption* at the top of this file for
+the resume point and the four scans to re-run first. The rest of this section is
+what a cold session should know about the tree itself, and it is still true.
 
-**Nothing in plan 018 is unfinished.** What it deliberately left to the owner is
-listed in [3tk-staging-plan-018.md](3tk-staging-plan-018.md) under *What this
-plan deliberately leaves to the owner*, and the open questions are under
-*What is waiting for a ruling* below.
+**What plan 019 deliberately leaves to the owner** is listed in
+[3tk-staging-plan-019.md](3tk-staging-plan-019.md) under that heading, and the
+open questions are under *What is waiting for a ruling* below.
 
 **What a cold session should know before anything is named.**
 
@@ -1203,6 +1344,18 @@ finishes.
 3TK-46   eight sections, eight labels       -> DONE (8 labels, ref 001 to 002)
 3TK-47   the move, and the checker          -> DONE (8 moved, 0 differing)
 ```
+
+### Plan 019's three, and where each one stops
+
+```
+3TK-48   the rules for an example           -> DONE (ref/ only, no code)
+3TK-49   the pattern catalog                -> DONE (62 patterns, 48 blocks compiled)
+3TK-50   the examples tree, and one pattern -> next
+```
+
+**48 writes the rules 49 and 50 obey. 49 decides which patterns exist, and
+therefore how many files there are. 50 cannot run before either.** The order is
+forced, not chosen.
 
 **All five have run, and plan 018 is spent.** **43 wrote the format 46 obeys.
 44 answered how many blocks there are: eight.** 45 decided what one of them
@@ -1854,7 +2007,9 @@ started. What is left is what is genuinely open.
 - **The port says `Item` where the owner's word is `Outer`.** Ruled 2026-08-26:
   **new work says Outer, and the existing tree is not searched and replaced.**
   3tk has priority over the repair. Counted live that day: **124 in `3tk/src`,
-  203 in `3tk/test` and `3tk/negative`, 346 in `ref/`, and 164 in
+  203 in `3tk/test` and `3tk/negative`, 360 in `ref/` — **14 of them in the two
+  files the rule itself produced, and none of them added to the old tree** — and
+  164 in
   [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)**.
   The last is the shared input binding otk, ztk and dtk, and **3tk does not
   reword a `common/` document for the other three ports** — which is why this is
@@ -1865,7 +2020,10 @@ started. What is left is what is genuinely open.
   written for any other reason. **If it is ever repaired, it is repaired
   whole** — renaming `ref/` but not `src/`, or `src/` but not the
   specification, splits the two words along an invisible line, which is worse
-  than today's line of new work against old. Filed by plan 019.
+  than today's line of new work against old. Filed by plan 019, and **written
+as a rule by 3TK-48** in
+[ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md), which is the
+first of the three places the debt is recorded.
 
 - **Whether otk gets a status file.** `../odin/` holds one backport document.
   **The pointer at the specification is written** — 3TK-19, 2026-08-24, one
