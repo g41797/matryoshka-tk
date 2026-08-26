@@ -13,8 +13,20 @@ It re-describes no document's content and rules on nothing.
 | File | What it is | Who reads it |
 |---|---|---|
 | [3tk-status.md](3tk-status.md) | Where the work stands. Edited in place | **Anyone opening this folder, first.** A cold session starts here |
-| [3tk-staging-plan-014.md](3tk-staging-plan-014.md) | The current plan. Holds only what has not run | **The owner**, to authorize a stage; **a stage**, to run it |
+| [3tk-staging-plan-016.md](3tk-staging-plan-016.md) | The current plan. Holds only what has not run | **The owner**, to authorize a stage; **a stage**, to run it |
 | [3tk-log.md](3tk-log.md) | The narrative, append-only, newest first | Anyone asking *when did this happen, and why* |
+
+## `ref/` — revised with the source, not frozen
+
+**Every other file in this folder is a finished stage output**, frozen at the
+moment its stage ran. **These are the opposite: they are alive.** A change to
+`3tk/src` revises them in the same stage that changes it.
+
+| File | What it is | Who reads it |
+|---|---|---|
+| [ref/3tk-api-002.md](ref/3tk-api-002.md) | Using the toolkit: what each thing is for, when to reach for it, what it refuses | **Anyone calling the port.** The page to learn it from |
+| [ref/3tk-decisions-001.md](ref/3tk-decisions-001.md) | What was decided, its marker, and where it lives in the code. Nine sections | The owner, and any AI, **instead of travelling through this folder** |
+| [ref/3tk-api-003.md](ref/3tk-api-003.md) | The same surface as a verification table: every assert and contract with its `file:line` | Anyone checking that 002 is true. **Not a page to learn from** |
 
 ## Read from elsewhere
 
@@ -61,6 +73,7 @@ above, and is not re-argued here.
 | File | What it is | Who reads it |
 |---|---|---|
 | [3tk-who-supports-slot.md](3tk-who-supports-slot.md) | From the owner. Argues the containers should not support the Slot idiom at all | **The owner.** Answering it either way retires the file |
+| [3tk-doc-split.md](3tk-doc-split.md) | From the owner. The source files serve the AI, not the user, and cannot build documentation | **3TK-29 to 3TK-31**, as their input; **the owner**, to rule on it |
 
 ## The code
 

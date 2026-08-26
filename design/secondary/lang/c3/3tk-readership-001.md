@@ -1,6 +1,6 @@
 # 3tk — who reads the notes (001)
 
-Stage 3TK-27 of [3tk-staging-plan-014.md](3tk-staging-plan-014.md), 2026-08-25.
+Stage 3TK-27 of `3tk-staging-plan-014.md`, 2026-08-25.
 
 Seven files, 1,945 lines: the six `*-notes-*` files at 1,483 and
 [3tk-drafts-review-001.md](3tk-drafts-review-001.md) at 462. For each of them,

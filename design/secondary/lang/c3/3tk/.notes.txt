@@ -11,3 +11,5 @@ C3 Playground
 PCI 9060 Bus Master Interface
     https://www.farnell.com/datasheets/390078.pdf
 
+Example of creation of module description doc
+    /home/g41797/dev/langs/c3/lib/std/core/test.c3
