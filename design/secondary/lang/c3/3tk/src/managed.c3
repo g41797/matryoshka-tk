@@ -57,27 +57,6 @@ macro void release($Type, Slot* slot)
     alloc::free(a, item);
 }
 
-<*
- Finds the `Allocator` field at compile time.
-
- A type with no `Allocator` field does not compile.
- The message tells you to take the plain helper instead.
-
- @param $Type : "the outer type"
-*>
-// [3tk: D3, Part 7.4]
-macro usz required_alloc_offset($Type)
-{
-    var $off = -1;
-    $foreach $m : $Type::members:
-        $if $m.type == Allocator:
-            $off = $m.offset;
-        $endif
-    $endforeach
-    $assert $off >= 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::managed";
-    return $off;
-}
-
 
 //----------------------
 // Little-endian imports

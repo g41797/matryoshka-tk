@@ -69,6 +69,7 @@ declare -A NOCOMPILE_EXPECT=(
   [nocompile_no_inner]="NotAnItem"
   [nocompile_two_inners]="TwoInners"
   [nocompile_managed_no_allocator]="mtk::helper"
+  [nocompile_managed_two_allocators]="TwoAllocators"
 )
 
 echo "== c3c =="

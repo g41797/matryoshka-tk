@@ -188,6 +188,8 @@ macro usz inner_offset($Type)
 
  A type with no `Allocator` field does not compile.
  The message tells you to take the plain helper instead.
+ A type with two `Allocator` fields does not compile.
+ The message names your type.
 
  @param $Type : "the outer type"
 *>
@@ -195,11 +197,15 @@ macro usz inner_offset($Type)
 macro usz required_alloc_offset($Type)
 {
     var $off = -1;
+    var $seen = 0;
     $foreach $m : $Type::members:
         $if $m.type == Allocator:
             $off = $m.offset;
+            $seen = $seen + 1;
         $endif
     $endforeach
-    $assert $off >= 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::managed";
+    $assert $seen != 0 : "type " +++ $Type::name +++ " has no Allocator field; use mtk::helper instead of mtk::managed";
+    // [3tk: Part 4.4]
+    $assert $seen == 1 : "type " +++ $Type::name +++ " has more than one Allocator field; exactly one is allowed";
     return $off;
 }

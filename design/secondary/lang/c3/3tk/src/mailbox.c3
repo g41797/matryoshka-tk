@@ -261,8 +261,6 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
             if (h) { slot.fill(h); return; }
             if (self._wake_gen != gen) return mtk::WOKEN~;
 
-            // [3tk: Part 2.6]
-            if (self.has_queued()) self._cv.signal();
             return mtk::TIMEOUT~;
         }
     }
@@ -280,6 +278,9 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
 // [3tk: R8, Part 11.3, Part 11.6, Part 19.1]
 fn void? Mailbox.receive_all(&self, InnerQueue* out)
 {
+    // [3tk: Part 9.2 rule 3]
+    mtk::@check(out.is_empty(), "receive_all asserts the queue is empty on entry");
+
     if (self.@closed_fast()) return mtk::CLOSED~;
 
     self._mu.lock();
@@ -325,6 +326,9 @@ fn void? Mailbox.wake_all(&self)
 // [3tk: R6b, R8, Part 11.6, Part 11.12, Part 19.1]
 fn void Mailbox.close(&self, InnerQueue* out)
 {
+    // [3tk: Part 9.2 rule 3]
+    mtk::@check(out.is_empty(), "close asserts the queue is empty on entry");
+
     self._mu.lock();
     defer self._mu.unlock();
 

@@ -1,7 +1,7 @@
 # 3tk — open defects
 
-**The working list for fixing the port.** Ten items — **eight open, one closed,
-one deferred**. One table, one section each: where it is, what is wrong, what the
+**The working list for fixing the port.** Ten items — **six fixed, two open,
+one closed, one deferred**. One table, one section each: where it is, what is wrong, what the
 fix is, how to know it worked, and what state it is in.
 
 **Everything known about the port is on this list, including what is not being
@@ -31,27 +31,45 @@ before trusting them again — every fix moves them.
 
 | # | Where | What | Fix is | State |
 |---|---|---|---|---|
-| **P2** | `managed.c3:69` | A dead duplicate of a live macro | **Mechanical** | **open** |
-| **P1** | `inner.c3:195` | Two allocator fields: takes the last, silently | **Mechanical** | **open** |
-| **P3** | `mailbox.c3:277`, `:323` | A stated precondition nothing enforces | **Mechanical** | **open** |
-| **P4** | `mailbox.c3:265`, `pool.c3:376` | A branch that can never be taken | **Mechanical, touches a MUST** | **open** |
-| **W1** | `pool.c3:387` | The contract describes a case it does not have | **Wording** | **open** |
-| **W2** | `pool.c3:60` | The rule is stated, the cost of breaking it is not | **Wording** | **open** |
-| **P6** | `pool.c3:435`, `:493`, `:459` | Items abandoned with no trace | **Needs a ruling first** | **open** |
-| **P7** | `mailbox.c3:257`, `pool.c3:369` | A fault outside the declared set escapes | **Needs a ruling first** | **open** |
-| **P5** | `pool.c3:324`, `:459` | The hook identity checks leave a fast build | **Nothing — it split in two** | CLOSED 2026-08-26 |
-| **Q5** | `mailbox.c3:106`, `pool.c3:230` | A release racing a call still in flight | **Ruled: the port will enforce it** | DEFERRED 2026-08-27 |
+| **P2** | was `managed.c3:69` | A dead duplicate of a live macro | Mechanical | **FIXED 2026-08-27** |
+| **P1** | `inner.c3:186` | Two allocator fields: takes the last, silently | Mechanical | **FIXED 2026-08-27** |
+| **P3** | `mailbox.c3:284`, `:329` | A stated precondition nothing enforces | Mechanical | **FIXED 2026-08-27** |
+| **P4** | was `mailbox.c3:265`, `pool.c3:376` | A branch that can never be taken | Mechanical, touches a MUST | **FIXED 2026-08-27** |
+| **W1** | `pool.c3:384` | The contract describes a case it does not have | Wording | **FIXED 2026-08-27** |
+| **W2** | `pool.c3:60` | The rule is stated, the cost of breaking it is not | Wording | **FIXED 2026-08-27** |
+| **P6** | `pool.c3:434`, `:492`, `:458` | Items abandoned with no trace | **Needs a ruling first** | **open** |
+| **P7** | `mailbox.c3:257`, `pool.c3:370` | A fault outside the declared set escapes | **Needs a ruling first** | **open** |
+| **P5** | `pool.c3:325`, `:458` | The hook identity checks leave a fast build | Nothing — it split in two | CLOSED 2026-08-26 |
+| **Q5** | `mailbox.c3:106`, `pool.c3:231` | A release racing a call still in flight | Ruled: the port will enforce it | DEFERRED 2026-08-27 |
 
-**Of the eight open: six are mechanical or wording, and two need a decision
-before code can be written.** Both decisions are small and are stated in their
-sections.
+**Six of the ten are done, on 2026-08-27, in one stage.** Every mechanical and
+wording item is fixed and verified: four builds green, 67 checks (63 before,
+plus the new compile-time negative once per build), 87 tests, 0 failures; the
+doc loop 0 differing blocks and 0 banned words.
 
-**The two that are not open are here for a reason.** `P5` was a real finding
+**Two remain open, and both are waiting on you.** `P6` and `P7` each need one
+small ruling before code can be written. The ruling is stated in the section.
+
+**The two that were never open are here for a reason.** `P5` was a real finding
 and it did not survive as one — its section says why, so nobody re-raises it.
 `Q5` is real, is ruled, and is simply not scheduled.
 
-**One ordering constraint, and it is the only one: `P2` before `P1`.** A rule
-added to the copy in `managed.c3` has no effect, because nothing calls it.
+**What the six fixes moved outside `3tk/src`:**
+
+- `ref/3tk-reference-003.md` — W1 and W2's sentences, and `required_alloc_offset`
+  moved out of the `mtk::managed` listing into the compile-time section, where it
+  is actually declared. `-002` went to `backup/`.
+- `ref/3tk-decisions-003.md` — new entries for `P1`, `P2`, `P3`, `P4`, `W1`, `W2`,
+  and **every `file:line` citation re-anchored**, which they needed anyway: the
+  `2DO` comments had already made them stale. `-002` went to `backup/`.
+- `3tk/negative/nocompile_managed_two_allocators.c3` — new, and added to
+  `run-builds.sh`.
+- `check-doc-loop.sh`, `move-module-docs.sh`, `doc_blocks.py`, `README.md`,
+  `3tk-status.md` and this file now name `-003`.
+
+**Line numbers were re-printed after the fixes.** The ones in the table are live
+as of 2026-08-27, after the stage. **Every number in the two review files, and
+every number in an earlier version of this table, is now wrong.**
 
 ## P2 — a dead duplicate of a live macro
 
@@ -80,7 +98,8 @@ to it compiles clean, passes every build, and changes nothing.
 `negative/nocompile_managed_no_allocator.c3` must still be refused with a message
 naming `mtk::helper`; that message comes from the surviving macro's `$assert`.
 
-**State: open. Do this one first.**
+**State: FIXED 2026-08-27.** The macro and its doc block are gone from
+`managed.c3`; `inner.c3:186` is the only declaration. Verified by the build.
 
 ## P1 — two allocator fields, and it takes the last
 
@@ -117,7 +136,9 @@ Add `negative/nocompile_managed_two_allocators.c3`, alongside
 the message names the offending type — the same assertion
 `nocompile_two_inners` makes. Check count goes 63 to 64. Four builds green.
 
-**State: open. `P2` first.**
+**State: FIXED 2026-08-27.** It counts now, and refuses a second `Allocator`
+with a message naming the type. `negative/nocompile_managed_two_allocators.c3`
+is refused in all four modes — the check count went 63 to 67, one per mode.
 
 ## P3 — a stated precondition nothing enforces
 
@@ -153,7 +174,8 @@ behaviour and not a hole.
 the file rises by two. **Optional and not required by this item:** a tier-2
 negative that passes a non-empty queue.
 
-**State: open.**
+**State: FIXED 2026-08-27.** Both open with `mtk::@check(out.is_empty(), ...)`,
+naming the call. No paired `if`, for the reason above.
 
 ## P4 — a branch that can never be taken
 
@@ -204,7 +226,10 @@ kept. Without that entry the port looks like it dropped a MUST.
 **How to know it worked.** Four builds green, 63 checks, 87 tests. **The
 decisions file must gain the entry in the same stage** — it becomes `-003`.
 
-**State: open.**
+**State: FIXED 2026-08-27.** Both branches deleted with their branch-level
+markers. The FUNCTION-level `Part 2.6` markers stand — the port still owes and
+still keeps the MUST, by the dequeue. The decisions entry is in
+`ref/3tk-decisions-003.md`.
 
 ## W1 — the contract describes a case it does not have
 
@@ -233,9 +258,10 @@ means not — stays untouched; only `Pool.put`'s gloss on it overreaches.
 
 **How to know it worked.** The doc loop: `check-doc-loop.sh` must return **0
 differing blocks**, which means the matching sentence in
-`ref/3tk-reference-002.md` was changed with it. The sentence count moves.
+`ref/3tk-reference-003.md` was changed with it. The sentence count moves.
 
-**State: open.**
+**State: FIXED 2026-08-27.** *Unchanged* now says the pool refused it before
+any hook ran. `ref/3tk-reference-003.md` changed with it; 0 differing blocks.
 
 ## W2 — the rule is stated, the cost of breaking it is not
 
@@ -264,7 +290,8 @@ check and that a fast build cannot catch it.
 
 **How to know it worked.** Doc loop clean, 0 differing blocks. Banned words 0.
 
-**State: open.**
+**State: FIXED 2026-08-27.** One sentence added: the check is a checking-build
+check and a fast build cannot catch it. Reference and decisions changed with it.
 
 ## P6 — items abandoned with no trace
 
@@ -415,18 +442,23 @@ tracking.**
 
 ## After a fix
 
+**All four numbers below were re-measured on 2026-08-27, after the six fixes.**
+The one missing descriptor sentence is the pre-existing `inner.c3` module
+summary and is not new. `ref` moved 360 to 365 because the reference and the
+decisions each took on new sentences that say *item*; `3tk/src` did not move.
+
 **Every mechanical item touches `3tk/src`, so the doc loop is owed.**
 `ref/3tk-doc-loop-003.md` is the procedure; `check-doc-loop.sh` says whether it
 is still owed.
 
-**`ref/3tk-decisions-002.md` becomes `-003`.** `P4` requires an entry; `P1`,
-`P3`, `P6` and `P7` each change or add one.
+**`ref/3tk-decisions-003.md` is the current one**, and `-002` is in `backup/`.
+`P6` and `P7` will each add an entry when they are ruled.
 
 **The four numbers to re-measure**, and all four were true on 2026-08-27 with
 nothing fixed:
 
 ```
-./run-builds.sh        # four builds green, 63 checks, 87 tests
+./run-builds.sh        # four builds green, 67 checks, 87 tests, 0 failures
 ./check-doc-loop.sh    # 0 differing blocks, 439 sentences, 438 found, 1 missing, 0 banned
-grep -roiwE 'items?' 3tk/src ref        # 124 and 360
+grep -roiwE 'items?' 3tk/src ref        # 124 and 365
 ```

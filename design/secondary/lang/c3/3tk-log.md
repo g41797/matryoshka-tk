@@ -7,6 +7,55 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-27 — INTR 3, the six items that needed no ruling
+
+**One stage, six fixes, verified.** `P1`, `P2`, `P3`, `P4`, `W1`, `W2` — every
+item on [3tk-open-defects.md](3tk-open-defects.md) that did not need a decision
+from the owner first.
+
+- **`P2`** — `required_alloc_offset` was declared twice, identically. The copy in
+  `managed.c3` had no reader: both call sites name the `mtk::inner` one
+  qualified. The copy is gone. This was first, because `P1` edits the survivor.
+- **`P1`** — that survivor overwrote on every match and took the last `Allocator`
+  field silently, so which allocator `release` returned the memory to was decided
+  by declaration order. It counts now, the way `inner_offset` has always counted,
+  and both messages name the type. New negative,
+  `nocompile_managed_two_allocators.c3`, refused in all four modes.
+- **`P3`** — `Mailbox.receive_all` and `Mailbox.close` both say the caller's
+  queue must be empty and neither checked it. Both now open with
+  `mtk::@check(out.is_empty(), ...)`. Tier 2, no paired `if`: appending onto a
+  non-empty queue in a fast build is defined, not a hole.
+- **`P4`** — two `Part 2.6` signals that could not fire, in `Mailbox.receive` and
+  `Pool.get_wait`. Deleted with their branch-level markers. The MUST is kept by
+  the dequeue two lines above, and by a stronger route: a waiter that finds an
+  item does not leave at all. The FUNCTION-level markers stand. The `A3`
+  precedent is cited in the decisions entry, which is what keeps this from
+  looking like a dropped MUST.
+- **`W1`** — `Pool.put`'s *unchanged* now says the pool refused it before any
+  hook ran, which is the only way it happens.
+- **`W2`** — the `on_get` identity rule now says which build catches it: a
+  checking build, and not a fast one.
+
+**Two files under `ref/` became `-003`, and `-002` went to `backup/`.** The
+reference carries `W1` and `W2`'s sentences and moves `required_alloc_offset`
+into the compile-time section where it is actually declared. The decisions file
+gains an entry per item — **and every `file:line` citation in it was
+re-anchored**, which it needed anyway: yesterday's `2DO` comments had already
+made them stale. `check-doc-loop.sh`, `move-module-docs.sh`, `doc_blocks.py`,
+`README.md`, `3tk-status.md` and the defects list all name `-003` now.
+
+**Verified.** Four builds green, **67 checks** (63 before; the new negative runs
+once per build), 87 tests, 0 failures. Doc loop: 0 differing blocks, 439
+sentences, 438 found, 1 missing — the same pre-existing `inner.c3` module
+summary — and 0 banned words.
+
+**Two items remain open and both are the owner's:** `P6`, what the pool does when
+a close hook leaves items behind, and `P7`, whether a condition-variable failure
+is a defect or an eighth fault. Neither can be coded until one question each is
+answered.
+
+---
+
 ## 2026-08-27 — quiet before released, ruled and deferred
 
 **An owner ruling on INTR 2's `Q5`, and no stage.** One document, no code.

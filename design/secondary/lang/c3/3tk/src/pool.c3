@@ -58,6 +58,7 @@ interface PoolHooks
      The Slot is empty on entry. Fill it, or leave it.
      An empty Slot afterwards becomes `NOT_CREATED`.
      An item of a different identity is a defect of your application.
+ That is a checking-build check, and a fast build cannot catch it.
 
      @param want : "the identity asked for"
      @param in_pool : "how many of this identity remain, AFTER the removal. A hint, and stale"
@@ -372,8 +373,6 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
 
             h = b.free.pop();
             if (h) { slot.fill(h); return; }
-            // [3tk: Part 2.6]
-            if (!b.free.is_empty()) self._cv.signal();
             return mtk::TIMEOUT~;
         }
     }
@@ -384,7 +383,7 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
 
  The Slot is the answer.
  Cleared: the pool took it.
- Unchanged: it was refused, and you still have the item.
+ Unchanged: the pool refused it before any hook ran, and you still have the item.
  It cannot fail and cannot be interrupted.
  An empty Slot is a no-op.
  A close that arrives while `on_put` runs is handled.

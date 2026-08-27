@@ -1,13 +1,13 @@
 # 3tk — the doc loop
 
 How a `<* *>` block in `3tk/src` and
-[3tk-reference-002.md](3tk-reference-002.md) are kept saying the same thing.
+[3tk-reference-003.md](3tk-reference-003.md) are kept saying the same thing.
 
 **This is a procedure, not a stage.** It writes no status row and no log entry.
 A named stage that uses it writes those. See *What this document is* below.
 
 **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-[3tk-reference-002.md](3tk-reference-002.md), and the one source file named on
+[3tk-reference-003.md](3tk-reference-003.md), and the one source file named on
 the command line. Not a transcript.
 
 **Written by 3TK-39**, from what 3TK-37 did by hand over `helper.c3`.
@@ -24,7 +24,7 @@ rules for moving a module description are `002`'s, word for word.
 ## The invariant
 
 > Every descriptor line in `3tk/src` appears in
-> [3tk-reference-002.md](3tk-reference-002.md).
+> [3tk-reference-003.md](3tk-reference-003.md).
 
 **The check runs one way only.**
 
@@ -144,7 +144,7 @@ Run doc-loop from-reference on pool.c3.
 - A sentence can be true, be in the reference, and still not belong in a
   source comment.
 - **Design argument and implementation notes go to
-  [3tk-decisions-002.md](3tk-decisions-002.md)**, and the `// [3tk: ...]` mark
+  [3tk-decisions-003.md](3tk-decisions-003.md)**, and the `// [3tk: ...]` mark
   points at them.
 - That is what 3TK-31 was refused twice for.
 - A `<* *>` block holds the descriptor and the contracts. Nothing else.
@@ -333,7 +333,7 @@ module.**
   for that module carries.
 - **A sentence refused from a declaration is not thereby refused from a module
   block.** Design argument still goes to
-  [3tk-decisions-002.md](3tk-decisions-002.md) either way.
+  [3tk-decisions-003.md](3tk-decisions-003.md) either way.
 
 ## The rules that are elsewhere, by link
 
@@ -350,7 +350,7 @@ state.
 | The banned words, and the scoped bans | [../../../../rules-049.md](../../../../rules-049.md), Part 5 |
 | Staccato, and the markdown rules | [../../../../rules-049.md](../../../../rules-049.md), Part 6 |
 | Moved, never composed | [../3tk-staging-plan-016.md](../3tk-staging-plan-016.md) |
-| What each decision was, and where it lives | [3tk-decisions-002.md](3tk-decisions-002.md) |
+| What each decision was, and where it lives | [3tk-decisions-003.md](3tk-decisions-003.md) |
 
 ## The checker script
 
@@ -478,7 +478,7 @@ question here and does not answer it.
 - A named stage that uses it writes those. Otherwise the log stops being
   history and becomes a transcript.
 - **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-  [3tk-reference-002.md](3tk-reference-002.md), and the one source file.
+  [3tk-reference-003.md](3tk-reference-003.md), and the one source file.
 
 ## Where it stood when this was written
 
