@@ -41,16 +41,19 @@ three times.** INTR 1 and INTR 2 touched no code. **INTR 3 did** — it fixed si
 of the ten items — **so the doc loop was owed, and it was paid inside that
 stage. 3TK-50 is not blocked.**
 
-- **INTR 1** — the four review files in [reviews/](reviews/) triaged into
-  [reviews/3tk-05-review-analysis-001.md](reviews/3tk-05-review-analysis-001.md).
-  Seven problems, `P1` to `P7`, five refutations, and five questions.
-- **INTR 2** — those five questions answered in
-  [reviews/3tk-06-questions-answered-001.md](reviews/3tk-06-questions-answered-001.md).
-  Four close as readings. **P5 closes as a checking question** and its second half
+- **INTR 1** — four implementation reviews, triaged. Seven problems, `P1` to
+  `P7`, five refutations, and five questions.
+- **INTR 2** — those five questions answered. Four close as readings. **P5 closes as a checking question** and its second half
   merges into P6. **One item was the owner's**: the port never promised *quiet
   before released*, and that precondition was written down nowhere.
 - **INTR 3** — the six items that needed no ruling, fixed and verified. See
   below, and [3tk-open-defects.md](3tk-open-defects.md) for what each one was.
+- **The `reviews/` folder was removed on 2026-08-27.** Everything not already
+  written down twice was absorbed: the five refutations into
+  [3tk-open-defects.md](3tk-open-defects.md)'s *Refuted* section, `Q4`'s ruling
+  into its `P5` section, `Q5`'s and `W3` into
+  [3tk-release-while-busy-001.md](3tk-release-while-busy-001.md). The defect
+  list is now the only record of the reasoning.
 
 **That one is now ruled and deferred.**
 [3tk-release-while-busy-001.md](3tk-release-while-busy-001.md) holds all of it —
@@ -73,15 +76,51 @@ differing blocks and 0 banned words, and `run-builds.sh` is four builds green,
 added `negative/nocompile_managed_two_allocators.c3`, which runs once per build.
 
 **Two `ref/` files were superseded and `-002` went to `backup/`:**
-[ref/3tk-reference-003.md](ref/3tk-reference-003.md) and
+[ref/3tk-reference-004.md](ref/3tk-reference-004.md) and
 [ref/3tk-decisions-003.md](ref/3tk-decisions-003.md). Every tool and document
 that named `-002` now names `-003`. **Every `file:line` citation in the decisions
 file was re-anchored** — they had already gone stale under the `2DO` comments.
 
-**Two items are still open, and both are waiting on the owner:** `P6` — what the
-pool does when a close hook leaves items behind — and `P7` — whether a
-condition-variable failure is a defect or an eighth fault. Each ruling is one
-question, stated in its section.
+**One item is still open and is waiting on the owner:** `P6` — what the pool
+does when a close hook leaves items behind, at `pool.c3:434` and `:492`. The
+ruling is one question, stated in its section.
+
+**`3tk-open-defects.md` has an *Order* section as of 2026-08-27**, after the
+summary block. It names what runs now, what waits on the owner, what waits on an
+unscheduled stage, and the one dependency that is not obvious — `P6`'s option 1
+needs `Q5`'s stage. It is rewritten in the same edit that changes an item's
+state, and each item's section still holds its own dependency.
+
+**A separate finding came out of looking at `P6`'s close sites, 2026-08-27.**
+The port's doc comments say the close hook is called once. `Part 12.2` of the
+shared specification says it is called once by close and again for each put that
+finds the pool closed while its own hook ran, and requires the hook to tolerate
+it. The code is right; three doc sites are stale — `pool.c3:92`, `pool.c3:469`,
+`ref/3tk-reference-003.md:1039`. **Fixed the same day.** Two of the three
+contradicted themselves — the truthful lines sat beside the stale one — so the
+word *once* was written out and `Pool.close` took the *possibly once more*
+sentence. The reference is now `-004`, `-003` in `backup/`, every live
+cross-reference repointed. Doc loop 0 differing, 440 sentences, 439 found, 0
+banned. Recorded in
+[3tk-on-close-policy-001.md](3tk-on-close-policy-001.md).
+
+**`P6`'s third site is ruled.** On 2026-08-27 the owner wrote out the
+`if (!b) return;` guard in `Pool.take_back_handle` and left its text as a
+comment: `// if (!b) return; <- Force failure instead of silent bug`. With no
+guard, `b.free.push(h)` on a null `b` writes through a null pointer and the
+process dies. A checking build still stops at the `mtk::@check` above it with its
+message; a fast build no longer swallows the item. Loud in both builds. The
+commented line is there so nobody restores the guard as a fix. Only the two
+close-hook sites remain.
+
+**`P7` closed on 2026-08-27 without a ruling.** It warned that a
+condition-variable failure could return a fault outside the `@return?` set.
+Reading `std::thread` showed it cannot: `NativeConditionVariable.wait_until`
+exits three ways — success, `thread::WAIT_TIMEOUT`, or an `abort` inside the
+standard library — so the guard at `mailbox.c3:257` and `pool.c3:370` is dead.
+The branch stays, with a plain `//` comment at each line saying it is dead today
+and kept for a future wait failure. A `//` line is invisible to the doc loop, so
+no reference change and no `-004` are owed.
 
 **3TK-50 is not blocked.** **A fix stage would touch
 `3tk/src`, and then the doc loop is owed before 3TK-50.** The two files above are
@@ -104,13 +143,14 @@ Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
 
 **Re-measure before trusting any number in this file.** An INTR stage may have
 moved the tree under it, and the live-scan rule means a scan counts only when it
-has just been run. **These four are the ones later stages depend on**, and all
-four were true when 3TK-49 finished:
+has just been run. **These four are the ones later stages depend on.** They were true when 3TK-49
+finished; the first two were re-measured on 2026-08-27, after INTR 3 and the
+close-hook wording fix, and both moved:
 
 ```
-./3tk/run-builds.sh        # four builds green, 63 checks, 87 tests
-./3tk/check-doc-loop.sh    # 0 differing blocks, 439 sentences, 438 found, 1 missing
-grep -roiwE 'items?' 3tk/src ref            # 124 and 360
+./3tk/run-builds.sh        # four builds green, 67 checks, 87 tests
+./3tk/check-doc-loop.sh    # 0 differing blocks, 440 sentences, 439 found, 1 missing
+grep -roiwE 'items?' 3tk/src ref            # 124 and 360, last measured at 3TK-49
 c3c compile-only --safe=yes -O0 <blocks> 3tk/src/*.c3   # the catalog's 48 c3 blocks
 ```
 
@@ -140,7 +180,7 @@ table: every assert and every contract clause copied from `3tk/src` with its
 `file:line`. **Not the page to learn from** — that is what 002 exists to fix.
 
 **To read the toolkit as a book, read
-[ref/3tk-reference-003.md](ref/3tk-reference-003.md).** Seven parts, in 042's
+[ref/3tk-reference-004.md](ref/3tk-reference-004.md).** Seven parts, in 042's
 shape, with Parts 3 to 5 repeating one order. It covers the same surface as
 [ref/3tk-api-002.md](ref/3tk-api-002.md) and says the same things in a
 different arrangement. Whether that file stays is the owner's call.
@@ -1317,7 +1357,7 @@ open questions are under *What is waiting for a ruling* below.
 - **`3tk/move-module-docs.sh` is the mover**, `3tk/doc_blocks.py` is the format,
   and the round trip is byte-exact. Never hand-edit a module block on one side
   only: move it.
-- **The invariant is 439 sentences, 438 found, 1 missing.** **The one missing is
+- **The invariant is 440 sentences, 439 found, 1 missing**, as of 2026-08-27. **The one missing is
   `inner.c3`'s merged file header**, 3TK-40's open question: leave it, reword it
   to the struct, or file it in the reference. It now names a macro that has left
   the file. **The owner's markdown probe is gone** — 47 replaced it with Part 1.

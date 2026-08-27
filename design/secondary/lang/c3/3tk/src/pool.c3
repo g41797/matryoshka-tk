@@ -89,7 +89,7 @@ interface PoolHooks
      Called with everything that remained, as one flat queue.
      Process or free every item in it.
      No order is promised.
-     The hook is called once, outside the mutex, after the closed flag is set.
+     The hook is called outside the mutex, after the closed flag is set.
      Called once by `close`, and possibly once more with stragglers from a concurrent `put`.
      So a hook must not free its own context on the first call.
 
@@ -367,7 +367,7 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
 
         if (catch f = self._cv.wait_until(&self._mu, deadline))
         {
-            if (f != thread::WAIT_TIMEOUT) return f~;
+            if (f != thread::WAIT_TIMEOUT) return f~; // dead today: wait_until can only fail with WAIT_TIMEOUT, kept for future wait failures
 
             if (self._closed) return mtk::CLOSED~;
 
@@ -456,7 +456,7 @@ fn void Pool.take_back_handle(&self, Handle h) @private
 {
     PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
-    if (!b) return;
+    // if (!b) return; <- Force failure instead of silent bug
     b.free.push(h);
 }
 
@@ -466,7 +466,8 @@ fn void Pool.take_back_handle(&self, Handle h) @private
  Nothing comes back to you.
  Everything the pool held goes to `on_close`, as one flat queue.
  Callable more than once. The second call takes nothing and does not run the hook again.
- The hook is called once, outside the mutex, after the closed flag is set.
+ The hook is called outside the mutex, after the closed flag is set.
+ Called once by `close`, and possibly once more with stragglers from a concurrent `put`.
 *>
 // [3tk: R12, Part 11.8, Part 11.12, Part 12.2, Part 19.2]
 fn void Pool.close(&self)

@@ -1,7 +1,7 @@
 # 3tk — open defects
 
-**The working list for fixing the port.** Ten items — **six fixed, two open,
-one closed, one deferred**. One table, one section each: where it is, what is wrong, what the
+**The working list for fixing the port.** Ten items — **six fixed, one open,
+two closed, one deferred**. One table, one section each: where it is, what is wrong, what the
 fix is, how to know it worked, and what state it is in.
 
 **Everything known about the port is on this list, including what is not being
@@ -13,13 +13,16 @@ unlike everything under `ref/`. It carries no version suffix for that reason. A
 fixed item is marked in the table and its section is left standing, so the file
 is also the record of what was done.
 
-**Where the reasoning lives.** This file holds the *fix*. The *why* is in
-[reviews/3tk-05-review-analysis-001.md](reviews/3tk-05-review-analysis-001.md)
-(the six bugs, with the evidence) and
-[reviews/3tk-06-questions-answered-001.md](reviews/3tk-06-questions-answered-001.md)
-(the two wording items, and why `P5` is not on this list). Neither needs to be
-open to fix anything here. **Do not re-argue an item from the reviews — if a fix
-turns out to be wrong, change this file and say so.**
+**The reasoning lives here now.** The four implementation reviews and the two
+analysis files under `reviews/` were removed on 2026-08-27. Everything that was
+not already written down twice was absorbed: the refuted claims into *Refuted*
+below, `Q4`'s ruling into `P5`'s section, `Q5`'s into
+[3tk-release-while-busy-001.md](3tk-release-while-busy-001.md). **If a fix turns
+out to be wrong, change this file and say so** — there is no longer a second
+document to re-argue it from.
+
+**What can run, and what is waiting, is in [Order](#order)**, straight after
+the table.
 
 **Line numbers were printed live on 2026-08-27**, after the `2DO` comments went
 into `mailbox.c3` and `pool.c3`. **The numbers in the two review files are older
@@ -37,8 +40,8 @@ before trusting them again — every fix moves them.
 | **P4** | was `mailbox.c3:265`, `pool.c3:376` | A branch that can never be taken | Mechanical, touches a MUST | **FIXED 2026-08-27** |
 | **W1** | `pool.c3:384` | The contract describes a case it does not have | Wording | **FIXED 2026-08-27** |
 | **W2** | `pool.c3:60` | The rule is stated, the cost of breaking it is not | Wording | **FIXED 2026-08-27** |
-| **P6** | `pool.c3:434`, `:492`, `:458` | Items abandoned with no trace | **Needs a ruling first** | **open** |
-| **P7** | `mailbox.c3:257`, `pool.c3:370` | A fault outside the declared set escapes | **Needs a ruling first** | **open** |
+| **P6** | `pool.c3:434`, `:492` | The pool can lose items and never know | **Needs your decision** | **open, third site ruled 2026-08-27** |
+| **P7** | `mailbox.c3:257`, `pool.c3:370` | A branch that can never be taken, kept with its reason | Comment only | **CLOSED 2026-08-27** |
 | **P5** | `pool.c3:325`, `:458` | The hook identity checks leave a fast build | Nothing — it split in two | CLOSED 2026-08-26 |
 | **Q5** | `mailbox.c3:106`, `pool.c3:231` | A release racing a call still in flight | Ruled: the port will enforce it | DEFERRED 2026-08-27 |
 
@@ -47,12 +50,47 @@ wording item is fixed and verified: four builds green, 67 checks (63 before,
 plus the new compile-time negative once per build), 87 tests, 0 failures; the
 doc loop 0 differing blocks and 0 banned words.
 
-**Two remain open, and both are waiting on you.** `P6` and `P7` each need one
-small ruling before code can be written. The ruling is stated in the section.
+**One remains open, and it is waiting on you.** `P6` needs one small ruling
+before code can be written. The ruling is stated in the section.
 
-**The two that were never open are here for a reason.** `P5` was a real finding
-and it did not survive as one — its section says why, so nobody re-raises it.
+**`P7` no longer needs one.** Reading `std::thread` showed the fault it warned
+about cannot occur. The branch is dead, it stays, and a plain `//` comment at
+each line says why. Its section carries the evidence.
+
+**The ones that were never open are here for a reason.** `P5` and `P7` were
+real findings and neither survived as one — its section says why, so nobody re-raises it.
 `Q5` is real, is ruled, and is simply not scheduled.
+
+## Order
+
+Only the open and deferred items have an order. The fixed ones are done.
+
+**Runs now, waiting on nothing.**
+
+- Nothing. The close-hook wording fix ran on 2026-08-27 —
+  [3tk-on-close-policy-001.md](3tk-on-close-policy-001.md) is its record.
+
+**Waiting on you.**
+
+- `P6` — one ruling, three answers, written out in its section. INTR 1 ranked it
+  High, and it is the last of the three it put there.
+
+**Waiting on a stage that is not scheduled.**
+
+- `Q5` — ruled 2026-08-27, built by
+  [3tk-release-while-busy-001.md](3tk-release-while-busy-001.md).
+
+**The dependency that is not obvious.**
+
+- `P6`'s option 1 — count what was handed over, count what came back — needs
+  `Q5`'s stage first. A count means nothing until there is a moment when no
+  further `on_close` can arrive. `Part 12.2` lets a late put call the hook again
+  and names no end point. `Q5`'s release-waits-for-zero is that end point.
+  Options 2 and 3 do not need it, and either would put `P6` in front of
+  everything else here.
+
+Rewritten whenever an item changes state, in the same edit. Each section still
+holds its own dependency — this is an index, not the record.
 
 **What the six fixes moved outside `3tk/src`:**
 
@@ -293,92 +331,179 @@ check and that a fast build cannot catch it.
 **State: FIXED 2026-08-27.** One sentence added: the check is a checking-build
 check and a fast build cannot catch it. Reference and decisions changed with it.
 
-## P6 — items abandoned with no trace
+## P6 — the pool can lose items and never know
 
-**Where.** Three sites, and the third is `P5`'s second half, moved here by
-INTR 2:
+**Three sites.**
 
 ```
-pool.c3:435:        if (!stragglers.is_empty()) self._hooks.on_close(&stragglers);
-pool.c3:493:    self._hooks.on_close(&remaining);
-pool.c3:459:    if (!b) return;                      // in take_back_handle
+pool.c3:434     the close hook, called with what was left after a race
+pool.c3:492     the close hook, called with everything the pool held
+pool.c3:458-460 one item with an identity the pool does not recognize  -- RULED 2026-08-27
 ```
 
-**What is wrong.** The first two hand a local queue to `on_close` and let it go
-out of scope. `InnerQueue` is three plain fields, so the local disappears. The
-interface says what the hook owes — *Process or free every item in it* — and
-nothing observes whether it did. This is the port's last sight of those items,
-and `Pool.close` gives nothing back to the caller by design.
+**A pool cannot free its items.** It never allocated them. It does not know how.
 
-The third drops a single item: a hook returned an identity the pool was not
-created with, the `@check` above it compiles out in a fast build, and the item
-goes on the floor.
+**So close gives them away.** Everything left goes into one queue. The queue goes
+to the application's close hook. That is the application's chance to free them.
 
-Everything else that could lose an item in this port is guarded — a Slot that
-would be overwritten, an item inserted twice, a queue moved onto itself. **These
-are not, and the first two are the path with the most items in flight at once.**
+**The queue is a local.** It dies with the call.
 
-**The ruling this needs before code can be written.** *What does the port do when
-it notices?* It has no logging, and `Q4` closed the door on new tier-1 aborts.
-Three shapes, and they are not equivalent:
+**Nothing is checked on the way back.** The hook freed everything, or some, or
+none. The pool sees one thing in all three cases: the call returned. The items
+are still allocated. Nobody holds a pointer to them.
 
-1. **Count and expose.** The pool keeps a count of what it handed out and what
-   never came back, readable by the application after close. Honest, cheap, and
-   it invents no mechanism.
-2. **Check, and accept it compiles out.** `mtk::@check` after the hook returns,
-   asserting the queue is empty. Free in a fast build, which is where the loss
-   happens.
-3. **Leave it, and say so.** Document that the hook is trusted absolutely and
-   the port does not verify it — which at least stops the guarantee looking
-   stronger than it is.
+**The interface is not at fault.** It says plainly: process or free every item.
+**The gap is that the pool cannot tell whether that happened, and cannot say
+anything if it did not.** This is the port's last sight of those items.
 
-**Not decided. This is the item to rule on before a fix stage takes it.**
+**The two close sites are the big ones.** Everything the pool ever held can be
+in that queue.
 
-**State: open, blocked on the ruling above.**
+**Their locking and their count are not part of this.** Whether `on_close` runs
+outside the mutex, and whether it is called once or once per batch, were both
+already ruled by `Part 12.2` and `Part 12.3` of the shared specification. Three
+3tk doc sites still carry the superseded wording. That is a separate finding, and
+it is written up in
+[3tk-on-close-policy-001.md](3tk-on-close-policy-001.md). `P6` is only the leak
+question.
 
-## P7 — a fault outside the declared set escapes
-
-**Where.** `mailbox.c3:257` and `pool.c3:369`, both:
+**The third site is smaller and different, and it is now ruled.** A put hook
+returns an item of an identity the pool was never created with. The pool has
+nowhere to file it. A checking build stopped with a message; a fast build used
+to drop the item and return. **The owner removed the guard on 2026-08-27.**
 
 ```c3
-if (f != thread::WAIT_TIMEOUT) return f~;
+    mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
+    // if (!b) return; <- Force failure instead of silent bug
+    b.free.push(h);
 ```
 
-**What is wrong.** `f` is whatever `ConditionVariable.wait_until` returned.
-Anything that is not `WAIT_TIMEOUT` is passed straight to the caller. But the
-signatures declare closed sets:
+**The guard is written out, and its text stays as a comment.** With no guard,
+`b.free.push(h)` on a null `b` writes through a null pointer and the process
+dies. A checking build still stops at the `@check` with the message. A fast
+build no longer swallows the item — it fails at the line instead. **Loud in both
+builds.** The commented line is there so nobody restores the guard as a fix.
 
+**This closes the third site.** The two close-hook sites are what `P6` still asks
+about.
+
+### Why it stands out here
+
+**Every other way to lose an item is guarded.** Filling a full Slot. Chaining an
+item twice. Moving a queue onto itself.
+
+**These three are not.** Not by decision. Nobody worked out what the port would
+do.
+
+### The decision
+
+**Detecting it is trivial.** One comparison: did the queue come back empty.
+
+**Saying something is the problem.** No logging in the port, by design. No
+stopping the program — `Q4` barred any new always-on check. `Pool.close` returns
+nothing, so there is no value to put an answer in.
+
+**Three answers.**
+
+**1. Count it. Let the application ask.** The pool counts what it handed over and
+what came back. The application reads the number after close and judges for
+itself. Honest. Invents nothing — no log, no fault, no abort. Costs a field and a
+few lines. **Does nothing for anyone who never looks.**
+
+**2. Check it. Accept that a fast build will not.** `mtk::@check` after the hook
+returns, asserting the queue is empty. A forgetful hook stops the program at the
+line. Fastest way to find that bug while writing code. **It compiles out under
+`--safe=no`** — the build where the loss actually matters. A development tool,
+not a guarantee. Worth saying which it is.
+
+**3. Trust the hook. Write that down.** The application asked for the hook. The
+interface said what it owes. Verifying is not the port's job. **The port no
+longer answers this way for a wrong identity** — that site now fails rather than
+stays quiet, so option 3 is the less consistent one after the 2026-08-27 ruling.
+Documentation, not code — so that the silence is not read as a promise.
+
+**None is obviously right.** 1 is the most honest. 2 is the most useful while
+writing code. 3 is cheapest and defensible. **1 and 2 combine** — a check while
+developing, a number afterwards.
+
+**State: open, waiting on your decision.**
+
+## P7 — closed, the claim did not survive reading the standard library
+
+**Two sites.**
+
+```c3
+mailbox.c3:257   if (f != thread::WAIT_TIMEOUT) return f~; // dead today: ...
+pool.c3:370      if (f != thread::WAIT_TIMEOUT) return f~; // dead today: ...
 ```
-mailbox.c3:228:  @return? mtk::CLOSED, mtk::TIMEOUT, mtk::WOKEN
-pool.c3:339:     @return? mtk::CLOSED, mtk::TIMEOUT, mtk::UNKNOWN_IDENTITY
+
+**What was claimed.** `Mailbox.receive` and `Pool.get_wait` wait with a deadline.
+The wait can fail. The code passes that failure straight out. `f` belongs to
+`std::thread`, not to this port, and neither `@return?` line names it. So a
+caller who handles the listed outcomes and treats the rest as impossible is
+following the documentation and is wrong.
+
+**That claim needs one thing to be true.** `wait_until` has to be able to fail
+with something other than `thread::WAIT_TIMEOUT`. If it cannot, the `if` is never
+true, `return f~` never runs, and no unlisted fault ever reaches a caller.
+
+**It cannot.** `thread.c3:102` is a macro and forwards. The real body is
+`os/thread_posix.c3:179`:
+
+```c3
+switch (posix::pthread_cond_timedwait(cond, &mtx.mutex, &&time.to_timespec()))
+{
+    case ETIMEDOUT: return thread::WAIT_TIMEOUT~;
+    case OK:        return;
+    default:
+        $if(env::OPENBSD): return thread::WAIT_TIMEOUT~;
+        $else             abort("pthread_cond_timedwait failed, invalid value");
+        $endif
+}
 ```
 
-`mtk.c3:42` states the rule the port is built on — *The faults are outcomes a
-correct program reaches* — and the seven are declared in one `faultdef` so a
-caller can switch on a closed set. **These two calls widen that set at run time**
-with a fault from `std::thread` that appears in no signature, and they are the two
-calls most likely to sit in a loop. A caller who handles all three declared
-outcomes and treats anything else as impossible is right by the contract and
-wrong by the code.
+**Three exits, and only three.** Timed out, so `WAIT_TIMEOUT`. Woke normally, so
+success and no fault. Anything else, so `abort` inside the standard library —
+control never comes back, `f` is never assigned, line 257 is never reached.
 
-It is a contradiction between two parts of the same file, not a leak. No test
-would have caught it, and it is reachable only through a stdlib failure.
+**No fourth exit.** OpenBSD folds even its odd case into `WAIT_TIMEOUT`. The
+win32 file behaves the same way: every `?` exit in its condition-variable code is
+`thread::WAIT_TIMEOUT~`, at `:329`, `:341` and `:348`.
 
-**The ruling this needs.** *What is a condition-variable failure?* Two answers,
-and neither is obviously right:
+**So `f` is only ever `WAIT_TIMEOUT`.** The comparison is always false. The
+branch is dead.
 
-1. **A defect.** The waits cannot fail in a correct program, so treat a failure
-   the way the port treats any impossible state. `Q4` bars a new tier-1 site, so
-   this would be `mtk::@check` — which compiles out, and then the fault escapes
-   in a fast build anyway. **That is the weakness of this answer.**
-2. **An outcome.** Add one fault to the `faultdef` — something like
-   `mtk::WAIT_FAILED` — return it from both sites, and add it to both
-   `@return?` lines. The set stays closed and the caller can switch on it. Costs
-   an eighth fault, and every port would want the same one.
+**The `@return?` lines were never incomplete.** The sets they declare really are
+closed. There is no missing eighth fault, so there was nothing to rule on — no
+`mtk::WAIT_FAILED`, no folding into `TIMEOUT`.
 
-**Not decided.**
+### What was done, 2026-08-27
 
-**State: open, blocked on the ruling above.**
+**The branch stays. A plain `//` comment was added on the right of each line**,
+saying it is dead today and kept for a future wait failure.
+
+**Why keep it rather than write it out.** Deleting it makes the port lean on a
+promise that lives in another library's operating-system layer. The promise holds
+today. If `wait_until` ever grows a second fault, a port without the guard would
+quietly report it as a timeout. The guard costs a comparison that folds away and
+buys the day that changes.
+
+**Why a `//` comment and not a `<* *>` block.** The doc loop reads only `<* *>`
+text. A `//` line is invisible to it, so this owes no reference change and no
+`-004`. Verified after the edit: four builds green, 67 checks, 87 tests, 0
+failures; doc loop 0 differing blocks, 0 banned words.
+
+**Not the same as P4.** `P4` was a dead branch removed. This one is a dead branch
+kept, deliberately, with the reason written at the line.
+
+### One thing on the record, and it is a different subject
+
+**That `abort` is a tier-1 site.** A `pthread_cond_timedwait` failure kills the
+process instead of returning through `void?`. The port did not add the site and
+cannot avoid it, so **`Q4` is untouched** — `Q4` governs sites the port adds.
+Noted here only so nobody discovers it later and reads it as a new finding.
+
+**State: closed 2026-08-27. Nothing owed.**
 
 ## P5 — closed, and here so it is not re-raised
 
@@ -404,9 +529,42 @@ change to the shared specification, not a fix to C3.
 - its first half — that the contract never states what a fast build cannot
   catch — became **`W2`**;
 - its second half, `pool.c3:459` dropping an item on the floor, became the third
-  site of **`P6`**, which is where the port's whole quiet-loss problem now sits.
+  site of **`P6`**. That site was ruled on 2026-08-27: the guard is written out,
+  so the fast build fails at the line instead of dropping the item.
 
 **Nothing to do. State: closed 2026-08-26 by INTR 2.**
+
+## Refuted — claims that did not survive the code
+
+**Absorbed from `reviews/3tk-05-review-analysis-001.md` when the reviews folder
+was removed, 2026-08-27.** Each was a *required fix* in one of the four reviews.
+Each is answered by a line of the port, not by an argument. Kept so none of them
+is filed again.
+
+**`must_from_handle` performs no check.** False. `helper.c3:89` carries
+`@require is_mine(h, $Type) : "the handle is not of this type"`, which C3
+compiles into the macro. `negative/wrong_type_must.c3` proves it:
+`run-builds.sh` reports *wrong_type_must aborts* in both checked builds and
+*runs to the end* in both fast ones, which is the documented behaviour and not a
+gap.
+
+**`Inner.as` is an unchecked duplicate.** False, same reason. `helper.c3:143`
+carries its own `@require`.
+
+**`required_alloc_offset` is a wrong qualification.** False. The name resolves
+and the port compiles in all four builds. The real defect in that neighbourhood
+was `P2`, which is not what was described.
+
+**The `Slot` casts can be dropped.** False. `Slot` is a C3 `typedef` at
+`inner.c3:79` — a distinct type, not an alias. `Handle` at `:70` is the alias.
+The shorter forms would not compile.
+
+**`helper::init` may overwrite the whole outer, losing the allocator write.**
+False. `helper.c3:46-50` writes `n.link` and nothing else.
+
+**Two shapes that are correct and might look open.** A waiting path has no fast
+closed check, and that is the shape the reviews asked to keep. `Mailbox.create`
+needs no condition-variable rollback, because nothing fallible follows it.
 
 ## Q5 — a release racing a call still in flight
 
@@ -452,13 +610,13 @@ decisions each took on new sentences that say *item*; `3tk/src` did not move.
 is still owed.
 
 **`ref/3tk-decisions-003.md` is the current one**, and `-002` is in `backup/`.
-`P6` and `P7` will each add an entry when they are ruled.
+`P6` will add an entry when it is ruled; `P7` closed without one.
 
-**The four numbers to re-measure**, and all four were true on 2026-08-27 with
-nothing fixed:
+**The numbers to re-measure**, all true on 2026-08-27 after the close-hook
+wording fix:
 
 ```
 ./run-builds.sh        # four builds green, 67 checks, 87 tests, 0 failures
-./check-doc-loop.sh    # 0 differing blocks, 439 sentences, 438 found, 1 missing, 0 banned
+./check-doc-loop.sh    # 0 differing blocks, 440 sentences, 439 found, 1 missing, 0 banned
 grep -roiwE 'items?' 3tk/src ref        # 124 and 365
 ```

@@ -254,7 +254,7 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
 
         if (catch f = self._cv.wait_until(&self._mu, deadline))
         {
-            if (f != thread::WAIT_TIMEOUT) return f~;
+            if (f != thread::WAIT_TIMEOUT) return f~; // dead today: wait_until can only fail with WAIT_TIMEOUT, kept for future wait failures
 
             if (self._closed) return mtk::CLOSED~;
             h = self.dequeue();

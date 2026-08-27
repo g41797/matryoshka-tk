@@ -17,10 +17,16 @@ A part learned once is a part learned everywhere.
 Deep dive is not this book's job. For that the reader goes to `3tk/src` or to a
 test under `3tk/test`.
 
-**This is 002, written by 3TK-46.** It carries all of `001`, and adds Part 7's
-*The modules, one by one* — the eight labelled module blocks — and corrects
-Part 7's module layout for the eight-module split 3TK-44 made. `001` is in
-`backup/`.
+**This is 004.** It carries all of `003` and corrects one claim about the close
+hook: the pool's close section said the hook is called once, while the hooks
+section of the same file already said it can be called again by a put that finds
+the pool closed. The specification's `Part 12.2` says the second thing. The close
+section now says it too. `003` is in `backup/`.
+
+`003` carried all of `002` and re-anchored the citations. `002`, written by
+3TK-46, added Part 7's *The modules, one by one* — the eight labelled module
+blocks — and corrected Part 7's module layout for the eight-module split 3TK-44
+made.
 
 ---
 
@@ -1036,7 +1042,9 @@ fn usz  Pool.count_of(&self, typeid t)
   - Everything the pool held goes to `on_close`, as one flat queue.
   - Callable more than once. The second call takes nothing and does not run the
     hook again.
-  - The hook is called once, outside the mutex, after the closed flag is set.
+  - The hook is called outside the mutex, after the closed flag is set.
+  - Called once by `close`, and possibly once more with stragglers from a
+    concurrent `put`.
 - `is_closed` — true when it is closed.
 - `count_of` — how many of one identity are free.
   - A hint. It is stale by the time you read it.

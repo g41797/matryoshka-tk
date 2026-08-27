@@ -1,7 +1,7 @@
 """3TK-47. The two sides of a module description, and the one transformation.
 
 A module description exists twice: as a labelled block in
-`design/secondary/lang/c3/ref/3tk-reference-003.md`, and as the `<* *>` block
+`design/secondary/lang/c3/ref/3tk-reference-004.md`, and as the `<* *>` block
 directly above `module X;` in `3tk/src`. Moving one is a copy in either
 direction. The whole transformation is one leading space per line, added going
 into the source and stripped coming out. A blank line stays blank.

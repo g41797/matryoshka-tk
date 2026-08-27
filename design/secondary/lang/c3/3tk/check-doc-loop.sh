@@ -5,7 +5,7 @@
 # The invariant:
 #
 #     Every descriptor line in `3tk/src` appears in
-#     `design/secondary/lang/c3/ref/3tk-reference-003.md`.
+#     `design/secondary/lang/c3/ref/3tk-reference-004.md`.
 #
 # One direction only. The reference is allowed to say more — Usual flow, the
 # diagrams, the whole of Part 6. The source is a subset of it, never the
@@ -26,7 +26,7 @@
 set -u
 
 ROOT=$(cd "$(dirname "$0")" && pwd) || exit 2
-REF=${REF:-$ROOT/../ref/3tk-reference-003.md}
+REF=${REF:-$ROOT/../ref/3tk-reference-004.md}
 RULES=${RULES:-$ROOT/../../../../rules-049.md}
 PY=${PYTHON:-python3}
 

@@ -128,8 +128,17 @@ Two sub-questions come with it, and both are the owner's:
 Until the stage runs, the hazard is live and is named in no file a reader of the
 port would reach. **The gap is expected to be long.**
 
-`W3` in
-[reviews/3tk-06-questions-answered-001.md](reviews/3tk-06-questions-answered-001.md)
-is the one-sentence warning on both release calls. It is thrown away when
-enforcement lands. **Whether it goes in now is the only part of this item that is
-still open.**
+**`W3` lives here now.** It came out of INTR 2's `Q5` and was the third of that
+stage's three wording items; the `reviews/` folder that held it was removed on
+2026-08-27, so this is its only record.
+
+- `W3` is a one-sentence warning, added to the descriptor of both `release`
+  calls — `mailbox.c3:106` and `pool.c3:231`.
+- It says the port does not yet stop a release that races a call still in
+  flight, and that closing first is not enough to make a mailbox or a pool quiet.
+- It is written out again when enforcement lands, so it is a note with a known
+  end date rather than a permanent clause.
+- Both sites are inside `<* *>`, so adding it owes the doc loop and a new
+  reference version.
+
+**Whether it goes in now is the only part of this item that is still open.**

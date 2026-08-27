@@ -7,6 +7,250 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-27 — the reviews folder removed, what it held absorbed
+
+**The owner removed `reviews/`.** Four implementation reviews, `3tk-01` to
+`3tk-04`, plus the two analysis files. About 5100 lines. Nothing in `3tk/`
+depended on it and no script read it.
+
+**Most of it needed no absorbing.** Every defect — `P1` to `P7`, `W1`, `W2`,
+`Q5` — already had its own section in `3tk-open-defects.md`, with the evidence
+and the verification. The record of what was wrong and what was done never lived
+in `reviews/`.
+
+**Three things did, and moved.**
+
+**The five refutations** are now a *Refuted* section in `3tk-open-defects.md`,
+before `Q5`. Each was a *required fix* in one of the four reviews and each is
+answered by a line of the port rather than by an argument — `must_from_handle`
+and `Inner.as` both carry `@require`, `required_alloc_offset` resolves in all
+four builds, `Slot` is a `typedef` and not an alias so the casts cannot be
+dropped, and `helper::init` writes `n.link` and nothing else. Rewritten so the
+evidence is the code: the old text cited *review 1 §1* and similar, and those
+files are gone.
+
+**`W3`** is now inside `3tk-release-while-busy-001.md`, which was its only
+reader. Its *Interim* section had pointed at `reviews/` for it. It now states
+what `W3` is: a one-sentence warning on both `release` descriptors, written out
+again when enforcement lands, and owing the doc loop because both sites are
+inside `<* *>`.
+
+**The priority ranking** did not move as a table. Six of the eight ranked items
+are fixed, so one line in *Order* carries what is left — `P6` was ranked High and
+is the last of the three that were.
+
+**Dropped deliberately.** The list of review sections that claimed no defect,
+because it points into files that no longer exist and is unusable. The `Q1` to
+`Q3` answers, whose fixes are done and verified. Both *what was measured, live*
+sections, which are historical measurements this log already holds.
+
+**`Q4` needed nothing.** Its ruling was already quoted in full inside `P5`'s
+section — the specification refuses the promotion, `Part 11.12` holds the port's
+only two tier-1 sites, and `Part 12.2` files a hook's wrong identity as a defect
+of the application.
+
+**The defect list's opening block was rewritten.** It used to delegate the *why*
+to `reviews/` and forbid re-arguing from them. It now says the reasoning lives in
+that file and there is no second document to re-argue from.
+
+**Links in this log still point at `reviews/`.** They are historical entries and
+record what existed when they were written. They are left as they are.
+
+## 2026-08-27 — INTR 3 continued, the close-hook wording fixed, reference to 004
+
+**The fix was smaller than the finding said.** Two of the three stale sites
+already carried the truthful lines directly beside the stale one.
+
+**`pool.c3:92`, the hooks interface.** Lines 93 and 94 already read *called once
+by `close`, and possibly once more with stragglers from a concurrent `put`* and
+*so a hook must not free its own context on the first call*. Line 92 said *called
+once*. The block argued with itself. Only the word *once* was written out.
+
+**`pool.c3:469`, `Pool.close`.** Nothing truthful beside it. Same word written
+out, and the *possibly once more* sentence added in the same words as line 92.
+The hook's obligation stays at the interface, where a hook writer is reading.
+
+**`ref/3tk-reference-003.md:1039`.** The same two changes. The reference already
+held the truthful sentences in its hooks section at `:1091-1093`, so it carried
+both answers in one file.
+
+**The reference is versioned.** `-003` to `backup/`, `-004` in its place, every
+live cross-reference repointed. Historical mentions in this log, in
+`3tk-status.md` and in `3tk-open-defects.md` still name `-003`, because that is
+what those entries recorded at the time. The version paragraph at the top of the
+reference was stale as well — it still said *this is 002* — and now names `004`
+with `003` and `002` summarised under it.
+
+**Verified.** Doc loop 0 differing blocks, 440 sentences, 439 found, 1 missing,
+0 banned words. The one miss is the pre-existing `inner.c3` module summary. The
+count rose by one, which is the sentence added to `Pool.close`.
+
+**No ruling was needed and none was taken.** The specification had already ruled
+it in `Part 12.2`; only 3tk's wording was behind.
+
+**The Order section's *runs now* line is empty again.** `P6` and `Q5` are what is
+left.
+
+## 2026-08-27 — INTR 3 continued, the defect list gets an Order section
+
+**Why it was missing.** Six items were mechanical and ran in one stage, so
+ordering was trivial and nobody wrote it down. It stopped being trivial once the
+one open item's answers began depending on two other files.
+
+**Added to `3tk-open-defects.md`, after the summary block and before the item
+sections.** Not at the top: a dependency list above the table names items the
+reader has not met yet. One pointer line in the opening block links down to it.
+
+**Three headings and nothing else.** What runs now with nothing in front of it.
+What is waiting on the owner. What is waiting on an unscheduled stage. Then the
+one dependency a reader would not guess: `P6`'s option 1 needs `Q5`'s stage,
+because a count means nothing until there is a moment when no further `on_close`
+can arrive, and `Part 12.2` names no such moment. Options 2 and 3 do not need it,
+and either would put `P6` in front of everything else.
+
+**Called *Order*, not *Priorities*.** The priority ranking already exists at
+`reviews/3tk-05-review-analysis-001.md:412`, and this file's own rule says the
+*why* lives in the reviews and is not re-argued here. Copying it would give two
+copies that drift, and six of the ranked items are fixed, so the ranking is
+mostly historical. Order is a fact about dependencies rather than a judgment.
+
+**Kept out deliberately:** the fixed items, which have no order left, and stage
+scheduling such as `3TK-50`, which is `3tk-status.md`'s subject. Naming a stage
+in both files means editing both every time one moves.
+
+**Two rules written into the section itself.** It is rewritten in the same edit
+that changes an item's state. And it is never the only place a dependency is
+recorded — each item's section keeps its own, so a stale line is a duplicate gone
+wrong rather than a fact lost.
+
+## 2026-08-27 — INTR 3 continued, the close hook is not called once
+
+**Looking at `P6`'s two close-hook sites turned up a different finding.**
+
+**What was suspected.** `on_close` runs outside the mutex at `pool.c3:434` and
+`pool.c3:492`, and the two can run at the same time on two threads with two
+different lists. That reads as a broken *called once* promise.
+
+**The specification had already ruled it.** `Part 12.2` of
+`../common/matryoshka-specification-004.md`, under *on close*: called once by
+close, and once more for each put that discovers the pool closed while its own
+hook was running, with the hook required to tolerate a later call. The clause was
+weakened deliberately in `003`, and `003` says why — two calls to a cleanup hook
+is a smaller cost than items with no holder. `Part 12.3` covers the concurrency:
+hooks run at once on different threads, and a hook protects its own state.
+
+**So both axes are closed and the code is correct.** Nothing in `3tk/src`
+changes.
+
+**What is wrong is the port's own wording.** Three sites still carry the `002`-era
+*called once*: `pool.c3:92`, `pool.c3:469`, `ref/3tk-reference-003.md:1039`. A
+hook writer who reads the descriptor writes a hook that runs once, and the second
+call finds state the first one tore down. Two of the three are inside `<* *>`, so
+the fix owes the doc loop and a `-004`.
+
+**Two things outside 3tk were recorded, not ruled.** The user-facing
+`design/matryoshka-api-reference-042.md:1470` carries the same stale *calls it
+once*. And `Part 12.3` cites `3tk: pool.c3:445-480` for a window that is live at
+`pool.c3:421-445`.
+
+**Written up as [3tk-on-close-policy-001.md](3tk-on-close-policy-001.md).** Not
+scheduled. `P6` is unchanged and keeps only the leak question.
+
+## 2026-08-27 — INTR 3 continued, P6's third site ruled
+
+**The owner ruled on `pool.c3:458-460`,** the third and smallest of `P6`'s
+sites: a put hook returns an item of an identity the pool was never created
+with.
+
+**What it looked like.** A `mtk::@check` naming the fault, then a guard:
+
+```c3
+    mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
+    if (!b) return;
+    b.free.push(h);
+```
+
+**In a checking build the `@check` stopped the program.** In a fast build the
+`@check` compiled out, the guard ran, and the item was dropped with nothing said.
+That silent drop is what made this a `P6` site at all — INTR 2 split `P5` and
+sent this half here.
+
+**The ruling: write the guard out, keep its text at the line.**
+
+```c3
+    // if (!b) return; <- Force failure instead of silent bug
+```
+
+**Why this is a fix and not a removal.** With no guard, `b.free.push(h)` on a
+null `b` writes through a null pointer and the process dies. A checking build
+still stops at the `@check` with its message. A fast build now fails at the line
+instead of swallowing the item. Loud in both builds, which is exactly what the
+site lacked.
+
+**The comment carries the reason.** Without it the next reader sees an unguarded
+dereference after a check that compiles out, calls it an oversight, and restores
+the guard. The comment says the absence is the decision.
+
+**`Q4` is not touched.** `Q4` barred new always-on *check* sites the port adds.
+Nothing was added here; a guard was written out. The failure is a null
+dereference, not a `always_assert`, and the port's two tier-1 sites are still the
+two in `Part 11.12`.
+
+**Same shape as the `P7` ruling, opposite direction.** `P7` kept a dead branch
+and wrote the reason at the line. This writes out a live branch and writes the
+reason at the line. Both leave a `//` comment where a later reader would
+otherwise guess.
+
+**Verified.** Four builds green, passed 67, failed 0, 87 tests. The doc loop is
+untouched — a `//` comment is invisible to it, so no reference change and no
+`-004`.
+
+**`P6` is still open on its two close-hook sites,** `pool.c3:434` and `:492`.
+The tally is unchanged: six fixed, one open, two closed, one deferred.
+
+## 2026-08-27 — INTR 3 continued, P7 closed by reading the standard library
+
+**`P7` was not a defect.** It claimed `Mailbox.receive` and `Pool.get_wait` could
+return a fault their `@return?` lines do not name, arriving from a failed timed
+wait on a condition variable. The owner asked for that claim to be confirmed
+rather than taken.
+
+**The claim needs `wait_until` to be able to fail with something other than
+`thread::WAIT_TIMEOUT`.** It cannot. `thread.c3:102` is a macro that forwards;
+the body at `os/thread_posix.c3:179` has three exits — `ETIMEDOUT` returns
+`thread::WAIT_TIMEOUT`, `OK` returns success, and every other value calls
+`abort` inside the standard library, so control never comes back. OpenBSD folds
+its odd case into `WAIT_TIMEOUT`. The win32 file is the same: every `?` exit in
+its condition-variable code is `thread::WAIT_TIMEOUT~`, at `:329`, `:341`,
+`:348`. So `f` is only ever `WAIT_TIMEOUT`, the comparison is always false, and
+the branch is dead.
+
+**The `@return?` lines were never incomplete**, so there was no eighth fault to
+name and nothing for the owner to rule on.
+
+**What was done.** The owner ruled: keep the branch, add a plain `//` comment on
+the right of each line. `mailbox.c3:257` and `pool.c3:370` now carry *dead today:
+wait_until can only fail with WAIT_TIMEOUT, kept for future wait failures*.
+Keeping it means the port does not lean silently on a promise that lives in
+another library's operating-system layer; if `wait_until` ever grows a second
+fault, a port without the guard would report it as a timeout.
+
+**No documentation debt.** The doc loop reads only `<* *>` text, so a `//` line
+is invisible to it — no reference change, no `-004`. Verified after the edit:
+four builds green, 67 checks, 87 tests, 0 failures; doc loop 0 differing blocks,
+439 sentences with the one pre-existing `inner.c3` module summary missing, 0
+banned words.
+
+**On the record, and a different subject.** That `abort` is a tier-1 site the
+port did not add and cannot avoid, so `Q4` is untouched — `Q4` governs sites the
+port adds. A `pthread_cond_timedwait` failure kills the process rather than
+returning through `void?`.
+
+**`3tk-open-defects.md` now reads six fixed, one open, two closed, one
+deferred.** `P6` is the only ruling still owed.
+
+---
+
 ## 2026-08-27 — INTR 3, the six items that needed no ruling
 
 **One stage, six fixes, verified.** `P1`, `P2`, `P3`, `P4`, `W1`, `W2` — every

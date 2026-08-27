@@ -32,3 +32,29 @@ Runs
       ./3tk/move-module-docs.sh in  [module ...]
       ./3tk/move-module-docs.sh out [module ...]
       ./3tk/move-module-docs.sh roundtrip
+
+
+How to start after
+
+  To pick up the interrupt — P6 is the one ruling owed:
+
+  Read design/secondary/lang/c3/3tk-status.md and 3tk-open-defects.md.
+  INTR 3 continues. Rule P6.
+
+  To go back to the flow instead — 3TK-50 is the last unfinished stage and is not blocked:
+
+  Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
+
+  That second line is the one already printed in the status file, so it works with no editing.
+
+  What a cold session will find
+
+  - One open item: P6, the leak question, three answers written out in its section.
+  - One deferred item: Q5, ruled, its whole stage in its own file.
+  - reviews/ gone, with -05 and -06 still on disk holding nothing unique.
+  - The reference at -004.
+  - Four builds green, 67 checks, 87 tests; doc loop 0 differing, 440 / 439 / 1, 0 banned.
+
+  The status file's Resuming after an interruption section already carries all of that, so the restart line above is enough on its
+  own.
+
