@@ -105,6 +105,11 @@ fn Mailbox*? create(Allocator a)
 // [3tk: D6, Part 11.12, Part 13.1]
 fn void Mailbox.release(&self)
 {
+    //!!!!!!!  2DO closed is not quiet. A release also requires that no other call is
+    //!!!!!!!  2DO still running, and closing does not make that true. Not enforced yet:
+    //!!!!!!!  2DO a release racing a call in flight frees memory that call is using.
+    //!!!!!!!  2DO Ruled 2026-08-27: the port will enforce it, and release will wait.
+    //!!!!!!!  2DO See design/secondary/lang/c3/3tk-release-while-busy-001.md !!!!!!!
     // [3tk: Part 11.12]
     always_assert(self._closed, "releasing an open mailbox");
     self._cv.destroy()!!;

@@ -229,6 +229,12 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
 // [3tk: D6, Part 11.12, Part 13.1]
 fn void Pool.release(&self)
 {
+    //!!!!!!!  2DO closed is not quiet. A release also requires that no other call is
+    //!!!!!!!  2DO still running, and closing does not make that true. Not enforced yet.
+    //!!!!!!!  2DO Part 12.3 forces the mutex open across a hook, so a put that is
+    //!!!!!!!  2DO inside on_put relocks at pool.c3:424 in memory this call just freed.
+    //!!!!!!!  2DO Ruled 2026-08-27: the port will enforce it, and release will wait.
+    //!!!!!!!  2DO See design/secondary/lang/c3/3tk-release-while-busy-001.md !!!!!!!
     // [3tk: Part 11.12]
     always_assert(self._closed, "releasing an open pool");
     self._cv.destroy()!!;

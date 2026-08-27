@@ -7,6 +7,115 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-27 — quiet before released, ruled and deferred
+
+**An owner ruling on INTR 2's `Q5`, and no stage.** One document, no code.
+
+**The port enforces it.** Not a documented caller precondition — the owner's
+reason is that the client's code is unaffected either way, so the port may as well
+keep the rule itself.
+
+**It does not run now.** The examples and the pattern catalog do not exercise edge
+cases, so nothing downstream waits on it and the gap may be long. That is why it
+got a file of its own rather than a line in a plan.
+
+**The advice that went with the ruling is in the file**, because it is the part
+that would otherwise be lost: a counter alone has the hazard inside itself — the
+counter and its mutex live in the memory being freed — so `release` must **wait
+on a condition variable until the count is zero**, which means `release` stops
+being a call that cannot block. And `Part 11.12` is in the shared specification, so 3tk would be
+*discovering* the clause for every port, not implementing one.
+
+Written: `3tk-release-while-busy-001.md`.
+
+**Two `2DO` comments went into the code the same day**, at the owner's word and
+in the owner's format, on `Mailbox.release` and `Pool.release`. **Plain `//`
+lines, not doc blocks** — verified first: in a `.c3` file both of
+`check-doc-loop.sh`'s scans read only the `<* *>` text, so the comments are
+invisible to the doc loop and to the banned-word scan. Four builds green, doc
+loop unchanged at 0 differing blocks, banned words 0, and the `items?` count
+still 484. **The doc loop is not owed and 3TK-50 is not blocked.**
+
+**Two renames, both for a banned word.** `reviews/3tk-06-questions-settled-001.md`
+became `...-answered-001.md`, and the file written for the release hazard lost
+the word *quiescence* from its name — it is `3tk-release-while-busy-001.md`.
+Every reference repointed, including the two `2DO` comments. The word *drain* was
+also caught in the new prose and replaced with *wait*: it is on Part 5's list, and
+`release` waiting for calls in flight is what the ruling actually says.
+
+**And the eight open items got a working file: `3tk-open-defects.md`.** One
+table, one section each — where it is, what is wrong, what the fix is, how to
+know it worked, and its state. **Edited in place**, like the status file and this
+one, because it is ticked off rather than superseded.
+
+**Writing it moved two things.** `P4` is not the simple deletion it looked like:
+its marker is `Part 2.6`, a MUST, and the port's compliance is real but comes
+from the dequeue two lines above rather than from the vacuous branch — so the
+deletion needs a decisions entry or the port looks like it dropped a MUST. And
+`P6` and `P7` turned out **not** to be mechanical: each needs a small ruling
+first, because the port has no way to report what it noticed, and `Q4` closed the
+door on new tier-1 aborts. Both rulings are written out in their sections.
+
+**The line numbers in the two review files are now stale** — the `2DO` comments
+moved them, by five in `mailbox.c3` and six in `pool.c3`. `3tk-open-defects.md`
+was printed live afterwards and is the good copy.
+
+## 2026-08-26 — INTR 2, the five questions answered
+
+**Ran on the owner's word, second of the implementation-review interrupt.** One
+document under `reviews/`, no code, and no byte of `3tk/` changed.
+
+**INTR 1 had left five questions**, each with the check that settles it named.
+INTR 2 ran all five. **Four are closed as readings.** `Pool.put`'s fork is not a
+fork — the closed-window disposal was ruled 2026-08-24 and `on_put` has no
+give-it-back outcome, so the contract sentence is the defect and the code is not.
+`UNKNOWN_IDENTITY`'s fault-and-defect split is what its negative was written to
+assert. The empty-Slot no-op is `D6`'s pairing clause, not an exception to it —
+without the `if`, a fast build pushes a null handle and dereferences it. And the
+hook checks stay tier 2, because `Part 11.12` calls its own precondition *the one
+the toolkit refuses to soften* and `Part 12.2` files a hook's wrong identity as an
+ordinary defect of the application.
+
+**Q5 is the one thing left, and it is a sentence.** `Part 11.12` promises
+closed-before-released and nothing else; `Part 13.1` is the allocator rule and has
+nothing to say here. So *quiet before released* was never promised, it is the
+caller's to keep, and it is written down nowhere — while `Pool.put` opens the
+window itself, under `Part 12.3`'s MUST. Three ways out are listed and **INTR 2
+does not choose**.
+
+**P5 came apart under Q4.** Its promotion is refused by the specification, so it
+closes as a checking question: `pool.c3:318` becomes a wording item, and
+`pool.c3:453` merges into P6, which inherits the priority. Six problems and three
+wording items remain, and only the last of the three is blocked.
+
+**Measured live:** `./3tk/run-builds.sh` — four builds green, 63 checks, 0
+failures. The tree is where 3TK-49 left it.
+
+Written: `reviews/3tk-06-questions-answered-001.md`.
+
+---
+
+## 2026-08-26 — INTR 1, the four implementation reviews triaged
+
+**Ran on the owner's word, and it interrupted plan 019 between 3TK-49 and
+3TK-50.** One document under `reviews/`, no code, and no byte of `3tk/` changed.
+
+**Four review files, 4,350 lines, written from the sources with comments and
+documents excluded.** That exclusion cost the reviewer his headline: in C3 a
+`<* @require *>` block is a compiled contract, so *`must_from_handle` performs no
+identity check* is a false alarm about a line he was told to skip, and
+`negative/wrong_type_must.c3` already proves it. Four more claims were refuted the
+same way, and the sections that found nothing are listed so they are not re-read.
+
+**Seven problems survived**, `P1` to `P7`, each with live `file:line` and a
+ranking. Six are the reviewer's; **P7 is the analysis's own** — a `std::thread`
+fault escaping past a `@return?` that declares a closed set. **Five questions were
+left for the owner**, each naming the check that settles it, and INTR 2 ran them.
+
+Written: `reviews/3tk-05-review-analysis-001.md`.
+
+---
+
 ## 2026-08-26 — 3TK-49, the pattern catalog
 
 **Ran on the owner's word, second of plan 019's three.** One document under

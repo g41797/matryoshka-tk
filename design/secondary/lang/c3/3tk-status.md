@@ -36,6 +36,43 @@ cleared.
 **Exactly one 3tk stage is unfinished: 3TK-50.** Nothing else in plans 016 to
 019 is outstanding. 3TK-48 and 3TK-49 are done and their outputs are on disk.
 
+**The interrupt that is running now is the implementation review, and it has run
+twice.** Neither stage touched `3tk/src`, `test/` or `negative/`, so **3TK-50 is
+not blocked and the doc loop is not owed.**
+
+- **INTR 1** — the four review files in [reviews/](reviews/) triaged into
+  [reviews/3tk-05-review-analysis-001.md](reviews/3tk-05-review-analysis-001.md).
+  Seven problems, `P1` to `P7`, five refutations, and five questions.
+- **INTR 2** — those five questions answered in
+  [reviews/3tk-06-questions-answered-001.md](reviews/3tk-06-questions-answered-001.md).
+  Four close as readings. **P5 closes as a checking question** and its second half
+  merges into P6. **One item was the owner's**: the port never promised *quiet
+  before released*, and that precondition was written down nowhere.
+
+**That one is now ruled and deferred.**
+[3tk-release-while-busy-001.md](3tk-release-while-busy-001.md) holds all of it —
+the hazard, the ruling (**the port enforces it; the client's code is unaffected
+either way**), why a counter alone is not enough and `release` must wait, what it
+costs, the shared-specification clause it would make every port owe, and the
+deterministic negative that proves it. **It is not scheduled, and the gap before
+it runs is expected to be long.** Read that file and nothing else to run it.
+
+**[3tk-open-defects.md](3tk-open-defects.md) is the working list for fixing
+them.** One table and one section per item: where it is, what is wrong, what the
+fix is, how to know it worked, and its state. **It is edited in place** — a fixed
+item is marked there. Its line numbers were printed live on 2026-08-27 and are
+the good ones; **the numbers in the two review files predate the `2DO` comments
+and are off by five in `mailbox.c3` and six in `pool.c3`.**
+
+**Six of the eight are mechanical or wording. Two — `P6` and `P7` — need a small
+ruling from the owner before code can be written**, and both rulings are stated
+in their sections.
+
+**Nothing has been fixed yet.** P1, P2, P3, P4, P6 and P7 are open, and so are the
+three wording items `W1` to `W3` that INTR 2 raised. **A fix stage would touch
+`3tk/src`, and then the doc loop is owed before 3TK-50.** The two files above are
+the whole input to it; the four review files do not need reopening.
+
 **To resume, read three files in this order**, and nothing else is needed:
 
 1. this file,
