@@ -67,7 +67,21 @@ RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue 
 # suite tested one of them: an OPEN mailbox cannot be released, and neither can
 # a CLOSED one that is not yet quiet. The second half is the one a real program
 # gets wrong, because closing looks like it finished something.
-TIER1_NEGATIVES=(release_open_mailbox release_while_receiving release_open_pool)
+#
+# 3TK-54 added the pool's four. The mailbox needs one program for the second
+# half and the pool needs four, because Part 12.3 forces the mutex open across
+# every call into a hook: a pool can be closed and not quiet in four distinct
+# places, and each one is a different site rather than a different schedule of
+# the same site.
+#
+#   release_not_quiet_pool      a get_wait woken by the close, not yet returned
+#   release_during_on_put       a put inside on_put, about to re-take the mutex
+#   release_during_on_close     close's own hook, after CLOSED is published
+#   release_with_straggler_put  the SECOND on_close, called from inside put
+TIER1_NEGATIVES=(release_open_mailbox release_while_receiving
+                 release_open_pool release_not_quiet_pool
+                 release_during_on_put release_during_on_close
+                 release_with_straggler_put)
 
 # A compile-time negative never compiles, in any mode, and its message must name the type.
 declare -A NOCOMPILE_EXPECT=(

@@ -7,6 +7,108 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-28 — 3TK-54, the pool learns what quiet means, and pays for it once
+
+**The other half of the lifetime fix, and the harder half.** 3TK-53 did the
+mailbox, which has no hook; this one did the pool, where `Part 12.3` forces the
+mutex OPEN across every call into application code. **Taking the mutex proves
+nothing there, and that is the whole reason the count exists.**
+
+**What went in.** A `usz _active` in `Pool`, under the mutex the tool already
+owns, exactly as the mailbox has it. Every accepted call raises it after the
+closed check and lowers it under the mutex before returning: `get`, `get_wait`,
+`put`, `close` and `count_of`. A rejected entry raises nothing. `release` is
+never counted.
+
+**Three sites the mailbox does not have, and each one is a separate negative.**
+
+- **`put` inside `on_put`.** The count is raised before the unlock at `:421`
+  and lowered only after the re-take at `:423` — the re-take is the line that
+  touches a mutex a release breaking Rule 1 has already destroyed.
+- **`close` inside its own `on_close`.** `Pool.close` publishes CLOSED, opens
+  the mutex and runs application code. It stays counted through the hook, which
+  costs it one re-take it did not have.
+- **the straggler `on_close`, called from inside `put`.** A count that stopped
+  at `on_put` would read zero while that second hook ran. It is lowered after
+  the hook, on that path too.
+
+**`get_wait` needed one duplicated check rather than one moved one.** Its closed
+test lives at the head of the wait loop, where a woken waiter reads it. The
+entry test is a different question — *was this call accepted at all* — so the
+stage added one before the raise and left the loop's alone. Moving it would have
+changed which of `UNKNOWN_IDENTITY` and `CLOSED` a closed pool reports, and
+*What stays unchanged* forbids that.
+
+**A private `_close` now holds the state change**, as in the mailbox: the
+`_closed` write, the RELEASE store, the drain of every bucket into the caller's
+queue, the broadcast. **And `release` does not call it**, for the reason 3TK-53
+found on its side and this stage confirmed on the pool's: a `release` that
+closed first would pass its own check and `negative/release_open_pool.c3` would
+stop aborting. **The check comes first and nothing else runs when it fails.**
+
+**The added lock in `Pool.get`, measured rather than assumed.** The design named
+one added acquisition and asked for its cost. Single thread, uncontended,
+`--safe=yes -O3`, 20 million iterations, three runs each, against a copy of the
+pre-change source:
+
+```
+hook path    (get NEW_ONLY, on_get fills)    18.9 -> 31.6 ns   +12.7 ns
+stored path  (get AVAILABLE_ONLY + put)      60.9 -> 61.5 ns   within noise
+```
+
+**Only the hook path pays it**, because only the hook path leaves the mutex; the
+three modes that return under the first acquisition pay the increment and the
+decrement and nothing else. **And the +12.7 ns is measured against a hook that
+does one pointer store.** A real `on_get` allocates, so the acquisition is a
+fraction of a percent of what the caller is already spending to get there — the
+worst case is the one measured, and it is the case that does not happen.
+
+**Four negatives, all tier 1, all deterministic.** `release_not_quiet_pool` is
+the pool's counterpart to `release_while_receiving`: a `get_wait` woken by the
+close and not yet returned. The other three park a hook until the main thread
+has published that it is about to release, so each window is entered on purpose
+rather than raced for — `release_during_on_put`, `release_during_on_close`, and
+`release_with_straggler_put`, which waits for the *second* `on_close` before it
+releases. All four abort in all four builds with the new message.
+
+**Two tests.** `the_pool_closed_then_quiet_then_freed` walks CLOSED, then QUIET,
+then FREED with an assertion at each step, and reads `p._active` directly the
+way the mailbox's test reads `mb._active`. `the_pool_close_then_join_then_
+release` runs the ordinary shape: three workers borrowing and returning, joined
+first, then close, then release. The pool's close gives nothing back, so unlike
+the mailbox's shape there is no queue to drain — **what the caller owes is the
+join, and that is the whole point.**
+
+**What the reference gained.** The pool's `release` and `close` descriptors, the
+module block, Part 5's *Usual flow* step 6, the four new programs under *Where
+to go deeper* — and one addition to Part 6 that is not a copy of the mailbox's:
+**the pool has a second way to be closed and not quiet**, and a reader who knows
+only the parked-receiver case would not predict it. A pool can be closed, hold
+nothing, refuse every new call, and still have application code inside it.
+
+**`Part 11.12` was left alone again**, for the reason 3TK-53 left it alone: it
+lives in the shared specification, it binds four ports, and it is 3TK-52's,
+which needs `Q-D`. The rule went into 3tk's own reference and its descriptors.
+
+**Verified live, 2026-08-28, at the end of the stage:**
+
+```
+./run-builds.sh        87 checks, 0 failures, four builds green, 91 tests each
+./check-doc-loop.sh    0 differing blocks, 452 sentences, 451 found
+                       1 missing — the pre-existing inner.c3 module summary
+                       0 banned words
+./run-sanitizers.sh    thread on two builds, address on one, all clean
+```
+
+71 checks became 87 — four tier 1 rows in each of the four builds. 89 tests
+became 91. The doc loop moved 446 to 452 because the pool's descriptors took on
+the rule.
+
+**Advice: clear the context.** The lifetime fix is now built on both tools, and
+what is left of it is bookkeeping — `3TK-55` re-measures and closes `Q5`, and
+`3TK-52` needs an owner answer before it can run. Neither reads anything this
+stage held in working memory.
+
 ## 2026-08-28 — 3TK-53, the mailbox learns what quiet means
 
 **The first stage to touch `3tk/src` since the lifetime work began.** Five

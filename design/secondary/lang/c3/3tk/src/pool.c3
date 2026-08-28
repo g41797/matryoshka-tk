@@ -20,6 +20,7 @@
  On put the Slot is the answer: cleared means the pool took the item, unchanged means it was refused and you still have the item.
  On close nothing comes back to you. Everything goes to `on_close`.
  Close it first. Releasing an open pool aborts in every build mode.
+ Closing does not make a pool quiet: release it only after every call on it has returned.
  The mailbox gives everything back to a caller.
  The pool's close gives nothing back at all.
 
@@ -144,6 +145,7 @@ struct Pool
 
     bool         _closed;
     Atomic{bool} _closed_fast;
+    usz          _active;
 
     PoolBucket[] _buckets;
     PoolHooks    _hooks;
@@ -225,19 +227,37 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
 
  Close it first. Releasing an open pool aborts in every build mode.
  It takes no allocator.
- The pool must be closed.
+ The pool must be closed and quiet.
+ Quiet means no call on the pool is still running.
+ Closing does not make a pool quiet: a hook the pool called is application code that has not returned, and a getter parked in `get_wait` is woken by the close and has not yet returned either.
+ The usual way to get quiet is to join the threads that touch the pool.
+ Releasing a pool that is not quiet aborts in every build mode.
 *>
 // [3tk: D6, Part 11.12, Part 13.1]
 fn void Pool.release(&self)
 {
-    //!!!!!!!  2DO closed is not quiet. A release also requires that no other call is
-    //!!!!!!!  2DO still running, and closing does not make that true. Not enforced yet.
-    //!!!!!!!  2DO Part 12.3 forces the mutex open across a hook, so a put that is
-    //!!!!!!!  2DO inside on_put relocks at pool.c3:424 in memory this call just freed.
-    //!!!!!!!  2DO Ruled 2026-08-27: the port will enforce it, and release will wait.
-    //!!!!!!!  2DO See design/secondary/lang/c3/3tk-release-while-busy-001.md !!!!!!!
+    // Rule 1 of the lifetime contract, and the whole of what `_active` is for.
+    // Closed is state; quiet is that state and an empty active set together.
+    // The predicate is read UNDER the mutex, never before taking it, and
+    // `release` is never counted itself: it would then assert against itself.
+    //
+    // The pool is the harder of the two tools, because Part 12.3 forces the
+    // mutex OPEN across every call into a hook. Taking the mutex proves nothing
+    // about a `put` that is inside `on_put`; only the count sees it.
+    //
+    // This is a check and not a wait. A release that waited would block on
+    // application code the port does not control. What it catches, it catches
+    // on the schedule it happens to see.
     // [3tk: Part 11.12]
-    always_assert(self._closed, "releasing an open pool");
+    self._mu.lock();
+    always_assert(self._closed && self._active == 0,
+                  "releasing a pool that is not quiet");
+    self._mu.unlock();
+
+    // The order is established against the real structs, not assumed. C3's
+    // `Mutex.destroy` is `pthread_mutex_destroy`, which aborts on the EBUSY a
+    // held mutex returns, so the unlock above must precede it. The condition
+    // variable is destroyed first because no waiter can remain: quiet says so.
     self._cv.destroy()!!;
     self._mu.destroy();
     Allocator a = self._alloc;
@@ -290,17 +310,24 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
 
     self._mu.lock();
 
+    // A rejected entry never becomes active: it raises nothing.
     if (self._closed) { self._mu.unlock(); return mtk::CLOSED~; }
+
+    // Accepted. Raised here, and lowered under the mutex on every path out of
+    // the call — including the one that leaves the mutex to run `on_get`.
+    // [3tk: Part 11.12]
+    self._active++;
 
     PoolBucket* b = self.bucket_for(want);
     mtk::@check(b != null, "Pool.get for an identity the pool was not created with");
-    if (!b) { self._mu.unlock(); return mtk::UNKNOWN_IDENTITY~; }
+    if (!b) { self._active--; self._mu.unlock(); return mtk::UNKNOWN_IDENTITY~; }
 
     if (mode != NEW_ONLY)
     {
         Handle h = b.free.pop();
         if (h)
         {
+            self._active--;
             self._mu.unlock();
             slot.fill(h);
             return;
@@ -309,6 +336,7 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
 
     if (mode == AVAILABLE_ONLY)
     {
+        self._active--;
         self._mu.unlock();
         return mtk::NOT_AVAILABLE~;
     }
@@ -319,6 +347,16 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
     // [3tk: Part 12.3, Part 15.2]
     self._mu.unlock();
     self._hooks.on_get(want, in_pool, slot);
+
+    // The one added acquisition in the design, and the reason it is here: the
+    // hook above is application code holding a Slot this pool handed it, so the
+    // call is still active while it runs, and the count is lowered under the
+    // mutex like every other lowering. The mode taken here is the only one that
+    // calls a hook; the three that return above pay nothing.
+    // [3tk: Part 11.12]
+    self._mu.lock();
+    self._active--;
+    self._mu.unlock();
 
     if (slot.is_empty()) return mtk::NOT_CREATED~;
     // [3tk: Part 12.2]
@@ -355,6 +393,20 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
     mtk::@check(b != null, "Pool.get_wait for an identity the pool was not created with");
     // [3tk: A3]
     if (!b) return mtk::UNKNOWN_IDENTITY~;
+
+    // A rejected entry never becomes active. This check duplicates the one at
+    // the head of the loop rather than replacing it: the loop's check is what a
+    // woken waiter reads, and this one is what decides whether the call was
+    // accepted at all.
+    // [3tk: Part 2.4, Part 11.12]
+    if (self._closed) return mtk::CLOSED~;
+
+    // Raised before the wait can release the mutex, and lowered with the mutex
+    // held again. C3 runs deferred statements in reverse, so this one runs
+    // before the unlock declared above it.
+    // [3tk: Part 11.12]
+    self._active++;
+    defer self._active--;
 
     while (true)
     {
@@ -401,12 +453,19 @@ fn void Pool.put(&self, Slot* slot)
 
     self._mu.lock();
 
+    // A rejected entry never becomes active: it raises nothing.
     if (self._closed) { self._mu.unlock(); return; }
+
+    // Accepted, and raised before the mutex is opened for `on_put` below. This
+    // is the site the whole mechanism exists for: `:423` re-takes a mutex that
+    // a release breaking Rule 1 would already have destroyed and freed.
+    // [3tk: Part 11.12]
+    self._active++;
 
     Handle h = slot.peek();
     PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "Pool.put of an identity the pool was not created with");
-    if (!b) { self._mu.unlock(); return; }
+    if (!b) { self._active--; self._mu.unlock(); return; }
 
     // [3tk: Part 12.4]
     usz in_pool = b.free.len();
@@ -432,6 +491,14 @@ fn void Pool.put(&self, Slot* slot)
         // [3tk: Part 12.3]
         self._mu.unlock();
         if (!stragglers.is_empty()) self._hooks.on_close(&stragglers);
+
+        // Lowered after the straggler hook, not before it. A count that stopped
+        // at `on_put` would leave application code running with pool-derived
+        // items while a release saw zero.
+        // [3tk: Part 11.12]
+        self._mu.lock();
+        self._active--;
+        self._mu.unlock();
         return;
     }
 
@@ -442,6 +509,7 @@ fn void Pool.put(&self, Slot* slot)
     while (Handle e = extra.pop_front()) self.take_back_handle(e);
 
     self._cv.broadcast();
+    self._active--;
     self._mu.unlock();
 }
 
@@ -468,29 +536,65 @@ fn void Pool.take_back_handle(&self, Handle h) @private
  Callable more than once. The second call takes nothing and does not run the hook again.
  The hook is called outside the mutex, after the closed flag is set.
  Called once by `close`, and possibly once more with stragglers from a concurrent `put`.
+ Closing does not make a pool quiet.
 *>
 // [3tk: R12, Part 11.8, Part 11.12, Part 12.2, Part 19.2]
 fn void Pool.close(&self)
 {
     self._mu.lock();
 
+    // The second call takes nothing and does not run the hook again, so it
+    // never becomes active either.
     if (self._closed) { self._mu.unlock(); return; }
 
-    self._closed = true;
-    self._closed_fast.store(true, RELEASE);
+    // Active for the whole of the call, hook included. `Pool.close` is the one
+    // close in the toolkit that runs application code after publishing CLOSED,
+    // and the port does not bound how long that hook takes.
+    // [3tk: Part 11.12]
+    self._active++;
 
     // [3tk: R12]
     InnerQueue remaining;
-    foreach (&b : self._buckets)
-    {
-        while (Handle h = b.free.pop()) remaining.push_back(h);
-    }
+    self._close(&remaining);
 
-    self._cv.broadcast();
     self._mu.unlock();
 
     // [3tk: Part 12.2]
     self._hooks.on_close(&remaining);
+
+    // [3tk: Part 11.12]
+    self._mu.lock();
+    self._active--;
+    self._mu.unlock();
+}
+
+// The state change, with the mutex already held, and nothing else.
+// The only writer of `_closed`. It never takes or releases the mutex, calls no
+// hook, destroys nothing and frees nothing. Calling it twice is safe, and the
+// second call transfers nothing.
+//
+// The fast-path store is RELEASE and pairs with the ACQUIRE load in
+// `@closed_fast`: a thread that reads the flag set has also seen every write
+// made before the store, so the fast path can refuse without the mutex.
+//
+// `release` does not call it. Part 11.12 requires the pool to be closed before
+// it is released, and a release that closed first would pass its own check —
+// so the check comes first and nothing else runs when it fails.
+// Internal, so not a `<* *>` block: see 3TK-42.
+// [3tk: R12, Part 11.12, Part 15.4]
+fn void Pool._close(&self, InnerQueue* out) @private
+{
+    if (self._closed) return;
+
+    self._closed = true;
+    self._closed_fast.store(true, RELEASE);
+
+    foreach (&b : self._buckets)
+    {
+        while (Handle h = b.free.pop()) out.push_back(h);
+    }
+
+    self._cv.broadcast();
 }
 
 <*
@@ -508,6 +612,8 @@ fn usz Pool.count_of(&self, typeid t)
 {
     self._mu.lock();
     defer self._mu.unlock();
+    self._active++;
+    defer self._active--;
     PoolBucket* b = self.bucket_for(t);
     return b ? b.free.len() : 0;
 }

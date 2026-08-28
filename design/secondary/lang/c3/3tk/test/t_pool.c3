@@ -10,6 +10,7 @@ import mtk::pool;
 import mtk::mailbox;
 import std::time;
 import std::core::mem::alloc;
+import std::thread;
 
 <*
  A hook object. Part 12.1: the implementing object IS the context, so ztk's
@@ -636,4 +637,117 @@ fn void a_closed_pool_is_empty() @test
     always_assert(s.is_empty(), "a refused get filled the Slot");
 
     p.release();
+}
+
+struct PoolLifetime
+{
+    Pool*       p;
+    Atomic{usz} waiting;
+    Atomic{usz} returned;
+}
+
+fn int parked_getter(void* arg)
+{
+    PoolLifetime* lf = (PoolLifetime*)arg;
+    Slot got;
+    lf.waiting.store(1, RELEASE);
+    bool closed = @catch_is(lf.p.get_wait(Holder::typeid, &got, time::sec(30)), mtk::CLOSED);
+    always_assert(closed, "the close did not wake the parked getter with CLOSED");
+    always_assert(got.is_empty(), "a refused get filled the Slot");
+    lf.returned.store(1, RELEASE);
+    return 0;
+}
+
+<*
+ **Part 11.12 — CLOSED, then QUIET, then FREED, with an assertion at each step.**
+
+ The positive counterpart of the pool's four tier 1 negatives. Those programs
+ prove the port stops when the rule is broken; this one proves what the caller
+ is supposed to do instead, and runs it rather than reasoning about it.
+
+ A worker parks in `get_wait`. The close publishes CLOSED and wakes it. The
+ worker reports `CLOSED` and finishes. Only then is the pool quiet, and only
+ then may it be released.
+
+ The count is read directly, the way `t_concurrency.c3` reads `mb._cv`: it is a
+ deliberate use of what D1 leaves reachable, because there is no public way to
+ ask whether a tool is quiet — and there must not be. The answer would be stale
+ before the caller could act on it, and the caller already knows: it is the one
+ that started the threads.
+*>
+fn void the_pool_closed_then_quiet_then_freed() @test
+{
+    TestHooks h;
+    Pool* p = new_pool(&h);
+
+    PoolLifetime lf;
+    lf.p = p;
+
+    Thread worker;
+    worker.create(&parked_getter, &lf)!!;
+
+    while (lf.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+    thread::sleep(time::ms(50))!!;             // it is inside wait_until by now
+
+    // CLOSED. The getter is woken, and it has NOT returned yet.
+    p.close();
+    always_assert(p.is_closed(), "the close did not close the pool");
+    always_assert(h.closes.load() == 1, "the close hook did not run exactly once");
+
+    // QUIET. This is the step the rule is about, and joining is how to get it.
+    worker.join()!!;
+    always_assert(lf.returned.load(ACQUIRE) == 1, "the getter did not return");
+    always_assert(p._active == 0, "the pool is closed but not quiet after the join");
+
+    // FREED.
+    p.release();
+}
+
+<*
+ **The ordinary correct shape on the pool: close, then join, then release.**
+
+ Three workers, each getting an item and giving it back, twice. They are joined
+ first, so every `get` and every `put` — hooks included — has returned before
+ the close runs. The close hands everything the pool still held to `on_close`,
+ which frees it. Then, and only then, the pool is quiet and can be freed.
+
+ The pool's close gives nothing back to the caller, so unlike the mailbox's
+ shape there is no queue to drain here. What the caller owes is the join.
+*>
+fn void the_pool_close_then_join_then_release() @test
+{
+    TestHooks h;
+    Pool* p = new_pool(&h);
+
+    PoolLifetime[3] work;
+    Thread[3]   workers;
+    foreach (usz i, &t : workers)
+    {
+        work[i].p = p;
+        t.create(&borrower, &work[i])!!;
+    }
+    foreach (&t : workers) t.join()!!;
+
+    // every call has returned, and the pool is still open
+    always_assert(!p.is_closed(), "the workers closed the pool");
+    always_assert(p._active == 0, "a call was still active after every worker joined");
+
+    p.close();
+    always_assert(p._active == 0, "the close left the pool active after it returned");
+
+    p.release();
+}
+
+fn int borrower(void* arg)
+{
+    PoolLifetime* lf = (PoolLifetime*)arg;
+    for (usz i = 0; i < 2; i++)
+    {
+        Slot s;
+        if (catch lf.p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "get failed"); }
+        lf.p.put(&s);
+        always_assert(s.is_empty(), "an open pool refused a put");
+    }
+    lf.returned.store(1, RELEASE);
+    return 0;
 }

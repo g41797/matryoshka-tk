@@ -966,6 +966,7 @@ p.release();
 6. **Release.**
 
    - Close it first. Releasing an open pool aborts in every build mode.
+   - Then let every thread that touches it finish. Closed is not quiet.
 
 ### The API — create and destroy
 
@@ -980,7 +981,13 @@ fn void Pool.release(&self)
   - Every step undoes what succeeded before it.
 - `release` — frees the pool, with the allocator it kept.
   - It takes no allocator.
-  - The pool must be closed.
+  - The pool must be closed and quiet.
+  - Quiet means no call on the pool is still running.
+  - Closing does not make a pool quiet: a hook the pool called is application
+    code that has not returned, and a getter parked in `get_wait` is woken by
+    the close and has not yet returned either.
+  - The usual way to get quiet is to join the threads that touch the pool.
+  - Releasing a pool that is not quiet aborts in every build mode.
 
 ### The API — get
 
@@ -1054,6 +1061,7 @@ fn usz  Pool.count_of(&self, typeid t)
   - The hook is called outside the mutex, after the closed flag is set.
   - Called once by `close`, and possibly once more with stragglers from a
     concurrent `put`.
+  - Closing does not make a pool quiet.
 - `is_closed` — true when it is closed.
 - `count_of` — how many of one identity are free.
   - A hint. It is stale by the time you read it.
@@ -1137,6 +1145,12 @@ fn void on_close(InnerQueue* remaining);
 - `3tk/negative/duplicate_pool_tags.c3` — the identity set that is refused.
 - `3tk/negative/pool_unknown_identity.c3` — the get that aborts.
 - `3tk/negative/release_open_pool.c3` — the abort that never goes away.
+- `3tk/negative/release_not_quiet_pool.c3` — the same abort, for a pool that is
+  closed but has a `get_wait` still on its way out.
+- `3tk/negative/release_during_on_put.c3`,
+  `3tk/negative/release_during_on_close.c3` and
+  `3tk/negative/release_with_straggler_put.c3` — the three hook windows, where
+  the pool is closed and application code is still inside it.
 
 ---
 
@@ -1320,9 +1334,15 @@ A mailbox and a pool pass through four conditions, in this order:
   call on it is still running. A receiver parked in `receive` has been woken by
   the close and has not yet returned to its caller: the tool is closed, and it
   is not quiet.
+- **The pool has a second way to be closed and not quiet, and it is the one to
+  watch.** A hook runs outside the pool's mutex, so a `put` that is inside
+  `on_put` is a call still running with the mutex free, and `Pool.close` itself
+  runs `on_close` after the closed flag is set. A pool can be closed, hold
+  nothing, answer every new call with `CLOSED` — and still have application
+  code inside it.
 - `release` is legal only when the tool is quiet, and it checks that it is.
-  Releasing a mailbox that is not quiet aborts in every build mode, the same
-  way releasing an open one does.
+  Releasing a mailbox or a pool that is not quiet aborts in every build mode,
+  the same way releasing an open one does.
 
 The toolkit does not wait for quiet, and that is a decision rather than a gap.
 A release that waited would block on application code the toolkit does not
@@ -1673,6 +1693,7 @@ A free item is taken, or `on_get` is asked to make one.
 On put the Slot is the answer: cleared means the pool took the item, unchanged means it was refused and you still have the item.
 On close nothing comes back to you. Everything goes to `on_close`.
 Close it first. Releasing an open pool aborts in every build mode.
+Closing does not make a pool quiet: release it only after every call on it has returned.
 The mailbox gives everything back to a caller.
 The pool's close gives nothing back at all.
 
