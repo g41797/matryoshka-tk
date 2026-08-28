@@ -9,6 +9,7 @@ import mtk::mailbox;
 import std::thread;
 import std::time;
 import std::core::mem::alloc;
+import std::atomic::types;
 
 fn Mailbox* new_mailbox()
 {
@@ -407,4 +408,126 @@ fn void a_closed_mailbox_is_empty() @test
 
     while (Handle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
     mb.release();
+}
+
+struct Lifetime
+{
+    Mailbox*    mb;
+    Atomic{usz} waiting;
+    Atomic{usz} returned;
+}
+
+fn int parked_receiver(void* arg)
+{
+    Lifetime* lf = (Lifetime*)arg;
+    Slot got;
+    lf.waiting.store(1, RELEASE);
+    bool closed = @catch_is(lf.mb.receive(&got, time::sec(30)), mtk::CLOSED);
+    always_assert(closed, "the close did not wake the parked receiver with CLOSED");
+    always_assert(got.is_empty(), "a refused receive filled the Slot");
+    lf.returned.store(1, RELEASE);
+    return 0;
+}
+
+<*
+ **Part 11.12 — CLOSED, then QUIET, then FREED, with an assertion at each step.**
+
+ The positive counterpart of `negative/release_while_receiving.c3`. That program
+ proves the port stops when the rule is broken; this one proves what the caller
+ is supposed to do instead, and runs it rather than reasoning about it.
+
+ A worker parks in `receive`. The close publishes CLOSED and wakes it. The
+ worker reports `CLOSED` and finishes. Only then is the mailbox quiet, and only
+ then may it be released.
+
+ The count is read directly, the way `t_concurrency.c3` reads `mb._cv`: it is a
+ deliberate use of what D1 leaves reachable, because there is no public way to
+ ask whether a tool is quiet — and there must not be. The answer would be stale
+ before the caller could act on it, and the caller already knows: it is the one
+ that started the threads.
+*>
+fn void closed_then_quiet_then_freed() @test
+{
+    Mailbox* mb = new_mailbox();
+
+    Lifetime lf;
+    lf.mb = mb;
+
+    Thread worker;
+    worker.create(&parked_receiver, &lf)!!;
+
+    while (lf.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+    thread::sleep(time::ms(50))!!;             // it is inside wait_until by now
+
+    // CLOSED. The receiver is woken, and it has NOT returned yet.
+    InnerQueue left;
+    mb.close(&left);
+    always_assert(mb.is_closed(), "the close did not close the mailbox");
+    always_assert(left.is_empty(), "an empty mailbox handed something back");
+
+    // QUIET. This is the step the rule is about, and joining is how to get it.
+    worker.join()!!;
+    always_assert(lf.returned.load(ACQUIRE) == 1, "the receiver did not return");
+    always_assert(mb._active == 0, "the mailbox is closed but not quiet after the join");
+
+    // FREED.
+    mb.release();
+}
+
+<*
+ **The ordinary correct shape: close with `out`, then join, then release.**
+
+ Three senders, three items each. The senders are joined first, so every send
+ has returned before the close runs; the close hands back all nine; releasing
+ those items is the caller's work and it is done before the release rather than
+ after it. Then, and only then, the mailbox is quiet and can be freed.
+
+ This is the shape the reference tells a caller to write, run rather than
+ reasoned about.
+*>
+fn void close_then_join_then_release() @test
+{
+    Mailbox* mb = new_mailbox();
+
+    Sending[3] sd;
+    Thread[3]  senders;
+    foreach (usz i, &t : senders)
+    {
+        sd[i].mb = mb;
+        sd[i].first = (int)(i * 3);
+        t.create(&sender_fn, &sd[i])!!;
+    }
+    foreach (&t : senders) t.join()!!;
+
+    InnerQueue left;
+    mb.close(&left);
+
+    // the caller's work, Part 11.6, and it happens before the release
+    usz back = 0;
+    while (Handle h = left.pop_front()) { back++; }
+    always_assert(back == 9, "the close did not hand back every item that was sent");
+
+    always_assert(mb._active == 0, "a joined mailbox is not quiet");
+    mb.release();
+}
+
+struct Sending
+{
+    Mailbox* mb;
+    int      first;
+    Msg[3]   items;
+}
+
+fn int sender_fn(void* arg)
+{
+    Sending* sd = (Sending*)arg;
+    foreach (usz k, &one : sd.items)
+    {
+        mtk::helper::init(one);
+        one.id = sd.first + (int)k;
+        Slot s;
+        s.fill(mtk::helper::to_handle(one));
+        if (catch sd.mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
+    }
+    return 0;
 }

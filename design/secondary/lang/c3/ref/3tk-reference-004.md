@@ -716,6 +716,7 @@ mb.release();
 5. **Release.**
 
    - Close it first. Releasing an open mailbox aborts in every build mode.
+   - Then let every thread that touches it finish. Closed is not quiet.
 
 ### The API — create and destroy
 
@@ -728,7 +729,12 @@ fn void Mailbox.release(&self)
   - Every step undoes what succeeded before it.
 - `release` — frees the mailbox, with the allocator it kept.
   - It takes no allocator.
-  - The mailbox must be closed.
+  - The mailbox must be closed and quiet.
+  - Quiet means no call on the mailbox is still running.
+  - Closing does not make a mailbox quiet: a receiver parked in `receive` is
+    woken by the close and has not yet returned.
+  - The usual way to get quiet is to join the threads that touch the mailbox.
+  - Releasing a mailbox that is not quiet aborts in every build mode.
 
 ### The API — send
 
@@ -784,6 +790,7 @@ fn usz   Mailbox.len(&self)
 - `close` — closes the mailbox and gives back what was left. Cannot fail.
   - Callable more than once. The second call takes nothing.
   - Discarding that queue drops the items, and a later send refuses them.
+  - Closing does not make a mailbox quiet.
 - `is_closed` — true when it is closed.
 - `len` — how many items are queued.
   - A hint. It is stale by the time you read it.
@@ -817,6 +824,8 @@ None of them is a defect. A correct program reaches all four.
 - `3tk/test/t_mailbox.c3` — send, receive, close.
 - `3tk/test/t_concurrency.c3` — many producers and many consumers.
 - `3tk/negative/release_open_mailbox.c3` — the abort that never goes away.
+- `3tk/negative/release_while_receiving.c3` — the same abort, for a mailbox
+  that is closed but not yet quiet.
 
 ---
 
@@ -1297,6 +1306,54 @@ Where the items go.
 - It wakes the current waiters and each one reports `WOKEN`.
 - The mailbox stays open.
 
+Closed is not quiet, and it is the mistake this section exists for.
+
+A mailbox and a pool pass through four conditions, in this order:
+
+```text
+    OPEN -> CLOSED -> QUIET -> FREED
+```
+
+- `close` performs the transition to CLOSED. It refuses every call that has not
+  started yet, and it wakes every thread that is waiting.
+- **Quiet is a different condition.** A tool is quiet when it is closed and no
+  call on it is still running. A receiver parked in `receive` has been woken by
+  the close and has not yet returned to its caller: the tool is closed, and it
+  is not quiet.
+- `release` is legal only when the tool is quiet, and it checks that it is.
+  Releasing a mailbox that is not quiet aborts in every build mode, the same
+  way releasing an open one does.
+
+The toolkit does not wait for quiet, and that is a decision rather than a gap.
+A release that waited would block on application code the toolkit does not
+control — a hook that never returns would be a release that never returns —
+which trades one defect for a worse one. **Getting to quiet is the caller's
+work, and the usual way to do it is to join the threads.**
+
+```c3
+mb.close(&left);        // CLOSED: no new call is accepted, every waiter woken
+foreach (&t : workers) t.join()!!;   // QUIET: every accepted call has returned
+mb.release();           // FREED
+```
+
+Close-then-release on one thread is the ordinary shape and it works without
+any of this: a `close` has already returned, so it is not a call still running.
+The rule is about the *other* threads.
+
+Two things the check does not do, stated because the comfortable reading is
+the wrong one.
+
+- **It catches a violation on the schedule it happens to see.** A program that
+  breaks the rule and interleaves harmlessly today passes today.
+- **It says nothing about a thread that merely has the pointer.** The toolkit's
+  protection begins when a call is accepted. A thread that calls `send` on a
+  mailbox that was already freed is past anything a counter inside that mailbox
+  could do, and always was.
+
+One tool has exactly one owner that releases it, and that owner calls `release`
+once. `release` is concurrent with nothing — not with a call, not with a close,
+and not with another `release`.
+
 One macro on each tool is visible but not for you.
 
 - `Mailbox.@closed_fast` and `Pool.@closed_fast` are the two. Each reads the
@@ -1574,6 +1631,7 @@ On close what was left comes back to you, as one queue.
 Releasing those items is your work.
 The mailbox never knew what they were.
 Close it first. Releasing an open mailbox aborts in every build mode.
+Closing does not make a mailbox quiet: release it only after every call on it has returned.
 
 The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
 The fields named with a leading underscore are internal. Do not read them.

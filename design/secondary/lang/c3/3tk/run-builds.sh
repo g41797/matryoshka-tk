@@ -62,7 +62,12 @@ RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue 
 # A TIER 1 negative aborts in EVERY mode, including --safe=no -O3. Part 11.12 is
 # the one precondition the specification refuses to soften, and this is the only
 # shape in the suite whose expected behaviour does not change with the build.
-TIER1_NEGATIVES=(release_open_mailbox release_open_pool)
+#
+# 3TK-53 added `release_while_receiving`. Part 11.12 has two halves, and the
+# suite tested one of them: an OPEN mailbox cannot be released, and neither can
+# a CLOSED one that is not yet quiet. The second half is the one a real program
+# gets wrong, because closing looks like it finished something.
+TIER1_NEGATIVES=(release_open_mailbox release_while_receiving release_open_pool)
 
 # A compile-time negative never compiles, in any mode, and its message must name the type.
 declare -A NOCOMPILE_EXPECT=(

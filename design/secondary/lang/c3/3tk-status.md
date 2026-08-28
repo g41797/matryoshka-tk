@@ -24,9 +24,10 @@ It is kept short for that reason.**
 
 ## What is live now
 
-**The lifetime fix.** `Mailbox.release` and `Pool.release` check `_closed`, which
-is state and not lifetime, so a release racing a call still in flight frees
-memory that call is using. Tracked as `Q5`.
+**The lifetime fix, half built.** **The mailbox is done — 3TK-53, 2026-08-28.**
+`Pool.release` still checks `_closed`, which is state and not lifetime, so a
+release racing a call still in flight frees memory that call is using. Tracked as
+`Q5`, and **3TK-54 is the other half.**
 
 **The owner ruled it on 2026-08-28:**
 
@@ -44,19 +45,32 @@ charter still says `release(InnerQueue* out)` and *the `always_assert` removed*.
 **Both are wrong**: no signature changes, and the assertion is **rewritten**, to
 check `_closed && _active == 0`.
 
+**And two places where the document loses, both settled by 3TK-53 and both
+waiting for 3TK-54 in the same shape:**
+
+- **`release` does not call `_close`.** Section 2 says it does *if the tool is
+  still open*; section 13 says `negative/release_open_pool.c3` must still abort.
+  Both cannot hold. **The check comes first, and nothing else runs when it
+  fails** — so `_close` has one caller, not two.
+- **`Part 11.12` belongs to 3TK-52, not to the code stages.** It is in
+  [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md)
+  and binds four ports. **A code stage writes the rule into `ref/` and the
+  descriptors and leaves the shared clause alone.** That is what lets 53 and 54
+  run while `Q-D` is open.
+
 ## The stages that have not run
 
 | stage | what it does | start it with |
 |---|---|---|
-| **3TK-53** | **Mailbox, in code.** `_active`, the rewritten assertion, the rule text into `Part 11.12` and the descriptors, the `2DO` block at `mailbox.c3:108-112`, two negatives | `Run 3TK-53.` |
-| **3TK-54** | **Pool, in code.** The same, with the hook window and the straggler path, `Pool.get`'s added lock established and measured, the `2DO` block at `pool.c3:233-238`, four negatives | `Run 3TK-54.` |
+| **3TK-54** | **Pool, in code.** What 3TK-53 did to the mailbox, plus the hook window and the straggler path, `Pool.get`'s added lock established and measured, the `2DO` block at `pool.c3:233-238`, four negatives. **`src/mailbox.c3` is the exemplar** | `Run 3TK-54.` |
 | **3TK-52** | **The shared clause.** `Part 11.12` in [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md), which binds otk, ztk and dtk. **Needs `Q-D`** | `Run 3TK-52.` |
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`. Reads [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **Independent of the fix** | `Run 3TK-50.` |
 | **3TK-55** | **Close the books.** `Q5` to fixed in [3tk-open-defects.md](3tk-open-defects.md), `P6` re-stated, this file and the log brought up to date, every number re-measured | `Run 3TK-55.` |
 
-**53 before 54** — the mailbox has no hook, so it is the same mechanism without
-the hard part. **3TK-50 is independent** and may run before, after or between
-them.
+**3TK-53 ran on 2026-08-28**, and the mailbox is now the worked example 3TK-54
+copies: the hook window and the straggler path are the only parts of the
+mechanism it did not meet. **3TK-50 is independent** of the fix and may run
+before, after or between the rest.
 
 ## Open questions
 
@@ -112,6 +126,15 @@ plans.
 
 ## Standing facts
 
+- **`Mutex.destroy` is `pthread_mutex_destroy` and it aborts on `EBUSY`**, so a
+  held mutex cannot be destroyed. `release` takes the mutex, checks quiet,
+  releases it, then destroys the condition variable and the mutex. Established
+  against the real structs by 3TK-53; **section 7 of the fix document is a
+  sketch and is not to be copied.**
+- **`@private` on a method is ignored by c3c 0.8.3**, with a warning, and the
+  port already lives with it: `Mailbox._close` and the pool's helpers are private
+  by intent and reachable in fact. What keeps them out of reach is `module
+  mtk::mailbox` being a submodule, which `run-builds.sh` checks.
 - **C3 is installed.** `c3c` at `/usr/bin/c3c`, stdlib sources at
   `/home/g41797/dev/langs/c3/lib/std/`. **No install step in any stage.**
 - The toolchain 3TK-4 measured is `c3c` 0.8.3, LLVM 22.1.8, linux-x64. **Every
@@ -143,12 +166,13 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-28, with no source changed since.
+been run. Last measured 2026-08-28, at the end of 3TK-53, with no source changed
+since.
 
 ```
-./3tk/run-builds.sh        67 checks, 0 failures, four builds green
-                           87 tests in each build
-./3tk/check-doc-loop.sh    0 differing blocks, 440 sentences, 439 found
+./3tk/run-builds.sh        71 checks, 0 failures, four builds green
+                           89 tests in each build
+./3tk/check-doc-loop.sh    0 differing blocks, 446 sentences, 445 found
                            1 missing — the pre-existing inner.c3 module summary
                            0 banned words
 ./3tk/run-sanitizers.sh    thread on two builds, address on one. Skips and
@@ -203,7 +227,7 @@ scripts take an optional directory and exit 2 on a bad one.
 Every line begins the same way, because every stage reads this file first:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. Run 3TK-53.
+Read design/secondary/lang/c3/3tk-status.md. Run 3TK-54.
 ```
 
 For a ruling rather than a stage:
@@ -222,7 +246,7 @@ Read design/secondary/lang/c3/3tk-status.md and report where the 3tk work stands
 
 ## The stages that have run
 
-**Fifty-two, and the log has an entry for every one.** This table is the list,
+**Fifty-three, and the log has an entry for every one.** This table is the list,
 not the record.
 
 | stage | | |
@@ -279,6 +303,7 @@ not the record.
 | **3TK-48** | rules for an example | 2026-08-26 |
 | **3TK-49** | pattern catalog | 2026-08-26 |
 | **3TK-51** | accumulated description | 2026-08-28 |
+| **3TK-53** | mailbox, in code: closed is not quiet | 2026-08-28 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.

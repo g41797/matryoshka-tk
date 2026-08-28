@@ -19,6 +19,7 @@
  Releasing those items is your work.
  The mailbox never knew what they were.
  Close it first. Releasing an open mailbox aborts in every build mode.
+ Closing does not make a mailbox quiet: release it only after every call on it has returned.
 
  The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
  The fields named with a leading underscore are internal. Do not read them.
@@ -46,6 +47,7 @@ struct Mailbox
 
     bool         _closed;
     Atomic{bool} _closed_fast;
+    usz          _active;
 
     InnerQueue _oob;
     InnerQueue _regular;
@@ -100,18 +102,33 @@ fn Mailbox*? create(Allocator a)
 
  Close it first. Releasing an open mailbox aborts in every build mode.
  It takes no allocator.
- The mailbox must be closed.
+ The mailbox must be closed and quiet.
+ Quiet means no call on the mailbox is still running.
+ Closing does not make a mailbox quiet: a receiver parked in `receive` is woken by the close and has not yet returned.
+ The usual way to get quiet is to join the threads that touch the mailbox.
+ Releasing a mailbox that is not quiet aborts in every build mode.
 *>
 // [3tk: D6, Part 11.12, Part 13.1]
 fn void Mailbox.release(&self)
 {
-    //!!!!!!!  2DO closed is not quiet. A release also requires that no other call is
-    //!!!!!!!  2DO still running, and closing does not make that true. Not enforced yet:
-    //!!!!!!!  2DO a release racing a call in flight frees memory that call is using.
-    //!!!!!!!  2DO Ruled 2026-08-27: the port will enforce it, and release will wait.
-    //!!!!!!!  2DO See design/secondary/lang/c3/3tk-release-while-busy-001.md !!!!!!!
+    // Rule 1 of the lifetime contract, and the whole of what `_active` is for.
+    // Closed is state; quiet is that state and an empty active set together.
+    // The predicate is read UNDER the mutex, never before taking it, and
+    // `release` is never counted itself: it would then assert against itself.
+    //
+    // This is a check and not a wait. A release that waited would block on
+    // application code the port does not control. What it catches, it catches
+    // on the schedule it happens to see.
     // [3tk: Part 11.12]
-    always_assert(self._closed, "releasing an open mailbox");
+    self._mu.lock();
+    always_assert(self._closed && self._active == 0,
+                  "releasing a mailbox that is not quiet");
+    self._mu.unlock();
+
+    // The order is established against the real structs, not assumed. C3's
+    // `Mutex.destroy` is `pthread_mutex_destroy`, which aborts on the EBUSY a
+    // held mutex returns, so the unlock above must precede it. The condition
+    // variable is destroyed first because no waiter can remain: quiet says so.
     self._cv.destroy()!!;
     self._mu.destroy();
     Allocator a = self._alloc;
@@ -186,6 +203,9 @@ fn void? Mailbox.send_at(&self, Slot* slot, bool oob) @private
     // [3tk: Part 15.4]
     if (self._closed) return mtk::CLOSED~;
 
+    self._active++;
+    defer self._active--;
+
     self.enqueue(slot.take(), oob);
     self._cv.signal();
 }
@@ -210,6 +230,9 @@ fn void? Mailbox.poll(&self, Slot* slot)
     defer self._mu.unlock();
 
     if (self._closed) return mtk::CLOSED~;
+
+    self._active++;
+    defer self._active--;
 
     Handle h = self.dequeue();
     if (!h) return mtk::EMPTY~;
@@ -238,6 +261,15 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
 
     self._mu.lock();
     defer self._mu.unlock();
+
+    // [3tk: Part 2.4]
+    if (self._closed) return mtk::CLOSED~;
+
+    // Raised before the wait can release the mutex, and lowered with the mutex
+    // held again. A receiver parked in `wait_until` below is the one mailbox
+    // call a release can overlap, and the count is all that sees it.
+    self._active++;
+    defer self._active--;
 
     // [3tk: Part 11.5]
     usz gen = self._wake_gen;
@@ -288,6 +320,9 @@ fn void? Mailbox.receive_all(&self, InnerQueue* out)
 
     if (self._closed) return mtk::CLOSED~;
 
+    self._active++;
+    defer self._active--;
+
     out.append_queue(&self._oob);
     out.append_queue(&self._regular);
 }
@@ -310,6 +345,9 @@ fn void? Mailbox.wake_all(&self)
 
     if (self._closed) return mtk::CLOSED~;
 
+    self._active++;
+    defer self._active--;
+
     self._wake_gen++;
     self._cv.broadcast();
 }
@@ -320,6 +358,7 @@ fn void? Mailbox.wake_all(&self)
  Callable more than once. The second call takes nothing.
  The queue is in the order `receive` would have taken them out.
  Discarding that queue drops the items, and a later send refuses them.
+ Closing does not make a mailbox quiet.
 
  @param out : "an empty queue; the remainder is moved onto it, in receive order"
 *>
@@ -332,6 +371,28 @@ fn void Mailbox.close(&self, InnerQueue* out)
     self._mu.lock();
     defer self._mu.unlock();
 
+    // Active for its whole body. The mailbox holds the mutex throughout, so a
+    // release cannot observe this raise; it is raised anyway, because what
+    // decides is whether the memory can still be touched and not whether this
+    // particular tool happens to leave the mutex.
+    self._active++;
+    defer self._active--;
+
+    self._close(out);
+}
+
+// The state change, with the mutex already held, and nothing else.
+// The only writer of `_closed`. It never takes or releases the mutex, calls no
+// hook, destroys nothing and frees nothing. Calling it twice is safe, and the
+// second call transfers nothing.
+//
+// The fast-path store is RELEASE and pairs with the ACQUIRE load in
+// `@closed_fast`: a thread that reads the flag set has also seen every write
+// made before the store, so the fast path can refuse without the mutex.
+// Internal, so not a `<* *>` block: see 3TK-42.
+// [3tk: Part 11.12, Part 15.4]
+fn void Mailbox._close(&self, InnerQueue* out) @private
+{
     if (self._closed) return;
 
     self._closed = true;
@@ -358,6 +419,8 @@ fn usz Mailbox.len(&self)
 {
     self._mu.lock();
     defer self._mu.unlock();
+    self._active++;
+    defer self._active--;
     return self._oob.len() + self._regular.len();
 }
 

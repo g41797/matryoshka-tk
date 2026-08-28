@@ -7,6 +7,102 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-28 — 3TK-53, the mailbox learns what quiet means
+
+**The first stage to touch `3tk/src` since the lifetime work began.** Five
+stages wrote [3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) without changing
+a byte of the port; this one built the mailbox half of what it specifies.
+
+**What went in.** A `usz _active` in `Mailbox`, under the mutex the tool already
+owns — no atomic, because the mutex already protects `_closed` and the queues
+and a second synchronization domain buys nothing. Every accepted call raises it
+after the closed check and lowers it before returning: `send_at`, `poll`,
+`receive`, `receive_all`, `wake_all`, `len` and `close`. A rejected entry never
+raises. `release` is never counted, because it would then assert against itself.
+
+**The assertion is rewritten, not removed.** `always_assert(self._closed)` became
+`always_assert(self._closed && self._active == 0, "releasing a mailbox that is
+not quiet")`, read under the mutex and never before taking it. The `2DO` block
+that stood at `mailbox.c3:108-112` is gone, and with it the pointer to
+`3tk-release-while-busy-001.md`, whose conclusion the 2026-08-28 ruling replaced.
+
+**A private `_close` now holds the state change** — the `_closed` write, the
+RELEASE store to the fast-path flag, the transfer into the caller's queue, the
+broadcast. `close` takes the mutex, raises the count and calls it.
+
+**Two things the stage had to rule, because two inputs disagreed.**
+
+**First: `release` does not call `_close`.** Section 2 of the fix document says
+*release invokes `_close` if the tool is still open*, and section 13 says
+`negative/release_open_mailbox.c3` must still abort. **Both cannot hold** — a
+`release` that closes first would find `_closed` true and pass its own check, and
+the tier 1 program would stop aborting. The status file settles it in the port's
+favour: *no signature changes*, and `Mailbox.release` has no `out` queue to close
+into. **So the check comes first and nothing else runs when it fails**, and
+`_close` has one caller in the mailbox rather than two. 3TK-54 will find the same
+thing in the pool.
+
+**Second: `Part 11.12` is not this stage's to write.** The status row for 3TK-53
+says *the rule text into `Part 11.12` and the descriptors*, and Part 11.12 lives
+in [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md),
+which is **3TK-52's**, and 3TK-52 is blocked on `Q-D`. **So this stage wrote the
+rule into 3tk's own reference and its descriptors, and left the shared clause
+alone.** The code keeps its `[3tk: Part 11.12]` tags. This is what kept 3TK-53
+runnable without an owner answer, which is why it was picked.
+
+**The destruction order was established against the real structs**, as section 7
+asks, and it is not the sketch. C3's `Mutex.destroy` is `pthread_mutex_destroy`,
+which **aborts** on the `EBUSY` a held mutex returns — so `release` takes the
+mutex, checks, releases it, and only then destroys the condition variable and
+the mutex. The comment at the site says so; nothing was changed on the strength
+of the document's block.
+
+**What the reference gained.** The `release` and `close` descriptors, the module
+block, *Usual flow* step 5, and a new Part 6 subsection — *Closed is not quiet* —
+carrying `OPEN -> CLOSED -> QUIET -> FREED`, why the toolkit checks instead of
+waiting, the three-line shape a caller writes, and the two things the check does
+**not** do: it catches a violation only on the schedule it sees, and it says
+nothing about a thread that merely holds the pointer.
+
+**One program and two tests.**
+`negative/release_while_receiving.c3` is tier 1 and deterministic — a receiver
+publishes that it is about to park, the main thread waits, closes, and releases
+without joining. It aborts in all four builds with the new message, verified in
+`--safe=no -O3` by hand as well as by the script. `run-builds.sh` gained it as a
+tier 1 row, with a comment saying why Part 11.12 has two halves and the suite
+had been testing one.
+`closed_then_quiet_then_freed` walks CLOSED, then QUIET, then FREED with an
+assertion at each step; `close_then_join_then_release` runs the ordinary shape.
+Both read `mb._active` directly, the way `t_concurrency.c3` reads `mb._cv` — a
+deliberate use of what D1 leaves reachable, because there is no public way to
+ask whether a tool is quiet and there must not be one.
+
+**Two compile failures, both the same missing `import std::atomic::types`,** and
+`run-builds.sh` caught the second one properly: it judges compile and run
+separately, so the new tier 1 program was reported as *does not compile* rather
+than passing as *aborted*. That separation was added after `release_open_pool`
+went unexercised for exactly this reason, and it earned itself again.
+
+**Verified live, 2026-08-28, at the end of the stage:**
+
+```
+./run-builds.sh        71 checks, 0 failures, four builds green, 89 tests each
+./check-doc-loop.sh    0 differing blocks, 446 sentences, 445 found
+                       1 missing — the pre-existing inner.c3 module summary
+                       0 banned words
+./run-sanitizers.sh    thread on two builds, address on one, all clean
+```
+
+67 checks became 71 — one tier 1 row in each of the four builds. 87 tests became
+89. The doc loop moved 440 to 446 because the descriptors took on the rule.
+
+**Advice: clear the context.** 3TK-54 is the same mechanism on the pool, and it
+starts cold from the status file and `3tk-lifetime-fix-005.md`. Nothing in this
+stage's working state is worth carrying into it; what 3TK-54 needs to know about
+the two contradictions is in this entry and in the status.
+
+---
+
 ## 2026-08-28 — INTR 8, the status file compacted, and the rule that keeps it short
 
 **[3tk-status.md](3tk-status.md) went from 2,358 lines and 137 KB to 301 lines

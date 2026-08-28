@@ -35,7 +35,7 @@ before trusting them again — every fix moves them.
 | # | Where | What | Fix is | State |
 |---|---|---|---|---|
 | **P6** | `pool.c3:434`, `:492` | The pool can lose items and never know | **Needs your decision** | **open, third site ruled 2026-08-27** |
-| **Q5** | `mailbox.c3:106`, `pool.c3:231` | A release racing a call still in flight | Ruled: the port will enforce it | DEFERRED 2026-08-27 |
+| **Q5** | `mailbox.c3:112`, `pool.c3:231` | A release racing a call still in flight | Ruled 2026-08-28: stated, and checked | **mailbox done 3TK-53; pool is 3TK-54** |
 
 **Six of the ten are done, on 2026-08-27, in one stage.** Every mechanical and
 wording item is fixed and verified: four builds green, 67 checks (63 before,
@@ -51,7 +51,8 @@ each line says why. Its section carries the evidence.
 
 **The ones that were never open are here for a reason.** `P5` and `P7` were
 real findings and neither survived as one — its section says why, so nobody re-raises it.
-`Q5` is real, is ruled, and is simply not scheduled.
+`Q5` is real, is ruled, and is half built: 3TK-53 did the mailbox, 3TK-54 does
+the pool, and 3TK-55 closes the row.
 
 ## Order
 
@@ -234,8 +235,9 @@ needs no condition-variable rollback, because nothing fallible follows it.
 
 ## Q5 — a release racing a call still in flight
 
-**Where.** `Mailbox.release` at `mailbox.c3:106` and `Pool.release` at
-`pool.c3:230`. Both carry a `2DO` comment marking it.
+**Where.** `Mailbox.release` at `mailbox.c3:112` and `Pool.release` at
+`pool.c3:231`. **The mailbox's `2DO` comment is gone**, replaced by the check
+3TK-53 built. The pool still carries one, and 3TK-54 removes it.
 
 **What is wrong.** Both require the mailbox or the pool to be **closed**, and enforce it
 hard — it aborts in every build mode. **Closed is not quiet.** `Part 12.3` MUST
@@ -248,21 +250,32 @@ is using memory that release frees.
 A caller who reads `Part 11.12`, closes, and then releases has obeyed every
 clause the toolkit states, and can still land here.
 
-**The ruling, 2026-08-27.** **The port will enforce it** — not a documented
-caller precondition. The owner's reason: the client's code is unaffected either
-way, so the port may as well keep the rule itself.
+**The ruling, 2026-08-28, and it replaced the one before it.** On 2026-08-27
+the owner ruled that the port would *wait*. On 2026-08-28, after INTR 4 to 7,
+the owner ruled instead:
 
-**It is not scheduled**, and the gap is expected to be long: the examples and the
-pattern catalog do not exercise edge cases, so nothing downstream waits on it.
+> **Release while a call is in flight is not prevented. It is written down as a
+> thing the caller must not do, and it is checked. It is not waited for.**
 
-**Everything needed to run it is in
-[3tk-release-while-busy-001.md](3tk-release-while-busy-001.md)** — why a counter
-alone does not close the race, why `release` must wait rather than abort, what it
-costs, the shared-specification clause it would make every port owe, and the
-deterministic negative that proves it. **That file is the stage; this row is the
-tracking.**
+So `release` names the rule and checks it, rather than blocking on application
+code the port does not control.
 
-**State: deferred 2026-08-27. Not blocking anything.**
+**[3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) is the document that binds
+the two stages**, and it is the only one they read.
+**[3tk-release-while-busy-001.md](3tk-release-while-busy-001.md) is superseded**
+by it — its analysis of the race stands, its conclusion that `release` must wait
+does not.
+
+**What 3TK-53 built, 2026-08-28.** A `usz _active` under the mutex the mailbox
+already owns; every accepted call raises it before it can run outside that mutex
+and lowers it before returning; the assertion at `mailbox.c3:124` rewritten to
+`_closed && _active == 0`; a private `_close` holding the state change; the rule
+in the reference and in the descriptors; `negative/release_while_receiving.c3`
+as a tier 1 program; two positive tests. Verified: four builds green, 71 checks,
+89 tests, sanitizers clean.
+
+**State: mailbox fixed 2026-08-28. The pool is 3TK-54, and `Q5` closes in
+3TK-55.**
 
 ## After a fix
 
