@@ -24,11 +24,14 @@ It is kept short for that reason.**
 
 ## What is live now
 
-**The lifetime fix is built, on both tools.** **The mailbox by 3TK-53 and the
-pool by 3TK-54, both 2026-08-28.** Each `release` now checks `_closed &&
-_active == 0` under the mutex and aborts in all four builds when it does not
-hold. **What is left of `Q5` is bookkeeping**, and it is 3TK-55's: the defect
-row still says open.
+**The lifetime fix is built, on both tools, and its books are closed.** **The
+mailbox by 3TK-53 and the pool by 3TK-54, both 2026-08-28**; each `release` now
+checks `_closed && _active == 0` under the mutex and aborts in all four builds
+when it does not hold. **3TK-55 closed the defect row on 2026-08-28** and
+re-measured everything against the built tree.
+
+**Only one piece of the fix is unwritten, and it is not 3tk's to write alone:**
+`Part 11.12` of the shared specification, which is **3TK-52** and needs `Q-D`.
 
 **The owner ruled it on 2026-08-28:**
 
@@ -67,11 +70,11 @@ settled the same way by 3TK-54:**
 |---|---|---|
 | **3TK-52** | **The shared clause.** `Part 11.12` in [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md), which binds otk, ztk and dtk. **Needs `Q-D`** | `Run 3TK-52.` |
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`. Reads [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **Independent of the fix** | `Run 3TK-50.` |
-| **3TK-55** | **Close the books.** `Q5` to fixed in [3tk-open-defects.md](3tk-open-defects.md), `P6` re-stated, every number re-measured. **The code is done; this is the defect list catching up with it** | `Run 3TK-55.` |
 
-**3TK-53 and 3TK-54 both ran on 2026-08-28**, and between them the two tools now
-carry the whole mechanism. **3TK-50 is independent** of the fix and may run
-before, after or between the rest.
+**3TK-53, 3TK-54 and 3TK-55 all ran on 2026-08-28**, and between them the two
+tools carry the whole mechanism and the defect list agrees with them. **3TK-50 is
+independent** of the fix and may run before or after 3TK-52. **3TK-52 is the only
+stage the fix still owes**, and it is blocked on `Q-D`.
 
 ## Open questions
 
@@ -79,7 +82,7 @@ before, after or between the rest.
 |---|---|---|
 | **`Q-D.1`** | does the shared specification state *closed **and quiet** before released*, so every port states it? | owner |
 | **`Q-D.2`** | if it does, does 3TK-52 run before 3tk's code, or does 3tk go first under a written assumption? | owner |
-| **`P6` / `Q-F`** | what does the pool observe when a close hook is handed items and frees some, leaves some? Its lifetime blocker is gone; its own question is not | owner |
+| **`P6` / `Q-F`** | what does the pool observe when a close hook is handed items and frees some, leaves some? **Nothing blocks it now** — 3TK-55 found the dependency on `Q5` discharged, so all three options in its section are available | owner |
 
 `Q-A`, `Q-B`, `Q-C`, `Q-E` and `Q-G` were closed by the ruling —
 [3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) section 15 says how each went.
@@ -172,8 +175,7 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-28, at the end of 3TK-54, with no source changed
-since.
+been run. Last measured 2026-08-28, by 3TK-55, with no source changed since.
 
 ```
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green
@@ -181,8 +183,10 @@ since.
 ./3tk/check-doc-loop.sh    0 differing blocks, 452 sentences, 451 found
                            1 missing — the pre-existing inner.c3 module summary
                            0 banned words
-./3tk/run-sanitizers.sh    thread on two builds, address on one. Skips and
-                           exits 2 if its compiler is missing; a skip is not a pass
+./3tk/run-sanitizers.sh    3 passed, 0 failed — thread on two builds, address on
+                           one. Skips and exits 2 if its compiler is missing;
+                           a skip is not a pass
+grep -roiwE 'items?'       125 in 3tk/src, 365 in ref
 ```
 
 `run-builds.sh` needs `c3c` and nothing else, and that is deliberate. Both
@@ -233,7 +237,7 @@ scripts take an optional directory and exit 2 on a bad one.
 Every line begins the same way, because every stage reads this file first:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. Run 3TK-55.
+Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
 ```
 
 For a ruling rather than a stage:
@@ -252,7 +256,7 @@ Read design/secondary/lang/c3/3tk-status.md and report where the 3tk work stands
 
 ## The stages that have run
 
-**Fifty-four, and the log has an entry for every one.** This table is the list,
+**Fifty-five, and the log has an entry for every one.** This table is the list,
 not the record.
 
 | stage | | |
@@ -311,6 +315,7 @@ not the record.
 | **3TK-51** | accumulated description | 2026-08-28 |
 | **3TK-53** | mailbox, in code: closed is not quiet | 2026-08-28 |
 | **3TK-54** | pool, in code: the hook window, and one lock measured | 2026-08-28 |
+| **3TK-55** | the defect list catches up with the code | 2026-08-28 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.
@@ -330,4 +335,4 @@ the log has each one.
 
 **[3tk-open-defects.md](3tk-open-defects.md) is the working list** for what INTR
 1–3 found: one table and one section per item, edited in place. **`P6` is the one
-item still open.**
+item still open**, and since 3TK-55 nothing blocks it.

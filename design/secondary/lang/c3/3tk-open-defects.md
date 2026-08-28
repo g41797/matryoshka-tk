@@ -1,12 +1,12 @@
 # 3tk — open defects
 
-**The working list for fixing the port.** Ten items — **six fixed, one open,
-two closed, one deferred**. One table, one section each: where it is, what is wrong, what the
+**The working list for fixing the port.** Ten items — **seven fixed, one open,
+two closed**. One table, one section each: where it is, what is wrong, what the
 fix is, how to know it worked, and what state it is in.
 
 **Everything known about the port is on this list, including what is not being
-worked on.** A closed item and a deferred one stay in the table with their state,
-so nothing has to be remembered from prose or found in another file.
+worked on.** A fixed item and a closed one stay in the table with their state, so
+nothing has to be remembered from prose or found in another file.
 
 **This file is edited in place**, like `3tk-status.md` and `3tk-log.md` and
 unlike everything under `ref/`. It carries no version suffix for that reason. A
@@ -24,23 +24,28 @@ document to re-argue it from.
 **What can run, and what is waiting, is in [Order](#order)**, straight after
 the table.
 
-**Line numbers were printed live on 2026-08-27**, after the `2DO` comments went
-into `mailbox.c3` and `pool.c3`. **The numbers in the two review files are older
-than those comments and are off by five in `mailbox.c3` and six in `pool.c3`
-below the insertion points.** The numbers here are the good ones. Re-print
-before trusting them again — every fix moves them.
+**Line numbers were re-printed live on 2026-08-28**, by 3TK-55, against the code
+3TK-53 and 3TK-54 built. **Every earlier set is now wrong** — the `2DO` comments
+they were anchored to are gone, and both `release` bodies grew. The numbers here
+are the good ones. Re-print before trusting them again — every fix moves them.
 
 ## The list
 
 | # | Where | What | Fix is | State |
 |---|---|---|---|---|
-| **P6** | `pool.c3:434`, `:492` | The pool can lose items and never know | **Needs your decision** | **open, third site ruled 2026-08-27** |
-| **Q5** | `mailbox.c3:112`, `pool.c3:231` | A release racing a call still in flight | Ruled 2026-08-28: stated, and checked | **mailbox done 3TK-53; pool is 3TK-54** |
+| **P6** | `pool.c3:493`, `:563` | The pool can lose items and never know | **Needs your decision** | **open, third site ruled 2026-08-27** |
+| **Q5** | `mailbox.c3:124`, `pool.c3:253` | A release racing a call still in flight | Ruled 2026-08-28: stated, and checked | **fixed 2026-08-28, 3TK-53 + 3TK-54, closed by 3TK-55** |
 
 **Six of the ten are done, on 2026-08-27, in one stage.** Every mechanical and
 wording item is fixed and verified: four builds green, 67 checks (63 before,
 plus the new compile-time negative once per build), 87 tests, 0 failures; the
-doc loop 0 differing blocks and 0 banned words.
+doc loop 0 differing blocks and 0 banned words. **Those are that day's numbers
+and they have been overtaken** — the live ones are in
+[After a fix](#after-a-fix).
+
+**`Q5` is the seventh, and it is done.** 3TK-53 built the mailbox and 3TK-54 the
+pool, both 2026-08-28; 3TK-55 closed this row against the built code on the same
+day, after re-running all three scripts.
 
 **One remains open, and it is waiting on you.** `P6` needs one small ruling
 before code can be written. The ruling is stated in the section.
@@ -51,8 +56,8 @@ each line says why. Its section carries the evidence.
 
 **The ones that were never open are here for a reason.** `P5` and `P7` were
 real findings and neither survived as one — its section says why, so nobody re-raises it.
-`Q5` is real, is ruled, and is half built: 3TK-53 did the mailbox, 3TK-54 does
-the pool, and 3TK-55 closes the row.
+`Q5` is real, was ruled, and is built: 3TK-53 did the mailbox, 3TK-54 the pool,
+and 3TK-55 closed the row.
 
 ## Order
 
@@ -68,19 +73,18 @@ Only the open and deferred items have an order. The fixed ones are done.
 - `P6` — one ruling, three answers, written out in its section. INTR 1 ranked it
   High, and it is the last of the three it put there.
 
-**Waiting on a stage that is not scheduled.**
+**Nothing is waiting on a stage any more.** `Q5` was the last one, and it ran.
 
-- `Q5` — ruled 2026-08-27, built by
-  [3tk-release-while-busy-001.md](3tk-release-while-busy-001.md).
+**The dependency that is not obvious, and it is now discharged.**
 
-**The dependency that is not obvious.**
-
-- `P6`'s option 1 — count what was handed over, count what came back — needs
-  `Q5`'s stage first. A count means nothing until there is a moment when no
-  further `on_close` can arrive. `Part 12.2` lets a late put call the hook again
-  and names no end point. `Q5`'s release-waits-for-zero is that end point.
-  Options 2 and 3 do not need it, and either would put `P6` in front of
-  everything else here.
+- `P6`'s option 1 — count what was handed over, count what came back — wanted a
+  moment when no further `on_close` can arrive. `Part 12.2` lets a late put call
+  the hook again and names no end point. **The ruling of 2026-08-28 gave the port
+  a different end point from the one that was expected**: `release` does not wait
+  for quiet, it *asserts* it, so the moment exists — a `release` that returns has
+  proved the count was zero — but it is proved rather than waited for. **Option 1
+  is therefore unblocked**, and so are 2 and 3, which never needed it. **All
+  three options are available and `P6` is a free ruling.**
 
 Rewritten whenever an item changes state, in the same edit. Each section still
 holds its own dependency — this is an index, not the record.
@@ -108,10 +112,13 @@ every number in an earlier version of this table, is now wrong.**
 **Three sites.**
 
 ```
-pool.c3:434     the close hook, called with what was left after a race
-pool.c3:492     the close hook, called with everything the pool held
-pool.c3:458-460 one item with an identity the pool does not recognize  -- RULED 2026-08-27
+pool.c3:493     the close hook, called with what was left after a race
+pool.c3:563     the close hook, called with everything the pool held
+pool.c3:526-527 one item with an identity the pool does not recognize  -- RULED 2026-08-27
 ```
+
+**Re-printed 2026-08-28**, after the lifetime fix moved every line below
+`Pool.release`.
 
 **A pool cannot free its items.** It never allocated them. It does not know how.
 
@@ -198,7 +205,9 @@ Documentation, not code — so that the silence is not read as a promise.
 writing code. 3 is cheapest and defensible. **1 and 2 combine** — a check while
 developing, a number afterwards.
 
-**State: open, waiting on your decision.**
+**State: open, waiting on your decision. Nothing blocks it any more** — the
+dependency on `Q5` is discharged, and all three options are on the table. See
+[Order](#order).
 
 
 ## Refuted — claims that did not survive the code
@@ -236,8 +245,9 @@ needs no condition-variable rollback, because nothing fallible follows it.
 ## Q5 — a release racing a call still in flight
 
 **Where.** `Mailbox.release` at `mailbox.c3:112` and `Pool.release` at
-`pool.c3:231`. **The mailbox's `2DO` comment is gone**, replaced by the check
-3TK-53 built. The pool still carries one, and 3TK-54 removes it.
+`pool.c3:237`; the two assertions are at `mailbox.c3:124` and `pool.c3:253`.
+**Both `2DO` comments are gone** — 3TK-53 replaced the mailbox's, 3TK-54 the
+pool's. `grep -n 2DO src/*.c3` returns nothing, re-run 2026-08-28.
 
 **What is wrong.** Both require the mailbox or the pool to be **closed**, and enforce it
 hard — it aborts in every build mode. **Closed is not quiet.** `Part 12.3` MUST
@@ -274,15 +284,28 @@ in the reference and in the descriptors; `negative/release_while_receiving.c3`
 as a tier 1 program; two positive tests. Verified: four builds green, 71 checks,
 89 tests, sanitizers clean.
 
-**State: mailbox fixed 2026-08-28. The pool is 3TK-54, and `Q5` closes in
-3TK-55.**
+**What 3TK-54 built, 2026-08-28.** The same mechanism in the pool, where it is
+harder: `Part 12.3` forces the mutex open across every hook, so taking the mutex
+proves nothing and only `_active` sees a `put` that is inside `on_put`. **The
+count covers the hook and not the function body**, including the second
+`on_close` a straggling `put` performs. Four tier 1 negatives came with it —
+`release_not_quiet_pool`, `release_during_on_put`, `release_during_on_close`,
+`release_with_straggler_put` — and what the added lock in `Pool.get` costs is
+measured in the log's 3TK-54 entry.
+
+**State: fixed. Mailbox 3TK-53, pool 3TK-54, both 2026-08-28; row closed by
+3TK-55 the same day.** What is not written is `Part 11.12` of the shared
+specification, which is 3TK-52's and binds four ports — it is not part of this
+row.
 
 ## After a fix
 
-**All four numbers below were re-measured on 2026-08-27, after the six fixes.**
+**All the numbers below were re-measured on 2026-08-28, by 3TK-55, after 3TK-53
+and 3TK-54.**
 The one missing descriptor sentence is the pre-existing `inner.c3` module
-summary and is not new. `ref` moved 360 to 365 because the reference and the
-decisions each took on new sentences that say *item*; `3tk/src` did not move.
+summary and is not new. `ref` moved 360 to 365 on 2026-08-27 because the reference and the decisions
+each took on new sentences that say *item*, and it has not moved since. `3tk/src`
+went 124 to 125 with the lifetime fix's new prose.
 
 **Every mechanical item touches `3tk/src`, so the doc loop is owed.**
 `ref/3tk-doc-loop-003.md` is the procedure; `check-doc-loop.sh` says whether it
@@ -291,11 +314,15 @@ is still owed.
 **`ref/3tk-decisions-003.md` is the current one**, and `-002` is in `backup/`.
 `P6` will add an entry when it is ruled; `P7` closed without one.
 
-**The numbers to re-measure**, all true on 2026-08-27 after the close-hook
-wording fix:
+**The numbers to re-measure**, all true on 2026-08-28 after 3TK-54:
 
 ```
-./run-builds.sh        # four builds green, 67 checks, 87 tests, 0 failures
-./check-doc-loop.sh    # 0 differing blocks, 440 sentences, 439 found, 1 missing, 0 banned
-grep -roiwE 'items?' 3tk/src ref        # 124 and 365
+./run-builds.sh        # four builds green, 87 checks, 91 tests per build, 0 failures
+./check-doc-loop.sh    # 0 differing blocks, 452 sentences, 451 found, 1 missing, 0 banned
+./run-sanitizers.sh    # 3 passed, 0 failed — thread on two builds, address on one
+grep -roiwE 'items?' 3tk/src ref        # 125 and 365
 ```
+
+**`run-sanitizers.sh` joined the list here** because the lifetime fix is a
+concurrency change and a green `run-builds.sh` does not speak for it. **A skip is
+not a pass**: the script exits 2 when its compiler is missing.

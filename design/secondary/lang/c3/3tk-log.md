@@ -7,6 +7,66 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-28 — 3TK-55, the defect list catches up with the code
+
+**No code changed in this stage, and that is what it is for.** 3TK-53 and 3TK-54
+built the lifetime fix in the two tools on 2026-08-28. **The list that named the
+defect still said it was open**, and every line number and every measured number
+in it was anchored to a tree that no longer exists. This stage closed the row and
+re-printed the numbers.
+
+**`Q5` is fixed.** The row in [3tk-open-defects.md](3tk-open-defects.md) now says
+so: mailbox 3TK-53, pool 3TK-54, both 2026-08-28, closed by 3TK-55 the same day.
+Seven of the ten items are done, one is open, two were closed without a fix.
+**`P6` is the only thing left on that list**, and it is the owner's.
+
+**The three scripts were re-run before anything was written**, because a number
+counts only when it has just been measured:
+
+```
+./run-builds.sh        87 checks, 0 failures, four builds green, 91 tests per build
+./check-doc-loop.sh    0 differing blocks, 452 sentences, 451 found, 1 missing
+                       0 banned words
+./run-sanitizers.sh    3 passed, 0 failed — thread on two builds, address on one
+grep -roiwE 'items?'   125 in 3tk/src, 365 in ref
+```
+
+**The one missing descriptor sentence is the pre-existing `inner.c3` module
+summary** and is not new. **`3tk/src`'s *item* count went 124 to 125**, which is
+the lifetime fix's new prose and nothing else; `ref` has not moved since
+2026-08-27.
+
+**`run-sanitizers.sh` was added to the list the defect file tells the next
+session to re-measure.** The fix is a concurrency change and four green builds do
+not speak for it. The file also now records that **a skip is not a pass** — the
+script exits 2 when its compiler is missing.
+
+**Every line number in the file was re-printed live.** `Q5`'s two assertions are
+at `mailbox.c3:124` and `pool.c3:253`; `P6`'s three sites moved from `434`, `492`
+and `458-460` to `493`, `563` and `526-527`, because the lifetime fix grew
+`Pool.release` above them. **`grep -n 2DO src/*.c3` now returns nothing** — 3TK-53
+took the mailbox's comment, 3TK-54 the pool's.
+
+**And one dependency turned out to be discharged rather than met.** The file said
+`P6`'s option 1 — count what was handed over, count what came back — needed
+`Q5`'s stage first, because a count means nothing until no further `on_close` can
+arrive, and it expected `Q5` to supply that end point by *waiting* for zero.
+**The ruling of 2026-08-28 does not wait; it asserts.** The end point exists all
+the same — a `release` that returns has proved the count was zero — but it is
+proved rather than waited for. **So all three of `P6`'s options are available and
+it is a free ruling**, which the file now says in both places it discussed the
+order.
+
+**What was deliberately not touched.** `Part 11.12` of
+[../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md)
+is 3TK-52's, binds four ports and needs `Q-D`. It is the only part of the
+lifetime fix still unwritten, and closing `Q5`'s row does not close it.
+
+**Advice: clear the context.** Nothing here is needed by 3TK-52 or 3TK-50, and
+both start cold from the status file.
+
+---
+
 ## 2026-08-28 — 3TK-54, the pool learns what quiet means, and pays for it once
 
 **The other half of the lifetime fix, and the harder half.** 3TK-53 did the
