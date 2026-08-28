@@ -7,6 +7,469 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-28 — INTR 8, the status file compacted, and the rule that keeps it short
+
+**[3tk-status.md](3tk-status.md) went from 2,358 lines and 137 KB to 301 lines
+and 16 KB.** The owner's instruction: the status is read at the start of every
+stage and written at the end of one, so its size is a running cost, and it had
+become a second log.
+
+**The rule is now the first thing in the file**, above everything else:
+
+> **Status holds what has not happened, what is true now, and how to start.
+> The log holds what happened, when, and why.**
+
+With four clauses under it: a stage appends one log entry and touches status only
+where its state changed; a sentence that explains a decision is log, and a
+sentence that tells the next session what to do is status; **a finished stage
+keeps a row and never a section**; and nothing is duplicated between the two.
+
+**What the file had become.** `## Stages` alone was 1,064 lines — 45% of the
+file — a section per stage recording what each one found, argued and measured.
+`Resuming after an interruption`, `How to continue after a clear` and the stage
+list added on 2026-08-28 were three overlapping answers to one question, 540
+lines between them. `Files` was a 235-line folder listing that goes stale on its
+own. `Current state` was 89 lines describing 59 checks and 85 tests, from the
+3TK-9 era.
+
+**Nothing was dropped without checking.** Every stage id in `## Stages` was
+compared against the log: **fifty of fifty already had an entry**, so the section
+was deleted whole rather than merged. Inbound links were checked too — **nothing
+links into the status at section level**, so no anchor broke.
+
+**One thing was over-compacted and put back the same stage.** The first pass also
+removed *Standing facts* and *Open questions*, on the reading that they were
+history. **They are not** — the two open port defects `P3` and `P4`, the
+`Item`/`Outer` debt with its deadline at dtk's first stage, the ztk/3tk `on_get`
+difference, the `Slot` question, and the toolchain facts are all *what is true
+now* and *what has not happened*, which is exactly what the rule says the status
+is for. **Both sections are back, one line per item**, with the reasoning left in
+the document each one names. That is the distinction the rule turns on: the
+status says *that* a thing is open, the document says *why*.
+
+**The file now holds**, in order: the rule; what is live; the five stages that
+have not run with the line that starts each; the open questions; the measured
+numbers; the rules that hold across every stage; where things live; how to start
+after a clear; **a one-line row for each of the fifty-two stages that have run**;
+and the seven interrupt stages in a table.
+
+**One question is left standing in it for the owner**: twelve documents and
+`README.md` are in `backup/` while other files link to them at root — archived,
+or displaced?
+
+**No source was touched**, and no other document changed. **Verified live:**
+`run-builds.sh` 67 checks, 87 tests in each of the four builds, all four green,
+0 failures. `check-doc-loop.sh` 0 differing blocks, 440 sentences, 439 found, the
+one pre-existing miss, 0 banned words. The ban scan over the rewritten status:
+**0 hits**. Every link in it printed and read — one dead link was found and
+repointed, `3tk-who-supports-slot.md`, which is in `backup/`.
+
+## 2026-08-28 — INTR 7, the third review, and reviewing stops
+
+**A third review read `-004`, endorsed the ruling, and said to proceed to 3TK-53
+and 3TK-54 rather than reopen the architecture.** Its verdict on the central
+decision: keep it. **`3tk-lifetime-fix-005.md` is its ten clarifications and
+nothing else** — no decision changed, no section moved, the shape INTR 6 built
+left alone. `-004` and the review are in `backup/`. **No byte of `3tk/src`,
+`test/` or `negative/` was touched.**
+
+**Three of the ten earn their place on their own.**
+
+**`close` lowers the count before it returns.** `-004` said *after its last
+access*, which is true and never says what a caller needs to hear: that
+`close(); release();` in one thread is the ordinary shape and works. Rule 1 is
+about the *other* threads. **This was the gap most likely to cost 3TK-53 a day.**
+
+**QUIET is a predicate, not a field.** `_closed && _active == 0`, and `_quiet`
+must not become a third flag to keep consistent. Cheap to say, annoying to undo.
+
+**A green negative proves that violation is caught, not that all are.** Seven
+deterministic programs read as proof of safety unless the document says
+otherwise beside the table. The assertion is a contract check and not a race
+detector.
+
+**The rest are one-liners**, each traced in the change table: `_active == 0`
+means *no accepted operation is still inside*, not *nobody can touch this*; the
+three rules stated as three, with `_active` speaking only to the first; `_active`
+covering an operation's access including the hooks it invokes rather than the
+body of one function; the concurrency table made canonical — **`release` is
+concurrent with nothing, not even `close`**; a guard on the destruction sketch
+saying no source may be changed on its strength; `Pool.get`'s locking left as an
+invariant here and a sequence for 3TK-54, which reads the existing protocol
+first; and **a positive life-cycle test in `t_pool.c3`** asserting CLOSED, then
+QUIET, then FREED — the negatives prove only that closed is not quiet.
+
+**Two of the ten corrected sentences INTR 6 wrote**, and both corrections are
+right. The missing decrement-before-return, above. And **the ruling does not ask
+*less* discipline than a waiting `release` — it asks *different* discipline.**
+The owner writes `close(); join(workers); release();` instead of
+`close(); release();`. The argument is not that there is less of it: it is that
+**the responsibility now sits where the tool's life is actually decided, instead
+of the port waiting on execution it does not control.** That is a stronger
+argument than the one it replaces, and it is the one to quote.
+
+**Reviewing of this document stops here, and the document says so.** Three
+rounds — twenty points, thirty-three, ten — each smaller than the last, the third
+ending in *proceed*. **Further review goes into 3TK-53's own record, not into a
+sixth version of this file.** Rounds 1 and 2 both recommended the waiting design
+and neither was asked whether the port should absorb the hazard at all; round 3
+was asked, and agreed with the owner.
+
+**Verified live, with no source changed:** `run-builds.sh` **67 checks, 87 tests
+in each of the four builds, all four green, 0 failures**. `check-doc-loop.sh`
+**0 differing blocks, 440 sentences, 439 found**, the one pre-existing `inner.c3`
+miss, **0 banned words**. The ban scan over the new file leaves **0 hits in
+prose**; those that remain are inside code blocks and are the same stdlib call
+name, which Part 5 exempts.
+
+## 2026-08-28 — INTR 6, the ruling: state the rule, do not absorb it
+
+**The owner ruled `Q5` on 2026-08-28**, and the ruling is the smallest change to
+the design that removes the most from it:
+
+> **Release while a call is in flight is not prevented. It is written down as a
+> thing the caller must not do, and it is checked. It is not waited for.**
+
+**`3tk-lifetime-fix-004.md` is the document, and `-003` is in `backup/`.** No
+byte of `3tk/src`, `test/` or `negative/` was touched.
+
+**What the owner saw that four documents and two reviews had not.** The two
+advice files both landed on a waiting `release`, both reviewers endorsed it, and
+`-001` to `-003` refined it. **None of them had been asked whether the port should
+absorb the hazard at all** — every one of them was reviewing a proposal that
+already assumed a mechanism. The owner's question was whether a documented rule
+would do, without adding code and therefore without adding bugs.
+
+**It does, and the counter stays.** The split that decided it: **`_active` is
+nearly free — a `usz` under a mutex the call already holds. The wait is where
+every cost lived.** So the field stays and is maintained exactly as `-003`
+described it; `release` reads it once, in an `always_assert`, in all four builds.
+
+**Three questions stopped arising, and one contradiction dissolved with them.**
+`Q-A` — nothing waits, so nothing can order one hook against another;
+`Part 12.2` and `Part 12.3` are untouched and
+[3tk-on-close-policy-001.md](3tk-on-close-policy-001.md) is not reopened. `Q-B`
+and `Q-C` — Rule 1 requires the tool closed before released, so `close(out)` and
+`on_close` have already given the items back and **neither `release` grows a
+parameter**. With no signature change, **the `Q5`-against-`Q-B` contradiction the
+second review called the largest problem in `-002` never arises**, and the `Q5`
+ruling's *the client's code is unaffected either way* stands as written. All four
+are recorded in section 15 with their reasons, so nobody reopens a question that
+no longer has content.
+
+**`Q-E` and `Q-G` are answered too.** 3TK-50's examples carry no changed
+signature, so the two lines of work are independent. And `W3` — drafted as a
+temporary warning to be written in and out again within days — **is now permanent
+and is the fix.**
+
+**Two questions stay open, and neither blocks the code.** `Q-D`, much smaller
+than it was: not *must every port implement a waiting release*, but **must every
+port state a precondition** — one word in `Part 11.12`, *closed and quiet before
+released*, with the joining sentence beside it. And `P6`, untouched.
+
+**What the ruling costs, written in the document and not softened.** A check
+catches a violation on the schedule it happens on; a wait would have been correct
+on every schedule. **That is the whole price**, and the argument for paying it is
+that the port already lives on exactly this bargain — the stale pointer has
+always been a written rule, and Rule 1 does not remove a class of error but moves
+a line, from *do not release while anyone might be inside* to *do not release
+while anyone might enter*.
+
+**What it no longer costs:** `release` still cannot block; no hook can hold a
+release for ever; **the deadlock clause INTR 5 had to add is gone with the wait**,
+and so is the predicate-loop rule and the `release_vs_close` oracle. The two
+`release_open_*` negatives stay tier 1 and nothing inverts. `run-builds.sh` gains
+rows and changes nothing else.
+
+**The parked receiver is the case the rule is really about**, and it is written
+out: `close` wakes a thread inside `wait_until` but does not wait for it to
+leave. **Closed is not quiet.** A caller must close, observe the thread finish,
+and release after that — and both `close` descriptors now owe a sentence saying
+so, beside `Part 11.12` and the two `release` descriptors.
+
+**Seven negatives, all ordinary tier-1 aborts in all four builds**, including a
+new `release_not_quiet_pool.c3` for a `get_wait` that has been woken but has not
+yet returned.
+
+**The reorganization INTR 5 held back ran in this stage**, which is what it was
+waiting for: contract, mechanism, the two tools, consequences, programs, what is
+open, appendix. **The document is 834 lines against `-003`'s 1,301**, and nothing
+about the hazard was removed — the race, the hook window, the parked receiver and
+why taking the mutex proves nothing are all still described. A rule that is not
+explained is a rule somebody deletes later.
+
+**One thing left standing for 3TK-53 unchanged by any of this:** the destruction
+ordering. `release` still destroys a mutex and a condition variable and frees the
+block holding them, and whether the mutex may be destroyed while held is still
+not known.
+
+**Verified live, with no source changed:** `run-builds.sh` **67 checks, 87 tests
+in each of the four builds, all four green, 0 failures**. `check-doc-loop.sh`
+**0 differing blocks, 440 sentences, 439 found**, the one pre-existing `inner.c3`
+miss, **0 banned words**. The ban scan over the new file leaves **0 hits in
+prose**; those that remain are inside code blocks and are the same stdlib call
+name, which Part 5 exempts.
+
+## 2026-08-28 — INTR 5, the second review absorbed
+
+**`3tk-lifetime-fix-003.md` is written, and `-002` is in `backup/`.** The input
+was a **second review, of `-002`, thirty-three points** — the same reviewer, a
+second round, arriving hours after INTR 4 closed. **Both reviews are now in
+`backup/`**, the second as `3tk-bug-fixes-review-002.md`. **Twenty-eight points
+are acted on; five are deliberately not**, and the document says which and why.
+**No byte of `3tk/src`, `test/` or `negative/` was touched.**
+
+**The finding that mattered most: `-002` was written against `Q-A` without
+saying so.** It declared the question open and then wrote sections 9, 11, 17, 18
+and 20 as though Variant 1 already held — the straggler `on_close` model only
+exists under Variant 1, and one of the negatives INTR 4 added depends on it.
+**The fix is not a ruling.** `-003` opens with a new **section 0, the working
+assumptions**: the three things assumed, the question each pre-empts, and what
+changes if the owner rules the other way. **Every dependent site now carries a
+`[Variant 1]` or `[Q-B]` tag**, so the version that carries the rulings deletes
+tags rather than hunting for assumptions. `Q-D` is split the same way — `Q-D.1`
+is whether the shared specification requires the waiting release, `Q-D.2` is
+whether every port owes it before claiming conformance.
+
+**Three things were missing from the document altogether.**
+
+**A hook must not wait on the release that is waiting for it.** Because `release`
+waits for application code, an application can build a cycle out of it and
+deadlock, and nothing inside the port can break one. `-002` said only that a slow
+`on_put` stalls every closer, which is the mild half. **It is now a clause in
+section 16**, and it belongs in whatever 3TK-52 writes.
+
+**The release wait is a predicate loop, and a broadcast is only a wake-up.**
+`_close` broadcasts while the releasing thread still holds the mutex, and the
+same broadcast serves an ordinary waiter and the release waiting for quiet. A
+woken thread re-reads `_active` after the unlock. **That is the difference
+between a `while` and an `if` at the one site where an `if` would be a live bug.**
+
+**The `release_vs_close_*` programs had no oracle.** INTR 4 added them and left
+them able to pass by luck. Either call may publish CLOSED first; the invariant is
+that **exactly one destroys and the other returns safely**, and that is what the
+two programs check.
+
+**Four corrections where `-002` claimed more than it had.** The invariant said
+*every operation raises `_active`*, which its own rejected-entry path and its own
+definition of *active* both contradict — it is **every operation accepted after
+the closed check**. The probe section reported *release returned* when no release
+of this port had run; it now says the release-shaped sequence completed, and
+`WAIT_TIMEOUT` is narrowed to the four builds tested. `P6`'s *no further
+`on_close` can arrive* becomes *every operation accepted before the closure has
+finished*, because Race B says a stale caller may still exist. And *three of five
+are done* becomes **one done, one narrowed, three open** — a destruction ordering
+handed to 3TK-53 is scoped, not established.
+
+**One argument was made on the owner's behalf and is withdrawn.** `-002` said an
+open mailbox *cannot be released safely* without a caller's `out`. Lifetime
+safety does not force that: discarding, or an internally named destination, also
+satisfy the invariant. **The requirement is to define what becomes of the items,
+not to pass a parameter.** The three designs are listed and `Q-B` stays the
+owner's — with the note that the port discards nothing silently anywhere else,
+which is an argument and not a proof.
+
+**Smaller, each traced in the change table:** *no measurable cost* written out —
+never measured, and the design does not need it; `Mailbox._close` and
+`Pool._close` written apart with a table of which public call supplies the
+storage; the `_closed_fast` ordering levelled, named here and specified by
+3TK-53; the double-free interleaving demoted to an illustration with the
+argument about who owns the destroying above it; a thread may leave the mutex and
+remain active, as a normative sentence; the state diagram redrawn so `release` is
+one arrow to FREED; `close` split by tool, since only the pool's runs application
+code after CLOSED.
+
+**Five points were held back, four of them for one reason.** The review asks for
+the document to be reorganized — repetition removed, specification separated from
+review history and implementation plan, a normative contract block promoted to
+the front — and for the negatives group to be renamed. **All of that is owed and
+none of it runs now.** The four blocking questions rewrite six of the sections a
+reorganization would move; doing it twice risks losing content for nothing.
+**It runs once, in the version that carries the owner's answers**, which is also
+the version that deletes the tags. The fifth is the reviewer's own answer to
+`Q-A`, which is a recommendation and is recorded as one.
+
+**Verified live, with no source changed:** `run-builds.sh` **67 checks, 87 tests
+in each of the four builds, all four green, 0 failures**. `check-doc-loop.sh`
+**0 differing blocks, 440 sentences, 439 found**, the one pre-existing `inner.c3`
+miss, **0 banned words**. The ban scan over the new file leaves **0 hits in
+prose**; eight remain, all inside code blocks and all the same stdlib call name,
+which Part 5 exempts.
+
+## 2026-08-28 — INTR 4, the review absorbed
+
+**`3tk-lifetime-fix-002.md` is written, and `-001` is in `backup/`.** The input
+was `3tk-bug-fixes-review.md`, a twenty-point review of `-001`. **Every point is
+absorbed**, and the review file went to `backup/` with the version it reviewed —
+nothing has to be read out of it again. The document has a *What changed from
+`-001`* table naming the section each point landed in, so the absorption can be
+checked without holding the review beside it. **No byte of `3tk/src`, `test/` or
+`negative/` was touched.**
+
+**Five things the review found that were genuinely missing**, and all five are
+now in the document.
+
+**The lifetime invariant was never stated.** `-001` described a mechanism
+without the rule the mechanism serves. Section 2 now opens with it — `free` is
+legal only when `_closed` is true and `_active` is zero — with the
+`OPEN / CLOSED / QUIET / FREED` diagram under it. 3TK-53 and 3TK-54 implement
+against that, not against prose.
+
+**"Every call raises the count" was too vague to implement.** Section 3 defines
+an *active operation* as any path that holds a valid reference and may still
+touch the memory, and enumerates every site on both tools. Section 4 pulls out
+the case `-001` made only about the pool: **`close` is itself active**, for its
+whole body, and that is precisely why release-racing-close can be supported.
+
+**Lifetime waiting and hook serialization were running together in one word.**
+Section 11 separates them: a pool may run two hooks at once and still guarantee
+that release waits for both. Nothing in the invariant asks for an order between
+hooks. `Q-A` stays open, but it is now a smaller question than it looked.
+
+**`-001` prescribed a destruction order it had not earned.** *`destroy; free`*
+skips the question of whether a mutex can be destroyed while held. Section 8
+sketches the sequence and hands the real order to 3TK-53, to be established
+against the real structs.
+
+**The probe was overclaiming.** *The design does not change; the probe did not
+refuse* is broader than four green builds of a scratch module support. The probe
+section now says what it validates — the synchronization pattern — and lists six
+things it does not: the real life cycles, hook lifetime, concurrent close and
+release, the destruction order, the memory ordering around `_closed_fast`, and
+where `_active` lands in each tool's locking protocol.
+
+**The contradiction the review calls the biggest problem is now a section of its
+own.** `Q5` was ruled on *the client's code is unaffected either way*; `Q-B`
+proposes `mbox.release(&iq)`, which is a client API change. **The two cannot both
+stand, and neither is the port's to drop.** Section 12 states it and names the
+two ways out — re-word the `Q5` ruling, or reject `Q-B` and design another
+destination for an open mailbox's items. **The reviewer would not start 3TK-53
+until it is resolved.** `Q-B` is therefore blocking, alongside `Q-A`.
+
+**Section 19 is split, and no question is ruled.** Seven questions of three
+different kinds were in one list with no way to see which stops the code.
+Blocking now: `Q-A`, `Q-B`, `Q-C`, `Q-D`. Tracking: `Q-E`, `Q-F`, `Q-G`. `Q-D`
+is restated as the semantic question the review asked for — does the shared
+specification require `release` to wait for the calls in flight — with the
+procedural half under it. **The reviewer's recommendation on all seven is
+recorded in its own table, labelled as the reviewer's and ruled by nobody.**
+
+**Smaller corrections**, each traced in the table: `_close` may be called twice
+and the second call transfers nothing; the ordering rule replaces the cost claim
+as the requirement; *release closes if it must* becomes the three-part life-cycle
+operation; Race A and Race B are named and the clause narrowed to the promise it
+can keep; `release vs release` is explained as a question of who owns the
+destroying; `P6`'s blocker is removed but its own question is explicitly not
+answered. **Two negatives were added** — `release` racing `close`, one per tool,
+distinct from the hook-parking tests.
+
+**Nothing was removed from `-001`.** Every section is present, renumbered where
+new sections landed above it.
+
+**One thing left alone.** [3tk-staging-plan-020.md](3tk-staging-plan-020.md)
+names `-001` in three places. The plan is published and Part 0 forbids editing it
+in place, so those lines stand; `-002`'s header says that where the plan names
+`-001`, this file is meant.
+
+**Verified live, with no source changed:** `run-builds.sh` **67 checks, 87 tests
+in each of the four builds, all four green, 0 failures**. `check-doc-loop.sh` **0 differing blocks, 440
+sentences, 439 found**, the one pre-existing `inner.c3` miss, **0 banned words**.
+The ban scan over the new file leaves **0 hits in prose**; six remain, all of
+them `unlock` inside a code block — the quoted `pool.c3:421` line and five lines
+of pseudo-code — which Part 5 exempts as a stdlib call name.
+
+## 2026-08-28 — 3TK-51, the accumulated description
+
+**`3tk-lifetime-fix-001.md` is written.** The two advice files merged into one
+document: the one defect on two tools, the mechanism, `_close`, the mailbox's
+`out` parameter and its reverse-order `defer` case, the pool's hook window, the
+contradiction, who may release, the boundary the fix cannot cross, what stays
+unchanged, what it costs, `P6`, the negatives it owes, and seven open questions.
+**No byte of `3tk/src`, `test/` or `negative/` was touched.**
+
+**The feasibility probe ran and did not refuse.** A scratch module compiled
+against `3tk/src` in all four builds: four workers entering under a mutex,
+working outside it, and leaving under it; a waiter blocking on the condition
+variable until the counter reached zero; the condition variable and the mutex
+destroyed and the heap block freed afterwards; and `wait_until` with no signal
+faulting with `thread::WAIT_TIMEOUT`. **`PROBE OK` in every build**, and elapsed
+0.10s against a 40ms working window — the waiter blocked rather than winning a
+race. **So the design changes nowhere.** The scratch module was written outside
+`3tk/` and removed; `3tk/` is clean.
+
+**Three things the stage found and did not decide.**
+
+**The contradiction is real and it blocks the code.** The pool advice's first
+half wants `on_close` to wait for the calls in flight — hook serialization — and
+its second half forbids turning the counter into a hook serializer. Serialization
+would reopen `Part 12.2` and `Part 12.3`, which
+[3tk-on-close-policy-001.md](3tk-on-close-policy-001.md) ruled and closed on
+2026-08-27. **Filed as `Q-A`. 3TK-53 and 3TK-54 cannot be written without it.**
+
+**The two `release_open_*` programs are TIER 1 in `run-builds.sh`**, so their
+inversion is not only a rewrite of two files: they stop being tier 1 and
+`run-builds.sh` changes with them. That is written into the stages that own it.
+
+**The `2DO` comment at `pool.c3:236` names `pool.c3:424` for the re-take of the
+mutex. It is at `:423` today.** Ordinary drift; the comment goes when 3TK-54
+writes the block out.
+
+**One thing outside the stage, reported and not fixed:**
+[3tk-status.md](3tk-status.md) links to `README.md` in this folder, and there is
+no such file.
+
+**Verified live, with no source changed:** `run-builds.sh` **67 checks, 87 tests,
+four builds green, 0 failures**. `check-doc-loop.sh` unchanged — 0 differing
+blocks, 440 sentences, 439 found, the one pre-existing `inner.c3` miss, 0 banned
+words. The ban scan over the new file leaves one hit, the quoted
+`self._mu.unlock();` source line, which Part 5 exempts as a stdlib call name.
+Every link in the new file printed and read.
+
+## 2026-08-27 — plan 020 written, the lifetime fix staged
+
+**Two advice files arrived** — `3tk-bugs- mailbox.md` and `3tk-bugs-pool.md`, the
+second of them carrying a whole second independent analysis under *Second advice*.
+They describe **one defect on two objects**, and it is the one already tracked as
+`Q5`: `always_assert(self._closed, ...)` at `mailbox.c3:106` and `pool.c3:231`
+checks state, not lifetime, so a release racing a call still in flight frees
+memory that call is using.
+
+**Plan 019 was not spent, so 020 carries its leftover forward.** 3TK-48 and
+3TK-49 have run; **3TK-50 has not**, and where it falls against the new stages is
+the owner's, listed in 020 rather than decided.
+
+**`3tk-staging-plan-020.md` declares 3TK-51 to 3TK-55.** The description first,
+then the shared-specification clause, then the mailbox, then the pool, then the
+books. **The order is forced**: 51 states the choice that 53 and 54 depend on, 52
+is a promise every port owes and 3tk must not make alone, and the mailbox is the
+same mechanism without the hook window — if it does not work there it will not
+work in the pool.
+
+**The advices contradict each other on one rule, and the plan does not resolve
+it.** The pool file's first half recommends that `on_close` wait for in-flight
+`on_get` and `on_put` — hook serialization. Its second half says the opposite and
+keeps `Part 12.2`'s two `on_close` calls. **They cannot both hold**, and it is
+the question that decides how 53 and 54 are written.
+
+**Three of the owner's requirements are written into the plan as rules.** Every
+document output is versioned, superseded version to `backup/`. **Every question
+and its answer lives inside the document**, never only in a conversation, and an
+answer makes the next version. **Every stage says whether to clear or compact and
+prints the line to continue with.**
+
+**Tests are named per stage rather than left to the end.** Both
+`negative/release_open_*.c3` programs **invert** — releasing an open object stops
+being an abort — and five new deterministic negatives park a hook or a receiver
+until the main thread has called release. None of them is a flaky race.
+
+**3TK-51 carries a feasibility probe.** The counter, the wait for zero and the
+tear-down, compiled against `3tk/src` in all four builds before any of it is
+written into the port. If the probe refuses, the design changes in 51 and not in
+53.
+
+**No code was touched.** `3tk-status.md` updated: 020 is the live plan, and the
+resume section now names six unfinished stages instead of one.
+
 ## 2026-08-27 — the reviews folder removed, what it held absorbed
 
 **The owner removed `reviews/`.** Four implementation reviews, `3tk-01` to

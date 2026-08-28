@@ -22,6 +22,7 @@ aborts in all four build modes, with a negative each.
 **Closed is not quiet.** `Part 12.3` MUST forbids holding the mutex across a call
 into application code, so `Pool.put` opens the mutex itself:
 
+
 ```
 pool.c3:422:    self._mu.unlock();
 pool.c3:423:    self._hooks.on_put(in_pool, &mine, &extra);
@@ -36,6 +37,41 @@ memory.
 **A caller who reads `Part 11.12`, closes, and then releases has obeyed every
 clause the toolkit states, and can still land here.** That is what makes it worth
 fixing rather than tolerating.
+
+## Owner thinking - Mailbox
+
+We never guard simmultaneous  releases - by design.
+
+Fix:
+
+- Allow release of not closed mbox.
+- Any release closes mbox does not matter mbox state.
+
+close api separated 
+- close for all clients, it calls private _close
+- _close does not lock/unlock
+- _close called only by release
+- release 
+  - does lock/unlock as regular mbox api
+  - call _close
+  - save allocator locally
+  - unlock
+  - release memory
+
+_close_ returns 'InnerQueue* out' 
+
+Release should do the same - add argument
+
+What worth to check in real code - defer behavior:
+
+    InnerQueue iq;
+
+- defer queue_outers_release(InnerQueue*)
+- defer mbox release <- got InnerQueue*
+- if queue_outers_release called with right address 
+
+queue_outers_release -  is client code function - in arg also InnerQueue* 
+
 
 ## The ruling
 
