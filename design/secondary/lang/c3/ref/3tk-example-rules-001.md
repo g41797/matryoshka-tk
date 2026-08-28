@@ -52,10 +52,10 @@ old tree.** The row is the live number, not a target.
 
 | where | `item` / `items` |
 |---|---|
-| `3tk/src` | 124 |
-| `3tk/test` and `3tk/negative` | 203 |
-| `ref/` | 360 |
-| `../../common/matryoshka-specification-004.md` | 164 |
+| `3tk/src` | 125 |
+| `3tk/test` and `3tk/negative` | 219 |
+| `ref/` | 365 |
+| `../../common/matryoshka-specification-005.md` | 165 |
 
 **The last row is why this is a ruling and not a stage.** That document is the
 shared input binding otk, ztk and dtk. **3tk does not reword a `common/`

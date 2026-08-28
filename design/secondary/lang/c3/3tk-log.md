@@ -7,6 +7,118 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-28 — the owner rules `P6`: the close hook takes the queue by value
+
+**A ruling, not a stage. No code changed.** Recorded here because the ruling and
+the stage that builds it are separated by a context clear.
+
+> **`on_close` takes the queue by value.** That says to the hook: **I do not
+> care what you did.** Comments and documentation say the same thing in words.
+
+**`P6` is answered as option 3** — trust the hook, write it down — **and the
+by-value signature is a stronger spelling of it than the option as written**: the
+pool physically cannot observe what the hook did, so the interface is honest by
+construction rather than by promise. **Options 1 and 2 are closed for good.**
+
+**Measured before advising**, c3c 0.8.3: a by-value struct parameter is an
+lvalue, so `&self` methods bind to it and the hook's ergonomics are unchanged —
+and the caller's copy is untouched, which is both the point of the ruling and
+the reason the copy must become a real move rather than a shallow alias.
+
+**The advice was 2 + 3 and it lost.** A leak dereferences nothing, so no build
+can notice it however the parameter is spelled, and the checked-build assertion
+was the only detector this defect could ever have. **The owner ruled that an
+interface which says *I do not care* is better than a pointer that suggests
+otherwise.** The trade is written into
+[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md) section 6 so it is
+visible and not reopened.
+
+**Five defaults went with it, all accepted**: the operation is `InnerQueue.take()`;
+`InnerStack` gets none; `_close` keeps its out-parameter; no specification
+version, but the argument is recorded for dtk; `on_put`'s `extra` stays a
+pointer because it is a genuine out-parameter.
+
+**Written: [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md)** — the
+ruling, the defaults, the work list, the 19 call sites across 6 files, and what
+must still abort. **It is 3TK-56's only input besides the status file.**
+
+---
+
+## 2026-08-28 — 3TK-52, closed and quiet, in the text that binds four ports
+
+**The last piece of the lifetime fix, and the only one that was never 3tk's
+alone.** The C3 port had been enforcing *closed and quiet* since 3TK-53 and
+3TK-54 while
+[../common/matryoshka-specification-004.md](../common/backup/matryoshka-specification-004.md)
+still said *closed* and nothing more. **A port stricter than the specification is
+the specification being behind**, not a deviation, and the fix for that is to
+move the text.
+
+**The owner ruled `Q-D` on 2026-08-28, both halves.**
+
+> **`Q-D.1`: yes** — the shared specification states closed *and quiet* before
+> released.
+>
+> **`Q-D.2`: port-first, ratified** — a port may run ahead of the shared
+> document as long as it writes down which way it assumed the question would go.
+
+**Written:
+[../common/matryoshka-specification-005.md](../common/matryoshka-specification-005.md).**
+`004` went to `common/backup/`.
+
+**Part 11.12 is now *Closed and quiet before release*.** Four words are named
+where all four ports can reach them — **open, closed, quiet, freed** — and the
+distinction that was missing is stated plainly: close ends no call that is
+already running, so a closed container with a waiting receive, or a put inside
+its hook, may not be released either.
+
+**The obligation is split, and that split is the whole reason this could be
+written without breaking a finished port.** Every port **states** the
+precondition; a port **checks** it where a check is cheap, and says so when it
+does not. **It is a check and never a wait** — a release that waited would block
+on application code, which Part 12.3 already forbids holding a mutex across.
+
+**Why the split was necessary.** `src/mailbox.zig` has a closed flag and no
+count of calls in flight. A flat *MUST detect it* would have made ztk — green,
+195/195, closed 2026-08-14 — retroactively non-conforming for a behaviour it was
+never asked for. **Stating costs ztk one sentence of documentation and no code**,
+and gives dtk the rule at its founding. That sentence is ztk's line of work to
+write, and it is recorded as such in the status file; **3tk does not edit another
+port's documents.**
+
+**Three citing sites moved with it.** Part 15.5's contract-violation example and
+its *never compiles out* sentence, and Part 18's invariant row 26. **No Part was
+renumbered and no conformance marking changed** — assumption A1 still holds, and
+005 widens what 11.12 covers rather than how hard it bites.
+
+**The change log carries the reader-of-004 section**, as every version does, plus
+a *What 005 was written on* section recording the port-first ruling — because it
+governs more than one version, and dtk is the boundary: **the shared text is
+current before dtk's first stage**, the same deadline the `Item`/`Outer` wording
+already has.
+
+**Filing, and the convention it follows.** Live documents were re-pointed to
+`005`: `common/README.md`, `../d/dtk-status.md`, `../d/inputs/README.md`,
+`ref/3tk-example-rules-001.md` and this line's status file. **Frozen stage
+outputs keep the version they were written against** — the same treatment 003 and
+004 got, and the reason nothing in `backup/` was touched. **`kitchen/tools/check_design.sh`
+still reports 14 dead links**, the number that would signal a regression, so the
+move added none.
+
+**One measured row was re-taken while its file was open.**
+`ref/3tk-example-rules-001.md` counts the word *item* per tree, and three of its
+four rows were stale: `3tk/src` 124 to 125, `3tk/test` and `3tk/negative` 203 to
+219, `ref/` 360 to 365, and the specification row 164 to 165 against `005`. **The
+row's own rule is unchanged** — it is the live number, not a target.
+
+**No code was touched and no script was run beyond the link checker**, because
+nothing under `3tk/` changed. The numbers 3TK-55 measured still stand.
+
+**Advice: clear the context.** 3TK-50 is the only stage left, it is independent
+of all of this, and it starts cold from the status file.
+
+---
+
 ## 2026-08-28 — 3TK-55, the defect list catches up with the code
 
 **No code changed in this stage, and that is what it is for.** 3TK-53 and 3TK-54

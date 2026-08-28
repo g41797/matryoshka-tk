@@ -33,7 +33,7 @@ are the good ones. Re-print before trusting them again — every fix moves them.
 
 | # | Where | What | Fix is | State |
 |---|---|---|---|---|
-| **P6** | `pool.c3:493`, `:563` | The pool can lose items and never know | **Needs your decision** | **open, third site ruled 2026-08-27** |
+| **P6** | `pool.c3:493`, `:563` | The pool can lose items and never know | **Ruled 2026-08-28: option 3.** `on_close` takes the queue **by value** — *I do not care what you did* — plus the wording | **ruled, built by 3TK-56.** [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md) |
 | **Q5** | `mailbox.c3:124`, `pool.c3:253` | A release racing a call still in flight | Ruled 2026-08-28: stated, and checked | **fixed 2026-08-28, 3TK-53 + 3TK-54, closed by 3TK-55** |
 
 **Six of the ten are done, on 2026-08-27, in one stage.** Every mechanical and
@@ -205,7 +205,17 @@ Documentation, not code — so that the silence is not read as a promise.
 writing code. 3 is cheapest and defensible. **1 and 2 combine** — a check while
 developing, a number afterwards.
 
-**State: open, waiting on your decision. Nothing blocks it any more** — the
+**State: RULED 2026-08-28 — option 3, and it is stronger than option 3 as
+written here.** `on_close` takes the queue **by value**, so the pool physically
+cannot observe what the hook did and the type says so; the comment and the
+reference say it in words. **Options 1 and 2 are closed for good, not deferred.**
+The ruling, the five defaults that go with it and the work list are in
+[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), which is **3TK-56's
+only input besides the status file.** The measurement behind it: a by-value
+struct parameter is an lvalue on c3c 0.8.3, so the hook's ergonomics are
+unchanged, and the caller's copy is untouched, so nothing is left to count.
+
+**Superseded state: open, waiting on your decision. Nothing blocked it** — the
 dependency on `Q5` is discharged, and all three options are on the table. See
 [Order](#order).
 

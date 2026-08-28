@@ -30,8 +30,11 @@ checks `_closed && _active == 0` under the mutex and aborts in all four builds
 when it does not hold. **3TK-55 closed the defect row on 2026-08-28** and
 re-measured everything against the built tree.
 
-**Only one piece of the fix is unwritten, and it is not 3tk's to write alone:**
-`Part 11.12` of the shared specification, which is **3TK-52** and needs `Q-D`.
+**And the shared half is written too.** **3TK-52 wrote
+[../common/matryoshka-specification-005.md](../common/matryoshka-specification-005.md)
+on 2026-08-28**, after the owner ruled `Q-D`. `Part 11.12` is now *Closed and
+quiet before release*, `004` is in `common/backup/`, and every live link points
+at `005`. **The lifetime fix is complete, in code and in text.**
 
 **The owner ruled it on 2026-08-28:**
 
@@ -57,35 +60,40 @@ settled the same way by 3TK-54:**
   still open*; section 13 says `negative/release_open_pool.c3` must still abort.
   Both cannot hold. **The check comes first, and nothing else runs when it
   fails** — so `_close` has one caller in each tool, not two.
-- **`Part 11.12` belongs to 3TK-52, not to the code stages.** It is in
-  [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md)
-  and binds four ports. **A code stage writes the rule into `ref/` and the
-  descriptors and leaves the shared clause alone.** That is what let 53 and 54
-  run while `Q-D` is open, and **it is now the only part of the fix not
-  written.**
+- **`Part 11.12` belonged to 3TK-52, not to the code stages.** It is in
+  [../common/matryoshka-specification-005.md](../common/matryoshka-specification-005.md)
+  and binds four ports. **A code stage wrote the rule into `ref/` and the
+  descriptors and left the shared clause alone.** That is what let 53 and 54 run
+  while `Q-D` was open, and **3TK-52 has since written the clause itself.**
 
 ## The stages that have not run
 
 | stage | what it does | start it with |
 |---|---|---|
-| **3TK-52** | **The shared clause.** `Part 11.12` in [../common/matryoshka-specification-004.md](../common/matryoshka-specification-004.md), which binds otk, ztk and dtk. **Needs `Q-D`** | `Run 3TK-52.` |
+| **3TK-56** | **The close hook takes the queue by value**, and `P6` is closed with it. **Ruled 2026-08-28.** Its only input besides this file is [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), which holds the ruling, the five defaults and the work list | `Run 3TK-56.` |
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`. Reads [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **Independent of the fix** | `Run 3TK-50.` |
 
-**3TK-53, 3TK-54 and 3TK-55 all ran on 2026-08-28**, and between them the two
-tools carry the whole mechanism and the defect list agrees with them. **3TK-50 is
-independent** of the fix and may run before or after 3TK-52. **3TK-52 is the only
-stage the fix still owes**, and it is blocked on `Q-D`.
+**3TK-52, 3TK-53, 3TK-54 and 3TK-55 all ran on 2026-08-28**, and between them
+the two tools carry the mechanism, the defect list agrees with them and the
+shared specification states the rule. **3TK-56 was added on 2026-08-28**, when the owner ruled `P6`: `on_close` takes
+the queue **by value**, which says to the hook *I do not care what you did*.
+**Neither remaining stage blocks the other.**
 
 ## Open questions
 
 | | what it asks | whose |
 |---|---|---|
-| **`Q-D.1`** | does the shared specification state *closed **and quiet** before released*, so every port states it? | owner |
-| **`Q-D.2`** | if it does, does 3TK-52 run before 3tk's code, or does 3tk go first under a written assumption? | owner |
-| **`P6` / `Q-F`** | what does the pool observe when a close hook is handed items and frees some, leaves some? **Nothing blocks it now** — 3TK-55 found the dependency on `Q5` discharged, so all three options in its section are available | owner |
 
-`Q-A`, `Q-B`, `Q-C`, `Q-E` and `Q-G` were closed by the ruling —
+**`P6` / `Q-F` was ruled on 2026-08-28** and is now 3TK-56's to build —
+[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md). **No question of that
+set is open any more.**
+
+`Q-A`, `Q-B`, `Q-C`, `Q-E` and `Q-G` were closed by the ruling of 2026-08-28 —
 [3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) section 15 says how each went.
+**`Q-D.1` and `Q-D.2` were ruled on 2026-08-28 and 3TK-52 built both answers**,
+so section 14 of that document, which still lists `Q-D` as open, is out of date
+and this file is what holds. **`P6` / `Q-F` is the only question of that set
+still open.**
 
 **And these, which are not about the lifetime fix.** One line each; the document
 named holds the reasoning.
@@ -115,6 +123,12 @@ named holds the reasoning.
   `backup/3tk-who-supports-slot.md` argues they should not.
   3TK-10 did not rule it and 3TK-11 did not act on it, so the code has it. Two
   methods and two tests.
+- **ztk owes one sentence, and it is the ztk line's to write.** Specification
+  `005` Part 11.12 says **every port states** the closed-and-quiet precondition,
+  and that a port which does not check it says so. **`src/mailbox.zig` has a
+  closed flag and no count of calls in flight**, so ztk states rather than
+  checks — which the clause allows and which nobody has yet written into ztk's
+  own documentation. **No ztk code change is implied.**
 - **Whether otk gets a status file.** The pointer at the specification is
   written; the folder is not prepared, and preparing it means saying what otk's
   line of work is. The owner's.
@@ -201,6 +215,13 @@ scripts take an optional directory and exit 2 on a bad one.
   Never "parent".
 - **Porting is not transpiling.** The specification says what to preserve; each
   port decides how to spell it.
+- **A port may run ahead of the shared specification**, writing a rule into its
+  own code and its own `ref/` while the shared clause is still open, **as long as
+  it writes down which way it assumed the question would go.** The shared text
+  catches up in a later stage. **Ruled 2026-08-28** as `Q-D.2`, after 3TK-53 and
+  3TK-54 had done exactly that. **The boundary is dtk**: dtk builds from the
+  specification alone, so the shared text is current before dtk's first stage.
+  The `Item`/`Outer` wording has the same deadline for the same reason.
 - **A change to `3tk/src` revises `ref/` in the same stage** — not later, and not
   as a debt for the next stage. A file under `ref/` that contradicts `3tk/src`
   is a defect of the stage that changed the source. Ruled 2026-08-25.
@@ -240,13 +261,8 @@ Every line begins the same way, because every stage reads this file first:
 Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
 ```
 
-For a ruling rather than a stage:
-
-```
-Read design/secondary/lang/c3/3tk-status.md and 3tk-lifetime-fix-005.md.
-Q-D.1: <yes | no>. Q-D.2: <3TK-52 first | 3tk first>.
-Write 3tk-lifetime-fix-006.md.
-```
+**Nothing is waiting on a ruling.** Both open questions were answered on
+2026-08-28 and each has a stage.
 
 For orientation only:
 
@@ -256,7 +272,7 @@ Read design/secondary/lang/c3/3tk-status.md and report where the 3tk work stands
 
 ## The stages that have run
 
-**Fifty-five, and the log has an entry for every one.** This table is the list,
+**Fifty-six, and the log has an entry for every one.** This table is the list,
 not the record.
 
 | stage | | |
@@ -315,6 +331,7 @@ not the record.
 | **3TK-51** | accumulated description | 2026-08-28 |
 | **3TK-53** | mailbox, in code: closed is not quiet | 2026-08-28 |
 | **3TK-54** | pool, in code: the hook window, and one lock measured | 2026-08-28 |
+| **3TK-52** | the shared clause: closed and quiet, and specification 005 | 2026-08-28 |
 | **3TK-55** | the defect list catches up with the code | 2026-08-28 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
@@ -334,5 +351,5 @@ the log has each one.
 | **INTR 8** | this file compacted, 2,358 lines to a list and a state | no |
 
 **[3tk-open-defects.md](3tk-open-defects.md) is the working list** for what INTR
-1–3 found: one table and one section per item, edited in place. **`P6` is the one
-item still open**, and since 3TK-55 nothing blocks it.
+1–3 found: one table and one section per item, edited in place. **`P6` was the last item open** and
+was ruled on 2026-08-28; 3TK-56 builds it.

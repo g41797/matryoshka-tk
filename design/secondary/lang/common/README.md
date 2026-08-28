@@ -9,10 +9,19 @@ written from, and the process every port follows.
 
 ## What is here
 
-- **[matryoshka-specification-004.md](matryoshka-specification-004.md)** — the
+- **[matryoshka-specification-005.md](matryoshka-specification-005.md)** — the
   portable specification. Self-contained and language-neutral. *A port is
   written from this file alone.* Source of truth for all four ports.
-  **004 replaced 003 on 2026-08-24**, and changes one Part: 7.1 stated ztk's
+  **005 replaced 004 on 2026-08-28**, and changes one Part: 11.12 required a
+  container to be **closed** before release and now requires it to be **closed
+  and quiet** — closed, and with no call the application made still running.
+  Close ends no call that is already running, so a caller who obeyed 004 could
+  still release a container out from under a waiting receive or a put inside its
+  hook. **The obligation is split**: every port states the precondition, and a
+  port checks it where a check is cheap. It is a check and never a wait. Found
+  by the C3 port in code, ruled by its owner on 2026-08-28, written here by
+  stage 3TK-52.
+  **004 had replaced 003 on 2026-08-24**, and changed one Part: 7.1 stated ztk's
   mechanism — a helper object bound to one type — where the design has only the
   promise that the crossings exist per type and are generated. It was the
   fifteenth instance of the mistake 003 fixed fourteen times, and the first
@@ -21,7 +30,7 @@ written from, and the process every port follows.
   port written from 002 would have reproduced Zig's doubly-linked list, its
   anchor and its inexact link test. Two realizations appear side by side,
   marked *ztk* and *3tk*. The change log names every difference across all
-  three cuts, so nothing needs diffing.
+  four versions, so nothing needs diffing.
 - **[ztk-audit-001.md](ztk-audit-001.md)** — read-only evidence about ztk, the
   reference implementation. Every claim names a file and a line range. It is the
   specification's own input, and it is about Zig, not about any port.
@@ -55,6 +64,6 @@ the same. `port-flow-001.md` says which is which.
 | Port | Language | Folder | State |
 |---|---|---|---|
 | ztk | Zig | this repo's `src/` | the reference implementation; green, needs tuning |
-| 3tk | C3 | [`../c3/3tk-status.md`](../c3/3tk-status.md) | complete through 3TK-7 |
+| 3tk | C3 | [`../c3/3tk-status.md`](../c3/3tk-status.md) | the port that has driven every specification version since 002 |
 | dtk | D | [`../d/dtk-status.md`](../d/dtk-status.md) | prepared, no stage has run |
 | otk | Odin | `../odin/` | needs refactoring; no status file yet |

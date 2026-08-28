@@ -14,7 +14,7 @@ The **D** port of Matryoshka. Fourth in the family: **otk** (Odin), **ztk** (Zig
 this repo, the reference implementation), **3tk** (C3, complete), **dtk** (D).
 
 Ported from
-[the portable specification](../common/matryoshka-specification-004.md), with ztk
+[the portable specification](../common/matryoshka-specification-005.md), with ztk
 as the reference for *behaviour* — never as a template for syntax.
 
 ## Scope — ruled by the owner, 2026-08-23
@@ -36,7 +36,7 @@ These are not proposals. They are settled, and every stage works inside them.
 
 Read these; nothing in this folder replaces them.
 
-- **[matryoshka-specification-004.md](../common/matryoshka-specification-004.md)**
+- **[matryoshka-specification-005.md](../common/matryoshka-specification-005.md)**
   — the source of truth. Self-contained and language-neutral. *A port is written
   from this file alone.* A defect found in it is fixed **there**, once, for every
   port — not patched in a dtk document.
