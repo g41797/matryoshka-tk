@@ -38,7 +38,7 @@ fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
     thread::sleep(time::ms(200))!!;     // the release has run by now
 }
 
-fn void ParkingHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     while (Handle h = remaining.pop_front()) { }
 }

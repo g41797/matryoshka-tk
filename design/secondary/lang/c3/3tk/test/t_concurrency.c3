@@ -218,7 +218,7 @@ fn void ConcurrentHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dyn
 
 fn void ConcurrentHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
 
-fn void ConcurrentHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void ConcurrentHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     while (Handle h = remaining.pop_front())
     {
@@ -367,7 +367,7 @@ fn void LateCloseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
     // pool to put it now, and that is the whole point.
 }
 
-fn void LateCloseHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void LateCloseHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     self.closes.add(1, SEQ_CONSISTENT);
     while (Handle h = remaining.pop_front())

@@ -87,17 +87,18 @@ interface PoolHooks
     <*
      Take everything that is left.
 
-     Called with everything that remained, as one flat queue.
-     Process or free every item in it.
+     Called with everything that remained, as one flat queue, by value.
+     Process or free every item in it. The pool does not verify it and never
+     will.
      No order is promised.
      The hook is called outside the mutex, after the closed flag is set.
      Called once by `close`, and possibly once more with stragglers from a concurrent `put`.
      So a hook must not free its own context on the first call.
 
-     @param remaining : "everything the pool still held, flattened across every identity. No order is promised"
+     @param remaining : "everything the pool still held, flattened across every identity, by value. No order is promised"
     *>
     // [3tk: R12, V11, Part 12.2]
-    fn void on_close(InnerQueue* remaining);
+    fn void on_close(InnerQueue remaining);
 }
 
 <*
@@ -490,7 +491,7 @@ fn void Pool.put(&self, Slot* slot)
 
         // [3tk: Part 12.3]
         self._mu.unlock();
-        if (!stragglers.is_empty()) self._hooks.on_close(&stragglers);
+        if (!stragglers.is_empty()) self._hooks.on_close(stragglers.take());
 
         // Lowered after the straggler hook, not before it. A count that stopped
         // at `on_put` would leave application code running with pool-derived
@@ -560,7 +561,7 @@ fn void Pool.close(&self)
     self._mu.unlock();
 
     // [3tk: Part 12.2]
-    self._hooks.on_close(&remaining);
+    self._hooks.on_close(remaining.take());
 
     // [3tk: Part 11.12]
     self._mu.lock();

@@ -7,6 +7,57 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-30 — 3TK-56: the close hook takes the queue by value, in code
+
+**Built [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), the
+2026-08-28 ruling.** `P6` closes: `on_close` receives `InnerQueue`, not
+`InnerQueue*`, and the pool holds nothing back.
+
+**`InnerQueue.take()`** — `3tk/src/queue.c3` — hands over everything the queue
+holds and empties the source, O(1), cannot fail. Both call sites in
+`pool.c3` — the straggler path (`:494`) and the main close (`:564`) — became
+`self._hooks.on_close(stragglers.take())` and
+`self._hooks.on_close(remaining.take())`.
+
+**The six implementers followed**: `negative/common.c3`,
+`negative/release_with_straggler_put.c3`, `negative/release_during_on_put.c3`,
+`negative/release_during_on_close.c3`, `test/t_concurrency.c3` (two hooks),
+`test/t_pool.c3`. Only the signature line changed in every one — a by-value
+struct parameter is an lvalue, so `&self` methods (`pop_front`, `is_empty`,
+`len`) bind to it exactly as they did through the pointer, and no body needed
+touching. The three `release_during_*` tier 1 negatives still abort in every
+build mode, unweakened.
+
+**One positive test, no negative.** `t_queue.c3:take_empties_the_source`
+proves the source is empty after `take()`. No negative is possible: a hook
+that keeps items dereferences nothing, so no build could ever notice a leak
+however the parameter is spelled — that is the ruling working as intended, not
+a gap in coverage.
+
+**Wording, not just code.** `PoolHooks.on_close`'s doc block in `pool.c3` now
+carries *the pool does not verify it and never will*, and the same sentence
+went to `ref/3tk-reference-004.md` — named directly by the charter, and edited
+in place rather than versioned. `ref/3tk-decisions-004.md` gained the `P6`
+entry under `pool.c3` and a `take()` entry under `queue.c3`; `-003` moved to
+`backup/`. `3tk-port-findings-004.md` gained §4a, the argument for dtk and otk
+to read: no shared-specification change, because Part 12.2 already says the
+hook is handed the items and not through what; ztk's `on_close` was read at
+`pool.zig:127-130` and is still by pointer, an open divergence and not a
+recommendation. `-003` moved to `backup/`. `3tk-open-defects.md`'s `P6` row and
+section are marked ruled and built.
+
+**Verified**: `run-builds.sh` four builds green, 87 checks, 92 tests per build
+(the new `take()` test), 0 failures. `check-doc-loop.sh` 0 differing blocks,
+457 sentences, 456 found — the one miss is the pre-existing `inner.c3` module
+summary — 0 banned words. `run-sanitizers.sh` 3 passed, 0 failed, the hook path
+exercised on every run.
+
+**`grep -roiwE 'items?'` moved 365 to 366 in `ref`**, from `take()`'s two new
+sentences in the decisions entry; `3tk/src` is unchanged at 125, because
+`take()`'s doc block never says *item*.
+
+**3TK-50 is the only stage left** — the examples tree, independent of the fix.
+
 ## 2026-08-28 — the owner rules `P6`: the close hook takes the queue by value
 
 **A ruling, not a stage. No code changed.** Recorded here because the ruling and

@@ -156,6 +156,21 @@ fn Handle InnerQueue.pop_front(&self)
     return h;
 }
 
+<*
+ Takes everything the queue holds, as one flat queue. O(1).
+
+ The queue is empty afterwards.
+*>
+// [3tk: Part 8.2]
+fn InnerQueue InnerQueue.take(&self) @inline
+{
+    InnerQueue out = *self;
+    self.head = null;
+    self.tail = null;
+    self.count = 0;
+    return out;
+}
+
 // --- Moving ------------------------------------------------------------------------
 
 <*

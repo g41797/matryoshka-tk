@@ -40,7 +40,7 @@ fn void StragglerHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
     while (self.closed.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
 }
 
-fn void StragglerHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     bool straggler = !remaining.is_empty();
     while (Handle h = remaining.pop_front()) { }

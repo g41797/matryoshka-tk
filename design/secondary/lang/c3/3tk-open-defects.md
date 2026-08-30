@@ -1,6 +1,6 @@
 # 3tk — open defects
 
-**The working list for fixing the port.** Ten items — **seven fixed, one open,
+**The working list for fixing the port.** Ten items — **eight fixed, zero open,
 two closed**. One table, one section each: where it is, what is wrong, what the
 fix is, how to know it worked, and what state it is in.
 
@@ -33,7 +33,7 @@ are the good ones. Re-print before trusting them again — every fix moves them.
 
 | # | Where | What | Fix is | State |
 |---|---|---|---|---|
-| **P6** | `pool.c3:493`, `:563` | The pool can lose items and never know | **Ruled 2026-08-28: option 3.** `on_close` takes the queue **by value** — *I do not care what you did* — plus the wording | **ruled, built by 3TK-56.** [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md) |
+| **P6** | `pool.c3:494`, `:564` | The pool can lose items and never know | **Ruled 2026-08-28: option 3.** `on_close` takes the queue **by value** — *I do not care what you did* — plus the wording | **ruled, built by 3TK-56.** [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md) |
 | **Q5** | `mailbox.c3:124`, `pool.c3:253` | A release racing a call still in flight | Ruled 2026-08-28: stated, and checked | **fixed 2026-08-28, 3TK-53 + 3TK-54, closed by 3TK-55** |
 
 **Six of the ten are done, on 2026-08-27, in one stage.** Every mechanical and
@@ -47,8 +47,9 @@ and they have been overtaken** — the live ones are in
 pool, both 2026-08-28; 3TK-55 closed this row against the built code on the same
 day, after re-running all three scripts.
 
-**One remains open, and it is waiting on you.** `P6` needs one small ruling
-before code can be written. The ruling is stated in the section.
+**`P6` is the eighth, and it is done.** Ruled 2026-08-28, built 2026-08-30 by
+3TK-56 — [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md) is its
+charter. Nothing remains open.
 
 **`P7` no longer needs one.** Reading `std::thread` showed the fault it warned
 about cannot occur. The branch is dead, it stays, and a plain `//` comment at
@@ -70,10 +71,11 @@ Only the open and deferred items have an order. The fixed ones are done.
 
 **Waiting on you.**
 
-- `P6` — one ruling, three answers, written out in its section. INTR 1 ranked it
-  High, and it is the last of the three it put there.
+- Nothing. `P6` was the last one, ruled 2026-08-28 and built 2026-08-30 by
+  3TK-56.
 
-**Nothing is waiting on a stage any more.** `Q5` was the last one, and it ran.
+**Nothing is waiting on a stage any more.** `Q5` and `P6` were the last two,
+and both ran.
 
 **The dependency that is not obvious, and it is now discharged.**
 
@@ -112,9 +114,9 @@ every number in an earlier version of this table, is now wrong.**
 **Three sites.**
 
 ```
-pool.c3:493     the close hook, called with what was left after a race
-pool.c3:563     the close hook, called with everything the pool held
-pool.c3:526-527 one item with an identity the pool does not recognize  -- RULED 2026-08-27
+pool.c3:494     the close hook, called with what was left after a race
+pool.c3:564     the close hook, called with everything the pool held
+pool.c3:527-528 one item with an identity the pool does not recognize  -- RULED 2026-08-27
 ```
 
 **Re-printed 2026-08-28**, after the lifetime fix moved every line below
@@ -205,19 +207,33 @@ Documentation, not code — so that the silence is not read as a promise.
 writing code. 3 is cheapest and defensible. **1 and 2 combine** — a check while
 developing, a number afterwards.
 
-**State: RULED 2026-08-28 — option 3, and it is stronger than option 3 as
-written here.** `on_close` takes the queue **by value**, so the pool physically
-cannot observe what the hook did and the type says so; the comment and the
-reference say it in words. **Options 1 and 2 are closed for good, not deferred.**
-The ruling, the five defaults that go with it and the work list are in
-[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), which is **3TK-56's
+**State: RULED 2026-08-28, BUILT 2026-08-30 by 3TK-56 — option 3, and it is
+stronger than option 3 as written here.** `on_close` takes the queue **by
+value**, so the pool physically cannot observe what the hook did and the type
+says so; the comment and the reference say it in words. **Options 1 and 2 are
+closed for good, not deferred.** The ruling, the five defaults that go with it
+and the work list are in
+[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), which was **3TK-56's
 only input besides the status file.** The measurement behind it: a by-value
 struct parameter is an lvalue on c3c 0.8.3, so the hook's ergonomics are
 unchanged, and the caller's copy is untouched, so nothing is left to count.
+`InnerQueue.take()` (`../3tk/src/queue.c3`) is the O(1) move both call sites
+use.
 
-**Superseded state: open, waiting on your decision. Nothing blocked it** — the
-dependency on `Q5` is discharged, and all three options are on the table. See
-[Order](#order).
+**Superseded state: open, waiting on your decision.** Closed by 3TK-56.
+
+**What 3TK-56 moved outside `3tk/src`:**
+
+- `ref/3tk-decisions-004.md` — the `P6` entry, under `pool.c3` and `queue.c3`.
+  `-003` went to `backup/`.
+- `ref/3tk-reference-004.md` — the `on_close` signature and its doc block, and
+  `InnerQueue.take()` added to the queue's operation list. Edited in place, not
+  versioned: this stage's charter names the file directly.
+- `3tk-port-findings-004.md` — new §4a, the argument for dtk and otk. `-003`
+  went to `backup/`.
+- `3tk/test/t_queue.c3` — one positive test, `take_empties_the_source`. No
+  negative is possible: a hook that keeps items dereferences nothing, so no
+  build can notice.
 
 
 ## Refuted — claims that did not survive the code
@@ -310,27 +326,27 @@ row.
 
 ## After a fix
 
-**All the numbers below were re-measured on 2026-08-28, by 3TK-55, after 3TK-53
-and 3TK-54.**
+**All the numbers below were re-measured on 2026-08-30, by 3TK-56, after `P6`
+was built.**
 The one missing descriptor sentence is the pre-existing `inner.c3` module
-summary and is not new. `ref` moved 360 to 365 on 2026-08-27 because the reference and the decisions
-each took on new sentences that say *item*, and it has not moved since. `3tk/src`
-went 124 to 125 with the lifetime fix's new prose.
+summary and is not new. `ref` moved 365 to 366 with `take()`'s two new
+sentences in the decisions entry. `3tk/src` is unchanged at 125 — `take()`'s
+doc block does not say *item*.
 
 **Every mechanical item touches `3tk/src`, so the doc loop is owed.**
 `ref/3tk-doc-loop-003.md` is the procedure; `check-doc-loop.sh` says whether it
 is still owed.
 
-**`ref/3tk-decisions-003.md` is the current one**, and `-002` is in `backup/`.
-`P6` will add an entry when it is ruled; `P7` closed without one.
+**`ref/3tk-decisions-004.md` is the current one**, and `-003` is in `backup/`.
+`P6`'s entry is in it, under `pool.c3` and `queue.c3`; `P7` closed without one.
 
-**The numbers to re-measure**, all true on 2026-08-28 after 3TK-54:
+**The numbers to re-measure**, all true on 2026-08-30 after 3TK-56:
 
 ```
-./run-builds.sh        # four builds green, 87 checks, 91 tests per build, 0 failures
-./check-doc-loop.sh    # 0 differing blocks, 452 sentences, 451 found, 1 missing, 0 banned
+./run-builds.sh        # four builds green, 87 checks, 92 tests per build, 0 failures
+./check-doc-loop.sh    # 0 differing blocks, 457 sentences, 456 found, 1 missing, 0 banned
 ./run-sanitizers.sh    # 3 passed, 0 failed — thread on two builds, address on one
-grep -roiwE 'items?' 3tk/src ref        # 125 and 365
+grep -roiwE 'items?' 3tk/src ref        # 125 and 366
 ```
 
 **`run-sanitizers.sh` joined the list here** because the lifetime fix is a

@@ -24,6 +24,11 @@ It is kept short for that reason.**
 
 ## What is live now
 
+**`P6` is built.** **3TK-56 ran on 2026-08-30**: `on_close` takes the queue by
+value, `InnerQueue.take()` is in `queue.c3`, both `pool.c3` call sites use it,
+and `3tk-open-defects.md` has no open row left. Only **3TK-50** — the examples
+tree, independent of the fix — has not run.
+
 **The lifetime fix is built, on both tools, and its books are closed.** **The
 mailbox by 3TK-53 and the pool by 3TK-54, both 2026-08-28**; each `release` now
 checks `_closed && _active == 0` under the mutex and aborts in all four builds
@@ -70,30 +75,26 @@ settled the same way by 3TK-54:**
 
 | stage | what it does | start it with |
 |---|---|---|
-| **3TK-56** | **The close hook takes the queue by value**, and `P6` is closed with it. **Ruled 2026-08-28.** Its only input besides this file is [3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md), which holds the ruling, the five defaults and the work list | `Run 3TK-56.` |
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`. Reads [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **Independent of the fix** | `Run 3TK-50.` |
 
-**3TK-52, 3TK-53, 3TK-54 and 3TK-55 all ran on 2026-08-28**, and between them
-the two tools carry the mechanism, the defect list agrees with them and the
-shared specification states the rule. **3TK-56 was added on 2026-08-28**, when the owner ruled `P6`: `on_close` takes
-the queue **by value**, which says to the hook *I do not care what you did*.
-**Neither remaining stage blocks the other.**
+**3TK-52, 3TK-53, 3TK-54, 3TK-55 and 3TK-56 all ran, 2026-08-28 to
+2026-08-30**, and between them the two tools carry the mechanism, the defect
+list agrees with them, the shared specification states the rule and `on_close`
+is by value. **3TK-50 is the only stage left, and it does not block or get
+blocked by anything above.**
 
 ## Open questions
 
 | | what it asks | whose |
 |---|---|---|
 
-**`P6` / `Q-F` was ruled on 2026-08-28** and is now 3TK-56's to build —
-[3tk-on-close-handoff-001.md](3tk-on-close-handoff-001.md). **No question of that
-set is open any more.**
-
-`Q-A`, `Q-B`, `Q-C`, `Q-E` and `Q-G` were closed by the ruling of 2026-08-28 —
-[3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) section 15 says how each went.
-**`Q-D.1` and `Q-D.2` were ruled on 2026-08-28 and 3TK-52 built both answers**,
-so section 14 of that document, which still lists `Q-D` as open, is out of date
-and this file is what holds. **`P6` / `Q-F` is the only question of that set
-still open.**
+**Nothing is open in the lifetime-fix / `P6` set.** `Q-A`, `Q-B`, `Q-C`, `Q-E`
+and `Q-G` were closed by the ruling of 2026-08-28 —
+[3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) section 15 says how each
+went. `Q-D.1` and `Q-D.2` were ruled on 2026-08-28 and 3TK-52 built both
+answers, so section 14 of that document, which still lists `Q-D` as open, is
+out of date and this file is what holds. **`P6` / `Q-F` was ruled on
+2026-08-28 and built by 3TK-56 on 2026-08-30.**
 
 **And these, which are not about the lifetime fix.** One line each; the document
 named holds the reasoning.
@@ -115,7 +116,7 @@ named holds the reasoning.
   found a stored item.** 3tk does not, ztk does; Parts 11.7 and 12.2 side with
   3tk, the ztk audit and book with ztk. **Recorded, not ruled** — whichever way
   it goes, one of three things moves.
-  [3tk-port-findings-003.md](3tk-port-findings-003.md) §5a.
+  [3tk-port-findings-004.md](3tk-port-findings-004.md) §5a.
 - **Two lines of the ztk book are wrong about `on_get`** — `042.md:1288` and
   `:1448-1449`. **The ztk line's work, not this one.** The port is right and
   everything else agrees with it.
@@ -189,18 +190,18 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-28, by 3TK-55, with no source changed since.
+been run. Last measured 2026-08-30, by 3TK-56, with no source changed since.
 
 ```
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green
-                           91 tests in each build
-./3tk/check-doc-loop.sh    0 differing blocks, 452 sentences, 451 found
+                           92 tests in each build
+./3tk/check-doc-loop.sh    0 differing blocks, 457 sentences, 456 found
                            1 missing — the pre-existing inner.c3 module summary
                            0 banned words
 ./3tk/run-sanitizers.sh    3 passed, 0 failed — thread on two builds, address on
                            one. Skips and exits 2 if its compiler is missing;
                            a skip is not a pass
-grep -roiwE 'items?'       125 in 3tk/src, 365 in ref
+grep -roiwE 'items?'       125 in 3tk/src, 366 in ref
 ```
 
 `run-builds.sh` needs `c3c` and nothing else, and that is deliberate. Both
@@ -238,7 +239,7 @@ scripts take an optional directory and exit 2 on a bad one.
   because a shared input inside one consumer's folder is a fork waiting to
   happen.
 - **`ref/`** — the live reference: [ref/3tk-reference-004.md](ref/3tk-reference-004.md),
-  [ref/3tk-decisions-003.md](ref/3tk-decisions-003.md),
+  [ref/3tk-decisions-004.md](ref/3tk-decisions-004.md),
   [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md), the example rules and the
   pattern catalog. **The only place staleness can hide**, since everything else
   is a frozen stage output.
@@ -333,6 +334,7 @@ not the record.
 | **3TK-54** | pool, in code: the hook window, and one lock measured | 2026-08-28 |
 | **3TK-52** | the shared clause: closed and quiet, and specification 005 | 2026-08-28 |
 | **3TK-55** | the defect list catches up with the code | 2026-08-28 |
+| **3TK-56** | the close hook takes the queue by value, and `P6` is closed | 2026-08-30 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.
@@ -351,5 +353,6 @@ the log has each one.
 | **INTR 8** | this file compacted, 2,358 lines to a list and a state | no |
 
 **[3tk-open-defects.md](3tk-open-defects.md) is the working list** for what INTR
-1–3 found: one table and one section per item, edited in place. **`P6` was the last item open** and
-was ruled on 2026-08-28; 3TK-56 builds it.
+1–3 found: one table and one section per item, edited in place. **`P6` was the
+last item open** and was ruled on 2026-08-28; **3TK-56 built it on 2026-08-30.
+Nothing on that list is open any more.**

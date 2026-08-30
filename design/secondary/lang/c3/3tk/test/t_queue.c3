@@ -236,6 +236,30 @@ fn void append_queue_empties_the_other() @test
 }
 
 <*
+ Part 8.2: `take()` hands over everything and leaves the source empty.
+
+ The by-value hand-off the pool's `on_close` relies on. Written where the
+ other queue tests live, not in `t_pool.c3`, because nothing here is
+ pool-specific.
+*>
+fn void take_empties_the_source() @test
+{
+    Msg[8] ms = fresh_msgs();
+    InnerQueue a;
+    for (usz i = 0; i < 3; i++) { mtk::helper::init(&ms[i]); a.push_back(mtk::helper::to_handle(&ms[i])); }
+
+    InnerQueue b = a.take();
+
+    always_assert(a.is_empty() && a.len() == 0, "take did not empty the source");
+    always_assert(b.len() == 3, "take did not carry the count over");
+
+    for (usz i = 0; i < 3; i++)
+    {
+        always_assert(mtk::helper::from_handle(b.pop_front(), Msg).id == (int)i, "take scrambled the order");
+    }
+}
+
+<*
  The splice leaves the joined chain intact and still self-terminated.
 
  This is the one place a single link could quietly break: the old tail of `self`

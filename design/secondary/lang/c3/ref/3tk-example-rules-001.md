@@ -74,7 +74,7 @@ other reason.
 
 **The debt is recorded in three places and this is one of them.** The other two
 are [../3tk-status.md](../3tk-status.md) under *Open questions*, and
-[../3tk-port-findings-003.md](../3tk-port-findings-003.md), which is the port's
+[../3tk-port-findings-004.md](../3tk-port-findings-004.md), which is the port's
 channel to another port. **`../../common/` is not one of the three.**
 
 ## The four trees
@@ -316,7 +316,7 @@ current file contents at the moment of the claim.**
 - **No change to `test/common.c3`**, and no change to the 87 existing tests.
 - **Nothing is written under `../../common/`**, and nothing is said to another
   port. A finding for another port goes in
-  [../3tk-port-findings-003.md](../3tk-port-findings-003.md), which describes
+  [../3tk-port-findings-004.md](../3tk-port-findings-004.md), which describes
   and recommends nothing.
 - **No `git`.** The owner saves.
 - **A stage revising the catalog versions it.** `001` to `002`, the old one to

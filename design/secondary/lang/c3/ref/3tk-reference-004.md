@@ -494,6 +494,7 @@ fn usz    InnerQueue.len(&self)
 fn void   InnerQueue.push_back(&self, Handle h)
 fn void   InnerQueue.push_back_slot(&self, Slot* s)
 fn Handle InnerQueue.pop_front(&self)
+fn InnerQueue InnerQueue.take(&self)
 fn void   InnerQueue.append_queue(&self, InnerQueue* other)
 fn InnerQueueIterator InnerQueue.iter(&self)
 fn Handle InnerQueueIterator.next(&self)
@@ -509,6 +510,8 @@ fn Handle InnerQueueIterator.next(&self)
 - `pop_front` — takes the item at the front.
   - Null on an empty queue, which is an answer and not a fault.
   - The returned item's chain link is cleared.
+- `take` — takes everything the queue holds, as one flat queue.
+  - The queue is empty afterwards.
 - `append_queue` — moves every item of another queue onto the back of this one,
   in O(1).
   - That queue is empty afterwards.
@@ -912,7 +915,7 @@ fn void MsgPolicy.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
     m.id = 0;
 }
 
-fn void MsgPolicy.on_close(&self, InnerQueue* remaining) @dynamic
+fn void MsgPolicy.on_close(&self, InnerQueue remaining) @dynamic
 {
     while (Handle h = remaining.pop_front())
     {
@@ -1083,7 +1086,7 @@ Three methods. Implement them to give a pool its policy.
 ```c3
 fn void on_get(typeid want, usz in_pool, Slot* slot);
 fn void on_put(usz in_pool, Slot* slot, InnerQueue* extra);
-fn void on_close(InnerQueue* remaining);
+fn void on_close(InnerQueue remaining);
 ```
 
 **`on_get` — make one, or refuse.**
@@ -1110,7 +1113,8 @@ fn void on_close(InnerQueue* remaining);
 
 **`on_close` — take everything that is left.**
 
-- Called with everything that remained, as one flat queue.
+- Called with everything that remained, as one flat queue, by value: *I do not
+  care what you did.* The pool does not verify it and never will.
 - Process or free every item in it.
 - No order is promised.
 - Called once by `close`, and possibly once more with stragglers from a

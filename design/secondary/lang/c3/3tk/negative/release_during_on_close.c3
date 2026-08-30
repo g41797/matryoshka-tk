@@ -33,7 +33,7 @@ struct ParkingHooks (PoolHooks)
 fn void ParkingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
 fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
 
-fn void ParkingHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     while (Handle h = remaining.pop_front()) { }
     self.inside.store(1, RELEASE);

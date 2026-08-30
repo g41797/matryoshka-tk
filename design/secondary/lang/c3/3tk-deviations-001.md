@@ -415,7 +415,7 @@ The stack's was the sharper case, and the deletion rested on two grounds.
 **The first is `R15`: `push_slot`'s only caller was ever `pool.c3:451`,
 `put_all`'s refusal path**, and 002 dropped `put_all` — §5.1's row says so, and
 the queue's `push_front_slot` went with it for the same reason. The second, from
-`3tk-port-findings-003.md`, was that no application could reach an `InnerStack`
+`3tk-port-findings-004.md`, was that no application could reach an `InnerStack`
 at all. **3tk-only, and it was two lines plus one test.**
 
 **CLARIFIED 2026-08-26.** The owner's ruling that the stack is available to a

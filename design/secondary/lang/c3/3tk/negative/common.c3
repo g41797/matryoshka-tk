@@ -28,4 +28,4 @@ struct NullHooks (PoolHooks)
 
 fn void NullHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
 fn void NullHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
-fn void NullHooks.on_close(&self, InnerQueue* remaining) @dynamic { }
+fn void NullHooks.on_close(&self, InnerQueue remaining) @dynamic { }

@@ -75,7 +75,7 @@ fn void TestHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
     // otherwise the Slot stays full: kept as it is
 }
 
-fn void TestHooks.on_close(&self, InnerQueue* remaining) @dynamic
+fn void TestHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     // Part 12.2 calls the close hook exactly once, so this one cannot race
     // today. It is written the same way as the other two because the contract
