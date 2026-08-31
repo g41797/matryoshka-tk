@@ -27,7 +27,7 @@ PAGE="$OUT/docs.html"
 echo "== docgen =="
 # --emit-stdlib=no: the toolkit only. The stdlib pages bury it otherwise.
 # Warnings go to the terminal; they are the compiler's, not this script's.
-( cd "$OUT" && $C3C docgen --emit-stdlib=no "$ROOT/src" ) || {
+( cd "$OUT" && $C3C docgen --emit-stdlib=no "$ROOT/src" "$ROOT/examples" ) || {
     echo "docgen failed" >&2; exit 1; }
 [ -s "$PAGE" ] || { echo "no docs.html was produced" >&2; exit 1; }
 

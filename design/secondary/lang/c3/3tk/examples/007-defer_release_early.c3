@@ -1,0 +1,40 @@
+<*
+ Creating an outer on the heap: the defer goes before the create.
+
+ - Register the release first.
+ - Create a `Holder`.
+ - Send it on. The defer finds nothing to do.
+*>
+module exm::defer_release_early;
+import mtk;
+import mtk::managed;
+import mtk::mailbox;
+import exm::outers;
+import exm::helpers;
+
+faultdef DEFER_RELEASE_EARLY_FAILED;
+
+fn void? send_a_fresh_holder(Allocator a, Mailbox* mb)
+{
+    Slot s;
+    defer mtk::managed::release(Holder, &s);
+    mtk::managed::create(Holder, a, &s)!;
+    s.must(Holder).id = 42;
+    mb.send(&s)!;                                       // on success the defer does nothing
+}
+
+fn void? defer_release_goes_before_the_create(Allocator a)
+{
+    Mailbox* mb = mtk::mailbox::create(a)!;
+    defer { InnerQueue left; mb.close(&left); mb.release(); }
+
+    send_a_fresh_holder(a, mb)!;
+
+    InnerQueue left;
+    mb.close(&left);
+    Handle h = left.pop_front();
+    exm::helpers::expect(DEFER_RELEASE_EARLY_FAILED, h != null, "the mailbox did not keep the Holder")!;
+    Slot s;
+    s.fill(h);
+    mtk::managed::release(Holder, &s);
+}

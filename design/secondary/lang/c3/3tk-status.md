@@ -29,6 +29,20 @@ value, `InnerQueue.take()` is in `queue.c3`, both `pool.c3` call sites use it,
 and `3tk-open-defects.md` has no open row left. Only **3TK-50** — the examples
 tree, independent of the fix — has not run.
 
+**Before 3TK-50 could start, the owner reviewed the pattern catalog and ruled
+a defect in it: a stack outer is illegal, not only across a mailbox or thread
+boundary.** 3tk computes an outer's address from its embedded `Inner` at every
+crossing, and a stack address is valid for exactly one lexical instance of one
+frame — a copy, or a use after the frame returns, reaches through a stale
+address, and it can appear to work before it fails. **This closed a Stage A,
+2026-08-31**, ahead of 3TK-50: the reference book, the pattern catalog and the
+example rules were revised — the one stack-outer example in each was replaced
+with a heap outer — and republished as new versions in a second local repo,
+[`matryoshka-3tk/design/`](https://github.com/g41797/matryoshka-3tk/tree/main/design),
+which the owner is also using for light builds and doc-site preview. The old
+versions moved to `backup/` here, and every live cross-reference in this repo
+now points at the new location. **3TK-50 starts from the corrected documents.**
+
 **The lifetime fix is built, on both tools, and its books are closed.** **The
 mailbox by 3TK-53 and the pool by 3TK-54, both 2026-08-28**; each `release` now
 checks `_closed && _active == 0` under the mutex and aborts in all four builds
@@ -75,13 +89,86 @@ settled the same way by 3TK-54:**
 
 | stage | what it does | start it with |
 |---|---|---|
-| **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`. Reads [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md) and [ref/3tk-patterns-001.md](ref/3tk-patterns-001.md). **Independent of the fix** | `Run 3TK-50.` |
+| **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`, run in steps grouped by catalog section. Reads [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md) and [3tk-patterns-002.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-002.md), both in `matryoshka-3tk/design/`. **Independent of the fix. Steps 1 through 7 ran 2026-08-31** | `Read design/secondary/lang/c3/3tk-status.md. Continue 3TK-50, step 8 (the next catalog section after "Topology patterns", "Pool patterns", entries 37-45).` |
 
 **3TK-52, 3TK-53, 3TK-54, 3TK-55 and 3TK-56 all ran, 2026-08-28 to
 2026-08-30**, and between them the two tools carry the mechanism, the defect
 list agrees with them, the shared specification states the rule and `on_close`
 is by value. **3TK-50 is the only stage left, and it does not block or get
 blocked by anything above.**
+
+**3TK-50 step 1 ran 2026-08-31**, catalog section "Slot and transfer idioms."
+`3tk/examples/` now exists: `outers.c3` and `helpers.c3` are the shared
+infrastructure, and nine files carry entries 1 and 3 through 10 (entry 2 has
+no code shape). `test/t_examples.c3` wraps all nine, and `project.json`'s
+`test-sources` gained `"examples"`. The log entry has the one finding worth
+keeping: a leak in entry 3's own example, from discarding the queue
+`Mailbox.close` gave back, which entry 30 itself warns against.
+
+**3TK-50 step 2 ran 2026-08-31**, catalog section "Crossing the border."
+Five more files carry entries 11, 12, 13, 15 and 16 (entry 14, "Stack outers
+are illegal", has no code shape — its prohibition is why every outer in this
+section and the last is heap-allocated). Two build errors surfaced only by
+`run-builds.sh`: a standalone `!catch` is not legal c3c 0.8.3, and
+`foreach (i : usz[3])` does not enumerate. Both are in the log entry.
+`run-builds.sh` is green — 87 checks, four builds, 106 tests each. **Not yet
+copied to `matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 3 ran 2026-08-31**, catalog section "Dispatch". Four more files
+carry entries 17 through 20 (entries 21 and 22 have no code shape — the last
+branch rule and a diagram — so neither has a file). One build error surfaced
+only by `run-builds.sh`: the catalog's entry 18 code shape still has
+`on_close` taking `InnerQueue*`, the signature from before 3TK-56 made the
+hook take the queue by value; the example was corrected, the catalog was not
+— it lives in `matryoshka-3tk` and this stage only writes `examples/`.
+`run-builds.sh` is green — 87 checks, four builds, 110 tests each. **Not yet
+copied to `matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 4 ran 2026-08-31**, catalog section "The infrastructure is an
+outer too". Four more files carry entries 23 through 26 — every entry in this
+section has a code shape, so all four got a file. One build error surfaced
+only by `run-builds.sh`: entry 26's no-op hooks struct had no fields, and c3c
+refuses a zero-sized struct; it was given one unused `bool` field. `run-builds.sh`
+is green — 87 checks, four builds, 114 tests each. **Not yet copied to
+`matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 5 ran 2026-08-31**, catalog section "Mailbox patterns". Six
+more files carry entries 27 through 32 — every entry in this section has a
+code shape, so all six got a file. One defect found before any build ran:
+entry 31's first draft called `send` on a mailbox already released, a
+use-after-free, fixed by releasing only after the refused send is checked.
+One build error surfaced only by `run-builds.sh`: entry 32's `Atomic{bool}`
+needed `import std::atomic::types` written explicitly, since nothing else in
+that file pulls it in the way `mtk` does elsewhere. Entry 32 is the section's
+only example with a real second thread, following `t_concurrency.c3`'s
+`Thread`/`thread::sleep` shape. `run-builds.sh` is green — 87 checks, four
+builds, 120 tests each. **Not yet copied to `matryoshka-3tk` or pushed** —
+that is the owner's step.
+
+**3TK-50 step 6 ran 2026-08-31, out of catalog order: the wrapper rule made
+explicit, and the two wrappers that already broke it.** The owner asked for
+the "no logic of its own" rule for `test/t_examples.c3` wrappers to be
+written down explicitly and for the tree to be checked against it before
+going further. [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md)
+now spells out that a wrapper may create and tear down shared infrastructure
+but must not touch a `Slot`, a `Handle` or an `InnerQueue` itself. Checked
+against every wrapper written by steps 1 through 5: two violated it —
+`test_example_insert_from_slot` drained and released a queue itself, and
+`test_example_reach_into_a_full_slot` received and released a Slot itself.
+Both moved into their example functions (`004-insert_from_slot.c3` and
+`016-reach_into_a_full_slot.c3`), and both wrappers are now call-and-assert.
+`run-builds.sh` is green — 87 checks, four builds, 120 tests each, unchanged
+in count since no test was added or removed. **Not yet copied to
+`matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 7 ran 2026-08-31**, catalog section "Topology patterns", entries
+33–36. Four more files carry entries 33 through 36 — none says *no code
+shape*, so all four got a file, composing the mailbox calls entries 27–32
+already established with real threads: `033-request_response.c3`,
+`034-pipeline.c3`, `035-fan_in.c3`, `036-fan_out.c3`. No build error, the
+first step since step 1 with none. `run-builds.sh` is green — 87 checks, four
+builds, 124 tests each. **Not yet copied to `matryoshka-3tk` or pushed** —
+that is the owner's step.
 
 ## Open questions
 
@@ -111,7 +198,7 @@ named holds the reasoning.
   is ever repaired it is repaired whole — `src/`, `ref/` and the shared
   specification together. **The deadline is dtk's first stage**, because dtk
   builds from the specification alone and would bake the word into a fourth port.
-  Written as a rule in [ref/3tk-example-rules-001.md](ref/3tk-example-rules-001.md).
+  Written as a rule in [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md).
 - **A ztk/3tk behavioural difference: whether `on_get` runs when a get already
   found a stored item.** 3tk does not, ztk does; Parts 11.7 and 12.2 side with
   3tk, the ztk audit and book with ztk. **Recorded, not ruled** — whichever way
@@ -190,18 +277,21 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-30, by 3TK-56, with no source changed since.
+been run. Last measured 2026-08-31, by 3TK-50 step 7 (`examples/` and
+`test/t_examples.c3` revised, `src/` untouched).
 
 ```
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green
-                           92 tests in each build
-./3tk/check-doc-loop.sh    0 differing blocks, 457 sentences, 456 found
-                           1 missing — the pre-existing inner.c3 module summary
-                           0 banned words
-./3tk/run-sanitizers.sh    3 passed, 0 failed — thread on two builds, address on
-                           one. Skips and exits 2 if its compiler is missing;
-                           a skip is not a pass
-grep -roiwE 'items?'       125 in 3tk/src, 366 in ref
+                           124 tests in each build
+./3tk/check-doc-loop.sh    not re-run this step — src/ did not change
+                           (last run: 0 differing blocks, 457 sentences, 456
+                           found, 1 missing — the pre-existing inner.c3 module
+                           summary; 0 banned words. REF must point at
+                           matryoshka-3tk's 3tk-reference-005.md; the in-repo
+                           default path is stale since the reference moved
+                           there)
+./3tk/run-sanitizers.sh    not re-run this step — src/ did not change
+grep -roiwE 'items?'       not re-run this step
 ```
 
 `run-builds.sh` needs `c3c` and nothing else, and that is deliberate. Both
@@ -238,13 +328,23 @@ scripts take an optional directory and exit 2 on a bad one.
   specification, the ztk audit, `port-flow-001.md`. Moved there 2026-08-23
   because a shared input inside one consumer's folder is a fork waiting to
   happen.
-- **`ref/`** — the live reference: [ref/3tk-reference-004.md](ref/3tk-reference-004.md),
-  [ref/3tk-decisions-004.md](ref/3tk-decisions-004.md),
-  [ref/3tk-doc-loop-003.md](ref/3tk-doc-loop-003.md), the example rules and the
-  pattern catalog. **The only place staleness can hide**, since everything else
-  is a frozen stage output.
+- **`ref/`** — the live reference: [ref/3tk-decisions-004.md](ref/3tk-decisions-004.md),
+  [ref/3tk-doc-loop-004.md](ref/3tk-doc-loop-004.md). **The only place staleness
+  can hide**, since everything else is a frozen stage output.
+- **[`matryoshka-3tk/design/`](https://github.com/g41797/matryoshka-3tk/tree/main/design)**
+  — a second, separate local repo, for light builds, doc-site preview, and the
+  live copies pushed there after each verified step. **The reference book, the
+  example rules and the pattern catalog live there now, not in this repo's
+  `ref/`**: [3tk-reference-005.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-005.md),
+  [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md),
+  [3tk-patterns-002.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-002.md).
+  Moved there because the owner is running builds and previews from that repo
+  going forward. **Ask the owner exactly where before creating a new file
+  there — every time**, even though `design/` is the default target.
 - **`backup/`** — superseded versions. **Not a source of truth**, and the owner
-  empties it.
+  empties it. `3tk-patterns-001.md`, `3tk-example-rules-001.md`,
+  `3tk-reference-004.md` and `3tk-doc-loop-003.md` moved here when their
+  successors published to `matryoshka-3tk`.
 - **The port family:** otk (Odin), ztk (Zig, this repo), **3tk (C3, active)**,
   dtk (D — [../d/dtk-status.md](../d/dtk-status.md), no stage has run).
 - `design/STATUS.md` and `design/STATUS-LOG.md` are untouched by this work.
@@ -259,11 +359,21 @@ scripts take an optional directory and exit 2 on a bad one.
 Every line begins the same way, because every stage reads this file first:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. Run 3TK-50.
+Read design/secondary/lang/c3/3tk-status.md. Continue 3TK-50, step 8 (the next catalog section after "Topology patterns", "Pool patterns", entries 37-45).
 ```
 
-**Nothing is waiting on a ruling.** Both open questions were answered on
-2026-08-28 and each has a stage.
+**Nothing is waiting on a ruling.** Stage A closed the stack-outer defect on
+2026-08-31. 3TK-50 runs in steps, grouped by the pattern catalog's own
+sections — nine of them, in order — **except step 6, which ran out of
+catalog order**: the wrapper rule made explicit and the tree checked against
+it, after entries 27-32 exposed two wrappers that already broke it. A step
+number and a catalog section no longer match one-to-one because of it; the
+log entry for each step says which section, if any, it covers. Each step
+writes its examples (or, for a rule step, revises what an earlier step
+wrote), runs `3tk/run-builds.sh`, and only then is copied to `matryoshka-3tk`
+and pushed and previewed there, by the owner. This file's *stages that have
+not run* table names the next step; a later resume line names whichever step
+follows that.
 
 For orientation only:
 

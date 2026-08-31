@@ -3,7 +3,7 @@
   "authors": [ "g41797" ],
   "version": "0.1.0",
   "sources": [ "src/**" ],
-  "test-sources": [ "test" ],
+  "test-sources": [ "test", "examples" ],
   "targets": {
     "mtk": {
       "type": "static-lib"
