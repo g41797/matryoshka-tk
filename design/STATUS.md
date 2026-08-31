@@ -39,7 +39,7 @@ instruction, read this file and ask what to work on.
 ## Rules
 - Read STATUS.md in full each session. It says where we are and what is next.
 - Session Log lives in STATUS-LOG.md (append-only, newest entries at top). Do NOT read it by default — append new entries there without reading the rest. Read STATUS-LOG.md only when explicitly asked (history audit, "what did we do about X", resolving a specific past-decision question).
-- No git directly. Owner does git.
+- No git directly, in this or any other repo. Owner does git. Exception: plain `git status` may be run without asking; every other git command still needs the owner or explicit one-off approval.
 - No skipping stages. Each stage passes before the next.
 - No real code before infrastructure (Stage 0) is verified.
 - Show intent before code changes. Get owner approval.
@@ -53,7 +53,7 @@ instruction, read this file and ask what to work on.
 - Status file ownership. A fact lives in exactly one file; the others get a pointer, not a copy. STATUS.md = current state only, no stage narrative. Plan = forward-looking work + one line per completed stage. STATUS-LOG.md = the narrative. context.md = one short line per doc, saying what it is. Full entry in rules-049.md.
 
 ## Constraints for Next Agent (MUST)
-- Git disabled. Do NOT run any git commands.
+- Git disabled, in every repo, always. Do NOT run any git commands except plain `git status`, which is allowed on its own.
 - Coding style: LE imports, explicit types, explicit dereference, stdlib first, errdefer/defer for resource cleanup.
 - Doc style: short sentences, bullets, no AI-sh words. See plan Section 1.
 - Run verification via kitchen scripts, not manual zig commands.

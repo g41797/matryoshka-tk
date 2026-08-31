@@ -7,6 +7,83 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-31 — 3TK-57 follow-up: docs.yml now deploys to Pages
+
+**The Pages-collision question 3TK-57 left open is resolved — not by a
+ruling, but by the repo split itself.** The blocker was: *"this repo's Pages
+deployment already belongs to ztk's `docs.yml`. A second workflow calling
+`deploy-pages` without coordination would clobber it."* That was true only
+while both workflows lived in `matryoshka-tk`. Once 3tk's CI moved to its own
+repo, `matryoshka-3tk`, there is no second workflow in the same repo to
+clobber — ztk's Pages deployment is in a different repo entirely.
+
+**`matryoshka-3tk/.github/workflows/docs.yml` gained a `deploy` job**, added
+after the owner reviewed external advice (correct in shape, but guessed at
+`c3c docgen`'s output rather than checking it):
+
+- `docgen` job unchanged through the `c3c docgen --emit-stdlib=no src
+  examples` step, still no mkdocs and no `kitchen/tools/*.sh` equivalent —
+  plan 021 was explicit that there is nothing for the docs workflow to wrap
+  beyond that one command.
+- A new "Prepare Pages site" step: `mkdir site && cp docs.html
+  site/index.html`. `c3c docgen` writes one self-contained `docs.html` into
+  the current directory — `preview-docs.sh`'s own comment says so — not a
+  directory, so `actions/upload-pages-artifact@v3` (which needs a directory
+  with `index.html` at its root) can't point at `docs.html` directly.
+- `actions/upload-pages-artifact@v3` replaces the plain `actions/upload-artifact@v4`
+  step; a separate `deploy` job (`needs: docgen`, `permissions: {pages:
+  write, id-token: write}`, `environment: github-pages`) calls
+  `actions/deploy-pages@v4`.
+
+**Still the owner's step, not run here:** enabling Pages on `matryoshka-3tk`
+(Settings → Pages → Source: GitHub Actions) before the workflow's `deploy`
+job can succeed.
+
+## 2026-08-31 — 3TK-57: GitHub Actions CI, built in `matryoshka-3tk`
+
+Plan 021 declared `.github/workflows/3tk-linux.yml`, `3tk-sanitizers.yml`,
+`3tk-docs.yml` and README badges here, in `matryoshka-tk`, scoped with
+`paths:`/`working-directory` to `design/secondary/lang/c3/3tk/**` — the same
+pattern ztk's own workflows use in this repo.
+
+**The owner corrected that placement mid-stage: every 3tk workflow belongs in
+`matryoshka-3tk` (local path `~/dev/root/github.com/g41797/matryoshka-3tk`),
+not here.** That repo is 3tk's own tree — `src/`, `test/`, `negative/`,
+`examples/`, `project.json` and `scripts/{run-builds,run-sanitizers,preview-docs}.sh`
+all live at its root, mirroring how ztk's repo owns its own `.github/`. The
+first draft, written directly into `matryoshka-tk/.github/workflows/`, was
+removed and rewritten there instead.
+
+**Written, in `matryoshka-3tk`:**
+
+- `.github/workflows/linux.yml` — push/pull_request/workflow_dispatch,
+  `c3c build mtk` + `c3c test`, matrix `safe:[yes,no] × opt:[O0,O3]`, matching
+  `scripts/run-builds.sh`'s four `MODES`. No `paths:` or
+  `working-directory` needed — the whole repo is 3tk.
+- `.github/workflows/sanitizers.yml` — `workflow_dispatch` only, installs
+  clang via `apt-get`, then `c3c test --sanitize=<thread|address> --cc clang`
+  for the same three combinations `scripts/run-sanitizers.sh` runs (`thread
+  safe-O0`, `thread fast-O3`, `address safe-O0`), 15-minute timeout per job.
+- `.github/workflows/docs.yml` — push to `main` on `src/**`/`examples/**`
+  plus `workflow_dispatch`; `c3c docgen --emit-stdlib=no src examples`,
+  uploaded as a build artifact, not deployed to Pages (the open
+  coexistence question with ztk's Pages deployment is unchanged by this).
+- Three README badges added to `matryoshka-3tk/README.md`, which had none
+  before.
+
+**Installing c3c**, same in every workflow, verified against the live GitHub
+API for `v0.8.3` before being written rather than assumed: the Linux asset is
+`c3-linux.tar.gz`, confirmed to extract to `c3/` containing `c3/c3c` — fetched
+and inspected with `curl`/`tar tzf`, not recalled from memory.
+
+**No stage ran `git`.** All six files (three workflows, one README edit) were
+written directly; nothing was staged, committed, or pushed in either repo. The
+owner saves and pushes both.
+
+**A memory record was added** (`3tk-ci-lives-in-matryoshka-3tk` in Claude's
+memory) so a future 3tk CI/workflow task starts from the corrected repo
+without repeating this correction.
+
 ## 2026-08-31 — 3TK-50 step 9: Shutdown, entries 46–48
 
 **Catalog section "Shutdown."** One of the three entries carries a code

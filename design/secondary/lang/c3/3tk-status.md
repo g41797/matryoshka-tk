@@ -515,6 +515,7 @@ not the record.
 | **3TK-52** | the shared clause: closed and quiet, and specification 005 | 2026-08-28 |
 | **3TK-55** | the defect list catches up with the code | 2026-08-28 |
 | **3TK-56** | the close hook takes the queue by value, and `P6` is closed | 2026-08-30 |
+| **3TK-57** | GitHub Actions CI — built in `matryoshka-3tk`, not here | 2026-08-31 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.
