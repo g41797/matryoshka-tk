@@ -7,12 +7,12 @@
  - `close` gives back whatever no worker claimed, and the closer releases it
    — every time.
 *>
-module exm::fan_out;
+module shc::fan_out;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::thread;
 import std::time;
 import std::atomic::types;
@@ -73,7 +73,7 @@ fn void? each_outer_goes_to_exactly_one_worker(Allocator a, Mailbox* mbx)
         leftover++;
     }
 
-    exm::helpers::expect(FAN_OUT_FAILED, claimed.load() + leftover == 6, "every outer was either claimed or came back from close")!;
+    shc::helpers::expect(FAN_OUT_FAILED, claimed.load() + leftover == 6, "every outer was either claimed or came back from close")!;
 
     mbx.release();
 }

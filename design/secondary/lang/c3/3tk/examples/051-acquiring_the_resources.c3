@@ -5,13 +5,13 @@
  - Build a `Master` whose fields are plain `Mailbox*` and `Pool*`.
  - Confirm neither is an optional and neither needs unwrapping.
 *>
-module exm::acquiring_the_resources;
+module shc::acquiring_the_resources;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::core::mem::alloc;
 
 faultdef ACQUIRING_THE_RESOURCES_FAILED;
@@ -61,8 +61,8 @@ fn void? resources_are_plain_pointers(Allocator a)
     hooks.alloc = a;
     Master* m = master_create(a, &hooks)!;
 
-    exm::helpers::expect(ACQUIRING_THE_RESOURCES_FAILED, m.mbx != null, "the mailbox is a plain pointer, not a Slot")!;
-    exm::helpers::expect(ACQUIRING_THE_RESOURCES_FAILED, m.pool != null, "the pool is a plain pointer, not a Slot")!;
+    shc::helpers::expect(ACQUIRING_THE_RESOURCES_FAILED, m.mbx != null, "the mailbox is a plain pointer, not a Slot")!;
+    shc::helpers::expect(ACQUIRING_THE_RESOURCES_FAILED, m.pool != null, "the pool is a plain pointer, not a Slot")!;
 
     InnerQueue left;
     m.mbx.close(&left);

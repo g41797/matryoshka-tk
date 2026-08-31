@@ -5,11 +5,11 @@
  - Build two tables that disagree about what an `Event` means.
  - Dispatch the same outer through both and confirm each ran its own handler.
 *>
-module exm::dispatch_table;
+module shc::dispatch_table;
 import mtk;
 import mtk::managed;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef DISPATCH_TABLE_FAILED;
 
@@ -48,9 +48,9 @@ fn void? dispatch_same_identity_two_ways(Allocator a)
 
     Counter c;
     log_table.dispatch(&c, &s)!;
-    exm::helpers::expect(DISPATCH_TABLE_FAILED, c.logged == 1, "the log table must run log_event on an Event")!;
-    exm::helpers::expect(DISPATCH_TABLE_FAILED, s.is_full(), "a handler that does not take the outer leaves the Slot full")!;
+    shc::helpers::expect(DISPATCH_TABLE_FAILED, c.logged == 1, "the log table must run log_event on an Event")!;
+    shc::helpers::expect(DISPATCH_TABLE_FAILED, s.is_full(), "a handler that does not take the outer leaves the Slot full")!;
 
     count_table.dispatch(&c, &s)!;
-    exm::helpers::expect(DISPATCH_TABLE_FAILED, c.counted == 1, "the count table must run count_event on the same Event")!;
+    shc::helpers::expect(DISPATCH_TABLE_FAILED, c.counted == 1, "the count table must run count_event on the same Event")!;
 }

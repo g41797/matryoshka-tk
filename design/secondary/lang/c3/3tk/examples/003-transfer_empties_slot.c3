@@ -7,13 +7,13 @@
  - Push a `Holder` onto a queue from a Slot.
  - Each Slot is empty right after its transfer.
 *>
-module exm::transfer_empties_slot;
+module shc::transfer_empties_slot;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef TRANSFER_FAILED;
 
@@ -75,27 +75,27 @@ fn void? demonstrate_transfer_empties_slot(Allocator a)
     defer mtk::managed::release(Holder, &to_send);
     mtk::managed::create(Holder, a, &to_send)!;
     mb.send(&to_send)!;
-    exm::helpers::expect(TRANSFER_FAILED, to_send.is_empty(), "send left the Slot full")!;
+    shc::helpers::expect(TRANSFER_FAILED, to_send.is_empty(), "send left the Slot full")!;
 
     Slot to_put;
     defer mtk::managed::release(Holder, &to_put);
     mtk::managed::create(Holder, a, &to_put)!;
     p.put(&to_put);
-    exm::helpers::expect(TRANSFER_FAILED, to_put.is_empty(), "put left the Slot full")!;
+    shc::helpers::expect(TRANSFER_FAILED, to_put.is_empty(), "put left the Slot full")!;
 
     Slot to_move;
     defer mtk::managed::release(Holder, &to_move);
     mtk::managed::create(Holder, a, &to_move)!;
     Holder* moved = to_move.move(Holder);
-    exm::helpers::expect(TRANSFER_FAILED, to_move.is_empty(), "move left the Slot full")!;
-    exm::helpers::expect(TRANSFER_FAILED, moved != null, "move gave back null")!;
+    shc::helpers::expect(TRANSFER_FAILED, to_move.is_empty(), "move left the Slot full")!;
+    shc::helpers::expect(TRANSFER_FAILED, moved != null, "move gave back null")!;
     alloc::free(a, moved);
 
     Slot to_queue;
     defer mtk::managed::release(Holder, &to_queue);
     mtk::managed::create(Holder, a, &to_queue)!;
     q.push_back_slot(&to_queue);
-    exm::helpers::expect(TRANSFER_FAILED, to_queue.is_empty(), "push_back_slot left the Slot full")!;
+    shc::helpers::expect(TRANSFER_FAILED, to_queue.is_empty(), "push_back_slot left the Slot full")!;
 }
 
 //----------------------

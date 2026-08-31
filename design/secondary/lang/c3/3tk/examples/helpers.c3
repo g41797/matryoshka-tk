@@ -4,7 +4,7 @@
  `expect` takes the fault to return, the condition, and the message.
  It survives all four builds, unlike `assert`.
 *>
-module exm::helpers;
+module shc::helpers;
 import std::io;
 
 <*

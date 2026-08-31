@@ -5,12 +5,12 @@
  - `on_get` reads `self.cap` and `self.live` with no cast.
  - `on_close` gives the remainder back to the same object.
 *>
-module exm::the_hook_object_is_the_context;
+module shc::the_hook_object_is_the_context;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::atomic::types;
 
 faultdef HOOK_OBJECT_IS_THE_CONTEXT_FAILED;
@@ -60,5 +60,5 @@ fn void? no_cast_needed(Allocator a)
     s.must(Holder).id = 7;
     p.put(&s);
 
-    exm::helpers::expect(HOOK_OBJECT_IS_THE_CONTEXT_FAILED, hooks.live.load(ACQUIRE) == 1, "the hook's own field must reflect what it did")!;
+    shc::helpers::expect(HOOK_OBJECT_IS_THE_CONTEXT_FAILED, hooks.live.load(ACQUIRE) == 1, "the hook's own field must reflect what it did")!;
 }

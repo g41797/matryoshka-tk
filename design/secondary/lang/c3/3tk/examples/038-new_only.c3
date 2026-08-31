@@ -4,12 +4,12 @@
  - Put one `Holder` back into the pool.
  - Get with `NEW_ONLY`: the hook runs, and the pool now holds two.
 *>
-module exm::new_only;
+module shc::new_only;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef NEW_ONLY_FAILED;
 
@@ -44,10 +44,10 @@ fn void? new_ignores_what_is_kept(Allocator a)
     Slot seed;
     p.get(Holder::typeid, NEW_ONLY, &seed)!;
     p.put(&seed);
-    exm::helpers::expect(NEW_ONLY_FAILED, hooks.created == 1, "the seed itself came from the hook")!;
+    shc::helpers::expect(NEW_ONLY_FAILED, hooks.created == 1, "the seed itself came from the hook")!;
 
     Slot s;
     p.get(Holder::typeid, NEW_ONLY, &s)!;
     defer p.put(&s);
-    exm::helpers::expect(NEW_ONLY_FAILED, hooks.created == 2, "NEW_ONLY must ask the hook even though one outer was kept")!;
+    shc::helpers::expect(NEW_ONLY_FAILED, hooks.created == 2, "NEW_ONLY must ask the hook even though one outer was kept")!;
 }

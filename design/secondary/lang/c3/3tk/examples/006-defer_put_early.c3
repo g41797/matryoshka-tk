@@ -6,12 +6,12 @@
  - Set a field.
  - Let the deferred `put` give it back.
 *>
-module exm::defer_put_early;
+module shc::defer_put_early;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef DEFER_PUT_EARLY_FAILED;
 
@@ -53,5 +53,5 @@ fn void? defer_put_goes_before_the_get(Allocator a)
     defer { p.close(); p.release(); }
 
     get_from_a_pool(p)!;
-    exm::helpers::expect(DEFER_PUT_EARLY_FAILED, p.count_of(Holder::typeid) == 1, "the pool did not get its Holder back")!;
+    shc::helpers::expect(DEFER_PUT_EARLY_FAILED, p.count_of(Holder::typeid) == 1, "the pool did not get its Holder back")!;
 }

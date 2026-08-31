@@ -5,11 +5,11 @@
  - The right shape goes through `mtk::managed::create`, which writes the
    allocator and the identity together.
 *>
-module exm::no_raw_allocator_call;
+module shc::no_raw_allocator_call;
 import mtk;
 import mtk::managed;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef NO_RAW_ALLOCATOR_CALL_FAILED;
 
@@ -22,5 +22,5 @@ fn void? never_a_raw_allocator_call(Allocator a)
     defer mtk::managed::release(Holder, &s);
     mtk::managed::create(Holder, a, &s)!;
 
-    exm::helpers::expect(NO_RAW_ALLOCATOR_CALL_FAILED, mtk::helper::is_mine(s.peek(), Holder), "the outer carries no identity")!;
+    shc::helpers::expect(NO_RAW_ALLOCATOR_CALL_FAILED, mtk::helper::is_mine(s.peek(), Holder), "the outer carries no identity")!;
 }

@@ -6,11 +6,11 @@
  - Send the wrapper.
  - Receive it back and confirm both the endpoint and the job id crossed.
 *>
-module exm::infrastructure_wrapper;
+module shc::infrastructure_wrapper;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::helpers;
+import shc::helpers;
 import std::time;
 
 faultdef INFRASTRUCTURE_WRAPPER_FAILED;
@@ -45,6 +45,6 @@ fn void? wrapper_carries_the_job_id(Allocator a, Mailbox* to, Mailbox* inbox)
     to.receive(&s, time::ms(1000))!;
 
     WorkerInbox* w = s.must(WorkerInbox);
-    exm::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.mbx == inbox, "the wrapper must carry the same inbox pointer")!;
-    exm::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.job_id == 42, "the wrapper must carry the job id")!;
+    shc::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.mbx == inbox, "the wrapper must carry the same inbox pointer")!;
+    shc::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.job_id == 42, "the wrapper must carry the job id")!;
 }

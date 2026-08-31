@@ -7,12 +7,12 @@
    timeout.
  - The worker answers on the response mailbox, and the caller reads it.
 *>
-module exm::request_response;
+module shc::request_response;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::thread;
 import std::time;
 
@@ -52,5 +52,5 @@ fn void? one_request_one_response(Allocator a, Mailbox* req_mbx, Mailbox* resp_m
 
     worker.join()!!;
 
-    exm::helpers::expect(REQUEST_RESPONSE_FAILED, reply.must(Event).code == 42, "the response carries the doubled request")!;
+    shc::helpers::expect(REQUEST_RESPONSE_FAILED, reply.must(Event).code == 42, "the response carries the doubled request")!;
 }

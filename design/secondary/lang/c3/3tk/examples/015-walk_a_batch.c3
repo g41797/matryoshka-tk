@@ -6,12 +6,12 @@
  - Walk it with an iterator, without consuming it.
  - Walk it again with `pop_front`, releasing each outer.
 *>
-module exm::walk_a_batch;
+module shc::walk_a_batch;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef WALK_A_BATCH_FAILED;
 
@@ -35,8 +35,8 @@ fn void? walk_a_received_batch(Allocator a)
     usz seen;
     InnerQueueIterator it = batch.iter();
     while (Handle h = it.next()) { seen++; }
-    exm::helpers::expect(WALK_A_BATCH_FAILED, seen == 3, "the iterator should see all three without consuming them")!;
-    exm::helpers::expect(WALK_A_BATCH_FAILED, batch.len() == 3, "walking with an iterator must not consume the queue")!;
+    shc::helpers::expect(WALK_A_BATCH_FAILED, seen == 3, "the iterator should see all three without consuming them")!;
+    shc::helpers::expect(WALK_A_BATCH_FAILED, batch.len() == 3, "walking with an iterator must not consume the queue")!;
 
     while (Handle h = batch.pop_front())
     {
@@ -44,5 +44,5 @@ fn void? walk_a_received_batch(Allocator a)
         s.fill(h);
         mtk::managed::release(Holder, &s);
     }
-    exm::helpers::expect(WALK_A_BATCH_FAILED, batch.is_empty(), "pop_front should have drained the queue")!;
+    shc::helpers::expect(WALK_A_BATCH_FAILED, batch.is_empty(), "pop_front should have drained the queue")!;
 }

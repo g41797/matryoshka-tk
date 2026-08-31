@@ -5,13 +5,13 @@
  - Get one outer of each identity the pool was created with.
  - Close the pool and let `on_close` release what is left through the outer-first chain.
 *>
-module exm::dispatch_identity_first;
+module shc::dispatch_identity_first;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
-import exm::dispatch_outer_first;
+import shc::outers;
+import shc::helpers;
+import shc::dispatch_outer_first;
 
 faultdef DISPATCH_IDENTITY_FIRST_FAILED;
 
@@ -36,7 +36,7 @@ fn void CreateByIdentityHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(h);
-        exm::dispatch_outer_first::free_outer(&s);
+        shc::dispatch_outer_first::free_outer(&s);
     }
 }
 
@@ -48,15 +48,15 @@ fn void? get_one_of_each_then_close(Allocator a)
 
     Slot s;
     p.get(Event::typeid, AVAILABLE_OR_NEW, &s)!;
-    exm::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Event) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Event) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.get(Sensor::typeid, AVAILABLE_OR_NEW, &s)!;
-    exm::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Sensor) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Sensor) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
-    exm::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Holder) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Holder) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.close();          // on_close dispatches the three kept outers through free_outer

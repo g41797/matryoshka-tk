@@ -6,12 +6,12 @@
  - `process_the_work` is `wake_all` and nothing else.
  - Confirm all four crossed, in order.
 *>
-module exm::the_step;
+module shc::the_step;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef THE_STEP_FAILED;
 
@@ -51,5 +51,5 @@ fn void? one_step_one_name(Allocator a, Mailbox* mb)
         defer mtk::managed::release(Event, &s);
         total += s.must(Event).code;
     }
-    exm::helpers::expect(THE_STEP_FAILED, total == 1 + 2 + 3 + 4, "seed_the_work sent all four, in order")!;
+    shc::helpers::expect(THE_STEP_FAILED, total == 1 + 2 + 3 + 4, "seed_the_work sent all four, in order")!;
 }

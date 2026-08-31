@@ -5,12 +5,12 @@
  - Create an `Event`, set its field, and send it.
  - Receive it back and confirm the field crossed unchanged.
 *>
-module exm::identity_costs_nothing;
+module shc::identity_costs_nothing;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::time;
 
 faultdef AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED;
@@ -25,5 +25,5 @@ fn void? a_new_type_costs_nothing(Allocator a, Mailbox* mb)
     Slot got;
     defer mtk::managed::release(Event, &got);
     mb.receive(&got, time::ms(2000))!;
-    exm::helpers::expect(AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED, got.must(Event).code == 1, "the new type crossed the mailbox unchanged")!;
+    shc::helpers::expect(AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED, got.must(Event).code == 1, "the new type crossed the mailbox unchanged")!;
 }

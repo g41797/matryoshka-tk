@@ -6,12 +6,12 @@
  - Send three `Holder` outers into a mailbox and receive them as a batch.
  - Walk the batch with the one loop shape, releasing each as it goes.
 *>
-module exm::the_optional_declaration_walk;
+module shc::the_optional_declaration_walk;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef THE_OPTIONAL_DECLARATION_WALK_FAILED;
 
@@ -45,6 +45,6 @@ fn void? the_declaration_is_the_condition(Allocator a)
     mb.receive_all(&batch)!;
 
     usz n = walk_and_release(&batch);
-    exm::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, n == 3, "the walk saw every handle the queue held")!;
-    exm::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, batch.is_empty(), "pop_front left nothing behind")!;
+    shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, n == 3, "the walk saw every handle the queue held")!;
+    shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, batch.is_empty(), "pop_front left nothing behind")!;
 }

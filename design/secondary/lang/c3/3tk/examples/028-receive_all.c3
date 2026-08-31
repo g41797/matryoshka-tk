@@ -6,12 +6,12 @@
  - Drain them all in one call.
  - Release each one.
 *>
-module exm::receive_all;
+module shc::receive_all;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef RECEIVE_ALL_FAILED;
 
@@ -37,9 +37,9 @@ fn void? receive_all_at_once(Allocator a, Mailbox* mb)
     {
         Slot s;
         s.fill(h);
-        exm::helpers::expect(RECEIVE_ALL_FAILED, s.to(Holder) != null, "every drained outer is the Holder that was sent")!;
+        shc::helpers::expect(RECEIVE_ALL_FAILED, s.to(Holder) != null, "every drained outer is the Holder that was sent")!;
         mtk::managed::release(Holder, &s);
         count++;
     }
-    exm::helpers::expect(RECEIVE_ALL_FAILED, count == 3, "all three outers came back in one call")!;
+    shc::helpers::expect(RECEIVE_ALL_FAILED, count == 3, "all three outers came back in one call")!;
 }

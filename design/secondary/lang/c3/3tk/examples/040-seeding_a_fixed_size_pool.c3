@@ -5,12 +5,12 @@
  - Seed a fixed size.
  - `AVAILABLE_OR_NEW` past the seed reports `NOT_CREATED`.
 *>
-module exm::seeding_a_fixed_size_pool;
+module shc::seeding_a_fixed_size_pool;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef SEEDING_A_FIXED_SIZE_POOL_FAILED;
 
@@ -69,7 +69,7 @@ fn void? seed_caps_the_pool(Allocator a)
     Slot s3;
     if (catch f = p.get(Holder::typeid, AVAILABLE_OR_NEW, &s3))
     {
-        exm::helpers::expect(SEEDING_A_FIXED_SIZE_POOL_FAILED, f == mtk::NOT_CREATED, "past the seed the hook must report NOT_CREATED")!;
+        shc::helpers::expect(SEEDING_A_FIXED_SIZE_POOL_FAILED, f == mtk::NOT_CREATED, "past the seed the hook must report NOT_CREATED")!;
         return;
     }
     return SEEDING_A_FIXED_SIZE_POOL_FAILED~;

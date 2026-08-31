@@ -5,12 +5,12 @@
  - Try to put a `Holder` back into it.
  - The primary defer runs first and does nothing; the fallback releases it.
 *>
-module exm::refused_put_fallback;
+module shc::refused_put_fallback;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef FALLBACK_RELEASE_FAILED;
 
@@ -53,9 +53,9 @@ fn void? fallback_releases_what_the_pool_refused(Allocator a)
 
     p.close();
 
-    exm::helpers::expect(FALLBACK_RELEASE_FAILED, s.is_full(), "the Holder is missing before the refused put")!;
+    shc::helpers::expect(FALLBACK_RELEASE_FAILED, s.is_full(), "the Holder is missing before the refused put")!;
     put_or_release(p, &s);
-    exm::helpers::expect(FALLBACK_RELEASE_FAILED, s.is_empty(), "the fallback did not take the Holder")!;
+    shc::helpers::expect(FALLBACK_RELEASE_FAILED, s.is_empty(), "the fallback did not take the Holder")!;
 
     p.release();
 }

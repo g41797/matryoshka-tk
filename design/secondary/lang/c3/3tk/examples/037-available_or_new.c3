@@ -6,12 +6,12 @@
  - Get with `AVAILABLE_OR_NEW`: the kept outer comes back, the hook does not run.
  - Put it back, get again: still the same outer, the hook still has not run.
 *>
-module exm::available_or_new;
+module shc::available_or_new;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef AVAILABLE_OR_NEW_FAILED;
 
@@ -45,11 +45,11 @@ fn void? reuse_before_create(Allocator a)
 
     Slot s;
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
-    exm::helpers::expect(AVAILABLE_OR_NEW_FAILED, hooks.created == 1, "the first get has nothing kept, so the hook must run")!;
+    shc::helpers::expect(AVAILABLE_OR_NEW_FAILED, hooks.created == 1, "the first get has nothing kept, so the hook must run")!;
     p.put(&s);
 
     Slot s2;
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s2)!;
-    exm::helpers::expect(AVAILABLE_OR_NEW_FAILED, hooks.created == 1, "a kept outer must be reused, so the hook must not run again")!;
+    shc::helpers::expect(AVAILABLE_OR_NEW_FAILED, hooks.created == 1, "a kept outer must be reused, so the hook must not run again")!;
     p.put(&s2);
 }

@@ -6,12 +6,12 @@
  - The master receives it and checks the instance, a real pointer compare.
  - The master drains, closes and releases the worker's mailbox.
 *>
-module exm::worker_finish_signal;
+module shc::worker_finish_signal;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::time;
 
 faultdef WORKER_FINISH_SIGNAL_FAILED;

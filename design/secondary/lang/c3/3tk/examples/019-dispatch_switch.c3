@@ -5,11 +5,11 @@
  - Take the handle and switch on its identity, asserting the prong's type.
  - Release the outer once the switch has touched it.
 *>
-module exm::dispatch_switch;
+module shc::dispatch_switch;
 import mtk;
 import mtk::managed;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef DISPATCH_SWITCH_FAILED;
 
@@ -34,16 +34,16 @@ fn void? dispatch_by_switch(Allocator a)
 
     mtk::managed::create(Event, a, &s)!;
     touch_by_switch(s.peek());
-    exm::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Event).code == 1, "the Event prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Event).code == 1, "the Event prong must run")!;
     mtk::managed::release(Event, &s);
 
     mtk::managed::create(Sensor, a, &s)!;
     touch_by_switch(s.peek());
-    exm::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Sensor).reading == 1, "the Sensor prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Sensor).reading == 1, "the Sensor prong must run")!;
     mtk::managed::release(Sensor, &s);
 
     mtk::managed::create(Holder, a, &s)!;
     touch_by_switch(s.peek());
-    exm::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Holder).id == 1, "the Holder prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Holder).id == 1, "the Holder prong must run")!;
     mtk::managed::release(Holder, &s);
 }

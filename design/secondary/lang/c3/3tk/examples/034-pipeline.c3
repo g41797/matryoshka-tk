@@ -8,12 +8,12 @@
  - The caller sends three values and the marker, then drains the output
    mailbox.
 *>
-module exm::pipeline;
+module shc::pipeline;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::thread;
 import std::time;
 
@@ -77,6 +77,6 @@ fn void? values_cross_one_stage_doubled(Allocator a, Mailbox* in_mbx, Mailbox* o
 
     stage.join()!!;
 
-    exm::helpers::expect(PIPELINE_FAILED, total == 2 + 4 + 6, "every value crossed the stage doubled")!;
-    exm::helpers::expect(PIPELINE_FAILED, saw_marker, "the end-of-stream marker travelled the chain too")!;
+    shc::helpers::expect(PIPELINE_FAILED, total == 2 + 4 + 6, "every value crossed the stage doubled")!;
+    shc::helpers::expect(PIPELINE_FAILED, saw_marker, "the end-of-stream marker travelled the chain too")!;
 }

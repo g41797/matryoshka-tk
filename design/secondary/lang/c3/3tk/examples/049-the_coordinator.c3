@@ -6,13 +6,13 @@
  - Process the work: receive each outer, put it back, and count it.
  - Shut down: close the mailbox, put back what it kept, then close the pool.
 *>
-module exm::the_coordinator;
+module shc::the_coordinator;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::time;
 
 faultdef THE_COORDINATOR_FAILED;

@@ -7,10 +7,10 @@
  - The main thread flips a flag and calls `wake_all`.
  - The receiver sees `WOKEN`, reads the flag, and returns.
 *>
-module exm::wake_without_a_message;
+module shc::wake_without_a_message;
 import mtk;
 import mtk::mailbox;
-import exm::helpers;
+import shc::helpers;
 import std::thread;
 import std::time;
 import std::atomic::types;
@@ -64,6 +64,6 @@ fn void? wake_reaches_a_blocked_receiver(Mailbox* mb)
 
     receiver.join()!!;
 
-    exm::helpers::expect(WAKE_WITHOUT_A_MESSAGE_FAILED, saw_woken.load(ACQUIRE), "the blocked receiver reported WOKEN")!;
-    exm::helpers::expect(WAKE_WITHOUT_A_MESSAGE_FAILED, !mb.is_closed(), "a wake does not close the mailbox")!;
+    shc::helpers::expect(WAKE_WITHOUT_A_MESSAGE_FAILED, saw_woken.load(ACQUIRE), "the blocked receiver reported WOKEN")!;
+    shc::helpers::expect(WAKE_WITHOUT_A_MESSAGE_FAILED, !mb.is_closed(), "a wake does not close the mailbox")!;
 }

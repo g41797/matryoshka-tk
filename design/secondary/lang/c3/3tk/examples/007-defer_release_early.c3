@@ -5,12 +5,12 @@
  - Create a `Holder`.
  - Send it on. The defer finds nothing to do.
 *>
-module exm::defer_release_early;
+module shc::defer_release_early;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef DEFER_RELEASE_EARLY_FAILED;
 
@@ -33,7 +33,7 @@ fn void? defer_release_goes_before_the_create(Allocator a)
     InnerQueue left;
     mb.close(&left);
     Handle h = left.pop_front();
-    exm::helpers::expect(DEFER_RELEASE_EARLY_FAILED, h != null, "the mailbox did not keep the Holder")!;
+    shc::helpers::expect(DEFER_RELEASE_EARLY_FAILED, h != null, "the mailbox did not keep the Holder")!;
     Slot s;
     s.fill(h);
     mtk::managed::release(Holder, &s);

@@ -5,12 +5,12 @@
  - Send a pool's identity through a mailbox.
  - Receive it and confirm the pointer matches, hooks and all.
 *>
-module exm::pool_as_message;
+module shc::pool_as_message;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::time;
 
 faultdef POOL_AS_MESSAGE_FAILED;
@@ -44,5 +44,5 @@ fn void? a_travelling_pool_carries_its_policy(Allocator a)
     to.receive(&s, time::ms(1000))!;
     Pool* got = mtk::pool::of(s.peek());
 
-    exm::helpers::expect(POOL_AS_MESSAGE_FAILED, got == p, "the pool that arrives must be the one that was sent")!;
+    shc::helpers::expect(POOL_AS_MESSAGE_FAILED, got == p, "the pool that arrives must be the one that was sent")!;
 }

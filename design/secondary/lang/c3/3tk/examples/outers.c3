@@ -5,7 +5,7 @@
  `Sensor` and `Holder` do not, and both cross exactly the same way.
  All three carry an `Allocator`, so all three may take `mtk::managed`.
 *>
-module exm::outers;
+module shc::outers;
 import mtk;
 import std::core::mem::alloc;
 

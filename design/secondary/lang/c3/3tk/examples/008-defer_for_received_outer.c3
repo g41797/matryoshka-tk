@@ -5,12 +5,12 @@
  - Receive it into a Slot, with the release deferred first.
  - A closed mailbox reaches the same defer through the fault path.
 *>
-module exm::defer_for_received_outer;
+module shc::defer_for_received_outer;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::time;
 
 faultdef DEFER_RECEIVED_FAILED;

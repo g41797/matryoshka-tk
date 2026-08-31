@@ -6,12 +6,12 @@
  - Try to send a `Holder` into it and see the send refused.
  - Release the Holder, since the mailbox never took it.
 *>
-module exm::release_a_refused_transfer;
+module shc::release_a_refused_transfer;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef REFUSED_TRANSFER_FAILED;
 
@@ -19,8 +19,8 @@ fn void? send_or_release(Mailbox* mb, Slot* s)
 {
     if (catch f = mb.send(s))
     {
-        exm::helpers::expect(REFUSED_TRANSFER_FAILED, f == mtk::CLOSED, "a refused send fails CLOSED")!;
-        exm::helpers::expect(REFUSED_TRANSFER_FAILED, s.is_full(), "a refused send leaves the outer with the caller")!;
+        shc::helpers::expect(REFUSED_TRANSFER_FAILED, f == mtk::CLOSED, "a refused send fails CLOSED")!;
+        shc::helpers::expect(REFUSED_TRANSFER_FAILED, s.is_full(), "a refused send leaves the outer with the caller")!;
         mtk::managed::release(Holder, s);
         return f~;
     }

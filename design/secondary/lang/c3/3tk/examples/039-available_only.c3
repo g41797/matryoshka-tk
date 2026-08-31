@@ -6,12 +6,12 @@
  - Drain with `AVAILABLE_ONLY` until `NOT_AVAILABLE`.
  - The hook never ran on this path.
 *>
-module exm::available_only;
+module shc::available_only;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef AVAILABLE_ONLY_FAILED;
 
@@ -68,6 +68,6 @@ fn void? drain_stops_at_not_available(Allocator a)
     int seeded = hooks.created;
 
     usz taken = drain(p);
-    exm::helpers::expect(AVAILABLE_ONLY_FAILED, taken == 2, "both kept outers must be drained")!;
-    exm::helpers::expect(AVAILABLE_ONLY_FAILED, hooks.created == seeded, "the hook must not run on this path")!;
+    shc::helpers::expect(AVAILABLE_ONLY_FAILED, taken == 2, "both kept outers must be drained")!;
+    shc::helpers::expect(AVAILABLE_ONLY_FAILED, hooks.created == seeded, "the hook must not run on this path")!;
 }

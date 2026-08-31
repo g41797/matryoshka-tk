@@ -7,12 +7,12 @@
  - Put it back and confirm the hook ran, with `extra` left empty because
    this outer carries no parts of its own.
 *>
-module exm::composite_outer_gives_back;
+module shc::composite_outer_gives_back;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef A_COMPOSITE_OUTER_GIVES_BACK_ITS_PARTS_FAILED;
 
@@ -53,5 +53,5 @@ fn void? extra_is_taken_the_same_way_as_the_slot(Allocator a)
     Slot s;
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
     p.put(&s);
-    exm::helpers::expect(A_COMPOSITE_OUTER_GIVES_BACK_ITS_PARTS_FAILED, hooks.on_put_calls == 1, "on_put ran once for the outer put back")!;
+    shc::helpers::expect(A_COMPOSITE_OUTER_GIVES_BACK_ITS_PARTS_FAILED, hooks.on_put_calls == 1, "on_put ran once for the outer put back")!;
 }

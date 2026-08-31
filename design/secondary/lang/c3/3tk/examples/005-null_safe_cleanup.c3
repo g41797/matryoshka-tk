@@ -5,12 +5,12 @@
  - Move the pooled one onto a queue, so its Slot is empty by the time cleanup runs.
  - Let both deferred cleanups run: one has nothing to do, one does.
 *>
-module exm::null_safe_cleanup;
+module shc::null_safe_cleanup;
 import mtk;
 import mtk::managed;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef NULL_SAFE_CLEANUP_FAILED;
 
@@ -58,7 +58,7 @@ fn void? cleanup_survives_an_empty_slot(Allocator a)
     defer p.put(&pooled);                       // no-op: the queue already took it
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &pooled)!;
     q.push_back_slot(&pooled);
-    exm::helpers::expect(NULL_SAFE_CLEANUP_FAILED, pooled.is_empty(), "the pooled Slot is not empty")!;
+    shc::helpers::expect(NULL_SAFE_CLEANUP_FAILED, pooled.is_empty(), "the pooled Slot is not empty")!;
 
     Slot heaped;
     defer mtk::managed::release(Holder, &heaped);    // has work to do

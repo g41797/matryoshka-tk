@@ -6,10 +6,10 @@
  - Receive it and confirm the pointer matches.
  - Confirm the travelling mailbox is still open.
 *>
-module exm::mailbox_as_message;
+module shc::mailbox_as_message;
 import mtk;
 import mtk::mailbox;
-import exm::helpers;
+import shc::helpers;
 import std::time;
 
 faultdef MAILBOX_AS_MESSAGE_FAILED;
@@ -37,6 +37,6 @@ fn void? a_travelling_mailbox_stays_open(Allocator a)
     carrier.receive(&s, time::ms(1000))!;
     Mailbox* got = receive_mailbox(&s);
 
-    exm::helpers::expect(MAILBOX_AS_MESSAGE_FAILED, got == travelling, "the mailbox that arrives must be the one that was sent")!;
-    exm::helpers::expect(MAILBOX_AS_MESSAGE_FAILED, !got.is_closed(), "a mailbox that is travelling is still a working endpoint")!;
+    shc::helpers::expect(MAILBOX_AS_MESSAGE_FAILED, got == travelling, "the mailbox that arrives must be the one that was sent")!;
+    shc::helpers::expect(MAILBOX_AS_MESSAGE_FAILED, !got.is_closed(), "a mailbox that is travelling is still a working endpoint")!;
 }

@@ -8,12 +8,12 @@
    `WorkerCtx` pointer.
  - The caller sends three, closes the mailbox, and joins.
 *>
-module exm::the_thread_is_given_one_pointer;
+module shc::the_thread_is_given_one_pointer;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::thread;
 import std::time;
 import std::atomic::types;
@@ -61,5 +61,5 @@ fn void? one_pointer_is_the_whole_context(Allocator a, Mailbox* mb)
 
     t.join()!!;
 
-    exm::helpers::expect(THE_THREAD_IS_GIVEN_ONE_POINTER_FAILED, ctx.done.load(ACQUIRE) == 3, "the worker reached every outer through the one context pointer")!;
+    shc::helpers::expect(THE_THREAD_IS_GIVEN_ONE_POINTER_FAILED, ctx.done.load(ACQUIRE) == 3, "the worker reached every outer through the one context pointer")!;
 }

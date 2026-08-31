@@ -6,13 +6,13 @@
  - Take it down in reverse acquisition order, walking the mailbox's
    remainder itself and leaving the pool's to its hook.
 *>
-module exm::releasing_the_resources;
+module shc::releasing_the_resources;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::core::mem::alloc;
 
 faultdef RELEASING_THE_RESOURCES_FAILED;
@@ -84,5 +84,5 @@ fn void? reverse_acquisition_order(Allocator a)
     m.mbx.send(&pending)!;             // left in the mailbox at shutdown
 
     m.shut_down();
-    exm::helpers::expect(RELEASING_THE_RESOURCES_FAILED, hooks.closed_count == 1, "the pool's remainder reached on_close; the mailbox's remainder is what shut_down walked itself")!;
+    shc::helpers::expect(RELEASING_THE_RESOURCES_FAILED, hooks.closed_count == 1, "the pool's remainder reached on_close; the mailbox's remainder is what shut_down walked itself")!;
 }

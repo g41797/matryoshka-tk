@@ -6,12 +6,12 @@
    identities and all.
  - Count each identity that arrived.
 *>
-module exm::fan_in;
+module shc::fan_in;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 import std::thread;
 
 faultdef FAN_IN_FAILED;
@@ -71,6 +71,6 @@ fn void? three_senders_one_mailbox(Allocator a, Mailbox* mbx)
         unreachable("fan-in met an identity it was not written for");
     }
 
-    exm::helpers::expect(FAN_IN_FAILED, events == 2, "both Event senders landed on the one mailbox")!;
-    exm::helpers::expect(FAN_IN_FAILED, holders == 1, "the Holder sender landed on the same mailbox")!;
+    shc::helpers::expect(FAN_IN_FAILED, events == 2, "both Event senders landed on the one mailbox")!;
+    shc::helpers::expect(FAN_IN_FAILED, holders == 1, "the Holder sender landed on the same mailbox")!;
 }

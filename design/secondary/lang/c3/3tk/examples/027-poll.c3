@@ -5,12 +5,12 @@
  - Poll an empty mailbox and see `EMPTY`.
  - Send a `Holder`, then poll again and receive it.
 *>
-module exm::poll;
+module shc::poll;
 import mtk;
 import mtk::managed;
 import mtk::mailbox;
-import exm::outers;
-import exm::helpers;
+import shc::outers;
+import shc::helpers;
 
 faultdef POLL_FAILED;
 
@@ -26,7 +26,7 @@ fn void? poll_then_send_then_poll(Allocator a, Mailbox* mb)
     Slot s;
     if (catch f = mb.poll(&s))
     {
-        exm::helpers::expect(POLL_FAILED, f == mtk::EMPTY, "an empty mailbox polls EMPTY")!;
+        shc::helpers::expect(POLL_FAILED, f == mtk::EMPTY, "an empty mailbox polls EMPTY")!;
     }
     else
     {
@@ -39,6 +39,6 @@ fn void? poll_then_send_then_poll(Allocator a, Mailbox* mb)
 
     Slot got;
     mb.poll(&got)!;
-    exm::helpers::expect(POLL_FAILED, got.to(Holder) != null, "the polled outer is the Holder that was sent")!;
+    shc::helpers::expect(POLL_FAILED, got.to(Holder) != null, "the polled outer is the Holder that was sent")!;
     free_outer(&got);
 }
