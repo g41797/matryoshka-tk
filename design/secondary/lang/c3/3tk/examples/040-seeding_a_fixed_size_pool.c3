@@ -72,5 +72,5 @@ fn void? seed_caps_the_pool(Allocator a)
         exm::helpers::expect(SEEDING_A_FIXED_SIZE_POOL_FAILED, f == mtk::NOT_CREATED, "past the seed the hook must report NOT_CREATED")!;
         return;
     }
-    return SEEDING_A_FIXED_SIZE_POOL_FAILED?;
+    return SEEDING_A_FIXED_SIZE_POOL_FAILED~;
 }

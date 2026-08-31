@@ -7,6 +7,185 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-31 — 3TK-50 step 9: Shutdown, entries 46–48
+
+**Catalog section "Shutdown."** One of the three entries carries a code
+shape and got a file; two do not — 47 (a numbered order plus prose, no
+`c3` block) and 48 (an ASCII diagram, no `c3` block, same as entry 22's
+precedent):
+
+- **46, Reading the fault on a receive.** The catalog's own
+  `p46_receive_faults` loop is kept verbatim as the illustration, and three
+  focused functions each provoke one outcome and check it is not mistaken
+  for either of the other two: `timeout_is_not_closed_or_woken` receives on
+  an empty, open mailbox with a 50ms window; `woken_is_not_closed_or_timeout`
+  blocks a receiver thread on a 2000ms window and wakes it from the main
+  thread after it has parked, following entry 32's `Thread`/`Atomic{bool}`
+  shape — calling `wake_all` before a receiver blocks was tried first and
+  found wrong: `_wake_gen` is snapshotted when `receive` starts waiting, so a
+  wake that lands first is invisible to the receive that follows, exactly as
+  entry 47's own wording says (*"a thread that starts waiting afterwards is
+  unaffected"*); `closed_is_not_woken_or_timeout` closes the mailbox first,
+  then receives.
+- **47, The shutdown order.** No code shape — a numbered list and a
+  rationale, not a shape to instantiate. No file, matching the precedent of
+  entries 21 and 22.
+- **48, Shutdown by message.** No code shape — an ASCII flow diagram, not a
+  `c3` block. No file, same precedent.
+
+`run-builds.sh` is green — 87 checks, four builds, 131 tests each. Not yet
+copied to `matryoshka-3tk` or pushed — that is the owner's step.
+
+## 2026-08-31 — 3TK-50 step 10 correction: entries 50–53 were missed
+
+**The owner asked where examples 050–056 were.** "Coordinator patterns"
+does not end at entry 49 — it runs through entry 56, and step 10's own log
+entry only covered 49. Re-reading the section found four more entries with
+a code shape: **50, The step; 51, Acquiring the resources; 52, Releasing
+the resources; 53, The thread is given one pointer.** The other three —
+**54, Spawn and join in one step; 55, More than one coordinator; 56, Pool
+and mailbox together** — have no `c3` block (bullets, bullets, and an ASCII
+diagram) and got no file, same precedent as every other bulleted or
+diagrammed entry.
+
+- **50.** `StepMaster.seed_the_work`/`process_the_work` from the catalog,
+  kept verbatim; `process_the_work` is `wake_all` and nothing else. Sends
+  four `Event`s and confirms all four crossed by summing their codes after
+  `receive_all`.
+- **51.** `master_create` builds a `Master` whose `mbx` and `pool` fields
+  are plain pointers, never a Slot to unwrap — the sharpest difference from
+  ztk in the section.
+- **52.** `Master.shut_down`, reverse acquisition order, allocation freed
+  last. One wrong assumption caught before the build: the first draft put
+  one outer back to the pool and then asked for a second with
+  `AVAILABLE_OR_NEW`, expecting two distinct outers — but `AVAILABLE_OR_NEW`
+  reuses what is free first, so the second `get` handed back the same one
+  and the pool's own remainder at close was empty. Fixed by asking for the
+  second with `NEW_ONLY`, which cannot reuse it.
+- **53.** `WorkerCtx` carries a `target` count rather than relying on
+  `Mailbox.close` to end the worker's loop — closing before the worker has
+  drained everything sent hands the remainder to `close`'s own out-queue
+  instead of to the worker, a race the shutdown order (entry 47) exists to
+  avoid. The worker instead stops once its own count reaches the target,
+  which is deterministic given the sends happen before the join.
+
+`run-builds.sh` is green — 87 checks, four builds, 141 tests each. Not yet
+copied to `matryoshka-3tk` or pushed — that is the owner's step.
+
+## 2026-08-31 — 3TK-50 step 11: New, and 3tk-only, entries 57–62
+
+**Catalog section "New, and 3tk-only."** Six entries, no ztk entry behind
+any of them (entry 42 belongs here too but sits with the pool patterns and
+already has its file, from step 8). Five of six carry a code shape and each
+got a file; 62 does not — two bullet lists comparing what a fast build stops
+checking, no `c3` block:
+
+- **57, The allocator in the outer.** `Holder` in place of the catalog's
+  `Buffer` — every other example already draws its outers from `outers.c3`.
+  Creates, then releases with no allocator argument, confirming the Slot
+  empties.
+- **58, An identity costs no registration.** `Event` in place of `Ticket`,
+  same reason. Sends a new field value through a mailbox and receives it
+  back unchanged.
+- **59, The optional-declaration walk.** `walk_and_release` pairs the
+  catalog's counting loop with a release per handle, since the catalog's own
+  `p59_walk` counts and leaks by design — illustrating the idiom, not memory
+  management. Three `Holder`s cross a mailbox as a batch and the walk drains
+  all three.
+- **60, Guarding an expensive check.** The catalog's `p60_guarded` kept
+  verbatim, run against a one-item batch's handle to show the guard neither
+  aborts nor disturbs it.
+- **61, A composite outer gives back its parts.** `PartHooks` kept from the
+  catalog, `on_close` taking the queue by value per 3TK-56 rather than the
+  catalog's stale `InnerQueue*` — the same correction step 3 made for entry
+  18. `extra` stays empty because `Holder` carries no parts of its own; the
+  hook still runs once per `put`.
+- **62, What a fast build stops checking.** No code shape — two bullet
+  lists, not a shape to instantiate. No file, same precedent as 21, 22, 41,
+  43, 44, 47 and 48.
+
+Two module names collided with c3c's 31-character limit and needed
+shortening from the file's own title — `an_identity_costs_no_registration`
+and `a_composite_outer_gives_back_its_parts` became
+`exm::identity_costs_nothing` and `exm::composite_outer_gives_back`; the
+files keep the full title, only the module declaration inside shortened.
+`run-builds.sh` is green — 87 checks, four builds, 137 tests each. Not yet
+copied to `matryoshka-3tk` or pushed — that is the owner's step.
+
+## 2026-08-31 — 3TK-50 step 10: Coordinator patterns, entry 49
+
+**Catalog section "Coordinator patterns," entry 49, the shapes that carry
+the example rules' own *Two levels* rule.** One file: `049-the_coordinator.c3`,
+following the catalog's `Master`/`run` shape verbatim — `seed_the_work`,
+`process_the_work` and `shut_down` are named steps, and `run`'s own body
+reads as three calls plus one guard, nothing more. `Master` owns both a
+mailbox and a pool and its `shut_down` follows entry 47's order for the two:
+close the mailbox, put back what it kept, release it, then close and release
+the pool.
+
+One defect, found by the build and not before: the wrapper's own
+`typeid[1] tags = { Holder::typeid };` bound to the wrong `Holder` —
+`test/common.c3` declares its own `struct Holder` in `mtk_test`, the
+wrapper's module, and shadowed `exm::outers::Holder`, the one the example
+itself uses. `Pool.get` aborted with *"an identity the pool was not created
+with,"* because the pool's one bucket was tagged with `test/common.c3`'s
+`Holder`, not the one `Master.seed_the_work` asked for. Fixed by qualifying
+the wrapper's tag as `exm::outers::Holder::typeid`. **Every other pool
+example lives inside `examples/`, where only `exm::outers::Holder` is in
+scope — entry 49 is the first place a pool is built in `test/`, which is
+what exposed it.** `run-builds.sh` is green — 87 checks, four builds, 132
+tests each. Not yet copied to `matryoshka-3tk` or pushed — that is the
+owner's step.
+
+## 2026-08-31 — 3TK-50 step 9: Shutdown, entries 46–48
+
+**Catalog section "Pool patterns."** Six of the nine entries carry a code
+shape and each got a file; three do not and got none — 41 (a diagram, no
+code), 43 (prose only, the tool-agnostic reason a hook runs outside the
+lock), and 44 (says outright *Entry 42's `on_close`*, so it names existing
+code rather than shaping new code):
+
+- **37, `AVAILABLE_OR_NEW`.** A `CountingHooks` object counts its own
+  `on_get` calls; a put-then-get-again shows the count stays at one, so the
+  kept outer was reused and the hook did not run a second time.
+- **38, `NEW_ONLY`.** The same counting hook shows `NEW_ONLY` asks it a
+  second time even though the first outer was put back and is free.
+- **39, `AVAILABLE_ONLY`.** Two seeded outers drain in a loop that stops on
+  the first `catch`; the hook's count is unchanged across the drain, which
+  is the entry's own claim that this path never creates.
+- **40, Seeding a fixed-size pool.** A `CappedHooks` object refuses past its
+  `cap`, so `AVAILABLE_OR_NEW` past the seed reports `NOT_CREATED` — the
+  seed count is the whole backpressure mechanism, nothing separate enforces
+  it.
+- **42, The hook object is the context.** Entry 42's own `CappedHooks` with
+  an `Atomic{usz}`, copied as the catalog gives it, to show `self.field`
+  needs no cast the way ztk's `ctx: *anyopaque` did.
+- **45, A pool of several identities.** Reuses entry 18's
+  `CreateByIdentityHooks` rather than writing a second one — one hook
+  object, three identities, `count_of` confirms each identity keeps to its
+  own free list after a get-then-put round trip.
+
+**One defect found before any build ran, and by inspection, not by a build
+error: entry 45's first draft dispatched an identity out of `on_close` with
+`s.peek().identity()`, a method that does not exist.** `Handle` has no
+`identity()` — the port's own dispatch code reads `h.link.type`, and every
+other `on_close` in the tree that dispatches (14, 18) either uses that or
+reuses another entry's chain. Fixed by reading `h.link.type` before filling
+the Slot, matching entry 17's `free_outer` shape; then 45 was rewritten a
+second time to import entry 18's `CreateByIdentityHooks` outright rather
+than duplicate it.
+
+**One build error surfaced only by `run-builds.sh`: entry 40's own draft
+wrote `return SEEDING_A_FIXED_SIZE_POOL_FAILED?;` to return a fault, the `?`
+operator from some other language's error handling.** 3tk's fault-return
+operator is `~` — a rule already in this file's *Standing facts* — and the
+draft broke its own rule. Fixed to `return SEEDING_A_FIXED_SIZE_POOL_FAILED~;`.
+
+`run-builds.sh` is green — 87 checks, four builds, 130 tests each. **Not yet
+copied to `matryoshka-3tk` or pushed** — that is the owner's step.
+
+---
+
 ## 2026-08-31 — 3TK-50 step 7: Topology patterns, entries 33–36
 
 **Catalog section "Topology patterns."** All four entries carry over

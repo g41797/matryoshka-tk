@@ -89,7 +89,7 @@ settled the same way by 3TK-54:**
 
 | stage | what it does | start it with |
 |---|---|---|
-| **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`, run in steps grouped by catalog section. Reads [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md) and [3tk-patterns-002.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-002.md), both in `matryoshka-3tk/design/`. **Independent of the fix. Steps 1 through 7 ran 2026-08-31** | `Read design/secondary/lang/c3/3tk-status.md. Continue 3TK-50, step 8 (the next catalog section after "Topology patterns", "Pool patterns", entries 37-45).` |
+| **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`, run in steps grouped by catalog section. Reads [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md) and [3tk-patterns-002.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-002.md), both in `matryoshka-3tk/design/`. **Independent of the fix. Steps 1 through 11 ran 2026-08-31 — every catalog section with a code shape is now covered.** The catalog's two remaining sections, "The 18 that dropped" and "What this document does not do", write no code (a table of ztk entries with nothing to port, and a closing note) — **there is no step 12.** | **3TK-50 has no next step. Ask the owner what closes it** — copying and pushing the last steps to `matryoshka-3tk`, and updating this table, are what remain. |
 
 **3TK-52, 3TK-53, 3TK-54, 3TK-55 and 3TK-56 all ran, 2026-08-28 to
 2026-08-30**, and between them the two tools carry the mechanism, the defect
@@ -169,6 +169,76 @@ already established with real threads: `033-request_response.c3`,
 first step since step 1 with none. `run-builds.sh` is green — 87 checks, four
 builds, 124 tests each. **Not yet copied to `matryoshka-3tk` or pushed** —
 that is the owner's step.
+
+**3TK-50 step 8 ran 2026-08-31**, catalog section "Pool patterns", entries
+37–45. Six of the nine entries carry a code shape and got a file — 37
+`AVAILABLE_OR_NEW`, 38 `NEW_ONLY`, 39 `AVAILABLE_ONLY`, 40 seeding a
+fixed-size pool, 42 the hook object is the context, 45 a pool of several
+identities (reusing entry 18's `CreateByIdentityHooks` rather than writing a
+second one); entries 41, 43 and 44 have no code shape of their own and got
+no file. Two defects, found before any build ran and by a build error: 45's
+first draft called a `Handle.identity()` method that does not exist, fixed
+to read `h.link.type` the way entry 17's dispatch chain does; 40's first
+draft returned a fault with `?`, some other language's operator, fixed to
+`~`. `run-builds.sh` is green — 87 checks, four builds, 130 tests each. **Not
+yet copied to `matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 9 ran 2026-08-31**, catalog section "Shutdown", entries 46–48.
+One of the three entries carries a code shape and got a file — 46, reading
+the fault on a receive — the other two do not: 47 is a numbered order plus
+prose, 48 is an ASCII diagram, same precedent as entries 21 and 22. One
+approach tried and found wrong before any build ran: calling `wake_all`
+before a receiver blocks does not produce `WOKEN`, because `_wake_gen` is
+snapshotted only once a receive starts waiting — the file follows entry 32's
+`Thread`/`Atomic{bool}` shape instead, blocking a receiver first and waking
+it from the main thread once it has parked. `run-builds.sh` is green — 87
+checks, four builds, 131 tests each. **Not yet copied to `matryoshka-3tk` or
+pushed** — that is the owner's step.
+
+**3TK-50 step 10 ran 2026-08-31**, catalog section "Coordinator patterns",
+entries 49–53 — **the section runs through entry 56, not 49; step 10's own
+log entry first covered only 49, and a later correction (below) added
+50–53 after the owner asked where they were.** Five files:
+
+- **49, The coordinator.** `049-the_coordinator.c3`, the catalog's
+  `Master`/`run` shape verbatim: `seed_the_work`, `process_the_work` and
+  `shut_down` are named steps, `shut_down` follows entry 47's order for a
+  mailbox and a pool together.
+- **50, The step.** `StepMaster.seed_the_work`/`process_the_work` kept
+  verbatim; `process_the_work` is `wake_all` alone.
+- **51, Acquiring the resources.** `master_create` shows `mbx` and `pool`
+  as plain pointers, never a Slot to unwrap.
+- **52, Releasing the resources.** `Master.shut_down`, reverse acquisition
+  order, allocation freed last.
+- **53, The thread is given one pointer.** `WorkerCtx` carries a `target`
+  count rather than trusting `Mailbox.close` to end the worker's loop.
+
+Entries 54, 55 and 56 have no `c3` block — bullets, bullets, an ASCII
+diagram — and got no file, same precedent as every other bulleted or
+diagrammed entry. Two defects, both in entries added by the correction:
+49's wrapper bound `Holder::typeid` to `test/common.c3`'s `Holder` rather
+than `exm::outers::Holder` — the two share a name and the wrapper's module,
+`mtk_test`, sees both — fixed by qualifying it as
+`exm::outers::Holder::typeid`; 52's first draft asked `AVAILABLE_OR_NEW`
+for a second outer expecting it distinct from the one just put back, but
+that mode reuses what is free first, so the pool's own remainder at close
+was empty — fixed by asking `NEW_ONLY` for the second. `run-builds.sh` is
+green — 87 checks, four builds, 141 tests each. **Not yet copied to
+`matryoshka-3tk` or pushed** — that is the owner's step.
+
+**3TK-50 step 11 ran 2026-08-31**, catalog section "New, and 3tk-only",
+entries 57–62 — the six shapes with no ztk entry behind them (entry 42 is
+here too and already has its file, from step 8). Five got files; 62 is two
+bullet lists with no `c3` block, same precedent as 21, 22, 41, 43, 44, 47,
+48, 54, 55 and 56. Entry 61's `on_close` took the queue by value, not the
+catalog's stale `InnerQueue*` — the same correction step 3 made for entry
+18. Two module names exceeded c3c's 31-character limit and were shortened
+from the file's own title: `exm::identity_costs_nothing` and
+`exm::composite_outer_gives_back`. **This was the last step: every catalog
+section with a code shape now has one.** `run-builds.sh` is green — 87
+checks, four builds, 141 tests each, once step 10's correction is folded
+in. **Not yet copied to `matryoshka-3tk` or pushed** — that is the owner's
+step.
 
 ## Open questions
 
@@ -277,12 +347,12 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-31, by 3TK-50 step 7 (`examples/` and
+been run. Last measured 2026-08-31, by 3TK-50 step 10's correction (`examples/` and
 `test/t_examples.c3` revised, `src/` untouched).
 
 ```
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green
-                           124 tests in each build
+                           141 tests in each build
 ./3tk/check-doc-loop.sh    not re-run this step — src/ did not change
                            (last run: 0 differing blocks, 457 sentences, 456
                            found, 1 missing — the pre-existing inner.c3 module
@@ -359,21 +429,21 @@ scripts take an optional directory and exit 2 on a bad one.
 Every line begins the same way, because every stage reads this file first:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. Continue 3TK-50, step 8 (the next catalog section after "Topology patterns", "Pool patterns", entries 37-45).
+Read design/secondary/lang/c3/3tk-status.md. 3TK-50 has no next step — ask the owner what closes it.
 ```
 
-**Nothing is waiting on a ruling.** Stage A closed the stack-outer defect on
-2026-08-31. 3TK-50 runs in steps, grouped by the pattern catalog's own
-sections — nine of them, in order — **except step 6, which ran out of
-catalog order**: the wrapper rule made explicit and the tree checked against
-it, after entries 27-32 exposed two wrappers that already broke it. A step
-number and a catalog section no longer match one-to-one because of it; the
-log entry for each step says which section, if any, it covers. Each step
-writes its examples (or, for a rule step, revises what an earlier step
-wrote), runs `3tk/run-builds.sh`, and only then is copied to `matryoshka-3tk`
-and pushed and previewed there, by the owner. This file's *stages that have
-not run* table names the next step; a later resume line names whichever step
-follows that.
+**Nothing is waiting on a ruling. 3TK-50 itself has run its last step.**
+Stage A closed the stack-outer defect on 2026-08-31. 3TK-50 ran in eleven
+steps, grouped by the pattern catalog's own sections — **except step 6,
+which ran out of catalog order**: the wrapper rule made explicit and the
+tree checked against it, after entries 27-32 exposed two wrappers that
+already broke it. A step number and a catalog section do not match
+one-to-one because of it; the log entry for each step says which section, if
+any, it covers. Each step wrote its examples (or, for a rule step, revised
+what an earlier step wrote) and ran `3tk/run-builds.sh`; **none of the
+eleven steps has yet been copied to `matryoshka-3tk` and pushed and
+previewed there**, and that is the owner's step. The catalog's two
+remaining sections write no code, so there is no step 12.
 
 For orientation only:
 
