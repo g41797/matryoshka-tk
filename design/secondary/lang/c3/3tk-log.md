@@ -7,6 +7,72 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-08-31 — 3TK-57 follow-up: `shc` gets its own module description page
+
+**Found after the `exm`→`shc` rename landed: `shc` rendered in `docs.html`
+with no description page, unlike `mtk`.** `src/mtk.c3` declares bare
+`module mtk;` with a module-level `<* ... *>` doc comment directly above it
+— no symbols required, just the doc block and the module statement — and
+that is what `docgen` turns into `mtk`'s own page. Nothing under
+`examples/` was a bare `module shc;` file: `outers.c3` declares
+`module shc::outers;`, `helpers.c3` declares `module shc::helpers;`, every
+numbered example declares `module shc::<name>;` — all submodules, none the
+parent.
+
+**Added `examples/shc.c3`**, mirroring `mtk.c3`'s shape but with no SPDX
+header — the plain example files don't carry one either, only `mtk.c3` does
+as the library's own file. Just a module-level doc comment (purpose: a
+pattern catalog for `mtk`, not part of the library; how to use it: one file
+one pattern, `shc::outers`/`shc::helpers` as shared infrastructure; the nine
+catalog theme groups named in one line) then bare `module shc;`, no code.
+
+**Verified:** regenerated `docs.html` and confirmed `shc`'s module entry now
+carries the doc text, same shape as `mtk`'s. `run-builds.sh` re-run clean
+afterward: 87/87 passed, all four modes green.
+
+**Where this ran.** Done only in `matryoshka-tk`'s copy
+(`design/secondary/lang/c3/3tk/examples/shc.c3`), per the standing rule —
+the owner copies to `matryoshka-3tk` themselves.
+
+## 2026-08-31 — 3TK-57 follow-up: examples module renamed `exm` to `shc`
+
+**`docs.html`'s generated module list is plain alphabetical — `c3c docgen`
+has no ordering flag, and the display order comes from a hard `.sort()` baked
+into the JS the tool writes into `docs.html` on every run
+(`moduleNames = [...new Set(allDecls.map(d => d.moduleName))].sort();`),
+confirmed by reading the generated output directly rather than assumed.**
+Tested `--append` as a possible workaround first: it does insert
+`EMBEDDED_JSON_LIST` entries in call order, but the final module list is
+always rebuilt and re-sorted after merging, so append order has no effect —
+`exm` still landed before `mtk` either way.
+
+**Owner's decision: rename the examples module `exm` → `shc`** ("showcase",
+matching `mtk`'s 3-letter convention) rather than post-process `docs.html`
+after every generation. The blast radius was checked before deciding: all 52
+occurrences of `exm::` were confined to `examples/*.c3`, `test/t_examples.c3`,
+and one reference in `3tk-example-rules-003.md` — nothing under `src/`. A
+permanent naming fix, not an ongoing script to maintain against future c3c
+upgrades.
+
+**Done:** `exm::` → `shc::` across all 52 files (bounded token replace, no
+other identifier collided), `3tk-example-rules-003.md` updated to match.
+`run-builds.sh` re-run clean afterward: 87/87 passed, all four modes green —
+confirmed the rename is cosmetic (module name only), not a behavior change.
+Regenerated `docs.html` and confirmed every `mtk`/`mtk::*` entry now sorts
+before every `shc::*` entry.
+
+**Where this ran, and the correction that followed.** The rename (and the
+regenerated `docs.html` check) was first done directly in `matryoshka-3tk`,
+alongside 3TK-57's CI workflow files. **The owner corrected this: 3tk source
+changes belong in `matryoshka-tk`'s own copy at
+`design/secondary/lang/c3/3tk/` only — the owner copies to `matryoshka-3tk`
+themselves.** That copy-back had already happened by the time work resumed
+here; this repo's copy was found already carrying the rename, same content
+and mtime as `matryoshka-3tk`'s, different inode. The one standing exception
+is CI: `.github/workflows/*.yml` and README CI badges still belong directly
+in `matryoshka-3tk`, per the earlier 3TK-57 correction — that repo owns its
+own Actions and this one does not run CI for 3tk.
+
 ## 2026-08-31 — 3TK-57 follow-up: docs.yml now deploys to Pages
 
 **The Pages-collision question 3TK-57 left open is resolved — not by a

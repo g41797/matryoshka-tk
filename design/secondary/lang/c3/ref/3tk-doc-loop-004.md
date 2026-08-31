@@ -250,6 +250,33 @@ against each shape.
   own convention, 44 fence lines in `lib/std`. An indented block gets neither
   the `<pre><code>` nor the highlighting.
 
+### A backticked identifier can auto-link, if the renderer can resolve it
+
+**Measured 2026-08-31, in `docs.html`'s `highlightC3`, which every `` `code` ``
+span and every ` ```c3 ` fence line runs through.** A backticked token becomes
+a clickable link to the matching declaration's own page, with no `[text](url)`
+needed, under two separate rules:
+
+- **A token containing `::`.** `` `shc::outers` `` links straight to that
+  module's page if `allDecls` holds a declaration whose `uid` equals the token
+  or ends with `::` plus the token's last segment. This is how `examples/shc.c3`'s
+  own doc comment linked `` `shc::outers` `` and `` `shc::helpers` `` to their
+  module pages without writing `[shc::outers](#shc::outers)` by hand.
+- **A bare word starting with an uppercase letter or `@`.** `` `Slot` `` or
+  `` `@check` `` links if the word matches a known symbol name — a type or an
+  attribute, by the same uppercase-or-`@` test the renderer applies. A bare
+  lowercase word, `` `expect` `` for instance, is never auto-linked even if a
+  function of that name exists; it renders as a plain `<code>` span.
+
+**Nothing to do differently for this.** Writing an identifier in backticks is
+already the register's rule, restated below under *The three restrictions
+that make a copy safe* — so a qualified `Module::symbol` or a capitalized
+type name gets the link for free.
+Worth knowing when writing a descriptor or a comment that names another
+module, struct, or attribute: prefer the qualified form (`` `shc::outers` ``,
+not `` `outers` ``) when the two candidates could resolve differently, since
+only the qualified and capitalized forms are guaranteed to link.
+
 ### What it does not render, where a reader would expect otherwise
 
 - **Numbered lists are not implemented.** `1. one` falls through to the
