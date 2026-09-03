@@ -669,11 +669,9 @@ fn int parked_getter(void* arg)
  worker reports `CLOSED` and finishes. Only then is the pool quiet, and only
  then may it be released.
 
- The count is read directly, the way `t_concurrency.c3` reads `mb._cv`: it is a
- deliberate use of what D1 leaves reachable, because there is no public way to
- ask whether a tool is quiet — and there must not be. The answer would be stale
- before the caller could act on it, and the caller already knows: it is the one
- that started the threads.
+ `is_quiet()` reads the closed-and-active predicate itself, under the mutex —
+ the public way to ask whether a tool is quiet, added by 3TK-58 for exactly
+ this.
 *>
 fn void the_pool_closed_then_quiet_then_freed() @test
 {
@@ -697,7 +695,7 @@ fn void the_pool_closed_then_quiet_then_freed() @test
     // QUIET. This is the step the rule is about, and joining is how to get it.
     worker.join()!!;
     always_assert(lf.returned.load(ACQUIRE) == 1, "the getter did not return");
-    always_assert(p._active == 0, "the pool is closed but not quiet after the join");
+    always_assert(p.is_quiet(), "the pool is closed but not quiet after the join");
 
     // FREED.
     p.release();
@@ -728,12 +726,14 @@ fn void the_pool_close_then_join_then_release() @test
     }
     foreach (&t : workers) t.join()!!;
 
-    // every call has returned, and the pool is still open
+    // every call has returned, and the pool is still open. There is no
+    // black-box way to check the active count alone while still open —
+    // `is_quiet()` requires closed too — so this step trusts the join and
+    // moves straight to close.
     always_assert(!p.is_closed(), "the workers closed the pool");
-    always_assert(p._active == 0, "a call was still active after every worker joined");
 
     p.close();
-    always_assert(p._active == 0, "the close left the pool active after it returned");
+    always_assert(p.is_quiet(), "the close left the pool active after it returned");
 
     p.release();
 }

@@ -440,11 +440,9 @@ fn int parked_receiver(void* arg)
  worker reports `CLOSED` and finishes. Only then is the mailbox quiet, and only
  then may it be released.
 
- The count is read directly, the way `t_concurrency.c3` reads `mb._cv`: it is a
- deliberate use of what D1 leaves reachable, because there is no public way to
- ask whether a tool is quiet — and there must not be. The answer would be stale
- before the caller could act on it, and the caller already knows: it is the one
- that started the threads.
+ `is_quiet()` reads the closed-and-active predicate itself, under the mutex —
+ the public way to ask whether a tool is quiet, added by 3TK-58 for exactly
+ this.
 *>
 fn void closed_then_quiet_then_freed() @test
 {
@@ -468,7 +466,7 @@ fn void closed_then_quiet_then_freed() @test
     // QUIET. This is the step the rule is about, and joining is how to get it.
     worker.join()!!;
     always_assert(lf.returned.load(ACQUIRE) == 1, "the receiver did not return");
-    always_assert(mb._active == 0, "the mailbox is closed but not quiet after the join");
+    always_assert(mb.is_quiet(), "the mailbox is closed but not quiet after the join");
 
     // FREED.
     mb.release();
@@ -507,7 +505,7 @@ fn void close_then_join_then_release() @test
     while (Handle h = left.pop_front()) { back++; }
     always_assert(back == 9, "the close did not hand back every item that was sent");
 
-    always_assert(mb._active == 0, "a joined mailbox is not quiet");
+    always_assert(mb.is_quiet(), "a joined mailbox is not quiet");
     mb.release();
 }
 

@@ -7,6 +7,84 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-03 — 3TK-58: `Mailbox`/`Pool` opaque handles
+
+**`Mailbox` and `Pool` became opaque handles**, following the idiom C3's own
+stdlib uses for `std::thread::channel::UnboundedChannel`: `typedef Mailbox =
+void;` / `typedef Pool = void;` are now the public types, and the real
+fields moved into `@private` structs in the same module — `_Mbox` in
+`mailbox.c3`, `_Pool` in `pool.c3`. Every method's first line casts the
+opaque handle back to the real type; the first parameter, no longer named
+`self` since the type it names is no longer real, is `mbox`/`pool` instead.
+Internal-only helpers (`enqueue`, `dequeue`, `has_queued`, `send_at`,
+`bucket_for`, `take_back`, `take_back_handle`, `_close`, and the
+`@closed_fast` macro) moved to be methods on `_Mbox`/`_Pool` directly, since
+they are only ever called from inside a method that has already cast.
+`TYPE` and `to_handle`/`of` were repointed at `_Mbox`/`_Pool`, since the
+identity a `Handle` carries has to be the real struct's `typeid` — leaving
+`TYPE` as `Mailbox::typeid` after the typedef would have silently made it
+`void`'s typeid instead, which is not what `init()` writes into a mailbox's
+own `Inner.link.type` (that still runs against `_Mbox`/`_Pool` through
+`mtk::helper::init`, taking the real pointer).
+
+**Scope held to `Mailbox`/`Pool` only**, per the plan: `PoolBucket` and the
+core (`PolyNode`/`Inner`) are untouched.
+
+**New API: `Mailbox.is_quiet()` / `Pool.is_quiet()` → `bool`**, returning
+`self._closed && self._active == 0` under the mutex — the same predicate
+`release()` already asserted. Narrower than a raw active-count accessor by
+the owner's call, made in this session before the plan was written.
+
+**Three test files were brought back to black-box, one test dropped.**
+`test/t_mailbox.c3` (two sites) and `test/t_pool.c3` (three sites) read
+`_active == 0` directly; all five became `is_quiet()` calls. One of
+`t_pool.c3`'s three sites (`the_pool_close_then_join_then_release`) checked
+`_active == 0` **before** `close()` ran, while the pool was still open —
+`is_quiet()` requires `_closed` too, so it cannot stand in there. That
+assertion was dropped rather than mistranslated; the test still asserts
+`!p.is_closed()` at that point and moves straight to `close()`, where
+`is_quiet()` picks back up. `t_identity.c3`, read first per the plan, turned
+out to touch none of `Mailbox`/`Pool` at all — its `.node`/`Msg`/`Job`/`Twin`
+lines were never in scope, so nothing there changed.
+
+**`t_concurrency.c3`'s `the_deadline_is_anchored_once` was dropped, not
+rewritten**, exactly as the plan called for: it reached `mb._cv.broadcast()`
+directly to provoke a spurious wakeup, and there is no black-box way to do
+that once `_cv` is unreachable — every public way to signal the condition
+variable changes one of the three things the receive loop checks before
+looping back to wait, so the case the test provoked is structurally
+unreachable from outside the module. Its `spurious_waker` helper went with
+it. Part 2.5, D7 stays documented, not mechanically tested — tracked as the
+"Tests improvements" TODO in `3tk-status.md`.
+
+**Verification.** `./3tk/run-builds.sh`: 87 checks, 0 failures, four builds
+green, 140 tests each (down from 141 — the one dropped test, and nothing
+else). `./3tk/check-doc-loop.sh` against the new
+`matryoshka-3tk/design/3tk-reference-006.md`: 466 descriptor sentences, 464
+found — the 2 missing are the same pre-existing gaps (a `helper.c3` and a
+`managed.c3` module-summary sentence) present against `3tk-reference-005.md`
+before this stage too, confirmed by running the check against both files.
+Module blocks: `mailbox.c3` and `pool.c3` both `same`; the one `DIFFERS`
+(`managed.c3`) is the same pre-existing gap. No `Mailbox{...}` / `Pool{...}`
+struct literal existed anywhere under `3tk/`, so no construction site needed
+updating.
+
+**Reference doc.** `3tk-reference-006.md` written directly in
+`matryoshka-3tk/design/`, per this session's ruling that design docs there
+are editable in place: Parts 4 and 5's Participants sections describe the
+opaque shape (keeping "the tool itself" in the prose so the module-summary
+sentence match against `mailbox.c3`/`pool.c3`'s doc comments still holds),
+every method signature block updated to `(&mbox, ...)` / `(&pool, ...)`,
+`is_quiet` added to both control-API blocks, and the `@closed_fast` note in
+Part 6 repointed at `_Mbox`/`_Pool` since the macro is no longer reachable
+from outside the module at all. `3tk-reference-005.md` moved to that repo's
+`backup/` with a plain `mv`.
+
+**Not yet copied anywhere else or pushed** — `matryoshka-3tk`'s `design/` is
+where the doc was written directly, but `src/`/`test/` changes are only in
+`matryoshka-tk`'s copy, per the standing rule that 3tk source changes go
+there and the owner copies to `matryoshka-3tk` themselves.
+
 ## 2026-08-31 — 3TK-57 follow-up: `shc` gets its own module description page
 
 **Found after the `exm`→`shc` rename landed: `shc` rendered in `docs.html`

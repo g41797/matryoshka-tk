@@ -36,7 +36,13 @@ module mtk::mailbox;
  One for ordinary items.
 *>
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
-struct Mailbox
+typedef Mailbox = void;
+
+// The real fields, behind the opaque handle above. Every public method casts
+// its first line and works on this from there. Internal, so not a `<* *>`
+// block: see 3TK-42.
+// [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
+struct _Mbox @private
 {
     Inner node;
 
@@ -59,17 +65,17 @@ struct Mailbox
  The identity of a `Mailbox` as an item.
 *>
 // [3tk: H0, Part 11.1]
-const typeid TYPE = Mailbox::typeid;
+const typeid TYPE = _Mbox::typeid;
 
 <*
  From a `Mailbox*` to a `Handle`. Cannot fail.
 *>
-macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle(p);
+macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle((_Mbox*)p);
 
 <*
  The checking crossing back. Null when the handle names another type.
 *>
-macro Mailbox* of(Handle h) => mtk::helper::from_handle(h, Mailbox);
+macro Mailbox* of(Handle h) => (Mailbox*)mtk::helper::from_handle(h, _Mbox);
 
 <*
  Allocates a mailbox and returns it.
@@ -83,7 +89,7 @@ macro Mailbox* of(Handle h) => mtk::helper::from_handle(h, Mailbox);
 // [3tk: D3, Part 3.1]
 fn Mailbox*? create(Allocator a)
 {
-    Mailbox* mb = alloc::new_try(a, Mailbox)!;
+    _Mbox* mb = alloc::new_try(a, _Mbox)!;
     defer catch alloc::free(a, mb);
 
     mtk::helper::init(mb);
@@ -94,7 +100,7 @@ fn Mailbox*? create(Allocator a)
 
     mb._cv.init()!;
 
-    return mb;
+    return (Mailbox*)mb;
 }
 
 <*
@@ -109,8 +115,10 @@ fn Mailbox*? create(Allocator a)
  Releasing a mailbox that is not quiet aborts in every build mode.
 *>
 // [3tk: D6, Part 11.12, Part 13.1]
-fn void Mailbox.release(&self)
+fn void Mailbox.release(&mbox)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     // Rule 1 of the lifetime contract, and the whole of what `_active` is for.
     // Closed is state; quiet is that state and an empty active set together.
     // The predicate is read UNDER the mutex, never before taking it, and
@@ -142,12 +150,12 @@ fn void Mailbox.release(&self)
  Call `is_closed` instead.
 *>
 // [3tk: D16, Part 15.4]
-macro bool Mailbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
+macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
 // Puts the item on the ordinary queue, or ahead of every ordinary item.
 // O(1) in every build mode. Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R7, Part 11.3]
-fn void Mailbox.enqueue(&self, Handle h, bool oob) @private
+fn void _Mbox.enqueue(&self, Handle h, bool oob) @private
 {
     if (oob) { self._oob.push_back(h); } else { self._regular.push_back(h); }
 }
@@ -155,14 +163,14 @@ fn void Mailbox.enqueue(&self, Handle h, bool oob) @private
 // Takes the next item.
 // Out-of-band first, then ordinary, first-in first-out within each.
 // [3tk: R7, R9, Part 11.3]
-fn Handle Mailbox.dequeue(&self) @private
+fn Handle _Mbox.dequeue(&self) @private
 {
     Handle h = self._oob.pop_front();
     return h ? h : self._regular.pop_front();
 }
 
 // True if anything is queued at all. Reads both queues.
-fn bool Mailbox.has_queued(&self) @private @inline
+fn bool _Mbox.has_queued(&self) @private @inline
     => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
@@ -176,7 +184,7 @@ fn bool Mailbox.has_queued(&self) @private @inline
  @return? mtk::CLOSED
 *>
 // [3tk: Part 9.3, Part 11.3, Part 11.6, Part 19.1]
-fn void? Mailbox.send(&self, Slot* slot) => self.send_at(slot, false);
+fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
 
 <*
  Same as `send()`, ahead of every ordinary item.
@@ -188,9 +196,9 @@ fn void? Mailbox.send(&self, Slot* slot) => self.send_at(slot, false);
  @return? mtk::CLOSED
 *>
 // [3tk: D14, R7, Part 11.3, Part 11.4]
-fn void? Mailbox.send_oob(&self, Slot* slot) => self.send_at(slot, true);
+fn void? Mailbox.send_oob(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, true);
 
-fn void? Mailbox.send_at(&self, Slot* slot, bool oob) @private
+fn void? _Mbox.send_at(&self, Slot* slot, bool oob) @private
 {
     mtk::@check(slot.is_full(), "Mailbox.send from an empty Slot");
     if (slot.is_empty()) return;
@@ -219,8 +227,10 @@ fn void? Mailbox.send_at(&self, Slot* slot, bool oob) @private
  @return? mtk::CLOSED, mtk::EMPTY
 *>
 // [3tk: D13, Part 19.1]
-fn void? Mailbox.poll(&self, Slot* slot)
+fn void? Mailbox.poll(&mbox, Slot* slot)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(slot.is_empty(), "an acquisition asserts the Slot is empty on entry");
 
@@ -251,8 +261,10 @@ fn void? Mailbox.poll(&self, Slot* slot)
  @return? mtk::CLOSED, mtk::TIMEOUT, mtk::WOKEN
 *>
 // [3tk: D7, D9, Part 2.4, Part 2.5, Part 2.6, Part 2.9, Part 15.3, Part 19.1]
-fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
+fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(slot.is_empty(), "an acquisition asserts the Slot is empty on entry");
 
@@ -308,8 +320,10 @@ fn void? Mailbox.receive(&self, Slot* slot, Duration timeout)
  @return? mtk::CLOSED
 *>
 // [3tk: R8, Part 11.3, Part 11.6, Part 19.1]
-fn void? Mailbox.receive_all(&self, InnerQueue* out)
+fn void? Mailbox.receive_all(&mbox, InnerQueue* out)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(out.is_empty(), "receive_all asserts the queue is empty on entry");
 
@@ -336,8 +350,10 @@ fn void? Mailbox.receive_all(&self, InnerQueue* out)
  @return? mtk::CLOSED
 *>
 // [3tk: Part 11.5]
-fn void? Mailbox.wake_all(&self)
+fn void? Mailbox.wake_all(&mbox)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     if (self.@closed_fast()) return mtk::CLOSED~;
 
     self._mu.lock();
@@ -363,8 +379,10 @@ fn void? Mailbox.wake_all(&self)
  @param out : "an empty queue; the remainder is moved onto it, in receive order"
 *>
 // [3tk: R6b, R8, Part 11.6, Part 11.12, Part 19.1]
-fn void Mailbox.close(&self, InnerQueue* out)
+fn void Mailbox.close(&mbox, InnerQueue* out)
 {
+    _Mbox* self = (_Mbox*)mbox;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(out.is_empty(), "close asserts the queue is empty on entry");
 
@@ -391,7 +409,7 @@ fn void Mailbox.close(&self, InnerQueue* out)
 // made before the store, so the fast path can refuse without the mutex.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: Part 11.12, Part 15.4]
-fn void Mailbox._close(&self, InnerQueue* out) @private
+fn void _Mbox._close(&self, InnerQueue* out) @private
 {
     if (self._closed) return;
 
@@ -407,7 +425,22 @@ fn void Mailbox._close(&self, InnerQueue* out) @private
 <*
  True when it is closed.
 *>
-fn bool Mailbox.is_closed(&self) => self.@closed_fast();
+fn bool Mailbox.is_closed(&mbox) => ((_Mbox*)mbox).@closed_fast();
+
+<*
+ True when it is closed and no call on it is still running.
+
+ The same predicate `release()` asserts, read under the mutex. The usual way
+ to reach this state is to join the threads that touch the mailbox.
+*>
+// [3tk: Part 11.12]
+fn bool Mailbox.is_quiet(&mbox)
+{
+    _Mbox* self = (_Mbox*)mbox;
+    self._mu.lock();
+    defer self._mu.unlock();
+    return self._closed && self._active == 0;
+}
 
 <*
  How many items are queued.
@@ -415,8 +448,9 @@ fn bool Mailbox.is_closed(&self) => self.@closed_fast();
  A hint. It is stale by the time you read it.
 *>
 // [3tk: Part 12.4]
-fn usz Mailbox.len(&self)
+fn usz Mailbox.len(&mbox)
 {
+    _Mbox* self = (_Mbox*)mbox;
     self._mu.lock();
     defer self._mu.unlock();
     self._active++;

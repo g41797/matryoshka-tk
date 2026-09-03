@@ -135,7 +135,13 @@ struct PoolBucket
  It is not empty, and it has no duplicate. Both are checked.
 *>
 // [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
-struct Pool
+typedef Pool = void;
+
+// The real fields, behind the opaque handle above. Every public method casts
+// its first line and works on this from there. Internal, so not a `<* *>`
+// block: see 3TK-42.
+// [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
+struct _Pool @private
 {
     Inner node;
 
@@ -156,17 +162,17 @@ struct Pool
  The identity of a `Pool` as an item.
 *>
 // [3tk: H0, Part 11.1]
-const typeid TYPE = Pool::typeid;
+const typeid TYPE = _Pool::typeid;
 
 <*
  From a `Pool*` to a `Handle`. Cannot fail.
 *>
-macro Handle to_handle(Pool* p) => mtk::helper::to_handle(p);
+macro Handle to_handle(Pool* p) => mtk::helper::to_handle((_Pool*)p);
 
 <*
  The checking crossing back. Null when the handle names another type.
 *>
-macro Pool* of(Handle h) => mtk::helper::from_handle(h, Pool);
+macro Pool* of(Handle h) => (Pool*)mtk::helper::from_handle(h, _Pool);
 
 <*
  Allocates a pool and returns it.
@@ -201,7 +207,7 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
         }
     $endif
 
-    Pool* p = alloc::new_try(a, Pool)!;
+    _Pool* p = alloc::new_try(a, _Pool)!;
     defer catch alloc::free(a, p);
 
     mtk::helper::init(p);
@@ -220,7 +226,7 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
         p._buckets[i].tag = t;
         p._buckets[i].free = {};
     }
-    return p;
+    return (Pool*)p;
 }
 
 <*
@@ -235,8 +241,10 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
  Releasing a pool that is not quiet aborts in every build mode.
 *>
 // [3tk: D6, Part 11.12, Part 13.1]
-fn void Pool.release(&self)
+fn void Pool.release(&pool)
 {
+    _Pool* self = (_Pool*)pool;
+
     // Rule 1 of the lifetime contract, and the whole of what `_active` is for.
     // Closed is state; quiet is that state and an empty active set together.
     // The predicate is read UNDER the mutex, never before taking it, and
@@ -273,12 +281,12 @@ fn void Pool.release(&self)
  Call `is_closed` instead.
 *>
 // [3tk: D16, Part 15.4]
-macro bool Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
+macro bool _Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
 // The bucket for an identity, or null. Called under the lock.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: A3, P2, Part 11.7, Part 19.3]
-fn PoolBucket* Pool.bucket_for(&self, typeid t) @private
+fn PoolBucket* _Pool.bucket_for(&self, typeid t) @private
 {
     foreach (&b : self._buckets) if (b.tag == t) return b;
     return null;
@@ -302,8 +310,10 @@ fn PoolBucket* Pool.bucket_for(&self, typeid t) @private
  @return? mtk::CLOSED, mtk::NOT_AVAILABLE, mtk::NOT_CREATED, mtk::UNKNOWN_IDENTITY
 *>
 // [3tk: A3, Part 11.7, Part 12.3, Part 19.2, Part 19.3]
-fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
+fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
 {
+    _Pool* self = (_Pool*)pool;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(slot.is_empty(), "an acquisition asserts the Slot is empty on entry");
 
@@ -379,8 +389,10 @@ fn void? Pool.get(&self, typeid want, GetMode mode, Slot* slot)
  @return? mtk::CLOSED, mtk::TIMEOUT, mtk::UNKNOWN_IDENTITY
 *>
 // [3tk: A3, D7, Part 2.4, Part 2.5, Part 2.6, Part 11.9, Part 19.2]
-fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
+fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
 {
+    _Pool* self = (_Pool*)pool;
+
     // [3tk: Part 9.2 rule 3]
     mtk::@check(slot.is_empty(), "an acquisition asserts the Slot is empty on entry");
 
@@ -445,8 +457,10 @@ fn void? Pool.get_wait(&self, typeid want, Slot* slot, Duration timeout)
  @param slot : "a full Slot; cleared if the pool took the item"
 *>
 // [3tk: P1, V11, Part 2.10, Part 9.4, Part 11.8, Part 12.2, Part 12.3, Part 19.2]
-fn void Pool.put(&self, Slot* slot)
+fn void Pool.put(&pool, Slot* slot)
 {
+    _Pool* self = (_Pool*)pool;
+
     // [3tk: Part 9.2 rule 6]
     if (slot.is_empty()) return;
 
@@ -515,13 +529,13 @@ fn void Pool.put(&self, Slot* slot)
 }
 
 // Stores one item the hook decided to keep. Called under the lock.
-fn void Pool.take_back(&self, Slot* s) @private
+fn void _Pool.take_back(&self, Slot* s) @private
 {
     if (s.is_empty()) return;
     self.take_back_handle(s.take());
 }
 
-fn void Pool.take_back_handle(&self, Handle h) @private
+fn void _Pool.take_back_handle(&self, Handle h) @private
 {
     PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
@@ -540,8 +554,10 @@ fn void Pool.take_back_handle(&self, Handle h) @private
  Closing does not make a pool quiet.
 *>
 // [3tk: R12, Part 11.8, Part 11.12, Part 12.2, Part 19.2]
-fn void Pool.close(&self)
+fn void Pool.close(&pool)
 {
+    _Pool* self = (_Pool*)pool;
+
     self._mu.lock();
 
     // The second call takes nothing and does not run the hook again, so it
@@ -583,7 +599,7 @@ fn void Pool.close(&self)
 // so the check comes first and nothing else runs when it fails.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R12, Part 11.12, Part 15.4]
-fn void Pool._close(&self, InnerQueue* out) @private
+fn void _Pool._close(&self, InnerQueue* out) @private
 {
     if (self._closed) return;
 
@@ -601,7 +617,22 @@ fn void Pool._close(&self, InnerQueue* out) @private
 <*
  True when it is closed.
 *>
-fn bool Pool.is_closed(&self) => self.@closed_fast();
+fn bool Pool.is_closed(&pool) => ((_Pool*)pool).@closed_fast();
+
+<*
+ True when it is closed and no call on it is still running.
+
+ The same predicate `release()` asserts, read under the mutex. The usual way
+ to reach this state is to join the threads that touch the pool.
+*>
+// [3tk: Part 11.12]
+fn bool Pool.is_quiet(&pool)
+{
+    _Pool* self = (_Pool*)pool;
+    self._mu.lock();
+    defer self._mu.unlock();
+    return self._closed && self._active == 0;
+}
 
 <*
  How many of one identity are free.
@@ -609,8 +640,9 @@ fn bool Pool.is_closed(&self) => self.@closed_fast();
  A hint. It is stale by the time you read it.
 *>
 // [3tk: Part 12.4]
-fn usz Pool.count_of(&self, typeid t)
+fn usz Pool.count_of(&pool, typeid t)
 {
+    _Pool* self = (_Pool*)pool;
     self._mu.lock();
     defer self._mu.unlock();
     self._active++;

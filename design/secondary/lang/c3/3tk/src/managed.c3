@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 <*
+ Optional convenience API, not Matryoshka core.
+
  One helper allocates and frees, and only if your struct carries the allocator itself.
 
  `create` allocates the outer, initializes it, and fills the Slot.

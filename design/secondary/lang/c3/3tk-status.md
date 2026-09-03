@@ -24,6 +24,20 @@ It is kept short for that reason.**
 
 ## What is live now
 
+**`Mailbox` and `Pool` are opaque handles.** **3TK-58 ran on 2026-09-03**:
+both became `typedef ... = void;`, with the real fields in `@private`
+`_Mbox`/`_Pool` structs; every method casts on its first line. New public
+`is_quiet()` on both replaced five direct `_active` reads across
+`t_mailbox.c3`/`t_pool.c3`, and `t_concurrency.c3`'s
+`the_deadline_is_anchored_once` was dropped — no black-box way to provoke a
+spurious wakeup once `_cv` is unreachable. `run-builds.sh` is green (87
+checks, four builds, 140 tests each) and `check-doc-loop.sh` is clean against
+the new `matryoshka-3tk/design/3tk-reference-006.md` but for the same two
+pre-existing gaps that predate this stage. See the log entry for the full
+account. **Not yet copied to `matryoshka-3tk`'s `src`/`test`, or pushed** —
+that is the owner's step; the reference doc itself was written directly in
+`matryoshka-3tk/design/`, per this session's ruling.
+
 **`P6` is built.** **3TK-56 ran on 2026-08-30**: `on_close` takes the queue by
 value, `InnerQueue.take()` is in `queue.c3`, both `pool.c3` call sites use it,
 and `3tk-open-defects.md` has no open row left. Only **3TK-50** — the examples
@@ -347,25 +361,44 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. Last measured 2026-08-31, by 3TK-50 step 10's correction (`examples/` and
-`test/t_examples.c3` revised, `src/` untouched).
+been run. Last measured 2026-09-03, by 3TK-58 (`src/mailbox.c3`, `src/pool.c3`,
+`test/t_mailbox.c3`, `test/t_pool.c3`, `test/t_concurrency.c3` all revised).
 
 ```
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green
-                           141 tests in each build
-./3tk/check-doc-loop.sh    not re-run this step — src/ did not change
-                           (last run: 0 differing blocks, 457 sentences, 456
-                           found, 1 missing — the pre-existing inner.c3 module
-                           summary; 0 banned words. REF must point at
-                           matryoshka-3tk's 3tk-reference-005.md; the in-repo
-                           default path is stale since the reference moved
-                           there)
-./3tk/run-sanitizers.sh    not re-run this step — src/ did not change
+                           140 tests in each build (down from 141 — one test
+                           dropped, see the 3TK-58 log entry)
+./3tk/check-doc-loop.sh    0 differing module blocks but one pre-existing
+                           (managed.c3), 466 sentences, 464 found, 2 missing
+                           — both pre-existing (a helper.c3 and a managed.c3
+                           module-summary sentence, present against
+                           3tk-reference-005.md too); 0 banned words. REF
+                           points at matryoshka-3tk's 3tk-reference-006.md;
+                           the in-repo default path is stale since the
+                           reference moved there
+./3tk/run-sanitizers.sh    not re-run this step
 grep -roiwE 'items?'       not re-run this step
 ```
 
 `run-builds.sh` needs `c3c` and nothing else, and that is deliberate. Both
 scripts take an optional directory and exit 2 on a bad one.
+
+## TODO
+
+**Flags for a later stage, not yet elaborated into a plan.**
+
+- **Tests improvements — closed by 3TK-58, 2026-09-03**, for the part that
+  could be. `test/t_mailbox.c3`/`t_pool.c3`'s direct `_active` reads are now
+  `is_quiet()`. `test/t_concurrency.c3`'s `the_deadline_is_anchored_once` had
+  no black-box equivalent and was dropped instead — see the log entry for
+  why. **Still open: whether the dropped Part 2.5/D7 coverage (deadline
+  anchored once, not restarted by a spurious wakeup) needs some other
+  verification** — a stress test, a manual sanitizer run, or nothing.
+  Owner's call.
+- **Managed Outers — re-thinking.** Every outer in 3tk is currently treated
+  as managed; the owner flagged this as wrong — some outers may be
+  non-managed. Flag only, raised 2026-09-03, no elaboration yet. Needs its
+  own discussion before any `src/` change.
 
 ## Rules that hold across every stage
 
@@ -394,6 +427,10 @@ scripts take an optional directory and exit 2 on a bad one.
 
 - **`design/secondary/lang/c3/`** — this folder. Plans, status, log, notes, and
   the code at `3tk/`.
+- **[`3tk/.notes.txt`](3tk/.notes.txt)** — local tool paths (C3 Manual, the
+  stdlib source tree) and the C3 Playground link, plus the doc-loop run
+  recipes (`check`, `from-reference`, `to-reference`, `move-module-docs.sh`)
+  and the two restart lines. Not versioned, edited in place.
 - **[`../common/`](../common/)** — what binds every port: the portable
   specification, the ztk audit, `port-flow-001.md`. Moved there 2026-08-23
   because a shared input inside one consumer's folder is a fork waiting to
@@ -429,21 +466,18 @@ scripts take an optional directory and exit 2 on a bad one.
 Every line begins the same way, because every stage reads this file first:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md. 3TK-50 has no next step — ask the owner what closes it.
+Read design/secondary/lang/c3/3tk-status.md.
 ```
 
-**Nothing is waiting on a ruling. 3TK-50 itself has run its last step.**
-Stage A closed the stack-outer defect on 2026-08-31. 3TK-50 ran in eleven
-steps, grouped by the pattern catalog's own sections — **except step 6,
-which ran out of catalog order**: the wrapper rule made explicit and the
-tree checked against it, after entries 27-32 exposed two wrappers that
-already broke it. A step number and a catalog section do not match
-one-to-one because of it; the log entry for each step says which section, if
-any, it covers. Each step wrote its examples (or, for a rule step, revised
-what an earlier step wrote) and ran `3tk/run-builds.sh`; **none of the
-eleven steps has yet been copied to `matryoshka-3tk` and pushed and
-previewed there**, and that is the owner's step. The catalog's two
-remaining sections write no code, so there is no step 12.
+**3TK-58 ran on 2026-09-03 and closed** — `Mailbox`/`Pool` are opaque
+handles, `is_quiet()` exists on both, the three test files are back to
+black-box, and `3tk-reference-006.md` is written. **No next stage is
+declared.** Ask the owner what to run next, or write a new staging plan.
+
+**3TK-50 is separately still waiting on the owner** — it has no next step
+(catalog sections with a code shape are all covered) and eleven steps are
+not yet copied to `matryoshka-3tk` and pushed/previewed there; that is
+independent of 3TK-58 and does not block it.
 
 For orientation only:
 
@@ -453,7 +487,7 @@ Read design/secondary/lang/c3/3tk-status.md and report where the 3tk work stands
 
 ## The stages that have run
 
-**Fifty-six, and the log has an entry for every one.** This table is the list,
+**Fifty-nine rows, and the log has an entry for every one.** This table is the list,
 not the record.
 
 | stage | | |
@@ -516,6 +550,7 @@ not the record.
 | **3TK-55** | the defect list catches up with the code | 2026-08-28 |
 | **3TK-56** | the close hook takes the queue by value, and `P6` is closed | 2026-08-30 |
 | **3TK-57** | GitHub Actions CI — built in `matryoshka-3tk`, not here | 2026-08-31 |
+| **3TK-58** | `Mailbox`/`Pool` opaque handles | 2026-09-03 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.
