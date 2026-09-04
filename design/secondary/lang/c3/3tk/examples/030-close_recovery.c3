@@ -17,7 +17,7 @@ faultdef CLOSE_RECOVERY_FAILED;
 
 fn void drain(InnerQueue* q, usz* freed)
 {
-    while (Handle h = q.pop_front())
+    while (Inner* h = q.pop_front())
     {
         Slot s;
         s.fill(h);

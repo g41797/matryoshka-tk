@@ -15,7 +15,7 @@ import shc::helpers;
 
 faultdef GUARDING_AN_EXPENSIVE_CHECK_FAILED;
 
-fn void guarded_walk(InnerQueue* q, Handle h)
+fn void guarded_walk(InnerQueue* q, Inner* h)
 {
     mtk::@check(h != null, "this walk was given a handle");
 
@@ -23,7 +23,7 @@ fn void guarded_walk(InnerQueue* q, Handle h)
     {
         usz n;
         InnerQueueIterator it = q.iter();
-        while (Handle each = it.next()) { n++; }
+        while (Inner* each = it.next()) { n++; }
         mtk::@check(n == q.len(), "the queue's kept count matches its chain");
     }
 }
@@ -40,7 +40,7 @@ fn void? the_guard_costs_nothing_in_a_fast_build(Allocator a)
 
     InnerQueue batch;
     mb.receive_all(&batch)!;
-    Handle h = batch.pop_front();
+    Inner* h = batch.pop_front();
     guarded_walk(&batch, h);
 
     Slot got;

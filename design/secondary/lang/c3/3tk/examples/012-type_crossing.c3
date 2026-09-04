@@ -1,7 +1,7 @@
 <*
  The `$Type` crossing needs no declared helper.
 
- - Create an `Event` and take its `Handle`.
+ - Create an `Event` and take its handle.
  - Cross back with the free-function form.
  - Cross back with the method form, and get the same answer.
 *>
@@ -18,7 +18,7 @@ fn void? cross_with_dollar_type(Allocator a)
     Slot s;
     defer mtk::managed::release(Event, &s);
     mtk::managed::create(Event, a, &s)!;
-    Handle h = s.peek();
+    Inner* h = s.peek();
 
     Event* free_form = mtk::helper::from_handle(h, Event);
     shc::helpers::expect(TYPE_CROSSING_FAILED, free_form != null, "from_handle did not find the Event")!;

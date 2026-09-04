@@ -40,13 +40,13 @@ fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
 
 fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front()) { }
+    while (Inner* h = remaining.pop_front()) { }
 }
 
 struct Giving
 {
     Pool*  p;
-    Handle item;
+    Inner* item;
 }
 
 fn int giver(void* arg)

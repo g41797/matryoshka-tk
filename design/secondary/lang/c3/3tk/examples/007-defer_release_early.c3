@@ -32,7 +32,7 @@ fn void? defer_release_goes_before_the_create(Allocator a)
 
     InnerQueue left;
     mb.close(&left);
-    Handle h = left.pop_front();
+    Inner* h = left.pop_front();
     shc::helpers::expect(DEFER_RELEASE_EARLY_FAILED, h != null, "the mailbox did not keep the Holder")!;
     Slot s;
     s.fill(h);

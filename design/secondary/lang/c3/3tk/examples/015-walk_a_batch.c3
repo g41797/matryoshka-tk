@@ -34,11 +34,11 @@ fn void? walk_a_received_batch(Allocator a)
 
     usz seen;
     InnerQueueIterator it = batch.iter();
-    while (Handle h = it.next()) { seen++; }
+    while (Inner* h = it.next()) { seen++; }
     shc::helpers::expect(WALK_A_BATCH_FAILED, seen == 3, "the iterator should see all three without consuming them")!;
     shc::helpers::expect(WALK_A_BATCH_FAILED, batch.len() == 3, "walking with an iterator must not consume the queue")!;
 
-    while (Handle h = batch.pop_front())
+    while (Inner* h = batch.pop_front())
     {
         Slot s;
         s.fill(h);

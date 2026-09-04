@@ -60,7 +60,7 @@ struct InnerQueueIterator
  Both are gone from a fast build.
 *>
 // [3tk: R6b, V4, Part 8.6]
-macro InnerQueue.@guard_insert(&self, Handle h)
+macro InnerQueue.@guard_insert(&self, Inner* h)
 {
     mtk::@check(h != null, "insert of a null handle");
     // [3tk: Part 8.7]
@@ -91,7 +91,7 @@ fn InnerQueueIterator InnerQueue.iter(&self) @inline => { .cur = self.head };
  The next handle, or null when the walk is exhausted.
 *>
 // [3tk: Part 8.4]
-fn Handle InnerQueueIterator.next(&self)
+fn Inner* InnerQueueIterator.next(&self)
 {
     Inner* n = self.cur;
     if (n) self.cur = (n.points_to() == n) ? null : n.points_to();
@@ -106,7 +106,7 @@ fn Handle InnerQueueIterator.next(&self)
  There is no front insert.
 *>
 // [3tk: R15, Part 8.2]
-fn void InnerQueue.push_back(&self, Handle h)
+fn void InnerQueue.push_back(&self, Inner* h)
 {
     self.@guard_insert(h);
     h.repoint_to(h);
@@ -138,9 +138,9 @@ fn void InnerQueue.push_back_slot(&self, Slot* s)
  The returned item's chain link is cleared.
 *>
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
-fn Handle InnerQueue.pop_front(&self)
+fn Inner* InnerQueue.pop_front(&self)
 {
-    Handle h = self.head;
+    Inner* h = self.head;
     if (!h) return null;
     if (self.head == self.tail)
     {

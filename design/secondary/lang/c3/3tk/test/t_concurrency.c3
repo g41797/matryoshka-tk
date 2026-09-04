@@ -181,7 +181,7 @@ fn void ConcurrentHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra
 
 fn void ConcurrentHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -331,7 +331,7 @@ fn void LateCloseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
 fn void LateCloseHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     self.closes.add(1, SEQ_CONSISTENT);
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);

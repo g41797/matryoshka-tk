@@ -1,5 +1,5 @@
 <*
- The declaration is the condition: a `Handle` bound in a `while` is in scope
+ The declaration is the condition: an `Inner*` bound in a `while` is in scope
  inside the body and nowhere else, so there is no variable left over to use
  by mistake after the loop.
 
@@ -18,7 +18,7 @@ faultdef THE_OPTIONAL_DECLARATION_WALK_FAILED;
 fn usz walk_and_release(InnerQueue* q)
 {
     usz n;
-    while (Handle h = q.pop_front())
+    while (Inner* h = q.pop_front())
     {
         Slot s;
         s.fill(h);

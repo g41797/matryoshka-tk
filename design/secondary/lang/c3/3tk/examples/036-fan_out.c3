@@ -65,7 +65,7 @@ fn void? each_outer_goes_to_exactly_one_worker(Allocator a, Mailbox* mbx)
     w3.join()!!;
 
     int leftover = 0;
-    while (Handle h = left.pop_front())
+    while (Inner* h = left.pop_front())
     {
         Slot s;
         s.fill(h);

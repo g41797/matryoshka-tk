@@ -43,7 +43,7 @@ fn void StragglerHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
 fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     bool straggler = !remaining.is_empty();
-    while (Handle h = remaining.pop_front()) { }
+    while (Inner* h = remaining.pop_front()) { }
     if (!straggler) return;             // the close's own call, which is empty here
 
     self.straggling.store(1, RELEASE);
@@ -54,7 +54,7 @@ fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 struct Giving
 {
     Pool*  p;
-    Handle item;
+    Inner* item;
 }
 
 fn int giver(void* arg)

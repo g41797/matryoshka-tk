@@ -33,7 +33,7 @@ fn void? finish_signal(Mailbox* inbox, Mailbox* worker_mbx)
 
     InnerQueue left;
     got.close(&left);
-    while (Handle h = left.pop_front())
+    while (Inner* h = left.pop_front())
     {
         Slot each;
         each.fill(h);

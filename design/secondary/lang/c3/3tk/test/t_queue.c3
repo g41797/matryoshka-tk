@@ -77,7 +77,7 @@ fn void the_last_item_points_at_itself() @test
 {
     Msg m;
     mtk::helper::init(&m);
-    Handle h = mtk::helper::to_handle(&m);
+    Inner* h = mtk::helper::to_handle(&m);
 
     always_assert(h.points_to() == null, "a fresh item is not off-chain");
 
@@ -145,9 +145,9 @@ fn void every_removal_repairs() @test
     InnerQueue q;
     for (usz i = 0; i < 3; i++) { mtk::helper::init(&ms[i]); q.push_back(mtk::helper::to_handle(&ms[i])); }
 
-    Handle a = q.pop_front();
-    Handle b = q.pop_front();
-    Handle c = q.pop_front();
+    Inner* a = q.pop_front();
+    Inner* b = q.pop_front();
+    Inner* c = q.pop_front();
 
     always_assert(!mtk::inner::is_linked(a), "pop_front left the head's link set");
     always_assert(!mtk::inner::is_linked(b), "pop_front left a middle item's link set");
@@ -175,7 +175,7 @@ fn void the_walk_yields_every_handle() @test
 
     usz seen = 0;
     InnerQueueIterator it = q.iter();
-    for (Handle h = it.next(); h; h = it.next())
+    for (Inner* h = it.next(); h; h = it.next())
     {
         always_assert(mtk::helper::from_handle(h, Msg).id == (int)seen, "the walk is out of order");
         seen++;
@@ -278,7 +278,7 @@ fn void append_queue_keeps_the_chain_walkable() @test
 
     usz seen = 0;
     InnerQueueIterator it = a.iter();
-    for (Handle h = it.next(); h; h = it.next())
+    for (Inner* h = it.next(); h; h = it.next())
     {
         always_assert(mtk::helper::from_handle(h, Msg).id == (int)seen, "the spliced chain is out of order");
         seen++;

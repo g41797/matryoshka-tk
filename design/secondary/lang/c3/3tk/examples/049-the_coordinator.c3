@@ -1,6 +1,6 @@
 <*
  A coordinator sequences discrete steps, and its own body says so in one
- glance — no step reaches around another to touch a `Slot` or a `Handle`.
+ glance — no step reaches around another to touch a `Slot` or a handle.
 
  - Seed the work: pull outers from the pool and send them to the mailbox.
  - Process the work: receive each outer, put it back, and count it.
@@ -28,7 +28,7 @@ fn void CoordinatorHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extr
 
 fn void CoordinatorHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -69,7 +69,7 @@ fn void Master.shut_down(&self)
 {
     InnerQueue left;
     self.mbx.close(&left);
-    while (Handle h = left.pop_front())
+    while (Inner* h = left.pop_front())
     {
         Slot s;
         s.fill(h);

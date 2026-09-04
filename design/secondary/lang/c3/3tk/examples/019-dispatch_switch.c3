@@ -13,7 +13,7 @@ import shc::helpers;
 
 faultdef DISPATCH_SWITCH_FAILED;
 
-fn void touch_by_switch(Handle h)
+fn void touch_by_switch(Inner* h)
 {
     switch (h.link.type)
     {

@@ -33,7 +33,7 @@ fn void? receive_all_at_once(Allocator a, Mailbox* mb)
     mb.receive_all(&batch)!;
 
     usz count = 0;
-    while (Handle h = batch.pop_front())
+    while (Inner* h = batch.pop_front())
     {
         Slot s;
         s.fill(h);

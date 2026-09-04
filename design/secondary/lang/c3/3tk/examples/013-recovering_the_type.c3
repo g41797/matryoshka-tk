@@ -19,7 +19,7 @@ fn void? recover_four_ways(Allocator a)
     Slot s;
     defer mtk::managed::release(Holder, &s);
     mtk::managed::create(Holder, a, &s)!;
-    Handle h = s.peek();
+    Inner* h = s.peek();
 
     Holder* checked = h.to(Holder);
     shc::helpers::expect(RECOVERING_THE_TYPE_FAILED, checked != null, "to() did not find the Holder")!;

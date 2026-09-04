@@ -27,7 +27,7 @@
  There is no `put_all`. A caller giving a batch back writes the loop.
 
  ```c3
- while (Handle h = batch.pop_front())
+ while (Inner* h = batch.pop_front())
  {
      Slot s;
      s.fill(h);
@@ -137,26 +137,6 @@ struct PoolBucket
 // [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
 typedef Pool = void;
 
-// The real fields, behind the opaque handle above. Every public method casts
-// its first line and works on this from there. Internal, so not a `<* *>`
-// block: see 3TK-42.
-// [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
-struct _Pool @private
-{
-    Inner node;
-
-    Mutex             _mu;
-    ConditionVariable _cv;
-
-    Allocator         _alloc;
-
-    bool         _closed;
-    Atomic{bool} _closed_fast;
-    usz          _active;
-
-    PoolBucket[] _buckets;
-    PoolHooks    _hooks;
-}
 
 <*
  The identity of a `Pool` as an item.
@@ -165,14 +145,14 @@ struct _Pool @private
 const typeid TYPE = _Pool::typeid;
 
 <*
- From a `Pool*` to a `Handle`. Cannot fail.
+ From a `Pool*` to its handle, an `Inner*`. Cannot fail.
 *>
-macro Handle to_handle(Pool* p) => mtk::helper::to_handle((_Pool*)p);
+macro Inner* to_handle(Pool* p) => mtk::helper::to_handle((_Pool*)p);
 
 <*
  The checking crossing back. Null when the handle names another type.
 *>
-macro Pool* of(Handle h) => (Pool*)mtk::helper::from_handle(h, _Pool);
+macro Pool* of(Inner* h) => (Pool*)mtk::helper::from_handle(h, _Pool);
 
 <*
  Allocates a pool and returns it.
@@ -286,7 +266,7 @@ macro bool _Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 // The bucket for an identity, or null. Called under the lock.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: A3, P2, Part 11.7, Part 19.3]
-fn PoolBucket* _Pool.bucket_for(&self, typeid t) @private
+fn PoolBucket* _Pool.bucket_for(&self, typeid t)
 {
     foreach (&b : self._buckets) if (b.tag == t) return b;
     return null;
@@ -335,7 +315,7 @@ fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
 
     if (mode != NEW_ONLY)
     {
-        Handle h = b.free.pop();
+        Inner* h = b.free.pop();
         if (h)
         {
             self._active--;
@@ -427,7 +407,7 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
         if (self._closed) return mtk::CLOSED~;
 
         // [3tk: A3]
-        Handle h = b.free.pop();
+        Inner* h = b.free.pop();
         if (h) { slot.fill(h); return; }
 
         if (catch f = self._cv.wait_until(&self._mu, deadline))
@@ -477,7 +457,7 @@ fn void Pool.put(&pool, Slot* slot)
     // [3tk: Part 11.12]
     self._active++;
 
-    Handle h = slot.peek();
+    Inner* h = slot.peek();
     PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "Pool.put of an identity the pool was not created with");
     if (!b) { self._active--; self._mu.unlock(); return; }
@@ -521,7 +501,7 @@ fn void Pool.put(&pool, Slot* slot)
     self.take_back(&mine);
 
     // [3tk: Part 12.5]
-    while (Handle e = extra.pop_front()) self.take_back_handle(e);
+    while (Inner* e = extra.pop_front()) self.take_back_handle(e);
 
     self._cv.broadcast();
     self._active--;
@@ -529,13 +509,13 @@ fn void Pool.put(&pool, Slot* slot)
 }
 
 // Stores one item the hook decided to keep. Called under the lock.
-fn void _Pool.take_back(&self, Slot* s) @private
+fn void _Pool.take_back(&self, Slot* s)
 {
     if (s.is_empty()) return;
     self.take_back_handle(s.take());
 }
 
-fn void _Pool.take_back_handle(&self, Handle h) @private
+fn void _Pool.take_back_handle(&self, Inner* h)
 {
     PoolBucket* b = self.bucket_for(h.link.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
@@ -599,7 +579,7 @@ fn void Pool.close(&pool)
 // so the check comes first and nothing else runs when it fails.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R12, Part 11.12, Part 15.4]
-fn void _Pool._close(&self, InnerQueue* out) @private
+fn void _Pool._close(&self, InnerQueue* out)
 {
     if (self._closed) return;
 
@@ -608,7 +588,7 @@ fn void _Pool._close(&self, InnerQueue* out) @private
 
     foreach (&b : self._buckets)
     {
-        while (Handle h = b.free.pop()) out.push_back(h);
+        while (Inner* h = b.free.pop()) out.push_back(h);
     }
 
     self._cv.broadcast();
@@ -650,6 +630,28 @@ fn usz Pool.count_of(&pool, typeid t)
     PoolBucket* b = self.bucket_for(t);
     return b ? b.free.len() : 0;
 }
+
+// The real fields, behind the opaque handle above. Every public method casts
+// its first line and works on this from there. Internal, so not a `<* *>`
+// block: see 3TK-42.
+// [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
+struct _Pool @private
+{
+    Inner node;
+
+    Mutex             _mu;
+    ConditionVariable _cv;
+
+    Allocator         _alloc;
+
+    bool         _closed;
+    Atomic{bool} _closed_fast;
+    usz          _active;
+
+    PoolBucket[] _buckets;
+    PoolHooks    _hooks;
+}
+
 
 //----------------------
 // Little-endian imports

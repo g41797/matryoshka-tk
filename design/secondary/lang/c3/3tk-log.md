@@ -7,6 +7,99 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-04 — 3TK-59: the `Handle` alias removed, the word kept
+
+**`alias Handle = Inner*;` is gone from `3tk/src/inner.c3`**, and every one of
+the 130 whole-word `Handle` sites under `3tk/` is now either `Inner*` or
+English prose. `typedef Slot = Inner*;` is the only handle-adjacent
+declaration left.
+
+**The ruling the stage was run on**, from the owner's objection that the
+`Slot`/`Handle`/`Inner*` model is hard for an ordinary developer: *a concept
+gets a C3 type when the type system can express useful semantics for it;
+otherwise it stays vocabulary.* `Slot` is a `typedef` — empty or full, `fill`
+requires empty and refuses null, `take` empties it — and earns a type name.
+`Handle` was an `alias`, so the compiler only ever saw `Inner*`: it refused no
+assignment, refused no null, detected no stale pointer, and said nothing about
+who frees the outer.
+
+**The word survives, and *porting is not transpiling* is why.** The
+specification describes the role; each port spells it as its type system
+allows — ztk `Handle`/`ItemHandle`, C3 `Inner*`, dtk to be decided. Nothing in
+the shared specification or in
+`kitchen/docs/addendums/handle-based-programming.md` was touched.
+
+**How the mechanical half was done, and what it could not do.** An `awk` pass
+substituted `Handle` → `Inner*` on every line *outside* a `<* … *>` doc
+comment, across `src/`, `test/`, `examples/` and `negative/`; the 16 sites it
+left were then rewritten by hand. **Two of those 16 were not prose and would
+have been silent defects if the pass had been trusted blindly**: `helper.c3`'s
+`@require is_mine((Handle)self, $Type)` is a compiled contract that happens to
+live inside a doc comment, and `pool.c3`'s module block carries a ```c3 fence
+whose `while (Handle h = batch.pop_front())` line the reference mirrors
+verbatim. Both were corrected.
+
+**One deletion the plan named as its own evidence.**
+`test/t_identity.c3:164`'s comment — *`Handle` is an alias for `Inner*`, so
+the crossings are reachable as methods* — existed only to explain the
+mismatch the alias caused. It is replaced by a sentence that states where the
+crossings are declared and needs no explanation of an alias.
+
+**The `[3tk: D4, R1, Part 10.1]` marker line went with the alias**, and
+nothing was lost: `struct Inner`'s own marker line already reads `D1 to D16,
+R1 to R15, Part 4, Part 9, Part 10.1`, which subsumes all three.
+
+**Three documents were written.**
+
+- **`3tk-reference-007.md`**, in `matryoshka-3tk/design/`, from 51 sites.
+  Part 3's *Participants* lost the `Handle` bullet and gained one that names
+  `Inner*` and says *handle* is a word in the books and not a type in the
+  source. The signature blocks needed no re-alignment: `Handle` and `Inner*`
+  are both six characters. The stale note under Part 5's `mtk::pool` about the
+  `mtk::Handle` spelling 3TK-47 corrected was rewritten into the past tense.
+  **`006`'s own version banner still read "This is 005"** — 3TK-58 did not
+  bump it — so `007`'s banner describes both `006` and `007`. `006` moved to
+  that repo's `backup/` with a plain `mv`.
+- **`3tk-patterns-003.md`**, from 22 sites, 15 of which were the walk
+  declaration. No pattern changed; only the spelling.
+- **`ref/3tk-decisions-005.md`**, carrying the ruling as an entry under
+  *Vocabulary and shape*, with `Slot` and `Handle` as the worked pair and dtk
+  named as the port that meets the question next. The three entries that
+  described the alias — *`Handle`, not `InnerHandle`*, *One handle type,
+  transparent*, and *The Slot is distinct, not an alias* — were rewritten,
+  and the `inner.c3` line anchors on the Slot entries were re-measured against
+  the shortened file. `004` moved to `backup/`.
+
+Cross-references were repointed in `ref/3tk-doc-loop-004.md`,
+`ref/3tk-api-003.md`, `3tk-open-defects.md`, and — in `matryoshka-3tk` —
+`3tk-example-rules-003.md`.
+
+**Verification.** `./3tk/run-builds.sh`: **87 checks, 0 failures, four builds
+green, 140 tests each** — identical to 3TK-58, as the plan required of a
+change with no semantics. `./3tk/check-doc-loop.sh` with `REF` at
+`3tk-reference-007.md`: **1 differing module block (`managed.c3`, pre-existing)
+and 462 descriptor sentences, 460 found, 2 missing** — the same two
+pre-existing gaps, confirmed absent from `006` as well. The plan called one of
+them a `helper.c3` sentence; it is in fact `inner.c3`'s *struct Inner*
+descriptor summary, and `helper.c3` is at 44 of 44. **Banned words: 0** in
+every doc comment and in `3tk-reference-007.md`, and the hand scan of
+`3tk-patterns-003.md` and `3tk-decisions-005.md` found nothing this stage
+wrote. The plan's warning about `drain` was heeded; the shape is called a
+**walk** throughout. `grep -rw Handle 3tk/`: **0 in every `.c3` file**. The one
+remaining hit in the tree is a comment in `check-doc-loop.sh` quoting
+`rules-049.md`'s scoped ban on *object*, which names the concept and not the
+type; it stays. `run-sanitizers.sh` was not run, as the plan says it need not be.
+
+**Two pre-existing `hands` hits are in `3tk-decisions-005.md`**, inherited
+from `004` at its `InnerQueue.take()` and pool-close entries. Reported, not
+fixed — `rules-049.md` Part 5 says report and do not fix without approval, and
+its scan scope skips `design/secondary/` anyway.
+
+**Not yet copied to `matryoshka-3tk`'s `src`/`test`, or pushed** — that is the
+owner's step. The three documents were written in place in their own repos.
+
+---
+
 ## 2026-09-03 — 3TK-58: `Mailbox`/`Pool` opaque handles
 
 **`Mailbox` and `Pool` became opaque handles**, following the idiom C3's own

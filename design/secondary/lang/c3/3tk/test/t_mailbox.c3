@@ -27,7 +27,7 @@ fn void drop_mailbox(Mailbox* mb)
 {
     InnerQueue left;
     mb.close(&left);
-    while (Handle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    while (Inner* h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
     mb.release();
 }
 
@@ -43,7 +43,7 @@ fn void a_mailbox_is_an_item() @test
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Handle h = mailbox::to_handle(mb);
+    Inner* h = mailbox::to_handle(mb);
     always_assert(h != null, "the mailbox has no handle");
     always_assert(h.link.type == mailbox::TYPE, "the mailbox carries no identity");
     always_assert(mailbox::of(h) == mb, "the mailbox did not survive the round trip");
@@ -248,7 +248,7 @@ fn void close_gives_the_remainder_back() @test
 
     for (usz i = 0; i < 3; i++)
     {
-        Handle h = left.pop_front();
+        Inner* h = left.pop_front();
         always_assert(mtk::helper::from_handle(h, Msg).id == (int)i, "the remainder is out of order");
         always_assert(!mtk::inner::is_linked(h), "a returned item kept its links");
     }
@@ -406,7 +406,7 @@ fn void a_closed_mailbox_is_empty() @test
     always_assert(@catch_is(mb.receive_all(&batch), mtk::CLOSED), "a closed mailbox answered a batch receive with items");
     always_assert(batch.is_empty(), "a refused batch receive moved items");
 
-    while (Handle h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
+    while (Inner* h = left.pop_front()) { /* the caller's work, Part 11.6 */ }
     mb.release();
 }
 
@@ -502,7 +502,7 @@ fn void close_then_join_then_release() @test
 
     // the caller's work, Part 11.6, and it happens before the release
     usz back = 0;
-    while (Handle h = left.pop_front()) { back++; }
+    while (Inner* h = left.pop_front()) { back++; }
     always_assert(back == 9, "the close did not hand back every item that was sent");
 
     always_assert(mb.is_quiet(), "a joined mailbox is not quiet");

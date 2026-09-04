@@ -8,9 +8,9 @@
  The chain link and the identity, in one.
  The identity sits in the same field as the chain link.
  The identity says what the outer type is.
- `Handle` is a pointer to an embedded `Inner`: one item, with the type forgotten.
- Everything 3tk transports is a `Handle`.
- It is an alias, so it converts freely with `Inner*` and costs nothing.
+ A pointer to an embedded `Inner` is one item, with the type forgotten.
+ That pointer is what the books call a handle, and 3tk transports nothing else.
+ It is spelled `Inner*`, because that is all it is.
  `Slot` is a box that holds one handle, or nothing.
  A Slot starts empty.
 
@@ -48,7 +48,7 @@ struct Inner
  @param to : "the handle this item now links to; itself, if it is the end"
 *>
 // [3tk: R6b]
-fn void Inner.repoint_to(&self, Handle to) @inline
+fn void Inner.repoint_to(&self, Inner* to) @inline
     => self.link = any_make(to, self.link.type);
 
 <*
@@ -57,17 +57,7 @@ fn void Inner.repoint_to(&self, Handle to) @inline
  Null if it is on no chain.
 *>
 // [3tk: R6b]
-fn Handle Inner.points_to(&self) @inline => (Handle)self.link.ptr;
-
-<*
- A pointer to an embedded `Inner`.
-
- One item, with the type forgotten.
- Everything 3tk transports is a `Handle`.
- It is an alias, so it converts freely with `Inner*` and costs nothing.
-*>
-// [3tk: D4, R1, Part 10.1]
-alias Handle = Inner*;
+fn Inner* Inner.points_to(&self) @inline => (Inner*)self.link.ptr;
 
 <*
  A box that holds one handle, or nothing.
@@ -76,7 +66,7 @@ alias Handle = Inner*;
  A Slot starts empty.
 *>
 // [3tk: D5, Part 9.1, Part 9.2 rule 1, Part 9.2 rule 2]
-typedef Slot = Handle;
+typedef Slot = Inner*;
 
 // --- The link test, and the repair -------------------------------------------
 
@@ -87,7 +77,7 @@ typedef Slot = Handle;
  False for a null handle.
 *>
 // [3tk: R6b, D12, V4, V5, Part 8.6, Part 8.7]
-fn bool is_linked(Handle h) @inline => h != null && h.points_to() != null;
+fn bool is_linked(Inner* h) @inline => h != null && h.points_to() != null;
 
 <*
  Clears the chain link so the item can be inserted again.
@@ -96,7 +86,7 @@ fn bool is_linked(Handle h) @inline => h != null && h.points_to() != null;
  Every removal in the queue and the stack calls it for you.
 *>
 // [3tk: Part 5.4, Part 8.8]
-fn void reset(Handle h) @inline
+fn void reset(Inner* h) @inline
 {
     if (!h) return;
     h.repoint_to(null);
@@ -108,13 +98,13 @@ fn void reset(Handle h) @inline
  Which of the two states it is in.
 *>
 // [3tk: Part 9.1, Part 9.9]
-fn bool Slot.is_empty(&self) @inline => !(Handle)*self;
+fn bool Slot.is_empty(&self) @inline => !(Inner*)*self;
 
 <*
  Which of the two states it is in.
 *>
 // [3tk: Part 9.1, Part 9.9]
-fn bool Slot.is_full(&self) @inline => (Handle)*self != null;
+fn bool Slot.is_full(&self) @inline => (Inner*)*self != null;
 
 <*
  Look without taking.
@@ -122,7 +112,7 @@ fn bool Slot.is_full(&self) @inline => (Handle)*self != null;
  Null on an empty Slot.
 *>
 // [3tk: Part 9.9]
-fn Handle Slot.peek(&self) @inline => (Handle)*self;
+fn Inner* Slot.peek(&self) @inline => (Inner*)*self;
 
 <*
  Take the handle out and clear the Slot.
@@ -130,10 +120,10 @@ fn Handle Slot.peek(&self) @inline => (Handle)*self;
  Null on an empty Slot.
 *>
 // [3tk: Part 9.2 rule 5, Part 9.9]
-fn Handle Slot.take(&self) @inline
+fn Inner* Slot.take(&self) @inline
 {
-    Handle h = (Handle)*self;
-    *self = (Slot)(Handle)null;
+    Inner* h = (Inner*)*self;
+    *self = (Slot)(Inner*)null;
     return h;
 }
 
@@ -146,7 +136,7 @@ fn Handle Slot.take(&self) @inline
  @param h : "the handle to place; must not be null"
 *>
 // [3tk: D6, Part 9.2 rule 1, Part 9.9]
-fn void Slot.fill(&self, Handle h) @inline
+fn void Slot.fill(&self, Inner* h) @inline
 {
     mtk::@check(h != null, "Slot.fill with a null handle");
     // [3tk: Part 9.2 rule 1]

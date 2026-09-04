@@ -102,9 +102,9 @@ fn void pop_repairs_the_link() @test
     InnerStack st;
     for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_handle(&ms[i])); }
 
-    Handle top    = st.pop();
-    Handle middle = st.pop();
-    Handle bottom = st.pop();
+    Inner* top    = st.pop();
+    Inner* middle = st.pop();
+    Inner* bottom = st.pop();
 
     always_assert(!mtk::inner::is_linked(top), "pop left the top's link set");
     always_assert(!mtk::inner::is_linked(middle), "pop left a middle item's link set");

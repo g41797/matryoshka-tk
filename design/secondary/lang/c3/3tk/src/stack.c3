@@ -52,7 +52,7 @@ struct InnerStack
  Both are gone from a fast build.
 *>
 // [3tk: R6b, Part 8.6]
-macro InnerStack.@guard_insert(&self, Handle h)
+macro InnerStack.@guard_insert(&self, Inner* h)
 {
     mtk::@check(h != null, "insert of a null handle");
     // [3tk: Part 8.7]
@@ -81,7 +81,7 @@ fn usz InnerStack.len(&self) @inline => self.count;
  There is no Slot-shaped insert.
 *>
 // [3tk: P6, R13, Part 8.2]
-fn void InnerStack.push(&self, Handle h)
+fn void InnerStack.push(&self, Inner* h)
 {
     self.@guard_insert(h);
     h.repoint_to(self.top ? self.top : h);
@@ -98,9 +98,9 @@ fn void InnerStack.push(&self, Handle h)
  The returned item's chain link is cleared.
 *>
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
-fn Handle InnerStack.pop(&self)
+fn Inner* InnerStack.pop(&self)
 {
-    Handle h = self.top;
+    Inner* h = self.top;
     if (!h) return null;
     self.top = (h.points_to() == h) ? null : h.points_to();
     self.count--;

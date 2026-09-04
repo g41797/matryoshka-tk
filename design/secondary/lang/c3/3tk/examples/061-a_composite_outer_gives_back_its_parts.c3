@@ -34,7 +34,7 @@ fn void PartHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
 
 fn void PartHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);

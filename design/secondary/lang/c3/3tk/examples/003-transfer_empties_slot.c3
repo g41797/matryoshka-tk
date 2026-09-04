@@ -31,7 +31,7 @@ fn void AlwaysCreateHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* ext
 
 fn void AlwaysCreateHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -46,7 +46,7 @@ fn void? demonstrate_transfer_empties_slot(Allocator a)
     {
         InnerQueue left;
         mb.close(&left);
-        while (Handle h = left.pop_front())
+        while (Inner* h = left.pop_front())
         {
             Slot s;
             s.fill(h);
@@ -63,7 +63,7 @@ fn void? demonstrate_transfer_empties_slot(Allocator a)
     InnerQueue q;
     defer
     {
-        while (Handle h = q.pop_front())
+        while (Inner* h = q.pop_front())
         {
             Slot s;
             s.fill(h);

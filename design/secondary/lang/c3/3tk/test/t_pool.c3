@@ -83,7 +83,7 @@ fn void TestHooks.on_close(&self, InnerQueue remaining) @dynamic
     // to rediscover 3TK-9.
     self.closes.add(1);
     self.closed_with.store(remaining.len());
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -112,7 +112,7 @@ fn Pool* new_pool(TestHooks* hooks)
 *>
 fn void put_batch(Pool* p, InnerQueue* items)
 {
-    while (Handle h = items.pop_front())
+    while (Inner* h = items.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -134,7 +134,7 @@ fn void a_pool_is_an_item() @test
     Pool* p = new_pool(&h);
     defer { p.close(); p.release(); }
 
-    Handle ph = pool::to_handle(p);
+    Inner* ph = pool::to_handle(p);
     always_assert(ph.link.type == pool::TYPE, "the pool carries no identity");
     always_assert(pool::of(ph) == p, "the pool did not survive the round trip");
     always_assert(pool::TYPE != mailbox::TYPE, "the two containers share an identity");
@@ -443,7 +443,7 @@ fn void the_give_back_loop_stops_at_the_first_refusal() @test
     always_assert(h.puts.load() == 0, "a closed pool ran the put hook");
 
     // the caller still owns all four and releases them
-    while (Handle x = items.pop_front())
+    while (Inner* x = items.pop_front())
     {
         Slot s;
         s.fill(x);

@@ -62,7 +62,7 @@ fn void? three_senders_one_mailbox(Allocator a, Mailbox* mbx)
 
     int events = 0;
     int holders = 0;
-    while (Handle h = batch.pop_front())
+    while (Inner* h = batch.pop_front())
     {
         Slot s;
         s.fill(h);

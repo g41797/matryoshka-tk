@@ -224,7 +224,7 @@ use.
 
 **What 3TK-56 moved outside `3tk/src`:**
 
-- `ref/3tk-decisions-004.md` — the `P6` entry, under `pool.c3` and `queue.c3`.
+- `ref/3tk-decisions-005.md` — the `P6` entry, under `pool.c3` and `queue.c3`.
   `-003` went to `backup/`.
 - `ref/3tk-reference-004.md` — the `on_close` signature and its doc block, and
   `InnerQueue.take()` added to the queue's operation list. Edited in place, not
@@ -337,7 +337,7 @@ doc block does not say *item*.
 `ref/3tk-doc-loop-003.md` is the procedure; `check-doc-loop.sh` says whether it
 is still owed.
 
-**`ref/3tk-decisions-004.md` is the current one**, and `-003` is in `backup/`.
+**`ref/3tk-decisions-005.md` is the current one**, and `-003` is in `backup/`.
 `P6`'s entry is in it, under `pool.c3` and `queue.c3`; `P7` closed without one.
 
 **The numbers to re-measure**, all true on 2026-08-30 after 3TK-56:

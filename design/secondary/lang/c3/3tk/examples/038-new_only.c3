@@ -25,7 +25,7 @@ fn void CountingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) 
 
 fn void CountingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);

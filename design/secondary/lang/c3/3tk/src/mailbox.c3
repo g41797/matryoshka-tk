@@ -68,14 +68,14 @@ struct _Mbox @private
 const typeid TYPE = _Mbox::typeid;
 
 <*
- From a `Mailbox*` to a `Handle`. Cannot fail.
+ From a `Mailbox*` to its handle, an `Inner*`. Cannot fail.
 *>
-macro Handle to_handle(Mailbox* p) => mtk::helper::to_handle((_Mbox*)p);
+macro Inner* to_handle(Mailbox* p) => mtk::helper::to_handle((_Mbox*)p);
 
 <*
  The checking crossing back. Null when the handle names another type.
 *>
-macro Mailbox* of(Handle h) => (Mailbox*)mtk::helper::from_handle(h, _Mbox);
+macro Mailbox* of(Inner* h) => (Mailbox*)mtk::helper::from_handle(h, _Mbox);
 
 <*
  Allocates a mailbox and returns it.
@@ -155,7 +155,7 @@ macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 // Puts the item on the ordinary queue, or ahead of every ordinary item.
 // O(1) in every build mode. Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R7, Part 11.3]
-fn void _Mbox.enqueue(&self, Handle h, bool oob) @private
+fn void _Mbox.enqueue(&self, Inner* h, bool oob)
 {
     if (oob) { self._oob.push_back(h); } else { self._regular.push_back(h); }
 }
@@ -163,14 +163,14 @@ fn void _Mbox.enqueue(&self, Handle h, bool oob) @private
 // Takes the next item.
 // Out-of-band first, then ordinary, first-in first-out within each.
 // [3tk: R7, R9, Part 11.3]
-fn Handle _Mbox.dequeue(&self) @private
+fn Inner* _Mbox.dequeue(&self)
 {
-    Handle h = self._oob.pop_front();
+    Inner* h = self._oob.pop_front();
     return h ? h : self._regular.pop_front();
 }
 
 // True if anything is queued at all. Reads both queues.
-fn bool _Mbox.has_queued(&self) @private @inline
+fn bool _Mbox.has_queued(&self) @inline
     => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
@@ -198,7 +198,7 @@ fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
 // [3tk: D14, R7, Part 11.3, Part 11.4]
 fn void? Mailbox.send_oob(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, true);
 
-fn void? _Mbox.send_at(&self, Slot* slot, bool oob) @private
+fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
 {
     mtk::@check(slot.is_full(), "Mailbox.send from an empty Slot");
     if (slot.is_empty()) return;
@@ -244,7 +244,7 @@ fn void? Mailbox.poll(&mbox, Slot* slot)
     self._active++;
     defer self._active--;
 
-    Handle h = self.dequeue();
+    Inner* h = self.dequeue();
     if (!h) return mtk::EMPTY~;
     slot.fill(h);
 }
@@ -291,7 +291,7 @@ fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
         // [3tk: Part 2.4]
         if (self._closed) return mtk::CLOSED~;
 
-        Handle h = self.dequeue();
+        Inner* h = self.dequeue();
         if (h) { slot.fill(h); return; }
 
         if (self._wake_gen != gen) return mtk::WOKEN~;
@@ -409,7 +409,7 @@ fn void Mailbox.close(&mbox, InnerQueue* out)
 // made before the store, so the fast path can refuse without the mutex.
 // Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: Part 11.12, Part 15.4]
-fn void _Mbox._close(&self, InnerQueue* out) @private
+fn void _Mbox._close(&self, InnerQueue* out)
 {
     if (self._closed) return;
 

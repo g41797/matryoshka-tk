@@ -28,7 +28,7 @@ fn void ReleaseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
 
 fn void ReleaseHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Handle h = remaining.pop_front())
+    while (Inner* h = remaining.pop_front())
     {
         Slot s;
         s.fill(h);
@@ -49,7 +49,7 @@ fn void Master.shut_down(&self)
 {
     InnerQueue left;
     self.mbx.close(&left);
-    while (Handle h = left.pop_front())
+    while (Inner* h = left.pop_front())
     {
         Slot s;
         s.fill(h);

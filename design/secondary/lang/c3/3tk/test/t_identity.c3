@@ -40,8 +40,8 @@ fn void inner_at_any_offset() @test
     mtk::helper::init(&m);
     mtk::helper::init(&j);
 
-    always_assert(mtk::helper::to_handle(&m) == (Handle)&m.node, "Msg: to_handle is not the inner");
-    always_assert(mtk::helper::to_handle(&j) == (Handle)&j.node, "Job: to_handle is not the inner");
+    always_assert(mtk::helper::to_handle(&m) == (Inner*)&m.node, "Msg: to_handle is not the inner");
+    always_assert(mtk::helper::to_handle(&j) == (Inner*)&j.node, "Job: to_handle is not the inner");
     always_assert(mtk::helper::from_handle(mtk::helper::to_handle(&m), Msg) == &m, "Msg: the round trip lost the outer");
     always_assert(mtk::helper::from_handle(mtk::helper::to_handle(&j), Job) == &j, "Job: the round trip lost the outer");
 }
@@ -80,7 +80,7 @@ fn void identity_is_stored() @test
 {
     Msg m;
     mtk::helper::init(&m);
-    Handle h = mtk::helper::to_handle(&m);
+    Inner* h = mtk::helper::to_handle(&m);
     always_assert(h.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -95,8 +95,8 @@ fn void identity_is_stored() @test
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!mtk::helper::is_mine((Handle)&m.node, Msg), "an uninitialized inner was claimed");
-    always_assert(mtk::helper::from_handle((Handle)&m.node, Msg) == null, "an uninitialized inner crossed the border");
+    always_assert(!mtk::helper::is_mine((Inner*)&m.node, Msg), "an uninitialized inner was claimed");
+    always_assert(mtk::helper::from_handle((Inner*)&m.node, Msg) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -109,7 +109,7 @@ fn void checking_crossing_refuses() @test
 {
     Twin t;
     mtk::helper::init(&t);
-    Handle h = mtk::helper::to_handle(&t);
+    Inner* h = mtk::helper::to_handle(&t);
 
     always_assert(mtk::helper::from_handle(h, Msg) == null, "a Twin crossed as a Msg");
     always_assert(mtk::helper::from_handle(h, Twin) == &t, "a Twin failed to cross as a Twin");
@@ -148,7 +148,7 @@ fn void heterogeneous_walk_claims_correctly() @test
     usz mine = 0;
     usz seen = 0;
     InnerQueueIterator it = list.iter();
-    for (Handle h = it.next(); h; h = it.next())
+    for (Inner* h = it.next(); h; h = it.next())
     {
         seen++;
         if (mtk::helper::from_handle(h, Msg)) mine++;
@@ -161,8 +161,8 @@ fn void heterogeneous_walk_claims_correctly() @test
  Part 6.3, through the METHODS — H0's second surface, and the one an
  application reads most.
 
- `Handle` is an alias for `Inner*`, so the crossings are reachable as methods
- on the handle itself. `to` is the checking crossing and `as` is the asserting
+ The crossings are declared on `Inner`, so they are reachable as methods on
+ the handle itself. `to` is the checking crossing and `as` is the asserting
  one — C3's own two names, borrowed from `any` rather than invented here, so a
  reader already knows which is which.
 
@@ -177,8 +177,8 @@ fn void the_methods_cross_the_same_border() @test
     mtk::helper::init(&m);
     mtk::helper::init(&t);
 
-    Handle hm = mtk::helper::to_handle(&m);
-    Handle ht = mtk::helper::to_handle(&t);
+    Inner* hm = mtk::helper::to_handle(&m);
+    Inner* ht = mtk::helper::to_handle(&t);
 
     always_assert(hm.to(Msg) == &m, "h.to lost the outer");
     always_assert(hm.as(Msg) == &m, "h.as lost the outer");
