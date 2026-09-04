@@ -9,11 +9,11 @@
  The count is kept, so `len` is O(1).
  `push_back` adds at the back.
  There is no front insert.
- `pop_front` takes the item at the front, and null on an empty queue is an answer and not a fault.
- `append_queue` moves every item of another queue onto the back of this one, in O(1).
+ `pop_front` takes the outer at the front, and null on an empty queue is an answer and not a fault.
+ `append_queue` moves every outer of another queue onto the back of this one, in O(1).
  `iter` and `next` are a walker, taken from the queue.
- Removing the current item during a walk is not supported.
- Every chain ends at an item pointing at itself, never at null.
+ Removing the current outer during a walk is not supported.
+ Every chain ends at an inner pointing at itself, never at null.
  Nothing in the queue can fail.
 *>
 module mtk::queue;
@@ -25,7 +25,7 @@ import mtk::inner;
 
  The transfer container.
  Nothing here allocates, and every operation is O(1).
- Every chain ends at an item pointing at itself, never at null.
+ Every chain ends at an inner pointing at itself, never at null.
  Nothing in the queue can fail.
  The count is kept, so `len` is O(1).
 *>
@@ -42,7 +42,7 @@ struct InnerQueue
  A walker over a queue.
 
  Exhausted when `next` returns null.
- Removing the current item during a walk is not supported.
+ Removing the current outer during a walk is not supported.
 *>
 // [3tk: V18, Part 6.5, Part 8.4]
 struct InnerQueueIterator
@@ -55,16 +55,16 @@ struct InnerQueueIterator
 <*
  The insert guard.
 
- A null handle is a defect.
- An item already on any chain is a defect.
+ A null inner is a defect.
+ An outer already on any chain is a defect.
  Both are gone from a fast build.
 *>
 // [3tk: R6b, V4, Part 8.6]
-macro InnerQueue.@guard_insert(&self, Inner* h)
+macro InnerQueue.@guard_insert(&self, Inner* inner)
 {
-    mtk::@check(h != null, "insert of a null handle");
+    mtk::@check(inner != null, "insert of a null inner");
     // [3tk: Part 8.7]
-    mtk::@check(!mtk::inner::is_linked(h), "the item is already on a chain");
+    mtk::@check(!mtk::inner::is_linked(inner), "the outer is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -76,7 +76,7 @@ macro InnerQueue.@guard_insert(&self, Inner* h)
 fn bool InnerQueue.is_empty(&self) @inline => self.count == 0;
 
 <*
- How many items the queue holds. O(1).
+ How many outers the queue holds. O(1).
 *>
 // [3tk: Part 8.2, Part 11.7]
 fn usz InnerQueue.len(&self) @inline => self.count;
@@ -88,7 +88,7 @@ fn usz InnerQueue.len(&self) @inline => self.count;
 fn InnerQueueIterator InnerQueue.iter(&self) @inline => { .cur = self.head };
 
 <*
- The next handle, or null when the walk is exhausted.
+ The next inner, or null when the walk is exhausted.
 *>
 // [3tk: Part 8.4]
 fn Inner* InnerQueueIterator.next(&self)
@@ -106,17 +106,17 @@ fn Inner* InnerQueueIterator.next(&self)
  There is no front insert.
 *>
 // [3tk: R15, Part 8.2]
-fn void InnerQueue.push_back(&self, Inner* h)
+fn void InnerQueue.push_back(&self, Inner* inner)
 {
-    self.@guard_insert(h);
-    h.repoint_to(h);
-    if (self.tail) { self.tail.repoint_to(h); } else { self.head = h; }
-    self.tail = h;
+    self.@guard_insert(inner);
+    inner.repoint_to(inner);
+    if (self.tail) { self.tail.repoint_to(inner); } else { self.head = inner; }
+    self.tail = inner;
     self.count++;
 }
 
 <*
- Same as `push_back()`, taking the item from a Slot.
+ Same as `push_back()`, taking the outer from a Slot.
 
  The Slot is empty afterwards.
  An empty Slot is a defect, not a no-op.
@@ -132,16 +132,16 @@ fn void InnerQueue.push_back_slot(&self, Slot* s)
 // --- Removing ---------------------------------------------------------------------
 
 <*
- Takes the item at the front.
+ Takes the outer at the front.
 
  Null on an empty queue, which is an answer and not a fault.
- The returned item's chain link is cleared.
+ The returned outer's chain link is cleared.
 *>
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
 fn Inner* InnerQueue.pop_front(&self)
 {
-    Inner* h = self.head;
-    if (!h) return null;
+    Inner* inner = self.head;
+    if (!inner) return null;
     if (self.head == self.tail)
     {
         self.head = null;
@@ -149,11 +149,11 @@ fn Inner* InnerQueue.pop_front(&self)
     }
     else
     {
-        self.head = h.points_to();
+        self.head = inner.points_to();
     }
     self.count--;
-    mtk::inner::reset(h);
-    return h;
+    mtk::inner::reset(inner);
+    return inner;
 }
 
 <*
@@ -174,7 +174,7 @@ fn InnerQueue InnerQueue.take(&self) @inline
 // --- Moving ------------------------------------------------------------------------
 
 <*
- Moves every item of another queue onto the back of this one. O(1).
+ Moves every outer of another queue onto the back of this one. O(1).
 
  That queue is empty afterwards.
  A queue moved onto itself is a defect.

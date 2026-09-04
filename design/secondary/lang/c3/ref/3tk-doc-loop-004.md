@@ -144,7 +144,7 @@ Run doc-loop from-reference on pool.c3.
 - A sentence can be true, be in the reference, and still not belong in a
   source comment.
 - **Design argument and implementation notes go to
-  [3tk-decisions-005.md](3tk-decisions-005.md)**, and the `// [3tk: ...]` mark
+  [3tk-decisions-006.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-006.md)**, and the `// [3tk: ...]` mark
   points at them.
 - That is what 3TK-31 was refused twice for.
 - A `<* *>` block holds the descriptor and the contracts. Nothing else.
@@ -360,7 +360,7 @@ module.**
   for that module carries.
 - **A sentence refused from a declaration is not thereby refused from a module
   block.** Design argument still goes to
-  [3tk-decisions-005.md](3tk-decisions-005.md) either way.
+  [3tk-decisions-006.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-006.md) either way.
 
 ## The rules that are elsewhere, by link
 
@@ -377,7 +377,7 @@ state.
 | The banned words, and the scoped bans | [../../../../rules-049.md](../../../../rules-049.md), Part 5 |
 | Staccato, and the markdown rules | [../../../../rules-049.md](../../../../rules-049.md), Part 6 |
 | Moved, never composed | [../3tk-staging-plan-016.md](../3tk-staging-plan-016.md) |
-| What each decision was, and where it lives | [3tk-decisions-005.md](3tk-decisions-005.md) |
+| What each decision was, and where it lives | [3tk-decisions-006.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-006.md) |
 
 ## The checker script
 

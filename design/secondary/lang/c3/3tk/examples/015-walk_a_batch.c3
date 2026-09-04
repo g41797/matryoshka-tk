@@ -34,14 +34,14 @@ fn void? walk_a_received_batch(Allocator a)
 
     usz seen;
     InnerQueueIterator it = batch.iter();
-    while (Inner* h = it.next()) { seen++; }
+    while (Inner* inner = it.next()) { seen++; }
     shc::helpers::expect(WALK_A_BATCH_FAILED, seen == 3, "the iterator should see all three without consuming them")!;
     shc::helpers::expect(WALK_A_BATCH_FAILED, batch.len() == 3, "walking with an iterator must not consume the queue")!;
 
-    while (Inner* h = batch.pop_front())
+    while (Inner* inner = batch.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
     shc::helpers::expect(WALK_A_BATCH_FAILED, batch.is_empty(), "pop_front should have drained the queue")!;

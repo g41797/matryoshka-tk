@@ -24,7 +24,7 @@ module mtk_test;
 import mtk;
 import std::core::mem::alloc;
 
-struct Msg   { int id; Inner node; char[8] body; }
-struct Job   { Inner node; int pri; }
-struct Twin  { int id; Inner node; char[8] body; }
-struct Holder { int id; Inner node; Allocator alloc; }
+struct Msg   { int id; Inner inner; char[8] body; }
+struct Job   { Inner inner; int pri; }
+struct Twin  { int id; Inner inner; char[8] body; }
+struct Holder { int id; Inner inner; Allocator alloc; }

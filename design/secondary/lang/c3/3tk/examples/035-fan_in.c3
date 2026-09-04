@@ -62,10 +62,10 @@ fn void? three_senders_one_mailbox(Allocator a, Mailbox* mbx)
 
     int events = 0;
     int holders = 0;
-    while (Inner* h = batch.pop_front())
+    while (Inner* inner = batch.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         if (s.to(Event))  { mtk::managed::release(Event, &s);  events++;  continue; }
         if (s.to(Holder)) { mtk::managed::release(Holder, &s); holders++; continue; }
         unreachable("fan-in met an identity it was not written for");

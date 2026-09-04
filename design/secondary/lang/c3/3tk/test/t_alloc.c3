@@ -180,7 +180,7 @@ fn void a_whole_life_leaves_nothing_outstanding() @test
     // the reason this call takes a list at all.
     InnerQueue returned;
     mb.close(&returned);
-    always_assert(returned.is_empty(), "an empty mailbox returned items on close");
+    always_assert(returned.is_empty(), "an empty mailbox returned outers on close");
     mb.release();
 
     TestHooks hooks;

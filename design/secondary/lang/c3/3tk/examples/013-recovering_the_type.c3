@@ -19,12 +19,12 @@ fn void? recover_four_ways(Allocator a)
     Slot s;
     defer mtk::managed::release(Holder, &s);
     mtk::managed::create(Holder, a, &s)!;
-    Inner* h = s.peek();
+    Inner* inner = s.peek();
 
-    Holder* checked = h.to(Holder);
+    Holder* checked = inner.to(Holder);
     shc::helpers::expect(RECOVERING_THE_TYPE_FAILED, checked != null, "to() did not find the Holder")!;
 
-    Holder* asserted = h.as(Holder);
+    Holder* asserted = inner.as(Holder);
     shc::helpers::expect(RECOVERING_THE_TYPE_FAILED, asserted == checked, "as() should match to()")!;
 
     Holder* peeked = s.to(Holder);
@@ -35,5 +35,5 @@ fn void? recover_four_ways(Allocator a)
     shc::helpers::expect(RECOVERING_THE_TYPE_FAILED, taken == checked, "Slot.move() should match Inner.to()")!;
     shc::helpers::expect(RECOVERING_THE_TYPE_FAILED, s.is_empty(), "Slot.move() must leave the Slot empty")!;
 
-    s.fill(h);
+    s.fill(inner);
 }

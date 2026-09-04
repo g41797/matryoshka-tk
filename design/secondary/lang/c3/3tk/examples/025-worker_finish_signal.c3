@@ -33,10 +33,10 @@ fn void? finish_signal(Mailbox* inbox, Mailbox* worker_mbx)
 
     InnerQueue left;
     got.close(&left);
-    while (Inner* h = left.pop_front())
+    while (Inner* inner = left.pop_front())
     {
         Slot each;
-        each.fill(h);
+        each.fill(inner);
         free_outer(&each);
     }
     got.release();
@@ -55,7 +55,7 @@ fn void? finish_signal_is_a_real_pointer_check(Allocator a)
     worker_mbx.send(&left_over)!;
 
     Slot s;
-    s.fill(mtk::mailbox::to_handle(worker_mbx));
+    s.fill(mtk::mailbox::to_inner(worker_mbx));
     inbox.send(&s)!;
 
     finish_signal(inbox, worker_mbx)!;

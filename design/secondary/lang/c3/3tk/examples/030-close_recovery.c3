@@ -17,10 +17,10 @@ faultdef CLOSE_RECOVERY_FAILED;
 
 fn void drain(InnerQueue* q, usz* freed)
 {
-    while (Inner* h = q.pop_front())
+    while (Inner* inner = q.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
         (*freed)++;
     }

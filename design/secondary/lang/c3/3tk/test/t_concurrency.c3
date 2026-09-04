@@ -77,12 +77,12 @@ fn int woken_waiter(void* arg)
  object.
 
  Part 14.2 MUST, invariant 31 — **the transfer orders memory.** Each producer
- writes `id` into the item before sending and each consumer reads it after
- receiving, with no atomics and no fences on the item's own fields. The sum
+ writes `id` into the outer before sending and each consumer reads it after
+ receiving, with no atomics and no fences on the outer's own fields. The sum
  coming out right is the guarantee holding: the mailbox's mutex is what carries
  the writes across.
 
- Part 15.1: no application data is under the toolkit's lock, and the item's
+ Part 15.1: no application data is under the toolkit's lock, and the outer's
  fields are application data.
 *>
 fn void many_producers_many_consumers() @test
@@ -103,17 +103,17 @@ fn void many_producers_many_consumers() @test
 
     foreach (&t : producers) t.join()!!;
 
-    // 3 producers x 50 items
+    // 3 producers x 50 outers
     while (sh.received.load(ACQUIRE) < 150) thread::sleep(time::ms(5))!!;
 
     InnerQueue left;
     mb.close(&left);
     foreach (&t : consumers) t.join()!!;
 
-    always_assert(sh.received.load(ACQUIRE) == 150, "items were lost in transit");
+    always_assert(sh.received.load(ACQUIRE) == 150, "outers were lost in transit");
     // each producer sends ids 0..49, three times over
-    always_assert(sh.sum.load(ACQUIRE) == 3 * (49 * 50 / 2), "Part 14.2: an item's fields did not cross the transfer");
-    always_assert(left.is_empty(), "the mailbox still held items");
+    always_assert(sh.sum.load(ACQUIRE) == 3 * (49 * 50 / 2), "Part 14.2: an outer's fields did not cross the transfer");
+    always_assert(left.is_empty(), "the mailbox still held outers");
 
     mb.release();
     pool.close();
@@ -181,10 +181,10 @@ fn void ConcurrentHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra
 
 fn void ConcurrentHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
 }
@@ -219,9 +219,9 @@ fn int hook_caller(void* arg)
 <*
  Part 2.6 MUST, invariant 5: signal hand-off on a lost race.
 
- Several waiters, one item, and one of them leaves on a timeout. The item must
+ Several waiters, one outer, and one of them leaves on a timeout. The outer must
  still reach somebody. Without the hand-off a pending signal is consumed by a
- waiter that then leaves, and the item sits with nobody woken.
+ waiter that then leaves, and the outer sits with nobody woken.
 
  This is a race, so the test runs the shape repeatedly rather than once.
 *>
@@ -242,16 +242,16 @@ fn void a_leaver_hands_the_signal_on() @test
         Msg m;
         mtk::helper::init(&m);
         Slot s;
-        s.fill(mtk::helper::to_handle(&m));
+        s.fill(mtk::helper::to_inner(&m));
         if (catch mb.send(&s)) {}
 
         foreach (&t : ts) t.join()!!;
 
         InnerQueue left;
         mb.close(&left);
-        // the item is either with a receiver or still queued; never lost
+        // the outer is either with a receiver or still queued; never lost
         always_assert(sh.received.load(ACQUIRE) + left.len() == 1,
-            "Part 2.6: the item was lost between a leaver and the queue");
+            "Part 2.6: the outer was lost between a leaver and the queue");
         while (left.pop_front()) {}
         mb.release();
     }
@@ -273,7 +273,7 @@ fn int short_waiter(void* arg)
  `Pool.close` can run to completion inside that window: it sets both flags,
  drains every bucket, and calls `on_close` — all before `put` relocks. A `put`
  that then stores what its hook kept pushes into a closed and already-drained
- pool, and the item is with NOBODY. The caller's Slot was cleared before the
+ pool, and the outer is with NOBODY. The caller's Slot was cleared before the
  hook ran, so Part 9.4 tells the caller truthfully that the pool has it; the
  close hook already ran, so the hook never sees it. Nothing releases it.
 
@@ -287,7 +287,7 @@ fn int short_waiter(void* arg)
  the pool from the hook, which is the other half of the same contract.
 
  What is asserted is the rule the fix carries: **what the pool holds when it
- discovers it is closed goes to `on_close`.** Both the kept item and the
+ discovers it is closed goes to `on_close`.** Both the kept outer and the
  hook's `extra` parts — Part 12.5's composite mechanism, which the caller never
  had and could not be given back — reach the close hook and are released.
 *>
@@ -297,7 +297,7 @@ struct LateCloseHooks (PoolHooks)
     Atomic{usz} in_hook;        // the put hook has been entered
     Atomic{usz} close_done;     // the closer thread has returned from close()
     Atomic{usz} closes;         // how many times on_close ran
-    Atomic{usz} released;       // items released across every on_close
+    Atomic{usz} released;       // outers released across every on_close
     usz         extras;         // parts the put hook hands back, Part 12.5
 }
 
@@ -324,17 +324,17 @@ fn void LateCloseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
         extra.push_back_slot(&part);
     }
 
-    // The Slot stays full: the hook kept the item. There is nowhere for the
+    // The Slot stays full: the hook kept the outer. There is nowhere for the
     // pool to put it now, and that is the whole point.
 }
 
 fn void LateCloseHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     self.closes.add(1, SEQ_CONSISTENT);
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
         self.released.add(1, SEQ_CONSISTENT);
     }
@@ -351,7 +351,7 @@ fn void a_close_during_the_put_hook_loses_nothing() @test
 
     Slot s;
     p.get(Holder::typeid, NEW_ONLY, &s)!!;
-    always_assert(s.is_full(), "the get did not produce an item");
+    always_assert(s.is_full(), "the get did not produce an outer");
 
     LateCloseArg arg = { p, &h };
     Thread closer;
@@ -365,17 +365,17 @@ fn void a_close_during_the_put_hook_loses_nothing() @test
 
     // Part 9.4: cleared means the pool took it. It did, and it must therefore
     // account for it.
-    always_assert(s.is_empty(), "the put left the item with the caller");
+    always_assert(s.is_empty(), "the put left the outer with the caller");
 
     // Invariant 34: nothing landed in a bucket after the flag was set.
     always_assert(p.count_of(Holder::typeid) == 0,
-        "invariant 34: an item is in a closed pool");
+        "invariant 34: an outer is in a closed pool");
 
-    // The straggler call. Without the fix this is 1 and three items leak.
+    // The straggler call. Without the fix this is 1 and three outers leak.
     always_assert(h.closes.load(ACQUIRE) == 2,
         "the stragglers never reached the close hook");
     always_assert(h.released.load(ACQUIRE) == 3,
-        "the kept item and its two parts did not all reach the close hook");
+        "the kept outer and its two parts did not all reach the close hook");
 
     p.release();
 }

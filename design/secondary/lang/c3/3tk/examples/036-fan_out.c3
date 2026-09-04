@@ -65,10 +65,10 @@ fn void? each_outer_goes_to_exactly_one_worker(Allocator a, Mailbox* mbx)
     w3.join()!!;
 
     int leftover = 0;
-    while (Inner* h = left.pop_front())
+    while (Inner* inner = left.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
         leftover++;
     }

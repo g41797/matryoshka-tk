@@ -1,9 +1,9 @@
 <*
  Part 13 and Part 7.3 — the owning helper, and D3.
 
- The decision under test: an application item that wants a release with no
+ The decision under test: an application outer that wants a release with no
  allocator parameter keeps the allocator in its OWN outer, and the inner stays
- two words wide for every item in the program.
+ two words wide for every outer in the program.
 *>
 module mtk_test;
 
@@ -22,7 +22,7 @@ fn void create_and_release_name_the_allocator_once() @test
 
     Holder* o = mtk::helper::must_from_slot(&s, Holder);
     o.id = 42;
-    always_assert(o.alloc == mem, "the item did not keep the allocator it was created with");
+    always_assert(o.alloc == mem, "the outer did not keep the allocator it was created with");
 
     mtk::managed::release(Holder, &s);
     always_assert(s.is_empty(), "release did not clear the Slot");
@@ -39,14 +39,14 @@ fn void creation_is_slot_shaped() @test
 
     if (catch mtk::managed::create(Holder, mem, &s)) { always_assert(false, "create failed"); }
 
-    // the caller's next line moves the item out of the Slot into a typed pointer
+    // the caller's next line moves the outer out of the Slot into a typed pointer
     Holder* o = mtk::helper::from_slot(&s, Holder);
-    always_assert(o != null, "the created item is not of its own type");
+    always_assert(o != null, "the created outer is not of its own type");
     always_assert(mtk::helper::is_mine(s.peek(), Holder), "create did not write the identity");
 }
 
 <*
- The created item is a full Matryoshka item: it threads onto a list and comes
+ The created outer is a full Matryoshka outer: it threads onto a list and comes
  back off through the border, like any other.
 *>
 fn void a_managed_item_is_an_ordinary_item() @test
@@ -63,8 +63,8 @@ fn void a_managed_item_is_an_ordinary_item() @test
 
     s.fill(list.pop_front());
     Holder* back = mtk::helper::must_from_slot(&s, Holder);
-    always_assert(back == o, "the item came back as a different address");
-    always_assert(back.id == 7, "the item came back with different contents");
+    always_assert(back == o, "the outer came back as a different address");
+    always_assert(back.id == 7, "the outer came back with different contents");
 
     mtk::managed::release(Holder, &s);
     always_assert(s.is_empty(), "release did not clear the Slot");

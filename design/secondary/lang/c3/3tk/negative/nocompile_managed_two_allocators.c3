@@ -8,6 +8,6 @@
 module neg_nc;
 import mtk;
 
-struct TwoAllocators { int id; Inner node; Allocator a; Allocator b; }
+struct TwoAllocators { int id; Inner inner; Allocator a; Allocator b; }
 
 fn int main() { Slot s; mtk::managed::create(TwoAllocators, mem, &s)!!; return 0; }

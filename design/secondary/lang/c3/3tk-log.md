@@ -7,6 +7,130 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-04 — 3TK-60: the two terms
+
+**3tk has exactly two terms, `Inner` and `Outer`, and the words *handle* and
+*item* are gone from the source, the tests, the negatives, the examples and
+every book.** `to_handle`/`from_handle`/`must_from_handle` are
+`to_inner`/`from_inner`/`must_from_inner`. The stage is a rename and nothing
+else: `run-builds.sh` returns **87 checks, 0 failures, four builds green, 140
+tests each** — identical to 3TK-59, as a change with no semantics must be.
+
+**It supersedes 3TK-59's decision to keep *handle* as an English word.** That
+stage removed `alias Handle = Inner*` and ruled *a concept gets a C3 type when
+the type system can express useful semantics for it; otherwise it stays
+vocabulary.* Under the two-term ruling *handle* is a third term naming nothing
+the pair does not: it was the old word for `Inner*`, and *item* the old word
+for an outer.
+
+**`Slot` is untouched**, and the terms document says why: it is a real type
+naming a container state, not a participant.
+
+### The owner's ruling mid-stage: `inner`, not `n`
+
+**Plan 024's own rename table wrote `from_inner(Inner* n, $Type)`.** At the
+checkpoint the owner asked why `n` and not something spelled out. Three facts
+settled it:
+
+1. **The other half of the pair is the full word.** Spelling one `outer` and
+   the other `n` hides the pair the stage exists to establish.
+2. **The tree already spelled the embedded field `node`** — 14 declarations
+   across `test/`, `examples/` and `negative/`. That is a *third term*, in the
+   same position *handle* held, and the ruling admits no third term. It was
+   not in the plan's scope; the owner ruled it in.
+3. **`inner` does not collide with the module `mtk::inner`.** Measured on c3c
+   0.8.3 before the ruling: a parameter, a local and a struct field all named
+   `inner` compile, link and run with `import mtk::inner` in scope, because C3
+   keeps module paths and value identifiers in separate namespaces. **The
+   abbreviation bought nothing.**
+
+**Ruled: `inner` everywhere** — parameters, locals, and the embedded field.
+`struct Msg { Inner inner; int v; }`.
+
+### One deviation from the plan, and why
+
+**The plan put the checkpoint before anything mechanical ran.** Renaming the
+three crossing macros in `helper.c3` alone left the tree with 40 failures —
+nothing to verify and a bad place to stop. **The three identifiers were swept
+tree-wide before the checkpoint, and nothing else**, so the owner reviewed the
+exemplar against a green build. Everything the checkpoint guards — the prose,
+the tests, the books — was held.
+
+### What the sweep found that a mechanical pass would have broken
+
+- **`h` is not always an `Inner*`.** `TestHooks h`, `ConcurrentHooks h` and
+  `LateCloseHooks h` are hooks structs, 24 sites. The rename was scoped per
+  function body — a block gets `h` → `inner` only if it declares `Inner* h` —
+  and two files are genuinely mixed (`t_pool.c3`, `t_concurrency.c3`, two
+  `Inner* h` each). Three `Holder* h` locals in `examples/` became `outer`.
+- **`3tk-api-003.md` was stale, and a word sweep would have hidden it.** It
+  still documented `### alias Handle = Inner*` and said "`Handle` is an alias
+  for `Inner*`" — a declaration 3TK-59 deleted. Renaming the word would have
+  produced `alias Inner = Inner*`, a false statement about a type that exists.
+  **The entry is deleted in `004`**, the signatures spell `Inner*`, and the
+  methods preamble now gives the real reason the crossings are declared on
+  `Inner`: C3 has no UFCS and a method cannot be attached to a pointer alias.
+- **A decisions record must keep the name of what it deleted.** The 3TK-59
+  entry in `3tk-decisions-006.md` keeps `alias Handle = Inner*` in backticks,
+  because it explains why *that declaration* went. Retiring a word forward does
+  not license rewriting the record of it. Same for the ztk row (`ItemHandle`)
+  and `D8`'s superseded names (`AnyNode`, `AnyHandle`).
+- **The reference's Participants block had been written around *handle*** in
+  3TK-59 and the sweep turned it into "a **inner**" and "*Inner* is a word in
+  these books and not a type in the source" — false, since `Inner` is a type.
+  Rewritten by hand, and it now states the model outright:
+
+  > You send and receive your own struct. To get that, you give the
+  > infrastructure one thing: an `Inner` embedded in it. From then on the
+  > infrastructure never sees your type — it moves `Inner*`, intrusively and
+  > type-erased. You get your struct back by crossing once, from `Inner*` to
+  > `Outer*`, and the identity in the `Inner` is what makes that crossing safe.
+
+  The same statement opens `3tk-terms-001.md` and the `mtk::helper` and
+  `mtk::inner` module blocks.
+- **Articles.** *a handle* → *an inner*, and `node`→`inner` produced "a inner"
+  twice in the reference. Swept and checked with a dedicated grep.
+- **Reflowing the reference broke the doc loop.** Rewrapping long lines
+  rewrote six module-description blocks and `check-doc-loop.sh` reported **6
+  differing blocks**; `./move-module-docs.sh out` restored them byte-exact.
+  A module description is copied, never composed — including its line breaks.
+
+### The doc loop came out better than the plan allowed
+
+The plan permitted the one pre-existing `managed.c3` `DIFFERS` block and the
+two pre-existing missing sentences to persist. **`move-module-docs.sh out`
+closed the `DIFFERS` block and one of the two missing sentences** as a side
+effect of copying the new descriptions across. Final: **0 differing blocks,
+471 of 472 sentences found, 0 banned words.** The one still missing is the
+pre-existing `inner.c3` struct-descriptor summary, which is 3TK-61's.
+
+### Also done, because it was in the way
+
+**Both scripts defaulted `REF` to `../ref/3tk-reference-004.md`**, four
+versions dead, so every invocation needed `REF=` on the command line. They now
+default to `matryoshka-3tk/design/3tk-reference-008.md` and run bare.
+`check-doc-loop.sh`'s comment quoting the banned-word rule was reworded off
+*item* and `Handle`.
+
+### Versions written, and what moved
+
+New, all in `matryoshka-3tk/design/`: **`3tk-terms-001.md`** (new),
+**`3tk-reference-008.md`**, **`3tk-patterns-004.md`**,
+**`3tk-example-rules-004.md`**, **`3tk-api-004.md`**,
+**`3tk-decisions-006.md`**. The last two changed repo: `ref/3tk-api-003.md`
+and `ref/3tk-decisions-005.md` moved to `c3/backup/`, and the stray
+`ref/3tk-api-002.md` with them. **`ref/` now holds only
+`3tk-doc-loop-004.md`.** `007`/`003`/`003` moved to
+`matryoshka-3tk/design/backup/`. Cross-references were repointed in the same
+step — `ref/3tk-doc-loop-004.md`, `3tk-open-defects.md` and the books' own
+links.
+
+**Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`/`examples`, or
+pushed** — that is the owner's step. The design documents were written
+directly in `matryoshka-3tk/design/`.
+
+---
+
 ## 2026-09-04 — 3TK-59: the `Handle` alias removed, the word kept
 
 **`alias Handle = Inner*;` is gone from `3tk/src/inner.c3`**, and every one of

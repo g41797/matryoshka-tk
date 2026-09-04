@@ -25,10 +25,10 @@ fn void? insert_from_a_slot(Allocator a)
     q.push_back_slot(&s);
     shc::helpers::expect(INSERT_FROM_SLOT_FAILED, s.is_empty(), "push_back_slot left the Slot full")!;
 
-    while (Inner* h = q.pop_front())
+    while (Inner* inner = q.pop_front())
     {
         Slot popped;
-        popped.fill(h);
+        popped.fill(inner);
         mtk::managed::release(Holder, &popped);
     }
 }

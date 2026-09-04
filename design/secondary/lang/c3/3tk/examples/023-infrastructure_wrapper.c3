@@ -17,7 +17,7 @@ faultdef INFRASTRUCTURE_WRAPPER_FAILED;
 
 struct WorkerInbox
 {
-    Inner       node;
+    Inner       inner;
     Allocator   alloc;
     Mailbox*    mbx;
     int         job_id;

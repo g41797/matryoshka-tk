@@ -2,31 +2,36 @@
 // SPDX-License-Identifier: MIT
 
 <*
- The inner, the handle, the Slot, and the link.
+ The inner, the Slot, and the link.
+
+ You send and receive your own struct.
+ The struct is the outer, and it is yours.
+ You give the infrastructure one thing, an `Inner` embedded in it.
+ From then on the infrastructure never sees your type.
+ It moves `Inner*`, intrusively and with the type erased.
 
  `Inner` is the field you embed.
  The chain link and the identity, in one.
  The identity sits in the same field as the chain link.
  The identity says what the outer type is.
- A pointer to an embedded `Inner` is one item, with the type forgotten.
- That pointer is what the books call a handle, and 3tk transports nothing else.
- It is spelled `Inner*`, because that is all it is.
- `Slot` is a box that holds one handle, or nothing.
+ A pointer to an embedded `Inner` is one outer, with the type forgotten.
+ It is spelled `Inner*`, because that is all it is, and 3tk transports nothing else.
+ `Slot` is a box that holds one `Inner*`, or nothing.
  A Slot starts empty.
 
- The Slot is how the toolkit tells you where an item went.
- Read the Slot after every call that gives or takes an item.
+ The Slot is how the toolkit tells you where an outer went.
+ Read the Slot after every call that gives or takes an outer.
 
  The chain link is the other half of `Inner`.
  `reset` clears the chain link and not the identity.
- Every chain ends at an item pointing at itself, never at null.
+ Every chain ends at an inner pointing at itself, never at null.
  That is what makes `is_linked` exact.
 *>
 module mtk::inner;
 import mtk;
 
 <*
- The inner, the handle, the Slot, the link test, and the port's check macro.
+ The inner, the Slot, the link test, and the port's check macro.
 
  The field you embed.
  The chain link and the identity, in one.
@@ -45,14 +50,14 @@ struct Inner
 
  The containers call it.
 
- @param to : "the handle this item now links to; itself, if it is the end"
+ @param to : "the inner this one now links to; itself, if it is the end"
 *>
 // [3tk: R6b]
 fn void Inner.repoint_to(&self, Inner* to) @inline
     => self.link = any_make(to, self.link.type);
 
 <*
- The item this one links to.
+ The inner this one links to.
 
  Null if it is on no chain.
 *>
@@ -60,9 +65,9 @@ fn void Inner.repoint_to(&self, Inner* to) @inline
 fn Inner* Inner.points_to(&self) @inline => (Inner*)self.link.ptr;
 
 <*
- A box that holds one handle, or nothing.
+ A box that holds one `Inner*`, or nothing.
 
- Zero or one item.
+ Zero or one outer.
  A Slot starts empty.
 *>
 // [3tk: D5, Part 9.1, Part 9.2 rule 1, Part 9.2 rule 2]
@@ -71,25 +76,25 @@ typedef Slot = Inner*;
 // --- The link test, and the repair -------------------------------------------
 
 <*
- True when the handle is on some chain.
+ True when the inner is on some chain.
 
  Exact, and O(1).
- False for a null handle.
+ False for a null inner.
 *>
 // [3tk: R6b, D12, V4, V5, Part 8.6, Part 8.7]
-fn bool is_linked(Inner* h) @inline => h != null && h.points_to() != null;
+fn bool is_linked(Inner* inner) @inline => inner != null && inner.points_to() != null;
 
 <*
- Clears the chain link so the item can be inserted again.
+ Clears the chain link so the outer can be inserted again.
 
  It clears the link and not the identity.
  Every removal in the queue and the stack calls it for you.
 *>
 // [3tk: Part 5.4, Part 8.8]
-fn void reset(Inner* h) @inline
+fn void reset(Inner* inner) @inline
 {
-    if (!h) return;
-    h.repoint_to(null);
+    if (!inner) return;
+    inner.repoint_to(null);
 }
 
 // --- The Slot's reading shape -----------------------------------------------
@@ -115,33 +120,33 @@ fn bool Slot.is_full(&self) @inline => (Inner*)*self != null;
 fn Inner* Slot.peek(&self) @inline => (Inner*)*self;
 
 <*
- Take the handle out and clear the Slot.
+ Take the `Inner*` out and clear the Slot.
 
  Null on an empty Slot.
 *>
 // [3tk: Part 9.2 rule 5, Part 9.9]
 fn Inner* Slot.take(&self) @inline
 {
-    Inner* h = (Inner*)*self;
+    Inner* inner = (Inner*)*self;
     *self = (Slot)(Inner*)null;
-    return h;
+    return inner;
 }
 
 <*
- Put a handle in.
+ Put an `Inner*` in.
 
- A null handle is a defect.
+ A null inner is a defect.
  Overwriting a full Slot is a defect.
 
- @param h : "the handle to place; must not be null"
+ @param inner : "the inner to place; must not be null"
 *>
 // [3tk: D6, Part 9.2 rule 1, Part 9.9]
-fn void Slot.fill(&self, Inner* h) @inline
+fn void Slot.fill(&self, Inner* inner) @inline
 {
-    mtk::@check(h != null, "Slot.fill with a null handle");
+    mtk::@check(inner != null, "Slot.fill with a null inner");
     // [3tk: Part 9.2 rule 1]
     mtk::@check(self.is_empty(), "never overwrite a full Slot");
-    *self = (Slot)h;
+    *self = (Slot)inner;
 }
 
 // --- Compile-time discovery of the outer's fields ----------------------------
@@ -167,7 +172,7 @@ macro usz inner_offset($Type)
             $seen = $seen + 1;
         $endif
     $endforeach
-    $assert $seen != 0 : "type " +++ $Type::name +++ " has no Inner field; it cannot be a Matryoshka item";
+    $assert $seen != 0 : "type " +++ $Type::name +++ " has no Inner field; it cannot be a Matryoshka outer";
     // [3tk: Part 4.4]
     $assert $seen == 1 : "type " +++ $Type::name +++ " has more than one Inner field; exactly one is allowed";
     return $off;

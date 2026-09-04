@@ -25,8 +25,8 @@ fn void PartHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 
 fn void PartHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    Holder* h = slot.must(Holder);
-    h.id = 0;
+    Holder* outer = slot.must(Holder);
+    outer.id = 0;
     self.on_put_calls++;
     // a composite outer would push its parts onto `extra` here; this one
     // carries none, so `extra` stays empty.
@@ -34,10 +34,10 @@ fn void PartHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
 
 fn void PartHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
 }

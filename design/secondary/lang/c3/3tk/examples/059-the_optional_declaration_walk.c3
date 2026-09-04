@@ -18,10 +18,10 @@ faultdef THE_OPTIONAL_DECLARATION_WALK_FAILED;
 fn usz walk_and_release(InnerQueue* q)
 {
     usz n;
-    while (Inner* h = q.pop_front())
+    while (Inner* inner = q.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
         n++;
     }
@@ -45,6 +45,6 @@ fn void? the_declaration_is_the_condition(Allocator a)
     mb.receive_all(&batch)!;
 
     usz n = walk_and_release(&batch);
-    shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, n == 3, "the walk saw every handle the queue held")!;
+    shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, n == 3, "the walk saw every inner the queue held")!;
     shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, batch.is_empty(), "pop_front left nothing behind")!;
 }

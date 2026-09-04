@@ -31,16 +31,16 @@ fn void CappedHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 
 fn void CappedHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    Holder* h = slot.must(Holder);
-    h.id = 0; // cleaned, and kept
+    Holder* outer = slot.must(Holder);
+    outer.id = 0; // cleaned, and kept
 }
 
 fn void CappedHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         self.live.sub(1);
         mtk::managed::release(Holder, &s);
     }

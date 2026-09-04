@@ -25,10 +25,10 @@ fn void CountingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) 
 
 fn void CountingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
 }

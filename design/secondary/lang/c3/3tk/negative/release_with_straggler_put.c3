@@ -2,13 +2,13 @@
  Part 11.12 MUST — the straggler path is covered too. **Tier 1.**
 
  Part 12.2: a `put` whose `on_put` ran while the pool was being closed hands
- its items to `on_close` itself, from inside `put`. That second hook call is
+ its outers to `on_close` itself, from inside `put`. That second hook call is
  application code running after the close has already finished, and a count
  that stopped at `on_put` would report zero while it ran.
 
  So this program lowers nothing until the straggler hook has returned: the
  `on_put` hook parks, the main thread closes, and the `put` wakes to find the
- pool closed and calls `on_close` with its own item. The release runs there.
+ pool closed and calls `on_close` with its own outer. The release runs there.
 
  Like every tier 1 program it must abort in all four builds, including
  `--safe=no -O3`. If it ever prints its last line, the port has softened a MUST.
@@ -35,7 +35,7 @@ fn void StragglerHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dyna
 
 fn void StragglerHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    // keep the item, so the close that arrives meanwhile makes it a straggler
+    // keep the outer, so the close that arrives meanwhile makes it a straggler
     self.in_put.store(1, RELEASE);
     while (self.closed.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
 }
@@ -43,7 +43,7 @@ fn void StragglerHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
 fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
     bool straggler = !remaining.is_empty();
-    while (Inner* h = remaining.pop_front()) { }
+    while (Inner* inner = remaining.pop_front()) { }
     if (!straggler) return;             // the close's own call, which is empty here
 
     self.straggling.store(1, RELEASE);
@@ -54,14 +54,14 @@ fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 struct Giving
 {
     Pool*  p;
-    Inner* item;
+    Inner* outer;
 }
 
 fn int giver(void* arg)
 {
     Giving* g = (Giving*)arg;
     Slot s;
-    s.fill(g.item);
+    s.fill(g.outer);
     g.p.put(&s);
     return 0;
 }
@@ -78,7 +78,7 @@ fn int main()
 
     Giving g;
     g.p = p;
-    g.item = helper::to_handle(&one);
+    g.outer = helper::to_inner(&one);
 
     Thread t;
     t.create(&giver, &g)!!;

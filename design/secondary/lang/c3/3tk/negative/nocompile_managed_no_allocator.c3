@@ -9,6 +9,6 @@
 module neg_nc;
 import mtk;
 
-struct Plain { int id; Inner node; }
+struct Plain { int id; Inner inner; }
 
 fn int main() { Slot s; mtk::managed::create(Plain, mem, &s)!!; return 0; }

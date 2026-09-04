@@ -28,10 +28,10 @@ fn void ReleaseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
 
 fn void ReleaseHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
         self.closed_count++;
     }
@@ -49,10 +49,10 @@ fn void Master.shut_down(&self)
 {
     InnerQueue left;
     self.mbx.close(&left);
-    while (Inner* h = left.pop_front())
+    while (Inner* inner = left.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
     self.mbx.release();

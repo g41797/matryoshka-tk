@@ -21,11 +21,11 @@ fn int main()
 {
     Mailbox* mb = mailbox::create(mem)!!;
 
-    // A queued item, so a softened check would also leak it.
+    // A queued outer, so a softened check would also leak it.
     Msg m;
     mtk::helper::init(&m);
     Slot s;
-    s.fill(mtk::helper::to_handle(&m));
+    s.fill(mtk::helper::to_inner(&m));
     if (catch mb.send(&s)) return 1;
 
     mb.release();                    // <-- the violation: never closed

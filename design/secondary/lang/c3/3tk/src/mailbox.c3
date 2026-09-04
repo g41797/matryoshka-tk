@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 <*
- The mailbox. A queue of items, with waiting.
+ The mailbox. A queue of outers, with waiting.
 
- Transfer of an item between threads.
+ Transfer of an outer between threads.
  Create, send, receive, close, release.
  Many producers, many consumers, on one mailbox.
- The mailbox keeps items. It never touches them.
- A mailbox is itself an item: it can travel through another mailbox.
+ The mailbox keeps outers. It never touches them.
+ A mailbox is itself an outer: it can travel through another mailbox.
 
  The allocator is kept for life.
  Nothing partially constructed is ever returned.
- On send the Slot is the answer: cleared means the mailbox has the item, untouched means the mailbox is closed and you still have the item.
+ On send the Slot is the answer: cleared means the mailbox has the outer, untouched means the mailbox is closed and you still have the outer.
  On receive an empty Slot goes in, and a full Slot comes back on success.
  Every other outcome is a fault, and the Slot stays empty.
  On close what was left comes back to you, as one queue.
- Releasing those items is your work.
+ Releasing those outers is your work.
  The mailbox never knew what they were.
  Close it first. Releasing an open mailbox aborts in every build mode.
  Closing does not make a mailbox quiet: release it only after every call on it has returned.
@@ -32,19 +32,19 @@ module mtk::mailbox;
 
  Created on the heap, with an allocator it keeps for life.
  Inside it are two queues.
- One for out-of-band items.
- One for ordinary items.
+ One for out-of-band outers.
+ One for ordinary outers.
 *>
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 typedef Mailbox = void;
 
-// The real fields, behind the opaque handle above. Every public method casts
+// The real fields, behind the opaque Mailbox above. Every public method casts
 // its first line and works on this from there. Internal, so not a `<* *>`
 // block: see 3TK-42.
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 struct _Mbox @private
 {
-    Inner node;
+    Inner inner;
 
     Mutex             _mu;
     ConditionVariable _cv;
@@ -62,20 +62,20 @@ struct _Mbox @private
 }
 
 <*
- The identity of a `Mailbox` as an item.
+ The identity of a `Mailbox` as an outer.
 *>
 // [3tk: H0, Part 11.1]
 const typeid TYPE = _Mbox::typeid;
 
 <*
- From a `Mailbox*` to its handle, an `Inner*`. Cannot fail.
+ From a `Mailbox*` to its `Inner*`. Cannot fail.
 *>
-macro Inner* to_handle(Mailbox* p) => mtk::helper::to_handle((_Mbox*)p);
+macro Inner* to_inner(Mailbox* p) => mtk::helper::to_inner((_Mbox*)p);
 
 <*
- The checking crossing back. Null when the handle names another type.
+ The checking crossing back. Null when the inner names another type.
 *>
-macro Mailbox* of(Inner* h) => (Mailbox*)mtk::helper::from_handle(h, _Mbox);
+macro Mailbox* of(Inner* inner) => (Mailbox*)mtk::helper::from_inner(inner, _Mbox);
 
 <*
  Allocates a mailbox and returns it.
@@ -152,21 +152,21 @@ fn void Mailbox.release(&mbox)
 // [3tk: D16, Part 15.4]
 macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
-// Puts the item on the ordinary queue, or ahead of every ordinary item.
+// Puts the outer on the ordinary queue, or ahead of every ordinary outer.
 // O(1) in every build mode. Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R7, Part 11.3]
-fn void _Mbox.enqueue(&self, Inner* h, bool oob)
+fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
 {
-    if (oob) { self._oob.push_back(h); } else { self._regular.push_back(h); }
+    if (oob) { self._oob.push_back(inner); } else { self._regular.push_back(inner); }
 }
 
-// Takes the next item.
+// Takes the next outer.
 // Out-of-band first, then ordinary, first-in first-out within each.
 // [3tk: R7, R9, Part 11.3]
 fn Inner* _Mbox.dequeue(&self)
 {
-    Inner* h = self._oob.pop_front();
-    return h ? h : self._regular.pop_front();
+    Inner* inner = self._oob.pop_front();
+    return inner ? inner : self._regular.pop_front();
 }
 
 // True if anything is queued at all. Reads both queues.
@@ -174,10 +174,10 @@ fn bool _Mbox.has_queued(&self) @inline
     => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
- Puts the item on the ordinary queue.
+ Puts the outer on the ordinary queue.
 
  The Slot is the answer. Cleared on success.
- Untouched on `CLOSED`, and the sender still has the item.
+ Untouched on `CLOSED`, and the sender still has the outer.
  An empty Slot is a defect.
 
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
@@ -187,9 +187,9 @@ fn bool _Mbox.has_queued(&self) @inline
 fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
 
 <*
- Same as `send()`, ahead of every ordinary item.
+ Same as `send()`, ahead of every ordinary outer.
 
- First-in first-out among out-of-band items themselves.
+ First-in first-out among out-of-band outers themselves.
  One priority level. This is not a priority queue.
 
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
@@ -219,7 +219,7 @@ fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
 }
 
 <*
- Takes an item if one is queued. Never waits.
+ Takes an outer if one is queued. Never waits.
 
  Reports `EMPTY` where `receive` with a zero timeout would report `TIMEOUT`.
 
@@ -244,13 +244,13 @@ fn void? Mailbox.poll(&mbox, Slot* slot)
     self._active++;
     defer self._active--;
 
-    Inner* h = self.dequeue();
-    if (!h) return mtk::EMPTY~;
-    slot.fill(h);
+    Inner* inner = self.dequeue();
+    if (!inner) return mtk::EMPTY~;
+    slot.fill(inner);
 }
 
 <*
- Takes an item, waiting up to the timeout.
+ Takes an outer, waiting up to the timeout.
 
  Every other outcome is a fault, and the Slot stays empty.
  The deadline is anchored once. A spurious wakeup does not restart it.
@@ -291,8 +291,8 @@ fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
         // [3tk: Part 2.4]
         if (self._closed) return mtk::CLOSED~;
 
-        Inner* h = self.dequeue();
-        if (h) { slot.fill(h); return; }
+        Inner* inner = self.dequeue();
+        if (inner) { slot.fill(inner); return; }
 
         if (self._wake_gen != gen) return mtk::WOKEN~;
 
@@ -301,8 +301,8 @@ fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
             if (f != thread::WAIT_TIMEOUT) return f~; // dead today: wait_until can only fail with WAIT_TIMEOUT, kept for future wait failures
 
             if (self._closed) return mtk::CLOSED~;
-            h = self.dequeue();
-            if (h) { slot.fill(h); return; }
+            inner = self.dequeue();
+            if (inner) { slot.fill(inner); return; }
             if (self._wake_gen != gen) return mtk::WOKEN~;
 
             return mtk::TIMEOUT~;
@@ -311,12 +311,12 @@ fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
 }
 
 <*
- Moves every queued item onto your queue.
+ Moves every queued outer onto your queue.
 
  The queue is in the order `receive` would have taken them out.
- Releasing the items is your work.
+ Releasing the outers is your work.
 
- @param out : "an empty queue; every queued item is moved onto it, in receive order"
+ @param out : "an empty queue; every queued outer is moved onto it, in receive order"
  @return? mtk::CLOSED
 *>
 // [3tk: R8, Part 11.3, Part 11.6, Part 19.1]
@@ -373,7 +373,7 @@ fn void? Mailbox.wake_all(&mbox)
 
  Callable more than once. The second call takes nothing.
  The queue is in the order `receive` would have taken them out.
- Discarding that queue drops the items, and a later send refuses them.
+ Discarding that queue drops the outers, and a later send refuses them.
  Closing does not make a mailbox quiet.
 
  @param out : "an empty queue; the remainder is moved onto it, in receive order"
@@ -443,7 +443,7 @@ fn bool Mailbox.is_quiet(&mbox)
 }
 
 <*
- How many items are queued.
+ How many outers are queued.
 
  A hint. It is stale by the time you read it.
 *>

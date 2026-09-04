@@ -2,7 +2,7 @@
  A `switch` over a `typeid` is the one dispatch shape ztk cannot write.
 
  - Create one outer of each identity, in a Slot.
- - Take the handle and switch on its identity, asserting the prong's type.
+ - Take the inner and switch on its identity, asserting the prong's type.
  - Release the outer once the switch has touched it.
 *>
 module shc::dispatch_switch;
@@ -13,16 +13,16 @@ import shc::helpers;
 
 faultdef DISPATCH_SWITCH_FAILED;
 
-fn void touch_by_switch(Inner* h)
+fn void touch_by_switch(Inner* inner)
 {
-    switch (h.link.type)
+    switch (inner.link.type)
     {
         case Event::typeid:
-            h.as(Event).code++;
+            inner.as(Event).code++;
         case Sensor::typeid:
-            h.as(Sensor).reading++;
+            inner.as(Sensor).reading++;
         case Holder::typeid:
-            h.as(Holder).id++;
+            inner.as(Holder).id++;
         default:
             unreachable("closed set: every identity is a prong");
     }

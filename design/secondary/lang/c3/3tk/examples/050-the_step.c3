@@ -44,10 +44,10 @@ fn void? one_step_one_name(Allocator a, Mailbox* mb)
     InnerQueue batch;
     mb.receive_all(&batch)!;
     int total = 0;
-    while (Inner* h = batch.pop_front())
+    while (Inner* inner = batch.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         defer mtk::managed::release(Event, &s);
         total += s.must(Event).code;
     }

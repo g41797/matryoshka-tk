@@ -2,26 +2,26 @@
 // SPDX-License-Identifier: MIT
 
 <*
- An item-transfer and item-reuse toolkit for concurrent C3 programs.
+ An outer-transfer and outer-reuse toolkit for concurrent C3 programs.
 
  Three small tools, each one usable on its own.
- The core is type identity for an item, and two containers that never allocate.
- `mtk::mailbox` is transfer of an item between threads.
- `mtk::pool` is reuse of an item, decided by your hooks.
+ The core is type identity for an outer, and two containers that never allocate.
+ `mtk::mailbox` is transfer of an outer between threads.
+ `mtk::pool` is reuse of an outer, decided by your hooks.
  Mailbox and pool are both optional.
  The core alone is a valid use.
 
  Share by communicating.
- Do not share access to an item, move the item.
- One place has the item at a time.
+ Do not share access to an outer, move the outer.
+ One place has the outer at a time.
  That gives a concurrent program with no lock around application data.
 
  Not a container library.
  The queue and the stack exist because the mailbox and the pool need them, and a caller may use either one directly.
  Not an allocator.
- Every item is allocated and freed by your code, or by your hooks.
+ Every outer is allocated and freed by your code, or by your hooks.
  Not a garbage collector.
- The toolkit never frees an item you gave it, except through a hook you wrote.
+ The toolkit never frees an outer you gave it, except through a hook you wrote.
  Not a coordinator.
  There is no `Master` type.
 

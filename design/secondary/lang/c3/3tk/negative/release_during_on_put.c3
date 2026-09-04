@@ -40,20 +40,20 @@ fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
 
 fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front()) { }
+    while (Inner* inner = remaining.pop_front()) { }
 }
 
 struct Giving
 {
     Pool*  p;
-    Inner* item;
+    Inner* outer;
 }
 
 fn int giver(void* arg)
 {
     Giving* g = (Giving*)arg;
     Slot s;
-    s.fill(g.item);
+    s.fill(g.outer);
     g.p.put(&s);                        // parks inside on_put
     return 0;
 }
@@ -70,7 +70,7 @@ fn int main()
 
     Giving g;
     g.p = p;
-    g.item = mtk::helper::to_handle(&one);
+    g.outer = mtk::helper::to_inner(&one);
 
     Thread t;
     t.create(&giver, &g)!!;

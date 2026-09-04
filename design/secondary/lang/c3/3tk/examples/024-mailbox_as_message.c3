@@ -17,7 +17,7 @@ faultdef MAILBOX_AS_MESSAGE_FAILED;
 fn void? send_mailbox(Mailbox* to, Mailbox* travelling)
 {
     Slot s;
-    s.fill(mtk::mailbox::to_handle(travelling));
+    s.fill(mtk::mailbox::to_inner(travelling));
     to.send(&s)!;
 }
 

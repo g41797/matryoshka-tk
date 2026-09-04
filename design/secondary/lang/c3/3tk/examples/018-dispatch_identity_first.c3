@@ -32,10 +32,10 @@ fn void CreateByIdentityHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue*
 
 fn void CreateByIdentityHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         shc::dispatch_outer_first::free_outer(&s);
     }
 }

@@ -3,7 +3,7 @@
  too expensive to write inside the argument itself.
 
  - Send one `Holder` into a mailbox and receive it back as a batch of one.
- - Take its handle and run a guarded check that only walks the queue when
+ - Take its inner and run a guarded check that only walks the queue when
    the build is checking anything at all.
 *>
 module shc::guarding_an_expensive_check;
@@ -15,9 +15,9 @@ import shc::helpers;
 
 faultdef GUARDING_AN_EXPENSIVE_CHECK_FAILED;
 
-fn void guarded_walk(InnerQueue* q, Inner* h)
+fn void guarded_walk(InnerQueue* q, Inner* inner)
 {
-    mtk::@check(h != null, "this walk was given a handle");
+    mtk::@check(inner != null, "this walk was given an inner");
 
     if (mtk::CHECKED)
     {
@@ -40,11 +40,11 @@ fn void? the_guard_costs_nothing_in_a_fast_build(Allocator a)
 
     InnerQueue batch;
     mb.receive_all(&batch)!;
-    Inner* h = batch.pop_front();
-    guarded_walk(&batch, h);
+    Inner* inner = batch.pop_front();
+    guarded_walk(&batch, inner);
 
     Slot got;
-    got.fill(h);
+    got.fill(inner);
     defer mtk::managed::release(Holder, &got);
-    shc::helpers::expect(GUARDING_AN_EXPENSIVE_CHECK_FAILED, got.is_full(), "the guarded check did not disturb the handle")!;
+    shc::helpers::expect(GUARDING_AN_EXPENSIVE_CHECK_FAILED, got.is_full(), "the guarded check did not disturb the inner")!;
 }

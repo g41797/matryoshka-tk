@@ -5,14 +5,14 @@
  The intrusive stack. Last-in first-out.
 
  The storage container.
- Where the queue carries items across, the stack holds them still.
+ Where the queue carries outers across, the stack holds them still.
  The pool keeps one per identity, and it is the only stack 3tk owns.
  No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
  A caller who wants a stack declares one.
  Four operations: no walker, and no splice.
  The order is not promised.
- No caller is entitled to which item comes back.
- Every chain ends at an item pointing at itself, never at null.
+ No caller is entitled to which outer comes back.
+ Every chain ends at an inner pointing at itself, never at null.
  Nothing in the stack can fail.
  The count is kept, so `len` is O(1).
  There is no tail, so flattening the stack is O(n).
@@ -25,13 +25,13 @@ import mtk::inner;
  The intrusive stack. Last-in first-out.
 
  The storage container.
- Where the queue carries items across, the stack holds them still.
+ Where the queue carries outers across, the stack holds them still.
  The pool keeps one per identity, and it is the only stack 3tk owns.
  No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
  Four operations: no walker, and no splice.
  The order is not promised.
- No caller is entitled to which item comes back.
- Every chain ends at an item pointing at itself, never at null.
+ No caller is entitled to which outer comes back.
+ Every chain ends at an inner pointing at itself, never at null.
  Nothing in the stack can fail.
  The count is kept, so `len` is O(1).
  There is no tail, so flattening the stack is O(n).
@@ -47,16 +47,16 @@ struct InnerStack
 <*
  The insert guard.
 
- A null handle is a defect.
- An item already on any chain is a defect.
+ A null inner is a defect.
+ An outer already on any chain is a defect.
  Both are gone from a fast build.
 *>
 // [3tk: R6b, Part 8.6]
-macro InnerStack.@guard_insert(&self, Inner* h)
+macro InnerStack.@guard_insert(&self, Inner* inner)
 {
-    mtk::@check(h != null, "insert of a null handle");
+    mtk::@check(inner != null, "insert of a null inner");
     // [3tk: Part 8.7]
-    mtk::@check(!mtk::inner::is_linked(h), "the item is already on a chain");
+    mtk::@check(!mtk::inner::is_linked(inner), "the outer is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -68,7 +68,7 @@ macro InnerStack.@guard_insert(&self, Inner* h)
 fn bool InnerStack.is_empty(&self) @inline => self.count == 0;
 
 <*
- How many items the stack holds. O(1).
+ How many outers the stack holds. O(1).
 *>
 // [3tk: Part 8.2, Part 11.7]
 fn usz InnerStack.len(&self) @inline => self.count;
@@ -81,29 +81,29 @@ fn usz InnerStack.len(&self) @inline => self.count;
  There is no Slot-shaped insert.
 *>
 // [3tk: P6, R13, Part 8.2]
-fn void InnerStack.push(&self, Inner* h)
+fn void InnerStack.push(&self, Inner* inner)
 {
-    self.@guard_insert(h);
-    h.repoint_to(self.top ? self.top : h);
-    self.top = h;
+    self.@guard_insert(inner);
+    inner.repoint_to(self.top ? self.top : inner);
+    self.top = inner;
     self.count++;
 }
 
 // --- Removing ---------------------------------------------------------------------
 
 <*
- Takes the item on top.
+ Takes the outer on top.
 
  Null on an empty stack.
- The returned item's chain link is cleared.
+ The returned outer's chain link is cleared.
 *>
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
 fn Inner* InnerStack.pop(&self)
 {
-    Inner* h = self.top;
-    if (!h) return null;
-    self.top = (h.points_to() == h) ? null : h.points_to();
+    Inner* inner = self.top;
+    if (!inner) return null;
+    self.top = (inner.points_to() == inner) ? null : inner.points_to();
     self.count--;
-    mtk::inner::reset(h);
-    return h;
+    mtk::inner::reset(inner);
+    return inner;
 }

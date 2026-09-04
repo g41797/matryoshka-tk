@@ -4,7 +4,7 @@
 
  `Pool.close` publishes CLOSED, opens the mutex, and then runs `on_close` with
  everything the pool held. That hook is application code holding pool-derived
- items, and the close has not returned while it runs. A release that ran there
+ outers, and the close has not returned while it runs. A release that ran there
  would free the block under it.
 
  So the closing thread is not the releasing thread here: `on_close` parks, and
@@ -35,7 +35,7 @@ fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @
 
 fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front()) { }
+    while (Inner* inner = remaining.pop_front()) { }
     self.inside.store(1, RELEASE);
     while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
     thread::sleep(time::ms(200))!!;     // the release has run by now

@@ -1,15 +1,15 @@
 <*
- Part 8.7: an item already on THIS queue, and ALONE on it.
+ Part 8.7: an outer already on THIS queue, and ALONE on it.
 
  **This program used to provoke the O(n) walk, and the walk is gone.** It was
  the WALK half of the old Part 8.6 pair: a queue of exactly one member left the
- item with no neighbours on either side, both of its link fields null, so the
+ outer with no neighbours on either side, both of its link fields null, so the
  link test could not see it and only a walk of the container could. Part 8.6 said in so many
  words that neither check alone was enough, and D12 recorded the hole as an
  accepted cost.
 
- R6b closed it with no field. The last item of every chain points at ITSELF, so
- the sole item of a queue has `points_to() == this`, `is_linked` returns true,
+ R6b closed it with no field. The last outer of every chain points at ITSELF, so
+ the sole outer of a queue has `points_to() == this`, `is_linked` returns true,
  and the
  link test catches the case that used to need the walk. `contains` and the walk
  were deleted outright.
@@ -36,9 +36,9 @@ fn int main()
     mtk::helper::init(&m);
 
     InnerQueue q;
-    q.push_back(mtk::helper::to_handle(&m));
-    q.push_back(mtk::helper::to_handle(&m));   // <-- the violation
+    q.push_back(mtk::helper::to_inner(&m));
+    q.push_back(mtk::helper::to_inner(&m));   // <-- the violation
 
-    io::printn("no check: the item was inserted twice");
+    io::printn("no check: the outer was inserted twice");
     return 0;
 }

@@ -28,10 +28,10 @@ fn void AlwaysCreateHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* ext
 
 fn void AlwaysCreateHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* h = remaining.pop_front())
+    while (Inner* inner = remaining.pop_front())
     {
         Slot s;
-        s.fill(h);
+        s.fill(inner);
         mtk::managed::release(Holder, &s);
     }
 }
@@ -46,10 +46,10 @@ fn void? cleanup_survives_an_empty_slot(Allocator a)
     InnerQueue q;
     defer
     {
-        while (Inner* h = q.pop_front())
+        while (Inner* inner = q.pop_front())
         {
             Slot s;
-            s.fill(h);
+            s.fill(inner);
             mtk::managed::release(Holder, &s);
         }
     }

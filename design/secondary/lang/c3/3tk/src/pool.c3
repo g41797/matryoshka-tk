@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 <*
- Reuse of an item, decided by your hooks. A keeper of free items, grouped by type identity.
+ Reuse of an outer, decided by your hooks. A keeper of free outers, grouped by type identity.
 
  Write the hooks, create, get, put, close, release.
  Policy is not in the pool. Policy is in the hooks.
- The pool answers whether a reusable item is free right now.
- A pool is itself an item: it can travel through a mailbox.
+ The pool answers whether a reusable outer is free right now.
+ A pool is itself an outer: it can travel through a mailbox.
 
  One bucket per identity, in a flat slice allocated once at creation.
  The identity set is fixed at creation.
@@ -16,8 +16,8 @@
  The implementing struct is the context. There is no `ctx` parameter.
  The hooks are a parameter of creation. A pool cannot exist without them.
  On get an empty Slot goes in, and a full Slot comes back on success.
- A free item is taken, or `on_get` is asked to make one.
- On put the Slot is the answer: cleared means the pool took the item, unchanged means it was refused and you still have the item.
+ A free outer is taken, or `on_get` is asked to make one.
+ On put the Slot is the answer: cleared means the pool took the outer, unchanged means it was refused and you still have the outer.
  On close nothing comes back to you. Everything goes to `on_close`.
  Close it first. Releasing an open pool aborts in every build mode.
  Closing does not make a pool quiet: release it only after every call on it has returned.
@@ -27,12 +27,12 @@
  There is no `put_all`. A caller giving a batch back writes the loop.
 
  ```c3
- while (Inner* h = batch.pop_front())
+ while (Inner* inner = batch.pop_front())
  {
      Slot s;
-     s.fill(h);
+     s.fill(inner);
      p.put(&s);
-     if (s.is_full()) { batch.push_back(h); break; }
+     if (s.is_full()) { batch.push_back(inner); break; }
  }
  ```
 
@@ -54,11 +54,11 @@ module mtk::pool;
 interface PoolHooks
 {
     <*
-     Asked for an item of a named identity.
+     Asked for an outer of a named identity.
 
      The Slot is empty on entry. Fill it, or leave it.
      An empty Slot afterwards becomes `NOT_CREATED`.
-     An item of a different identity is a defect of your application.
+     An outer of a different identity is a defect of your application.
  That is a checking-build check, and a fast build cannot catch it.
 
      @param want : "the identity asked for"
@@ -69,17 +69,17 @@ interface PoolHooks
     fn void on_get(typeid want, usz in_pool, Slot* slot);
 
     <*
-     An item is being given back. Four outcomes, and none is mandated.
+     An outer is being given back. Four outcomes, and none is mandated.
 
      Freed with nothing kept: empty the Slot.
      Kept as it is, or kept after a reset: leave it full.
-     Freed with a different item put back: replace the contents.
-     A full Slot on return means one thing — an item is kept, original or replacement.
-     `extra` starts empty. Items added there are taken the same way, with the same checks.
+     Freed with a different outer put back: replace the contents.
+     A full Slot on return means one thing — an outer is kept, original or replacement.
+     `extra` starts empty. Outers added there are taken the same way, with the same checks.
 
      @param in_pool : "how many of this identity are held, BEFORE the addition. A hint"
      @param slot : "full on entry"
-     @param extra : "an empty queue; items added here are taken the same way, with the same checks"
+     @param extra : "an empty queue; outers added here are taken the same way, with the same checks"
     *>
     // [3tk: Part 12.2, Part 12.4, Part 12.5]
     fn void on_put(usz in_pool, Slot* slot, InnerQueue* extra);
@@ -88,7 +88,7 @@ interface PoolHooks
      Take everything that is left.
 
      Called with everything that remained, as one flat queue, by value.
-     Process or free every item in it. The pool does not verify it and never
+     Process or free every outer in it. The pool does not verify it and never
      will.
      No order is promised.
      The hook is called outside the mutex, after the closed flag is set.
@@ -113,10 +113,10 @@ enum GetMode
 }
 
 <*
- The free items of one identity, as an `InnerStack`.
+ The free outers of one identity, as an `InnerStack`.
 
  A stack and not a queue, and the reason is defect surfacing.
- The item just given back is on top, so a caller still writing through a stale pointer collides with the next owner at once instead of much later.
+ The outer just given back is on top, so a caller still writing through a stale pointer collides with the next owner at once instead of much later.
  No order is promised.
 *>
 // [3tk: R11, Part 11.7, Part 11.10, Part 12.4]
@@ -139,20 +139,20 @@ typedef Pool = void;
 
 
 <*
- The identity of a `Pool` as an item.
+ The identity of a `Pool` as an outer.
 *>
 // [3tk: H0, Part 11.1]
 const typeid TYPE = _Pool::typeid;
 
 <*
- From a `Pool*` to its handle, an `Inner*`. Cannot fail.
+ From a `Pool*` to its `Inner*`. Cannot fail.
 *>
-macro Inner* to_handle(Pool* p) => mtk::helper::to_handle((_Pool*)p);
+macro Inner* to_inner(Pool* p) => mtk::helper::to_inner((_Pool*)p);
 
 <*
- The checking crossing back. Null when the handle names another type.
+ The checking crossing back. Null when the inner names another type.
 *>
-macro Pool* of(Inner* h) => (Pool*)mtk::helper::from_handle(h, _Pool);
+macro Pool* of(Inner* inner) => (Pool*)mtk::helper::from_inner(inner, _Pool);
 
 <*
  Allocates a pool and returns it.
@@ -273,7 +273,7 @@ fn PoolBucket* _Pool.bucket_for(&self, typeid t)
 }
 
 <*
- Takes a free item, or has the hook make one. Never waits.
+ Takes a free outer, or has the hook make one. Never waits.
 
  `AVAILABLE_OR_NEW` — take a free one, and ask the hook if there is none.
  `NEW_ONLY` — do not take a free one. Ask the hook.
@@ -315,12 +315,12 @@ fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
 
     if (mode != NEW_ONLY)
     {
-        Inner* h = b.free.pop();
-        if (h)
+        Inner* inner = b.free.pop();
+        if (inner)
         {
             self._active--;
             self._mu.unlock();
-            slot.fill(h);
+            slot.fill(inner);
             return;
         }
     }
@@ -351,11 +351,11 @@ fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
 
     if (slot.is_empty()) return mtk::NOT_CREATED~;
     // [3tk: Part 12.2]
-    mtk::@check(slot.peek().link.type == want, "the get hook returned an item of a different identity");
+    mtk::@check(slot.peek().link.type == want, "the get hook returned an outer of a different identity");
 }
 
 <*
- Takes a free item, waiting up to the timeout.
+ Takes a free outer, waiting up to the timeout.
 
  It never creates. No hook is called on this path.
  `TIMEOUT` comes only from `get_wait`, where `AVAILABLE_ONLY` would have said `NOT_AVAILABLE`.
@@ -407,8 +407,8 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
         if (self._closed) return mtk::CLOSED~;
 
         // [3tk: A3]
-        Inner* h = b.free.pop();
-        if (h) { slot.fill(h); return; }
+        Inner* inner = b.free.pop();
+        if (inner) { slot.fill(inner); return; }
 
         if (catch f = self._cv.wait_until(&self._mu, deadline))
         {
@@ -416,25 +416,25 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
 
             if (self._closed) return mtk::CLOSED~;
 
-            h = b.free.pop();
-            if (h) { slot.fill(h); return; }
+            inner = b.free.pop();
+            if (inner) { slot.fill(inner); return; }
             return mtk::TIMEOUT~;
         }
     }
 }
 
 <*
- Gives an item back. Returns nothing.
+ Gives an outer back. Returns nothing.
 
  The Slot is the answer.
  Cleared: the pool took it.
- Unchanged: the pool refused it before any hook ran, and you still have the item.
+ Unchanged: the pool refused it before any hook ran, and you still have the outer.
  It cannot fail and cannot be interrupted.
  An empty Slot is a no-op.
  A close that arrives while `on_put` runs is handled.
- The item goes to `on_close`, and your Slot stays cleared.
+ The outer goes to `on_close`, and your Slot stays cleared.
 
- @param slot : "a full Slot; cleared if the pool took the item"
+ @param slot : "a full Slot; cleared if the pool took the outer"
 *>
 // [3tk: P1, V11, Part 2.10, Part 9.4, Part 11.8, Part 12.2, Part 12.3, Part 19.2]
 fn void Pool.put(&pool, Slot* slot)
@@ -457,8 +457,8 @@ fn void Pool.put(&pool, Slot* slot)
     // [3tk: Part 11.12]
     self._active++;
 
-    Inner* h = slot.peek();
-    PoolBucket* b = self.bucket_for(h.link.type);
+    Inner* inner = slot.peek();
+    PoolBucket* b = self.bucket_for(inner.link.type);
     mtk::@check(b != null, "Pool.put of an identity the pool was not created with");
     if (!b) { self._active--; self._mu.unlock(); return; }
 
@@ -489,7 +489,7 @@ fn void Pool.put(&pool, Slot* slot)
 
         // Lowered after the straggler hook, not before it. A count that stopped
         // at `on_put` would leave application code running with pool-derived
-        // items while a release saw zero.
+        // outers while a release saw zero.
         // [3tk: Part 11.12]
         self._mu.lock();
         self._active--;
@@ -501,26 +501,26 @@ fn void Pool.put(&pool, Slot* slot)
     self.take_back(&mine);
 
     // [3tk: Part 12.5]
-    while (Inner* e = extra.pop_front()) self.take_back_handle(e);
+    while (Inner* e = extra.pop_front()) self.take_back_inner(e);
 
     self._cv.broadcast();
     self._active--;
     self._mu.unlock();
 }
 
-// Stores one item the hook decided to keep. Called under the lock.
+// Stores one outer the hook decided to keep. Called under the lock.
 fn void _Pool.take_back(&self, Slot* s)
 {
     if (s.is_empty()) return;
-    self.take_back_handle(s.take());
+    self.take_back_inner(s.take());
 }
 
-fn void _Pool.take_back_handle(&self, Inner* h)
+fn void _Pool.take_back_inner(&self, Inner* inner)
 {
-    PoolBucket* b = self.bucket_for(h.link.type);
+    PoolBucket* b = self.bucket_for(inner.link.type);
     mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
     // if (!b) return; <- Force failure instead of silent bug
-    b.free.push(h);
+    b.free.push(inner);
 }
 
 <*
@@ -588,7 +588,7 @@ fn void _Pool._close(&self, InnerQueue* out)
 
     foreach (&b : self._buckets)
     {
-        while (Inner* h = b.free.pop()) out.push_back(h);
+        while (Inner* inner = b.free.pop()) out.push_back(inner);
     }
 
     self._cv.broadcast();
@@ -631,13 +631,13 @@ fn usz Pool.count_of(&pool, typeid t)
     return b ? b.free.len() : 0;
 }
 
-// The real fields, behind the opaque handle above. Every public method casts
+// The real fields, behind the opaque Pool above. Every public method casts
 // its first line and works on this from there. Internal, so not a `<* *>`
 // block: see 3TK-42.
 // [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
 struct _Pool @private
 {
-    Inner node;
+    Inner inner;
 
     Mutex             _mu;
     ConditionVariable _cv;

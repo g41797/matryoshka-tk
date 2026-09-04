@@ -14,8 +14,8 @@ module neg;
 import mtk;
 import mtk::pool;
 
-struct Msg { int id; Inner node; }
-struct Job { Inner node; int pri; }
+struct Msg { int id; Inner inner; }
+struct Job { Inner inner; int pri; }
 
 <*
  A minimal hook object for the container negatives. Part 12.1: the implementing

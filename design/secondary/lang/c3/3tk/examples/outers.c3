@@ -9,6 +9,6 @@ module shc::outers;
 import mtk;
 import std::core::mem::alloc;
 
-struct Event  { Inner node; int code; Allocator alloc; }
-struct Sensor { int reading; Inner node; Allocator alloc; }
-struct Holder { int id; Inner node; Allocator alloc; }
+struct Event  { Inner inner; int code; Allocator alloc; }
+struct Sensor { int reading; Inner inner; Allocator alloc; }
+struct Holder { int id; Inner inner; Allocator alloc; }

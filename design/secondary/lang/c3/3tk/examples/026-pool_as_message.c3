@@ -24,7 +24,7 @@ fn void NoopHooks.on_close(&self, InnerQueue remaining) @dynamic {}
 fn void? send_pool(Mailbox* to, Pool* p)
 {
     Slot s;
-    s.fill(mtk::pool::to_handle(p));
+    s.fill(mtk::pool::to_inner(p));
     to.send(&s)!;
 }
 

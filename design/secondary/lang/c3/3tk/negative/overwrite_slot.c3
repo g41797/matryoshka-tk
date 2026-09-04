@@ -14,8 +14,8 @@ fn int main()
     mtk::helper::init(&a); mtk::helper::init(&b);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&a));
-    s.fill(mtk::helper::to_handle(&b));          // <-- the violation
+    s.fill(mtk::helper::to_inner(&a));
+    s.fill(mtk::helper::to_inner(&b));          // <-- the violation
 
     io::printn("no check: the full Slot was overwritten");
     return 0;

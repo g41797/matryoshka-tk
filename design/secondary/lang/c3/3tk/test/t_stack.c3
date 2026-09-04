@@ -23,13 +23,13 @@ fn void the_stack_is_last_in_first_out() @test
     Msg[8] ms;
     InnerStack st;
 
-    for (usz i = 0; i < 5; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_handle(&ms[i])); }
+    for (usz i = 0; i < 5; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_inner(&ms[i])); }
     always_assert(st.len() == 5, "five went in and the count disagrees");
 
     for (usz i = 5; i > 0; i--)
     {
-        Msg* m = mtk::helper::from_handle(st.pop(), Msg);
-        always_assert(m != null, "an item came off as the wrong type");
+        Msg* m = mtk::helper::from_inner(st.pop(), Msg);
+        always_assert(m != null, "an outer came off as the wrong type");
         always_assert(m.id == (int)(i - 1), "the stack is not last-in first-out");
     }
     always_assert(st.is_empty(), "the stack is not empty after five pops");
@@ -50,9 +50,9 @@ fn void an_empty_stack_answers() @test
 <*
  The self-link, at the bottom of the stack rather than the end of a queue.
 
- `pop` recognises the sole item by `h.points_to() == h`, so a stack built with a
+ `pop` recognises the sole outer by `h.points_to() == h`, so a stack built with a
  null
- terminator would either lose the item or leave `top` dangling. Both states are
+ terminator would either lose the outer or leave `top` dangling. Both states are
  visible from here.
 *>
 fn void the_bottom_item_points_at_itself() @test
@@ -62,21 +62,21 @@ fn void the_bottom_item_points_at_itself() @test
     a.id = 1; b.id = 2;
 
     InnerStack st;
-    st.push(mtk::helper::to_handle(&a));
-    always_assert(mtk::helper::to_handle(&a).points_to() == mtk::helper::to_handle(&a), "the sole item of a stack is not self-linked");
+    st.push(mtk::helper::to_inner(&a));
+    always_assert(mtk::helper::to_inner(&a).points_to() == mtk::helper::to_inner(&a), "the sole outer of a stack is not self-linked");
 
-    st.push(mtk::helper::to_handle(&b));
-    always_assert(mtk::helper::to_handle(&b).points_to() == mtk::helper::to_handle(&a), "the pushed item does not cover the one below");
-    always_assert(mtk::helper::to_handle(&a).points_to() == mtk::helper::to_handle(&a), "the bottom stopped being self-linked");
+    st.push(mtk::helper::to_inner(&b));
+    always_assert(mtk::helper::to_inner(&b).points_to() == mtk::helper::to_inner(&a), "the pushed outer does not cover the one below");
+    always_assert(mtk::helper::to_inner(&a).points_to() == mtk::helper::to_inner(&a), "the bottom stopped being self-linked");
 
-    always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 2, "pop took the wrong end");
-    always_assert(mtk::helper::from_handle(st.pop(), Msg).id == 1, "the bottom item was lost");
+    always_assert(mtk::helper::from_inner(st.pop(), Msg).id == 2, "pop took the wrong end");
+    always_assert(mtk::helper::from_inner(st.pop(), Msg).id == 1, "the bottom outer was lost");
     always_assert(st.pop() == null, "the stack did not empty");
 }
 
 <*
- Part 8.7: the exact link test, on the stack. An item on a stack is linked,
- including the bottom one, and an item on nothing is not.
+ Part 8.7: the exact link test, on the stack. An outer on a stack is linked,
+ including the bottom one, and an outer on nothing is not.
 *>
 fn void the_link_test_is_exact_on_the_stack() @test
 {
@@ -84,14 +84,14 @@ fn void the_link_test_is_exact_on_the_stack() @test
     mtk::helper::init(&a); mtk::helper::init(&b);
 
     InnerStack st;
-    st.push(mtk::helper::to_handle(&a));
+    st.push(mtk::helper::to_inner(&a));
 
-    always_assert(mtk::inner::is_linked(mtk::helper::to_handle(&a)), "the bottom of a stack reports unlinked");
-    always_assert(!mtk::inner::is_linked(mtk::helper::to_handle(&b)), "an item on no container reports linked");
+    always_assert(mtk::inner::is_linked(mtk::helper::to_inner(&a)), "the bottom of a stack reports unlinked");
+    always_assert(!mtk::inner::is_linked(mtk::helper::to_inner(&b)), "an outer on no container reports linked");
 }
 
 <*
- Part 8.8: the repair. `pop` clears the link, so the item can be pushed again —
+ Part 8.8: the repair. `pop` clears the link, so the outer can be pushed again —
  onto this stack or onto a queue, which is exactly what `Pool.close` does.
 
  Invariant 17.
@@ -100,14 +100,14 @@ fn void pop_repairs_the_link() @test
 {
     Msg[8] ms;
     InnerStack st;
-    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_handle(&ms[i])); }
+    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; mtk::helper::init(&ms[i]); st.push(mtk::helper::to_inner(&ms[i])); }
 
     Inner* top    = st.pop();
     Inner* middle = st.pop();
     Inner* bottom = st.pop();
 
     always_assert(!mtk::inner::is_linked(top), "pop left the top's link set");
-    always_assert(!mtk::inner::is_linked(middle), "pop left a middle item's link set");
+    always_assert(!mtk::inner::is_linked(middle), "pop left a middle outer's link set");
     always_assert(!mtk::inner::is_linked(bottom), "pop left the bottom's self-link set");
 
     // the shape Pool.close uses: pop off the stack, push onto a queue
@@ -115,11 +115,11 @@ fn void pop_repairs_the_link() @test
     q.push_back(bottom);
     q.push_back(middle);
     q.push_back(top);
-    always_assert(q.len() == 3, "a repaired item was refused by the queue");
+    always_assert(q.len() == 3, "a repaired outer was refused by the queue");
 }
 
 <*
- Part 8.1 and 8.3: the stack is heterogeneous and speaks in handles, like every
+ Part 8.1 and 8.3: the stack is heterogeneous and speaks in inners, like every
  other Matryoshka container. Invariants 13 and 14.
 
  The pool never mixes identities in one bucket, but the container does not know
@@ -131,12 +131,12 @@ fn void one_stack_three_types() @test
     mtk::helper::init(&m); mtk::helper::init(&j); mtk::helper::init(&t);
 
     InnerStack st;
-    st.push(mtk::helper::to_handle(&m));
-    st.push(mtk::helper::to_handle(&j));
-    st.push(mtk::helper::to_handle(&t));
+    st.push(mtk::helper::to_inner(&m));
+    st.push(mtk::helper::to_inner(&j));
+    st.push(mtk::helper::to_inner(&t));
 
     always_assert(st.len() == 3, "three types did not fit on one stack");
-    always_assert(mtk::helper::from_handle(st.pop(), Twin) == &t, "the Twin came back wrong");
-    always_assert(mtk::helper::from_handle(st.pop(), Job) == &j, "the Job came back wrong");
-    always_assert(mtk::helper::from_handle(st.pop(), Msg) == &m, "the Msg came back wrong");
+    always_assert(mtk::helper::from_inner(st.pop(), Twin) == &t, "the Twin came back wrong");
+    always_assert(mtk::helper::from_inner(st.pop(), Job) == &j, "the Job came back wrong");
+    always_assert(mtk::helper::from_inner(st.pop(), Msg) == &m, "the Msg came back wrong");
 }

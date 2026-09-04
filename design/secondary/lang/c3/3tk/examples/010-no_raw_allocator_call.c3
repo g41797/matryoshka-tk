@@ -16,7 +16,7 @@ faultdef NO_RAW_ALLOCATOR_CALL_FAILED;
 fn void? never_a_raw_allocator_call(Allocator a)
 {
     // WRONG — a raw allocator call on an outer skips `init`:
-    // Holder* h = a.new(Holder);
+    // Holder* outer = a.new(Holder);
 
     Slot s;
     defer mtk::managed::release(Holder, &s);

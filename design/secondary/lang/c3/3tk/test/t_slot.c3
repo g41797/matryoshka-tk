@@ -21,13 +21,13 @@ fn void rule2_a_slot_starts_empty() @test
     Slot s;
     always_assert(s.is_empty(), "Part 9.2 rule 2: a Slot did not start empty");
     always_assert(!s.is_full(), "is_full disagrees with is_empty");
-    always_assert(s.peek() == null, "an empty Slot yielded a handle");
+    always_assert(s.peek() == null, "an empty Slot yielded an inner");
 }
 
 <*
  Rule 5: a transfer clears the Slot.
 
- And Part 9.4: the Slot, not the outcome, says where the item went.
+ And Part 9.4: the Slot, not the outcome, says where the outer went.
 *>
 fn void rule5_a_transfer_clears_the_slot() @test
 {
@@ -35,14 +35,14 @@ fn void rule5_a_transfer_clears_the_slot() @test
     mtk::helper::init(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&m));
+    s.fill(mtk::helper::to_inner(&m));
     always_assert(s.is_full(), "fill left the Slot empty");
 
     InnerQueue list;
     list.push_back_slot(&s);
 
     always_assert(s.is_empty(), "Part 9.2 rule 5: the transfer did not clear the Slot");
-    always_assert(list.len() == 1, "the item did not arrive");
+    always_assert(list.len() == 1, "the outer did not arrive");
 }
 
 <*
@@ -72,11 +72,11 @@ fn void rule4_a_failed_move_leaves_the_slot_untouched() @test
     mtk::helper::init(&t);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&t));
+    s.fill(mtk::helper::to_inner(&t));
 
     always_assert(mtk::helper::move_from_slot(&s, Msg) == null, "a Twin was moved out as a Msg");
     always_assert(s.is_full(), "Part 9.2 rule 4: a failed move emptied the Slot");
-    always_assert(s.peek() == mtk::helper::to_handle(&t), "a failed move changed the Slot's contents");
+    always_assert(s.peek() == mtk::helper::to_inner(&t), "a failed move changed the Slot's contents");
 }
 
 <*
@@ -89,9 +89,9 @@ fn void a_matching_move_returns_and_clears() @test
     mtk::helper::init(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&m));
+    s.fill(mtk::helper::to_inner(&m));
 
-    always_assert(mtk::helper::move_from_slot(&s, Msg) == &m, "the move did not return the item");
+    always_assert(mtk::helper::move_from_slot(&s, Msg) == &m, "the move did not return the outer");
     always_assert(s.is_empty(), "the move did not clear the Slot");
 }
 
@@ -107,9 +107,9 @@ fn void a_look_is_not_a_take() @test
     mtk::helper::init(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&m));
+    s.fill(mtk::helper::to_inner(&m));
 
-    always_assert(mtk::helper::from_slot(&s, Msg) == &m, "from_slot did not find the item");
+    always_assert(mtk::helper::from_slot(&s, Msg) == &m, "from_slot did not find the outer");
     always_assert(s.is_full(), "from_slot emptied the Slot");
     always_assert(mtk::helper::from_slot(&s, Msg) == &m, "from_slot is not repeatable");
     always_assert(s.is_full(), "from_slot emptied the Slot on the second read");
@@ -125,19 +125,19 @@ fn void peek_and_take_differ() @test
     mtk::helper::init(&j);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&j));
+    s.fill(mtk::helper::to_inner(&j));
 
-    always_assert(s.peek() == mtk::helper::to_handle(&j), "peek found the wrong handle");
+    always_assert(s.peek() == mtk::helper::to_inner(&j), "peek found the wrong inner");
     always_assert(s.is_full(), "peek emptied the Slot");
-    always_assert(s.take() == mtk::helper::to_handle(&j), "take returned the wrong handle");
+    always_assert(s.take() == mtk::helper::to_inner(&j), "take returned the wrong inner");
     always_assert(s.is_empty(), "take did not clear the Slot");
-    always_assert(s.take() == null, "take on an empty Slot invented a handle");
+    always_assert(s.take() == null, "take on an empty Slot invented an inner");
 }
 
 <*
  Part 9.6: one place at a time.
 
- An item moves Slot to list to Slot and is never in two places. The count and
+ An outer moves Slot to list to Slot and is never in two places. The count and
  the Slot's state are read at every step, because between them they are the
  whole invariant.
 
@@ -152,7 +152,7 @@ fn void one_place_at_a_time() @test
     Slot b;
     InnerQueue list;
 
-    a.fill(mtk::helper::to_handle(&m));
+    a.fill(mtk::helper::to_inner(&m));
     always_assert(a.is_full() && b.is_empty() && list.is_empty(), "start state");
 
     list.push_back_slot(&a);
@@ -161,13 +161,13 @@ fn void one_place_at_a_time() @test
     b.fill(list.pop_front());
     always_assert(a.is_empty() && b.is_full() && list.is_empty(), "after the receive");
 
-    always_assert(mtk::helper::move_from_slot(&b, Msg) == &m, "the item came back changed");
+    always_assert(mtk::helper::move_from_slot(&b, Msg) == &m, "the outer came back changed");
     always_assert(b.is_empty(), "the claim did not clear the Slot");
 }
 
 <*
  Part 9.7's shape, end to end: the cleanup is registered before the
- acquisition, and every path out of the function releases the item.
+ acquisition, and every path out of the function releases the outer.
 
  The path taken here is the one the author did not think about — an early
  return between the acquisition and the end.

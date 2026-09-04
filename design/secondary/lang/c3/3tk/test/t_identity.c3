@@ -11,7 +11,7 @@ import mtk;
 
  R5 deleted `prev` and R6 refused the membership field that would have taken
  its place, so the inner is two words rather than three: 16 bytes on
- linux-x64, down from 24. Every item in the program pays for this struct, and
+ linux-x64, down from 24. Every outer in the program pays for this struct, and
  a word is added to it only with a reason written down.
 
  Since 3TK-21 the two parts live in ONE field — `Inner.link`, a C3 `any`,
@@ -40,16 +40,16 @@ fn void inner_at_any_offset() @test
     mtk::helper::init(&m);
     mtk::helper::init(&j);
 
-    always_assert(mtk::helper::to_handle(&m) == (Inner*)&m.node, "Msg: to_handle is not the inner");
-    always_assert(mtk::helper::to_handle(&j) == (Inner*)&j.node, "Job: to_handle is not the inner");
-    always_assert(mtk::helper::from_handle(mtk::helper::to_handle(&m), Msg) == &m, "Msg: the round trip lost the outer");
-    always_assert(mtk::helper::from_handle(mtk::helper::to_handle(&j), Job) == &j, "Job: the round trip lost the outer");
+    always_assert(mtk::helper::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
+    always_assert(mtk::helper::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
+    always_assert(mtk::helper::from_inner(mtk::helper::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
+    always_assert(mtk::helper::from_inner(mtk::helper::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
 }
 
 <*
  Part 5.1, every clause. The one that matters is the third:
 
-   Two items of different outer types never carry the same identity.
+   Two outers of different outer types never carry the same identity.
 
  Msg and Twin have identical layouts. ztk needed a mutable byte per type to
  stop the linker merging two identical constants; C3's typeid needs nothing.
@@ -67,8 +67,8 @@ fn void identity_is_per_type() @test
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
-    always_assert(a.node.link.type == b.node.link.type, "Part 5.1: two items of one type differ");
-    always_assert(a.node.link.type == Msg::typeid, "Part 5.4: the identity is not the stored one");
+    always_assert(a.inner.link.type == b.inner.link.type, "Part 5.1: two outers of one type differ");
+    always_assert(a.inner.link.type == Msg::typeid, "Part 5.4: the identity is not the stored one");
 }
 
 <*
@@ -80,23 +80,23 @@ fn void identity_is_stored() @test
 {
     Msg m;
     mtk::helper::init(&m);
-    Inner* h = mtk::helper::to_handle(&m);
-    always_assert(h.link.type == Msg::typeid, "the identity is not in the inner");
+    Inner* inner = mtk::helper::to_inner(&m);
+    always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
 <*
  Part 5.5: an inner with no identity written is a defect, and the port's
  mitigation is that a zeroed typeid matches no type.
 
- An item whose init was never called is REFUSED at the border rather than
+ An outer whose init was never called is REFUSED at the border rather than
  mis-claimed. That is the whole of what C3 gives here, and it is worth a test
  because it is the one place the port is no better than ztk.
 *>
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!mtk::helper::is_mine((Inner*)&m.node, Msg), "an uninitialized inner was claimed");
-    always_assert(mtk::helper::from_handle((Inner*)&m.node, Msg) == null, "an uninitialized inner crossed the border");
+    always_assert(!mtk::helper::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
+    always_assert(mtk::helper::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -109,25 +109,25 @@ fn void checking_crossing_refuses() @test
 {
     Twin t;
     mtk::helper::init(&t);
-    Inner* h = mtk::helper::to_handle(&t);
+    Inner* inner = mtk::helper::to_inner(&t);
 
-    always_assert(mtk::helper::from_handle(h, Msg) == null, "a Twin crossed as a Msg");
-    always_assert(mtk::helper::from_handle(h, Twin) == &t, "a Twin failed to cross as a Twin");
-    always_assert(!mtk::helper::is_mine(h, Msg), "the predicate claimed a Twin");
+    always_assert(mtk::helper::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
+    always_assert(mtk::helper::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
+    always_assert(!mtk::helper::is_mine(inner, Msg), "the predicate claimed a Twin");
 }
 
 <*
- A null handle is nobody's. Every crossing takes one without dereferencing it.
+ A null inner is nobody's. Every crossing takes one without dereferencing it.
 *>
 fn void null_handle_is_nobodys() @test
 {
     always_assert(!mtk::helper::is_mine(null, Msg), "the predicate claimed null");
-    always_assert(mtk::helper::from_handle(null, Msg) == null, "null crossed the border");
-    always_assert(mtk::helper::to_handle((Msg*)null) == null, "to_handle invented a handle from null");
+    always_assert(mtk::helper::from_inner(null, Msg) == null, "null crossed the border");
+    always_assert(mtk::helper::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
 }
 
 <*
- Part 6.2: walking a heterogeneous list and deciding which items to claim.
+ Part 6.2: walking a heterogeneous list and deciding which outers to claim.
 
  This is the third of the three places the check runs, and it is the reason
  the list can hold two types at once. Invariant 13.
@@ -140,21 +140,21 @@ fn void heterogeneous_walk_claims_correctly() @test
     mtk::helper::init(&m1); mtk::helper::init(&m2); mtk::helper::init(&t1); mtk::helper::init(&j1);
 
     InnerQueue list;
-    list.push_back(mtk::helper::to_handle(&m1));
-    list.push_back(mtk::helper::to_handle(&t1));
-    list.push_back(mtk::helper::to_handle(&j1));
-    list.push_back(mtk::helper::to_handle(&m2));
+    list.push_back(mtk::helper::to_inner(&m1));
+    list.push_back(mtk::helper::to_inner(&t1));
+    list.push_back(mtk::helper::to_inner(&j1));
+    list.push_back(mtk::helper::to_inner(&m2));
 
     usz mine = 0;
     usz seen = 0;
     InnerQueueIterator it = list.iter();
-    for (Inner* h = it.next(); h; h = it.next())
+    for (Inner* inner = it.next(); inner; inner = it.next())
     {
         seen++;
-        if (mtk::helper::from_handle(h, Msg)) mine++;
+        if (mtk::helper::from_inner(inner, Msg)) mine++;
     }
-    always_assert(seen == 4, "the walk lost an item");
-    always_assert(mine == 2, "the walk claimed the wrong number of items");
+    always_assert(seen == 4, "the walk lost an outer");
+    always_assert(mine == 2, "the walk claimed the wrong number of outers");
 }
 
 <*
@@ -162,7 +162,7 @@ fn void heterogeneous_walk_claims_correctly() @test
  application reads most.
 
  The crossings are declared on `Inner`, so they are reachable as methods on
- the handle itself. `to` is the checking crossing and `as` is the asserting
+ the inner itself. `to` is the checking crossing and `as` is the asserting
  one — C3's own two names, borrowed from `any` rather than invented here, so a
  reader already knows which is which.
 
@@ -177,12 +177,12 @@ fn void the_methods_cross_the_same_border() @test
     mtk::helper::init(&m);
     mtk::helper::init(&t);
 
-    Inner* hm = mtk::helper::to_handle(&m);
-    Inner* ht = mtk::helper::to_handle(&t);
+    Inner* hm = mtk::helper::to_inner(&m);
+    Inner* ht = mtk::helper::to_inner(&t);
 
     always_assert(hm.to(Msg) == &m, "h.to lost the outer");
     always_assert(hm.as(Msg) == &m, "h.as lost the outer");
-    always_assert(hm.to(Msg) == mtk::helper::from_handle(hm, Msg), "the method and the macro disagree");
+    always_assert(hm.to(Msg) == mtk::helper::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
     // legitimate state, not a defect — `as` is what refuses this one.
@@ -204,7 +204,7 @@ fn void the_slot_methods_cross_the_same_border() @test
     mtk::helper::init(&t);
 
     Slot s;
-    s.fill(mtk::helper::to_handle(&m));
+    s.fill(mtk::helper::to_inner(&m));
 
     always_assert(s.to(Msg) == &m, "s.to lost the outer");
     always_assert(s.must(Msg) == &m, "s.must lost the outer");
@@ -212,7 +212,7 @@ fn void the_slot_methods_cross_the_same_border() @test
     always_assert(!s.is_empty(), "a look emptied the Slot");
 
     always_assert(s.move(Twin) == null, "s.move claimed a Msg as a Twin");
-    always_assert(!s.is_empty(), "a failed move took the item anyway");
+    always_assert(!s.is_empty(), "a failed move took the outer anyway");
 
     always_assert(s.move(Msg) == &m, "s.move lost the outer");
     always_assert(s.is_empty(), "a successful move left the Slot full");
