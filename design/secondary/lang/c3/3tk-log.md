@@ -7,6 +7,149 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-06 — 3TK-61: the rethinking, and it changed no code
+
+**3TK-61 was declared in plan 024 as one subject — `managed.c3` pushing an
+`Allocator` field onto every Outer — with the escape clause *"a **62** if it
+turns out structural."* It turned out structural.** The owner expanded it in
+session into a general rethinking of the core's shape, ruled most of it, and the
+stage ended as an analysis: **no `src/` change, and `run-builds.sh` untouched.**
+
+Everything it settled is in
+[matryoshka-3tk/design/3tk-rethinking-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rethinking-001.md),
+written by id — `RT-n` a ruling, `HR-n` a helper requirement, `PL-n` the parking
+lot, `MS-n` a measurement — so a later stage cites an id instead of re-arguing
+the point. The build stages are in
+[3tk-staging-plan-025.md](3tk-staging-plan-025.md).
+
+### What the owner ruled
+
+**`OuterHelper` is a first-class citizen.** `struct OuterHelper { typeid otrid;
+}`, in `helper.c3`, module `mtk::helper` — the books lead with it and the macros
+become the layer beneath. Its state is the **type identity**, not the allocator:
+it mirrors ztk's per-instantiation `_tag` static, which is Zig compensating for
+having no runtime type identity, and C3 uses the real `typeid` instead. The
+owner accepts that `otrid` is writable — c3c 0.8.3 has no field-level privacy —
+because removing the `init` trap is worth more; the free mitigation was taken as
+a rule, that no member ever reads `self.otrid` to decide anything.
+
+**`inner.c3` absorbs the old `helper.c3` content**, and `helper.c3` survives to
+be refilled by the helper. **`stack.c3` becomes private** at the end of
+`pool.c3`, `t_stack.c3` is deleted, and that **reverses 3TK-45**. **`managed.c3`
+leaves the core** into module `xtn` under `3tk/extensions/`, a folder the owner
+created for it, named to sort after `mtk` in the documentation — **and the word
+*managed* survives in no name.**
+
+**Governing all of it, restated with force over the design and not only over the
+examples: an Outer is a long-lived heap object, and a user who does otherwise
+pays.** It decides that `create` is the blessed path and that the stage must
+*not* design defensively for stack or uninitialized outers — while keeping the
+distinction that **catching is not supporting**: an illegal use should still
+abort loudly in a safe build.
+
+**The allocator stops being stored.** `create` takes it — it allocates, so it
+must — and so does `release`. The `Allocator` field in an Outer becomes
+**optional**, and its purpose is the **Outer's own** later allocations, not a
+no-argument `release`. `required_alloc_offset` becomes an optional discovery and
+moves to `xtn`. This is a **port deviation being undone**: ztk never stores the
+allocator, and 3tk only did so to reach a `release` with no argument.
+
+### The two measurements, and both were worth running
+
+**MS-1 — the user's vocabulary is six spellings.** Across the 52 files of
+`examples/`: `managed::release` 78, `managed::create` 61, `.must(` 26, `.to(`
+25, `.move(` 4, `.as(` 4, and one each of `helper::is_mine` and
+`helper::from_inner`. **200 sites, and what is absent decided more than what is
+present:**
+
+- **`init` is called zero times.** `create` does it, 61 times. The trap the
+  helper was partly meant to close is already closed for every outer a user
+  creates — which, under the heap rule, is every legal outer.
+- **The free Slot forms are dead in user code** — `from_slot` 1,
+  `must_from_slot` 0, `move_from_slot` 0, `must_from_inner` 0. Users reach for
+  the **method** forms, **59 sites to 8**. So "bless one set" has an
+  evidence-backed answer: bless the methods.
+- **The receiver is almost always a Slot** — about 50 of the 59 method calls.
+  Users meet a bare `Inner*` only when dispatching. The container calls agree:
+  `send` 31, `put` 23, `get` 22, `receive` 21.
+- **Tests are the mirror image and are not user evidence** — `to_inner` 79,
+  `init` 63, `from_slot` 31 — because they probe the primitives on purpose.
+
+**MS-2 — and it proved one of the stage's own claims wrong.** Probed on c3c
+0.8.3:
+
+1. **C3 has no struct default field initializers.** `struct Cfg { int a = 7; }`
+   does not parse. The "defaults declared on the type" half of the ruling is
+   unavailable and must not be planned for.
+2. **The allocator already zeroes.** `alloc::new`/`new_try` take an optional
+   `#init` and, when it is not supplied, allocate with `calloc`
+   (`std/core/alloc.c3:182-187`); verified at runtime. **So
+   `managed::create`'s existing `alloc::new_try(a, $Type)!` is already
+   zero-initializing, and the comparison's claim that 3tk leaves the outer
+   undefined where ztk does `item.* = .{}` was false.** `PL-3` was recorded as
+   closed rather than deleted, so nobody raises it again.
+3. **`#init` is an opportunity, not just a detail.** `mem::new(Cfg, { .a = 7 })`
+   works, so `create` can accept an optional initializer and forward it — the
+   user sets non-default values *at creation* instead of remembering to fill
+   them afterwards.
+
+### What was dropped, and by whom
+
+**The owner dropped a dispatch construct** — users expect a `switch` and are
+content writing one — so the one remaining raw `link.type` read stays as it is.
+**The owner also ruled that `t_stack.c3` needs no replacement**: the stack is
+inner machinery, the pool is what cares, and the LIFO promise is already tested
+black-box in `t_pool.c3`.
+
+**Three ztk shapes were identified as Zig workarounds and are not gaps in 3tk**:
+`PolyTag`/`TAG`/`isIt`, which exist because Zig has no `typeid`; per-type
+instantiation, which is why ztk's helper body is written out twice for one
+opt-out; and, against them, 3tk's exact `is_linked`, which is a genuine
+improvement over ztk's documented blind spot. **A rule was written for every
+later stage that reads `polynode.zig`: separate ztk's intent from Zig's
+workarounds.**
+
+**One real gap survived the comparison and is parked**, not fixed: ztk asserts
+an item has no neighbours before it leaves a Slot, and 3tk's `move_from_slot`
+and `release` assert nothing (`PL-1`). So is the second insert guard — ztk walks
+the list *and* checks `is_linked`; 3tk only checks `is_linked`. The owner asked
+for the walk in debug builds, and the reason it differs was recorded: ztk needs
+it because its `is_linked` is blind to a list's sole member, whereas 3tk's
+exact test means the walk guards **chain corruption**, not double-insert
+(`PL-2`).
+
+### The decisions file, and why its new section runs ahead of the source
+
+**`3tk-decisions-007.md` was written, and `006` moved to
+`matryoshka-3tk/design/backup/`.** It carries a section the file has never had
+before — **"Ruled by 3TK-61, decided and not yet built"** — because the file's
+own rule is that it must not contradict `../3tk/src`, and every entry in its body
+carries a `file:line`. A stage that ruled the shape of the core and changed no
+code has decisions with **no line to cite**.
+
+**How it is discharged:** each build stage folds its own entries into the body
+with real `file:line` **and deletes them from that section.** When the section
+is empty the rethinking is built, and the section goes with it. The four live
+citers — `3tk-status.md`, `3tk-open-defects.md`, `ref/3tk-doc-loop-004.md` and
+`3tk-api-004.md` — were repointed in the same step. **The log's own 3TK-60 entry
+still cites `006`, and correctly: it is the record of what that stage wrote.**
+
+### Why it ends here
+
+**Eleven workstreams had accumulated, and several were design rather than
+execution** — the helper's member list did not exist yet, so no sweep could be
+written for it. Plan 024's own escape clause applied, and the stage stopped at
+the line it drew. **Plan 025 orders the building** so that each stage can be
+*proved* rather than believed: the stack first because it is self-contained, the
+relocation second because it must return identical numbers, the semantics third
+and alone, the helper fourth, and the books and examples last.
+
+**Three points are the owner's before the building starts**: the
+`inner::to_inner` stutter the merge creates, where `create`/`release` live given
+that the core is meant to allocate nothing, and the proposed member list itself.
+
+---
+
 ## 2026-09-04 — 3TK-60: the two terms
 
 **3tk has exactly two terms, `Inner` and `Outer`, and the words *handle* and

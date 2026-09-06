@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 <*
- The inner, the Slot, and the link.
+Contains all for
+- embedding an Inner
+- moving it
+- through the type-erased toolkit.
 
  You send and receive your own struct.
  The struct is the outer, and it is yours.
