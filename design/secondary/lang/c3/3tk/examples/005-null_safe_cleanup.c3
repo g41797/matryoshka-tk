@@ -7,10 +7,11 @@
 *>
 module shc::null_safe_cleanup;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef NULL_SAFE_CLEANUP_FAILED;
 
@@ -21,7 +22,7 @@ struct AlwaysCreateHooks (PoolHooks)
 
 fn void AlwaysCreateHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void AlwaysCreateHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -32,7 +33,7 @@ fn void AlwaysCreateHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 
@@ -50,7 +51,7 @@ fn void? cleanup_survives_an_empty_slot(Allocator a)
         {
             Slot s;
             s.fill(inner);
-            mtk::managed::release(Holder, &s);
+            HOLDER.release(a, &s);
         }
     }
 
@@ -61,6 +62,6 @@ fn void? cleanup_survives_an_empty_slot(Allocator a)
     shc::helpers::expect(NULL_SAFE_CLEANUP_FAILED, pooled.is_empty(), "the pooled Slot is not empty")!;
 
     Slot heaped;
-    defer mtk::managed::release(Holder, &heaped);    // has work to do
-    mtk::managed::create(Holder, a, &heaped)!;
+    defer HOLDER.release(a, &heaped);    // has work to do
+    HOLDER.create(a, &heaped)!;
 }

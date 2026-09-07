@@ -8,12 +8,13 @@
 *>
 module shc::releasing_the_resources;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
 import std::core::mem::alloc;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef RELEASING_THE_RESOURCES_FAILED;
 
@@ -21,7 +22,7 @@ struct ReleaseHooks (PoolHooks) { Allocator alloc; int closed_count; }
 
 fn void ReleaseHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void ReleaseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -32,7 +33,7 @@ fn void ReleaseHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
         self.closed_count++;
     }
 }
@@ -53,7 +54,7 @@ fn void Master.shut_down(&self)
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
     self.mbx.release();
 

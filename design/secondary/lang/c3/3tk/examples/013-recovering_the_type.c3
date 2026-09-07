@@ -8,17 +8,18 @@
 *>
 module shc::recovering_the_type;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef RECOVERING_THE_TYPE_FAILED;
 
 fn void? recover_four_ways(Allocator a)
 {
     Slot s;
-    defer mtk::managed::release(Holder, &s);
-    mtk::managed::create(Holder, a, &s)!;
+    defer HOLDER.release(a, &s);
+    HOLDER.create(a, &s)!;
     Inner* inner = s.peek();
 
     Holder* checked = inner.to(Holder);

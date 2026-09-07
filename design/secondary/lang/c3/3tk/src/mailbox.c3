@@ -67,15 +67,26 @@ struct _Mbox @private
 // [3tk: H0, Part 11.1]
 const typeid TYPE = _Mbox::typeid;
 
+// Part 4.6: `_Mbox` is an Outer, and the mailbox is an ordinary client of the
+// helper. One `@private` alias, exactly as an application writes one, and every
+// crossing below goes through it.
+//
+// `to_inner` is the one exception, and the reason is concurrency rather than
+// taste: the helper's `inner()` stamps on the way out, and a `Mailbox*` being
+// crossed by one thread may be on a chain being read by another. A stamp writes
+// the same bytes it finds, but it writes them, so this direction keeps the
+// read-only macro. Nothing else in the file does.
+alias MBOX @private = mtk::OF{_Mbox};
+
 <*
  From a `Mailbox*` to its `Inner*`. Cannot fail.
 *>
-macro Inner* to_inner(Mailbox* p) => mtk::helper::to_inner((_Mbox*)p);
+macro Inner* to_inner(Mailbox* p) => mtk::to_inner((_Mbox*)p);
 
 <*
  The checking crossing back. Null when the inner names another type.
 *>
-macro Mailbox* of(Inner* inner) => (Mailbox*)mtk::helper::from_inner(inner, _Mbox);
+macro Mailbox* of(Inner* inner) => (Mailbox*)MBOX.look(inner);
 
 <*
  Allocates a mailbox and returns it.
@@ -92,7 +103,7 @@ fn Mailbox*? create(Allocator a)
     _Mbox* mb = alloc::new_try(a, _Mbox)!;
     defer catch alloc::free(a, mb);
 
-    mtk::helper::init(mb);
+    MBOX.stamp(mb);
     mb._alloc = a;
 
     mb._mu.init()!;
@@ -462,7 +473,6 @@ fn usz Mailbox.len(&mbox)
 // Little-endian imports
 //----------------------
 import mtk;
-import mtk::helper;
 import std::thread;
 import std::time;
 import std::core::mem::alloc;

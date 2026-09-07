@@ -9,17 +9,19 @@
 *>
 module shc::request_response;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::thread;
 import std::time;
 
+alias EVENT  = mtk::OF{Event};
+
 faultdef REQUEST_RESPONSE_FAILED;
 
 struct RRArgs
 {
+    Allocator alloc;
     Mailbox* req_mbx;
     Mailbox* resp_mbx;
 }
@@ -31,23 +33,23 @@ fn int answer_one_request(void* arg)
     if (catch f = a.req_mbx.receive(&s, time::ms(2000))) return 0;
     Event* e = s.must(Event);
     e.code = e.code * 2;
-    if (catch f = a.resp_mbx.send(&s)) mtk::managed::release(Event, &s);
+    if (catch f = a.resp_mbx.send(&s)) EVENT.release(a.alloc, &s);
     return 0;
 }
 
 fn void? one_request_one_response(Allocator a, Mailbox* req_mbx, Mailbox* resp_mbx)
 {
-    RRArgs args = { .req_mbx = req_mbx, .resp_mbx = resp_mbx };
+    RRArgs args = { .alloc = a, .req_mbx = req_mbx, .resp_mbx = resp_mbx };
     Thread worker;
     worker.create(&answer_one_request, &args)!!;
 
     Slot s;
-    mtk::managed::create(Event, a, &s)!;
+    EVENT.create(a, &s)!;
     s.must(Event).code = 21;
     req_mbx.send(&s)!;
 
     Slot reply;
-    defer mtk::managed::release(Event, &reply);
+    defer EVENT.release(a, &reply);
     resp_mbx.receive(&reply, time::ms(2000))!;
 
     worker.join()!!;

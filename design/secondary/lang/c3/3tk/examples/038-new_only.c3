@@ -6,10 +6,11 @@
 *>
 module shc::new_only;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef NEW_ONLY_FAILED;
 
@@ -18,7 +19,7 @@ struct CountingHooks (PoolHooks) { Allocator alloc; int created; }
 fn void CountingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
     self.created++;
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void CountingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -29,7 +30,7 @@ fn void CountingHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 

@@ -9,7 +9,6 @@
 *>
 module shc::fan_out;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
@@ -17,10 +16,13 @@ import std::thread;
 import std::time;
 import std::atomic::types;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef FAN_OUT_FAILED;
 
 struct WorkerArgs
 {
+    Allocator alloc;
     Mailbox* mbx;
     Atomic{int}* claimed;
 }
@@ -32,7 +34,7 @@ fn int claim_until_closed(void* arg)
     {
         Slot s;
         if (catch f = a.mbx.receive(&s, time::ms(2000))) return 0;
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(a.alloc, &s);
         a.claimed.add(1);
     }
 }
@@ -42,13 +44,13 @@ fn void? each_outer_goes_to_exactly_one_worker(Allocator a, Mailbox* mbx)
     for (int i = 0; i < 6; i++)
     {
         Slot s;
-        mtk::managed::create(Holder, a, &s)!;
+        HOLDER.create(a, &s)!;
         mbx.send(&s)!;
     }
 
     Atomic{int} claimed;
     claimed.store(0);
-    WorkerArgs wargs = { .mbx = mbx, .claimed = &claimed };
+    WorkerArgs wargs = { .alloc = a, .mbx = mbx, .claimed = &claimed };
 
     Thread w1, w2, w3;
     w1.create(&claim_until_closed, &wargs)!!;
@@ -69,7 +71,7 @@ fn void? each_outer_goes_to_exactly_one_worker(Allocator a, Mailbox* mbx)
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(a, &s);
         leftover++;
     }
 

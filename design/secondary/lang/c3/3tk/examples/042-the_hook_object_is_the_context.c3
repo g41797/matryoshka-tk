@@ -7,11 +7,12 @@
 *>
 module shc::the_hook_object_is_the_context;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
 import std::atomic::types;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef HOOK_OBJECT_IS_THE_CONTEXT_FAILED;
 
@@ -25,7 +26,7 @@ struct CappedHooks (PoolHooks)
 fn void CappedHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
     if (self.live.load(ACQUIRE) >= self.cap) return; // empty Slot -> NOT_CREATED
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
     self.live.add(1);
 }
 
@@ -42,7 +43,7 @@ fn void CappedHooks.on_close(&self, InnerQueue remaining) @dynamic
         Slot s;
         s.fill(inner);
         self.live.sub(1);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 

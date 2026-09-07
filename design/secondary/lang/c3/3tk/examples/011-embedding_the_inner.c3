@@ -6,17 +6,18 @@
 *>
 module shc::embedding_the_inner;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias SENSOR = mtk::OF{Sensor};
 
 faultdef EMBEDDING_THE_INNER_FAILED;
 
 fn void? embed_one_inner_anywhere(Allocator a)
 {
     Slot s;
-    defer mtk::managed::release(Sensor, &s);
-    mtk::managed::create(Sensor, a, &s)!;
+    defer SENSOR.release(a, &s);
+    SENSOR.create(a, &s)!;
 
     Sensor* found = s.to(Sensor);
     shc::helpers::expect(EMBEDDING_THE_INNER_FAILED, found != null, "Sensor did not cross with its Inner off offset zero")!;

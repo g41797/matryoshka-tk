@@ -8,24 +8,25 @@
 *>
 module shc::reach_into_a_full_slot;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::time;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef REACH_INTO_A_FULL_SLOT_FAILED;
 
 fn void? reach_in_then_send(Allocator a, Mailbox* mb)
 {
     Slot s;
-    defer mtk::managed::release(Holder, &s);
-    mtk::managed::create(Holder, a, &s)!;
+    defer HOLDER.release(a, &s);
+    HOLDER.create(a, &s)!;
     s.must(Holder).id = 42;
     shc::helpers::expect(REACH_INTO_A_FULL_SLOT_FAILED, s.is_full(), "reaching in with must() must leave the Slot full")!;
     mb.send(&s)!;
 
     Slot got;
     mb.receive(&got, time::ms(1000))!;
-    mtk::managed::release(Holder, &got);
+    HOLDER.release(a, &got);
 }

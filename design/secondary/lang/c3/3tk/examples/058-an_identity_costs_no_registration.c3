@@ -7,23 +7,24 @@
 *>
 module shc::identity_costs_nothing;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::time;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED;
 
 fn void? a_new_type_costs_nothing(Allocator a, Mailbox* mb)
 {
     Slot s;
-    mtk::managed::create(Event, a, &s)!;
+    EVENT.create(a, &s)!;
     s.must(Event).code = 1;
     mb.send(&s)!;
 
     Slot got;
-    defer mtk::managed::release(Event, &got);
+    defer EVENT.release(a, &got);
     mb.receive(&got, time::ms(2000))!;
     shc::helpers::expect(AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED, got.must(Event).code == 1, "the new type crossed the mailbox unchanged")!;
 }

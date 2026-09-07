@@ -9,10 +9,11 @@
 *>
 module shc::composite_outer_gives_back;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef A_COMPOSITE_OUTER_GIVES_BACK_ITS_PARTS_FAILED;
 
@@ -20,7 +21,7 @@ struct PartHooks (PoolHooks) { Allocator alloc; int on_put_calls; }
 
 fn void PartHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void PartHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
@@ -38,7 +39,7 @@ fn void PartHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 

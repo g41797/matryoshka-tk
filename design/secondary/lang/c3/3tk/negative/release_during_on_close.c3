@@ -16,7 +16,6 @@
 *>
 module neg;
 import mtk;
-import mtk::helper;
 import mtk::pool;
 import std::io;
 import std::thread;

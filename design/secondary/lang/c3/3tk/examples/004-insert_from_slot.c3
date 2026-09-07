@@ -8,9 +8,10 @@
 *>
 module shc::insert_from_slot;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef INSERT_FROM_SLOT_FAILED;
 
@@ -18,8 +19,8 @@ fn void? insert_from_a_slot(Allocator a)
 {
     InnerQueue q;
     Slot s;
-    defer mtk::managed::release(Holder, &s);
-    mtk::managed::create(Holder, a, &s)!;
+    defer HOLDER.release(a, &s);
+    HOLDER.create(a, &s)!;
     s.must(Holder).id = 7;
 
     q.push_back_slot(&s);
@@ -29,6 +30,6 @@ fn void? insert_from_a_slot(Allocator a)
     {
         Slot popped;
         popped.fill(inner);
-        mtk::managed::release(Holder, &popped);
+        HOLDER.release(a, &popped);
     }
 }

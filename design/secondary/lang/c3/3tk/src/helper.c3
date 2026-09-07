@@ -1,173 +1,223 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
+//==============================================================================
+// The core, section 3 of 3: `OuterHelper`, the one thing a user binds.
+//
+// This is `module mtk` again, in its generic form. C3 lets a module name be
+// both plain and generic, so `mtk::to_inner(&m)` and `alias MSG = mtk::OF{Msg};`
+// resolve against the same name — Appendix A.6. No module block: `mtk.c3`
+// carries the description, and a module has one description however many
+// sections it is written in.
+//
+// Refilled by 3TK-64, which deleted `managed.c3` and moved `create`/`release`
+// here as members. Every member forwards to a macro in `inner.c3` and has no
+// logic of its own.
+//==============================================================================
+// [3tk: RT-3, HS-1 to HS-10, Part 3, Part 4.2, Part 5.1]
+module mtk <Outer>;
+
 <*
- Every crossing between a typed pointer and an `Inner*` lives in one file.
+ The one thing a user binds, one line per outer type.
 
- You send and receive your own struct.
- You give the infrastructure one thing, an `Inner` embedded in it.
- From then on the infrastructure never sees your type.
- It moves `Inner*`, intrusively and with the type erased.
- You get your struct back by crossing once, from `Inner*` to `Outer*`.
- The identity in the `Inner` is what makes that crossing safe.
+ `alias MSG = mtk::OF{Msg};` — and that is the whole ceremony.
 
- `to_inner` goes from your pointer to the `Inner*`.
- Null in, null out.
- `from_inner` goes from an `Inner*` back to `$Type*`, and is null on an identity mismatch.
- A mismatch is an answer, not a failure.
- `must_from_inner` is the same, and it aborts on a mismatch.
- The abort names your line.
- The same three take the outer from a Slot, and five of them appear again as methods.
- `from_slot` looks, and the Slot is unchanged.
- `move_from_slot` takes, and on success the Slot is left empty.
- None of these moves an outer.
- Reading an identity and casting a pointer leave every container alone.
- No alias to declare, no instantiation, no registration.
+ The carrier holds nothing.
+ Its only job is to give C3's method syntax a receiver, so that `MSG.create(mem, &s)` is a line you can write.
+ Every member takes `self` and no member reads it: `Outer` arrives from the module instantiation, and every member compares against `Outer::typeid`, the compile-time constant that instantiation supplies.
+ C3 has no static-method facility, and no way to alias a module instantiation as a namespace, so a zero-state type is how a generic module offers its members under one bound name.
+ It is a `typedef` over `uptr` because c3c refuses a struct with no members, and because the standard library spells its own zero-state carriers that way — `LibcAllocator` and `NullAllocator` are both this shape.
+ The value is never read, as a number or as anything else.
 *>
-// [3tk: D2, H0, Q2, E6, V19, Part 7, Part 7.1, Part 7.2, Part 7.4, Part 7.5, Part 15.5]
-module mtk::helper;
-import mtk;
-import mtk::inner;
+// [3tk: HS-1, Part 3.1]
+typedef OuterHelper = uptr;
 
 <*
- True when the inner names `$Type`.
+ The helper for `Outer`, ready to alias.
 
- False for a null inner.
- False for an outer whose `init` was never called.
-
- @param $Type : "the outer type"
+ Uppercase, because it is a `const`, and C3 enforces the pairing in both directions.
+ An uppercase alias must alias a constant, so `alias MSG = mtk::OF{Msg};` is the only spelling.
 *>
-// [3tk: Part 5.5, Part 7.2]
-macro bool is_mine(Inner* inner, $Type) => inner != null && inner.link.type == $Type::typeid;
+// [3tk: HS-2, Part 3.1, A.5]
+const OuterHelper OF = {};
+
+// --- The four crossings ------------------------------------------------------
+//
+// Two independent axes, so the names are derivable rather than memorised.
+// `must_` aborts on a mismatch, plain returns null; `take` empties the Slot on
+// success, `look` leaves it alone. `look` and `must_look` accept a `Slot*` or
+// an `Inner*`, dispatched at compile time on `$Typeof`.
 
 <*
- Writes the identity into the embedded `Inner`.
-
- Call it once, before first use.
- An outer that was never initialized carries no identity.
-
- @param outer : "a pointer to the outer"
- @require $defined($Typeof(*outer)::members) : "not a struct that embeds an Inner"
-*>
-// [3tk: H8, Part 5.4, Part 5.5, Part 7.2]
-macro void init(outer)
-{
-    Inner* inner = (Inner*)((char*)outer + mtk::inner::inner_offset($Typeof(*outer)));
-    inner.link = any_make(null, $Typeof(*outer)::typeid);
-}
-
-<*
- From your pointer to the `Inner*`.
-
- Null in, null out.
- Reading an identity and casting a pointer leave every container alone.
-
- @param outer : "a pointer to the outer, or null"
- @require $defined($Typeof(*outer)::members) : "not a struct that embeds an Inner"
-*>
-// [3tk: H5, Part 7.2]
-macro Inner* to_inner(outer)
-    => outer ? (Inner*)((char*)outer + mtk::inner::inner_offset($Typeof(*outer))) : null;
-
-<*
- From an `Inner*` back to `$Type*`.
+ From a Slot or an inner back to `Outer*`, without disturbing the Slot.
 
  Null on an identity mismatch.
  A mismatch is an answer, not a failure.
 
- @param $Type : "the outer type expected"
+ @param from : "a `Slot*` or an `Inner*`"
 *>
-// [3tk: H5, Part 6.2, Part 6.3]
-macro from_inner(Inner* inner, $Type)
+// [3tk: HS-3, Part 3.2]
+macro Outer* OuterHelper.look(self, from)
 {
-    if (!is_mine(inner, $Type)) return ($Type*)null;
-    return ($Type*)((char*)inner - mtk::inner::inner_offset($Type));
+    $switch:
+        $case $Typeof(from) == Slot*:
+            return mtk::from_slot(from, Outer);
+        $case $Typeof(from) == Inner*:
+            return mtk::from_inner(from, Outer);
+        $default:
+            $error "look takes a Slot* or an Inner*";
+    $endswitch
 }
 
 <*
- Same as `from_inner()`.
+ Same as `look`, and it aborts on a mismatch.
 
- It aborts on a mismatch.
  Use it where a mismatch would be your own defect.
  The abort names your line.
- Under `--safe=no` it is gone.
+ Under `--safe=no` the check is gone.
 
- @param $Type : "the outer type asserted"
- @require is_mine(inner, $Type) : "the inner is not of this type"
+ @param from : "a `Slot*` or an `Inner*`"
 *>
-// [3tk: H7, Part 5.5, Part 6.3, Part 15.5]
-macro must_from_inner(Inner* inner, $Type) => ($Type*)((char*)inner - mtk::inner::inner_offset($Type));
-
-<*
- Same as `from_inner()`, taking the outer from a Slot.
-
- It looks. The Slot is unchanged.
-
- @param $Type : "the outer type expected"
-*>
-// [3tk: Part 7.2]
-macro from_slot(Slot* s, $Type) => from_inner(s.peek(), $Type);
-
-<*
- Same as `from_slot()`.
-
- It looks, and aborts on failure.
- The Slot is unchanged.
-
- @param $Type : "the outer type asserted"
-*>
-// [3tk: Part 7.2]
-macro must_from_slot(Slot* s, $Type) => must_from_inner(s.peek(), $Type);
-
-<*
- Same as `from_slot()`, and it takes.
-
- On success the Slot is left empty.
- On failure it is unchanged.
-
- @param $Type : "the outer type expected"
-*>
-// [3tk: H6, Part 7.2, Part 9.2 rule 4]
-macro move_from_slot(Slot* s, $Type)
+// [3tk: HS-4, Part 3.2]
+macro Outer* OuterHelper.must_look(self, from)
 {
-    Inner* inner = s.peek();
-    if (!is_mine(inner, $Type)) return ($Type*)null;
-    s.take();
-    return ($Type*)((char*)inner - mtk::inner::inner_offset($Type));
+    $switch:
+        $case $Typeof(from) == Slot*:
+            return mtk::must_from_slot(from, Outer);
+        $case $Typeof(from) == Inner*:
+            return mtk::must_from_inner(from, Outer);
+        $default:
+            $error "must_look takes a Slot* or an Inner*";
+    $endswitch
 }
 
 <*
- Same as `from_inner()`, as a method on the inner.
+ From a Slot back to `Outer*`, emptying the Slot on success.
 
- @param $Type : "the outer type expected"
+ Null on an identity mismatch, and then the Slot is unchanged.
+ There is no `Inner*` form: an inner has no Slot to empty.
+
+ @param slot : "the Slot holding the outer; empty afterwards on success"
 *>
-macro Inner.to(&self, $Type) => from_inner((Inner*)self, $Type);
+// [3tk: HS-5, Part 3.2]
+macro Outer* OuterHelper.take(self, Slot* slot) => mtk::move_from_slot(slot, Outer);
 
 <*
- Same as `must_from_inner()`, as a method on the inner.
+ Same as `take`, and it aborts on a mismatch.
 
- @param $Type : "the outer type asserted"
- @require is_mine((Inner*)self, $Type) : "the inner is not of this type"
+ The Slot is empty afterwards.
+ This form did not exist before 3TK-64: the old `move_from_slot` had no abort form.
+
+ @param slot : "the Slot holding the outer; empty afterwards"
 *>
-macro Inner.as(&self, $Type) => ($Type*)((char*)self - mtk::inner::inner_offset($Type));
+// [3tk: HS-6, Part 3.2]
+macro Outer* OuterHelper.must_take(self, Slot* slot)
+{
+    Outer* outer = mtk::must_from_slot(slot, Outer);
+    slot.take();
+    return outer;
+}
+
+// --- The other five ----------------------------------------------------------
 
 <*
- Same as `from_slot()`, as a method on the Slot.
+ From your pointer to the `Inner*`, stamping the identity on the way.
 
- @param $Type : "the outer type expected"
+ The stamp may be written any number of times and is safe on a linked outer, so this costs nothing to call twice.
+ It is what makes the identity impossible to forget.
+
+ @param outer : "a pointer to the outer"
 *>
-macro Slot.to(&self, $Type) => from_slot(self, $Type);
+// [3tk: HS-7, HR-5, Part 3.3, Part 5.1]
+macro Inner* OuterHelper.inner(self, Outer* outer)
+{
+    mtk::stamp(outer);
+    return mtk::to_inner(outer);
+}
 
 <*
- Same as `must_from_slot()`, as a method on the Slot.
+ Writes the identity into the embedded `Inner`, and nothing else.
 
- @param $Type : "the outer type asserted"
+ For an outer you allocated by hand.
+ An outer made by `create` is stamped already.
+ It is called `stamp` and not `init` because `init` is the name of your own hook.
+
+ @param outer : "a pointer to the outer"
 *>
-macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
+// [3tk: HS-8, Part 3.3, Part 5.1]
+macro void OuterHelper.stamp(self, Outer* outer) => mtk::stamp(outer);
 
 <*
- Same as `move_from_slot()`, as a method on the Slot.
+ True when the outer is on some chain.
 
- @param $Type : "the outer type expected"
+ Exact, and O(1).
+
+ @param outer : "a pointer to the outer"
 *>
-macro Slot.move(&self, $Type) => move_from_slot(self, $Type);
+// [3tk: HS-9, Part 3.3]
+macro bool OuterHelper.linked(self, Outer* outer) => mtk::is_linked(mtk::to_inner(outer));
+
+// --- Allocating and freeing --------------------------------------------------
+
+<*
+ Allocates the outer, initializes it, stamps it, and fills the Slot.
+
+ Four steps in this order: allocate zeroed, call your `init(a)` hook if you declared one, stamp the inner, fill the Slot.
+ Stamping after the hook is deliberate: if `init` fails the outer was never stamped, so a pointer that escaped a failed creation can never be mistaken for a live outer.
+ On a hook failure the allocation is freed and the fault is propagated unchanged.
+ On an allocation failure the Slot is untouched and the fault is returned.
+ It returns `void?` because its caller has a real decision to make.
+
+ The toolkit reads and writes no field of your outer except the `Inner`.
+ An outer that wants to keep its allocator stores this argument in its own field, under any name, in its own `init`.
+
+ @param a : "the allocator; it is passed to your `init` hook and it is not stored"
+ @param slot : "an empty Slot, filled on success"
+*>
+// [3tk: RT-5, Part 3.4, Part 9.2 rule 3]
+macro void? OuterHelper.create(self, Allocator a, Slot* slot)
+{
+    // [3tk: Part 9.2 rule 3]
+    mtk::@check(slot.is_empty(), "an acquisition asserts the Slot is empty on entry");
+    Outer* outer = alloc::new_try(a, Outer)!;
+    $if $defined(outer.init):
+        if (catch f = outer.init(a))
+        {
+            alloc::free(a, outer);
+            return f~;
+        }
+    $endif
+    mtk::stamp(outer);
+    slot.fill(mtk::to_inner(outer));
+}
+
+<*
+ Calls your `destroy(a)` hook if you declared one, empties the Slot, and frees the outer.
+
+ A no-op on an empty Slot, so a `defer` registered before the acquisition is safe.
+ It returns `void`, and that is not symmetry-breaking for its own sake: `release` is what you write in a `defer`, and C3 refuses a bare failable call there.
+ The narrower reason is that a teardown fault has no recipient — `release` runs on a path that is usually already unwinding, nobody can act on "freeing failed", and the resource is gone either way.
+ A `destroy` fault therefore aborts in a safe build and is dropped in a fast one.
+ A failing destructor is a defect, not an outcome.
+
+ @param a : "the allocator the outer was created with"
+ @param slot : "the Slot holding the outer; empty afterwards"
+*>
+// [3tk: RT-5, Part 3.4, Part 9.2, Part 13.1]
+macro void OuterHelper.release(self, Allocator a, Slot* slot)
+{
+    if (slot.is_empty()) return;
+    Outer* outer = mtk::must_from_slot(slot, Outer);
+    $if $defined(outer.destroy):
+        fault f = @catch(outer.destroy(a));
+        mtk::@check(!f, "destroy failed during release");
+    $endif
+    slot.take();
+    alloc::free(a, outer);
+}
+
+
+//----------------------
+// Little-endian imports
+//----------------------
+import std::core::mem::alloc;

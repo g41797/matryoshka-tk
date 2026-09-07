@@ -10,12 +10,13 @@
 *>
 module shc::pipeline;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::thread;
 import std::time;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef PIPELINE_FAILED;
 
@@ -23,6 +24,7 @@ const int END_OF_STREAM = -1;
 
 struct StageArgs
 {
+    Allocator alloc;
     Mailbox* in_mbx;
     Mailbox* out_mbx;
 }
@@ -37,29 +39,29 @@ fn int double_and_forward(void* arg)
         Event* e = s.must(Event);
         if (e.code == END_OF_STREAM)
         {
-            if (catch f = a.out_mbx.send(&s)) mtk::managed::release(Event, &s);
+            if (catch f = a.out_mbx.send(&s)) EVENT.release(a.alloc, &s);
             return 0;
         }
         e.code = e.code * 2;
-        if (catch f = a.out_mbx.send(&s)) { mtk::managed::release(Event, &s); return 0; }
+        if (catch f = a.out_mbx.send(&s)) { EVENT.release(a.alloc, &s); return 0; }
     }
 }
 
 fn void? values_cross_one_stage_doubled(Allocator a, Mailbox* in_mbx, Mailbox* out_mbx)
 {
-    StageArgs args = { .in_mbx = in_mbx, .out_mbx = out_mbx };
+    StageArgs args = { .alloc = a, .in_mbx = in_mbx, .out_mbx = out_mbx };
     Thread stage;
     stage.create(&double_and_forward, &args)!!;
 
     for (int i = 1; i <= 3; i++)
     {
         Slot s;
-        mtk::managed::create(Event, a, &s)!;
+        EVENT.create(a, &s)!;
         s.must(Event).code = i;
         in_mbx.send(&s)!;
     }
     Slot marker;
-    mtk::managed::create(Event, a, &marker)!;
+    EVENT.create(a, &marker)!;
     marker.must(Event).code = END_OF_STREAM;
     in_mbx.send(&marker)!;
 
@@ -68,7 +70,7 @@ fn void? values_cross_one_stage_doubled(Allocator a, Mailbox* in_mbx, Mailbox* o
     for (int received = 0; received < 4; received++)
     {
         Slot s;
-        defer mtk::managed::release(Event, &s);
+        defer EVENT.release(a, &s);
         out_mbx.receive(&s, time::ms(2000))!;
         Event* e = s.must(Event);
         if (e.code == END_OF_STREAM) { saw_marker = true; continue; }

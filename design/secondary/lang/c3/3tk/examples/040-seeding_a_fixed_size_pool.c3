@@ -7,10 +7,11 @@
 *>
 module shc::seeding_a_fixed_size_pool;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef SEEDING_A_FIXED_SIZE_POOL_FAILED;
 
@@ -19,7 +20,7 @@ struct CappedHooks (PoolHooks) { Allocator alloc; usz cap; usz live; }
 fn void CappedHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
     if (self.live >= self.cap) return; // empty Slot -> NOT_CREATED
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
     self.live++;
 }
 
@@ -32,7 +33,7 @@ fn void CappedHooks.on_close(&self, InnerQueue remaining) @dynamic
         Slot s;
         s.fill(inner);
         self.live--;
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 
@@ -41,8 +42,8 @@ fn void? seed(Pool* p, Allocator a, usz n)
     for (usz i = 0; i < n; i++)
     {
         Slot s;
-        defer mtk::managed::release(Holder, &s);
-        mtk::managed::create(Holder, a, &s)!;
+        defer HOLDER.release(a, &s);
+        HOLDER.create(a, &s)!;
         p.put(&s); // the defer releases it only if the pool refused
     }
 }

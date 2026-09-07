@@ -14,12 +14,34 @@ import doc_blocks as db
 
 
 def sources(src_dir):
-    """Every source file by the module it declares."""
-    out = {}
+    """The file that carries each module's description.
+
+    3TK-63 made this a choice rather than a lookup. A module may be written in
+    several files — `module mtk;` is `mtk.c3`, `inner.c3` and `queue.c3` — and
+    it has ONE description however many sections it is written in. The carrier
+    is the file that already holds a `<* *>` above its module line; the others
+    are sections and carry a `//` banner saying so.
+
+    Two carriers for one module is a defect and stops the move: writing to
+    either would leave the other stale, and `check-doc-loop.sh` reports the same
+    condition. With no carrier at all the first file wins, which is the old
+    behaviour and the only sane insertion point.
+    """
+    seen = {}
     for p in sorted(glob.glob(os.path.join(src_dir, '*.c3'))):
-        name = db.module_of(open(p).read())
-        if name:
-            out[name] = p
+        text = open(p).read()
+        name = db.module_of(text)
+        if not name:
+            continue
+        seen.setdefault(name, []).append((p, bool(db.source_block(text)[3])))
+    out = {}
+    for name, entries in seen.items():
+        carriers = [p for p, has in entries if has]
+        if len(carriers) > 1:
+            raise SystemExit('%s is described in %d files: %s'
+                             % (name, len(carriers),
+                                ', '.join(os.path.basename(c) for c in carriers)))
+        out[name] = carriers[0] if carriers else entries[0][0]
     return out
 
 

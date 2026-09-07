@@ -32,10 +32,10 @@ fn void rule2_a_slot_starts_empty() @test
 fn void rule5_a_transfer_clears_the_slot() @test
 {
     Msg m;
-    mtk::helper::init(&m);
+    mtk::stamp(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&m));
+    s.fill(mtk::to_inner(&m));
     always_assert(s.is_full(), "fill left the Slot empty");
 
     InnerQueue list;
@@ -54,8 +54,8 @@ fn void rule5_a_transfer_clears_the_slot() @test
 fn void rule6_release_is_a_noop_on_empty() @test
 {
     Slot s;
-    mtk::managed::release(Holder, &s);
-    mtk::managed::release(Holder, &s);
+    HOLDER.release(mem, &s);
+    HOLDER.release(mem, &s);
     always_assert(s.is_empty(), "a release on an empty Slot did something");
 }
 
@@ -69,14 +69,14 @@ fn void rule6_release_is_a_noop_on_empty() @test
 fn void rule4_a_failed_move_leaves_the_slot_untouched() @test
 {
     Twin t;
-    mtk::helper::init(&t);
+    mtk::stamp(&t);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&t));
+    s.fill(mtk::to_inner(&t));
 
-    always_assert(mtk::helper::move_from_slot(&s, Msg) == null, "a Twin was moved out as a Msg");
+    always_assert(mtk::move_from_slot(&s, Msg) == null, "a Twin was moved out as a Msg");
     always_assert(s.is_full(), "Part 9.2 rule 4: a failed move emptied the Slot");
-    always_assert(s.peek() == mtk::helper::to_inner(&t), "a failed move changed the Slot's contents");
+    always_assert(s.peek() == mtk::to_inner(&t), "a failed move changed the Slot's contents");
 }
 
 <*
@@ -86,12 +86,12 @@ fn void rule4_a_failed_move_leaves_the_slot_untouched() @test
 fn void a_matching_move_returns_and_clears() @test
 {
     Msg m;
-    mtk::helper::init(&m);
+    mtk::stamp(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&m));
+    s.fill(mtk::to_inner(&m));
 
-    always_assert(mtk::helper::move_from_slot(&s, Msg) == &m, "the move did not return the outer");
+    always_assert(mtk::move_from_slot(&s, Msg) == &m, "the move did not return the outer");
     always_assert(s.is_empty(), "the move did not clear the Slot");
 }
 
@@ -104,14 +104,14 @@ fn void a_matching_move_returns_and_clears() @test
 fn void a_look_is_not_a_take() @test
 {
     Msg m;
-    mtk::helper::init(&m);
+    mtk::stamp(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&m));
+    s.fill(mtk::to_inner(&m));
 
-    always_assert(mtk::helper::from_slot(&s, Msg) == &m, "from_slot did not find the outer");
+    always_assert(mtk::from_slot(&s, Msg) == &m, "from_slot did not find the outer");
     always_assert(s.is_full(), "from_slot emptied the Slot");
-    always_assert(mtk::helper::from_slot(&s, Msg) == &m, "from_slot is not repeatable");
+    always_assert(mtk::from_slot(&s, Msg) == &m, "from_slot is not repeatable");
     always_assert(s.is_full(), "from_slot emptied the Slot on the second read");
 }
 
@@ -122,14 +122,14 @@ fn void a_look_is_not_a_take() @test
 fn void peek_and_take_differ() @test
 {
     Job j;
-    mtk::helper::init(&j);
+    mtk::stamp(&j);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&j));
+    s.fill(mtk::to_inner(&j));
 
-    always_assert(s.peek() == mtk::helper::to_inner(&j), "peek found the wrong inner");
+    always_assert(s.peek() == mtk::to_inner(&j), "peek found the wrong inner");
     always_assert(s.is_full(), "peek emptied the Slot");
-    always_assert(s.take() == mtk::helper::to_inner(&j), "take returned the wrong inner");
+    always_assert(s.take() == mtk::to_inner(&j), "take returned the wrong inner");
     always_assert(s.is_empty(), "take did not clear the Slot");
     always_assert(s.take() == null, "take on an empty Slot invented an inner");
 }
@@ -146,13 +146,13 @@ fn void peek_and_take_differ() @test
 fn void one_place_at_a_time() @test
 {
     Msg m;
-    mtk::helper::init(&m);
+    mtk::stamp(&m);
 
     Slot a;
     Slot b;
     InnerQueue list;
 
-    a.fill(mtk::helper::to_inner(&m));
+    a.fill(mtk::to_inner(&m));
     always_assert(a.is_full() && b.is_empty() && list.is_empty(), "start state");
 
     list.push_back_slot(&a);
@@ -161,7 +161,7 @@ fn void one_place_at_a_time() @test
     b.fill(list.pop_front());
     always_assert(a.is_empty() && b.is_full() && list.is_empty(), "after the receive");
 
-    always_assert(mtk::helper::move_from_slot(&b, Msg) == &m, "the outer came back changed");
+    always_assert(mtk::move_from_slot(&b, Msg) == &m, "the outer came back changed");
     always_assert(b.is_empty(), "the claim did not clear the Slot");
 }
 
@@ -181,9 +181,9 @@ fn void cleanup_registered_before_acquisition() @test
 macro int @acquire_and_leave_early()
 {
     Slot slot;
-    defer mtk::managed::release(Holder, &slot);
+    defer HOLDER.release(mem, &slot);
 
-    if (catch mtk::managed::create(Holder, mem, &slot)) return 0;
+    if (catch HOLDER.create(mem, &slot)) return 0;
     always_assert(slot.is_full(), "create did not fill the Slot");
 
     return 1;

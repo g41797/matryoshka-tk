@@ -15,7 +15,6 @@
 *>
 module neg;
 import mtk;
-import mtk::helper;
 import mtk::pool;
 import std::io;
 import std::thread;
@@ -74,11 +73,11 @@ fn int main()
     typeid[1] tags = { Msg::typeid };
     Pool* p = pool::create(mem, &tags, &hooks)!!;
 
-    helper::init(&one);
+    mtk::stamp(&one);
 
     Giving g;
     g.p = p;
-    g.outer = helper::to_inner(&one);
+    g.outer = mtk::to_inner(&one);
 
     Thread t;
     t.create(&giver, &g)!!;

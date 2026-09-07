@@ -8,12 +8,13 @@
 *>
 module shc::infrastructure_wrapper;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::helpers;
 import std::time;
 
 faultdef INFRASTRUCTURE_WRAPPER_FAILED;
+
+alias WORKER_INBOX = mtk::OF{WorkerInbox};
 
 struct WorkerInbox
 {
@@ -26,8 +27,8 @@ struct WorkerInbox
 fn void? wrap_and_send(Allocator a, Mailbox* to, Mailbox* inbox, int job_id)
 {
     Slot s;
-    defer mtk::managed::release(WorkerInbox, &s);
-    mtk::managed::create(WorkerInbox, a, &s)!;
+    defer WORKER_INBOX.release(a, &s);
+    WORKER_INBOX.create(a, &s)!;
 
     WorkerInbox* w = s.must(WorkerInbox);
     w.mbx = inbox;
@@ -41,7 +42,7 @@ fn void? wrapper_carries_the_job_id(Allocator a, Mailbox* to, Mailbox* inbox)
     wrap_and_send(a, to, inbox, 42)!;
 
     Slot s;
-    defer mtk::managed::release(WorkerInbox, &s);
+    defer WORKER_INBOX.release(a, &s);
     to.receive(&s, time::ms(1000))!;
 
     WorkerInbox* w = s.must(WorkerInbox);

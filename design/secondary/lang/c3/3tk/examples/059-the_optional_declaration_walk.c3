@@ -8,21 +8,22 @@
 *>
 module shc::the_optional_declaration_walk;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef THE_OPTIONAL_DECLARATION_WALK_FAILED;
 
-fn usz walk_and_release(InnerQueue* q)
+fn usz walk_and_release(Allocator a, InnerQueue* q)
 {
     usz n;
     while (Inner* inner = q.pop_front())
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(a, &s);
         n++;
     }
     return n;
@@ -36,15 +37,15 @@ fn void? the_declaration_is_the_condition(Allocator a)
     for (int i = 0; i < 3; i++)
     {
         Slot s;
-        defer mtk::managed::release(Holder, &s);
-        mtk::managed::create(Holder, a, &s)!;
+        defer HOLDER.release(a, &s);
+        HOLDER.create(a, &s)!;
         mb.send(&s)!;
     }
 
     InnerQueue batch;
     mb.receive_all(&batch)!;
 
-    usz n = walk_and_release(&batch);
+    usz n = walk_and_release(a, &batch);
     shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, n == 3, "the walk saw every inner the queue held")!;
     shc::helpers::expect(THE_OPTIONAL_DECLARATION_WALK_FAILED, batch.is_empty(), "pop_front left nothing behind")!;
 }

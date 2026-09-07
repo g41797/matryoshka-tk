@@ -10,13 +10,14 @@
 *>
 module shc::the_thread_is_given_one_pointer;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::thread;
 import std::time;
 import std::atomic::types;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef THE_THREAD_IS_GIVEN_ONE_POINTER_FAILED;
 
@@ -37,7 +38,7 @@ fn int worker_main(void* arg)
     {
         Slot s;
         if (catch mb_receive(ctx.mbx, &s)) break;
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(ctx.alloc, &s);
         ctx.done.add(1);
     }
     return 0;
@@ -54,8 +55,8 @@ fn void? one_pointer_is_the_whole_context(Allocator a, Mailbox* mb)
     for (int i = 0; i < 3; i++)
     {
         Slot s;
-        defer mtk::managed::release(Holder, &s);
-        mtk::managed::create(Holder, a, &s)!;
+        defer HOLDER.release(a, &s);
+        HOLDER.create(a, &s)!;
         mb.send(&s)!;
     }
 

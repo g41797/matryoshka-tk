@@ -55,7 +55,7 @@ fn void TestHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
     self.gets.add(1);
     self.last_get_count.store(in_pool);
     if (self.refuse_to_create) return;             // Part 12.2: an empty Slot is the failure
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void TestHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
@@ -67,11 +67,11 @@ fn void TestHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dyn
     for (usz i = 0; i < self.extras_on_put; i++)
     {
         Slot part;
-        if (catch mtk::managed::create(Holder, self.alloc, &part)) break;
+        if (catch HOLDER.create(self.alloc, &part)) break;
         extra.push_back_slot(&part);
     }
 
-    if (self.release_on_put) mtk::managed::release(Holder, slot);  // released, nothing kept
+    if (self.release_on_put) HOLDER.release(self.alloc, slot);  // released, nothing kept
     // otherwise the Slot stays full: kept as it is
 }
 
@@ -87,7 +87,7 @@ fn void TestHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 
@@ -158,7 +158,7 @@ fn void get_creates_then_reuses() @test
     always_assert(h.gets.load() == 1, "the get hook did not run");
     always_assert(h.last_get_count.load() == 0, "the count handed to on_get is wrong");
 
-    Holder* first = mtk::helper::must_from_slot(&s, Holder);
+    Holder* first = mtk::must_from_slot(&s, Holder);
 
     p.put(&s);
     always_assert(s.is_empty(), "put did not clear the Slot");
@@ -167,7 +167,7 @@ fn void get_creates_then_reuses() @test
 
     if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "the second get failed"); }
     always_assert(h.gets.load() == 1, "the second get called the hook instead of reusing");
-    always_assert(mtk::helper::must_from_slot(&s, Holder) == first, "a different outer came back");
+    always_assert(mtk::must_from_slot(&s, Holder) == first, "a different outer came back");
 
     p.put(&s);
 }
@@ -378,7 +378,7 @@ fn void a_closed_pool_refuses_a_put() @test
     always_assert(s.is_full(), "a closed pool took the outer anyway");
     always_assert(h.puts.load() == 0, "a closed pool ran the put hook");
 
-    mtk::managed::release(Holder, &s);              // the caller still owns it, and says so
+    HOLDER.release(mem, &s);              // the caller still owns it, and says so
     p.release();
 }
 
@@ -447,7 +447,7 @@ fn void the_give_back_loop_stops_at_the_first_refusal() @test
     {
         Slot s;
         s.fill(x);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(mem, &s);
     }
     p.release();
 }
@@ -575,7 +575,7 @@ fn void reuse_is_last_in_first_out() @test
     {
         Slot s;
         if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
-        Holder* o = mtk::helper::must_from_slot(&s, Holder);
+        Holder* o = mtk::must_from_slot(&s, Holder);
         o.id = (int)i;
         outers.push_back_slot(&s);
     }
@@ -588,7 +588,7 @@ fn void reuse_is_last_in_first_out() @test
     {
         Slot s;
         if (catch p.get(Holder::typeid, AVAILABLE_ONLY, &s)) { always_assert(false, "an available get failed"); }
-        Holder* o = mtk::helper::must_from_slot(&s, Holder);
+        Holder* o = mtk::must_from_slot(&s, Holder);
         always_assert(o.id == (int)(i - 1),
             "the pool did not hand back the most recently returned outer — the bucket is not a stack any more");
         outers.push_back_slot(&s);

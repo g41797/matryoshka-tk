@@ -1,24 +1,28 @@
 <*
- An outer with a lifetime carries the `Allocator` it was made with, so
- `release` needs none handed back to it.
+ An outer keeps the allocator only if it says so, in an `init` hook of its own.
+ The toolkit never stores one, and `release` is told which allocator to use.
 
- - Create a `Holder`.
- - Release it with no allocator argument.
+ - Create a `Holder`, whose `init` hook keeps the allocator it was given.
+ - Release it, naming the same allocator at the call.
+ - The kept field is the outer's business, and nothing in 3tk reads it.
 *>
 module shc::the_allocator_in_the_outer;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef THE_ALLOCATOR_IN_THE_OUTER_FAILED;
 
-fn void? release_takes_no_allocator(Allocator a)
+fn void? the_outer_keeps_what_it_chose_to_keep(Allocator a)
 {
     Slot s;
-    mtk::managed::create(Holder, a, &s)!;
+    HOLDER.create(a, &s)!;
     shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.is_full(), "create filled the Slot")!;
 
-    mtk::managed::release(Holder, &s);
-    shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.is_empty(), "release needed no allocator to free what create made with one")!;
+    shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.must(Holder).alloc == a, "the outer's own init hook did not keep the allocator")!;
+
+    HOLDER.release(a, &s);
+    shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.is_empty(), "release freed the outer with the allocator it was given")!;
 }

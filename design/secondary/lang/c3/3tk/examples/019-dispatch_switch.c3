@@ -7,9 +7,12 @@
 *>
 module shc::dispatch_switch;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias EVENT  = mtk::OF{Event};
+alias SENSOR = mtk::OF{Sensor};
+alias HOLDER = mtk::OF{Holder};
 
 faultdef DISPATCH_SWITCH_FAILED;
 
@@ -32,18 +35,18 @@ fn void? dispatch_by_switch(Allocator a)
 {
     Slot s;
 
-    mtk::managed::create(Event, a, &s)!;
+    EVENT.create(a, &s)!;
     touch_by_switch(s.peek());
     shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Event).code == 1, "the Event prong must run")!;
-    mtk::managed::release(Event, &s);
+    EVENT.release(a, &s);
 
-    mtk::managed::create(Sensor, a, &s)!;
+    SENSOR.create(a, &s)!;
     touch_by_switch(s.peek());
     shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Sensor).reading == 1, "the Sensor prong must run")!;
-    mtk::managed::release(Sensor, &s);
+    SENSOR.release(a, &s);
 
-    mtk::managed::create(Holder, a, &s)!;
+    HOLDER.create(a, &s)!;
     touch_by_switch(s.peek());
     shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Holder).id == 1, "the Holder prong must run")!;
-    mtk::managed::release(Holder, &s);
+    HOLDER.release(a, &s);
 }

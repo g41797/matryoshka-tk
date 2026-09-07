@@ -8,22 +8,23 @@
 *>
 module shc::worker_finish_signal;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::time;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef WORKER_FINISH_SIGNAL_FAILED;
 
-fn void free_outer(Slot* s)
+fn void free_outer(Allocator a, Slot* s)
 {
     if (s.is_empty()) return;
-    if (s.to(Holder)) { mtk::managed::release(Holder, s); return; }
+    if (s.to(Holder)) { HOLDER.release(a, s); return; }
     unreachable("free_outer met an identity it was not written for");
 }
 
-fn void? finish_signal(Mailbox* inbox, Mailbox* worker_mbx)
+fn void? finish_signal(Allocator a, Mailbox* inbox, Mailbox* worker_mbx)
 {
     Slot s;
     inbox.receive(&s, time::ms(1000))!;
@@ -37,7 +38,7 @@ fn void? finish_signal(Mailbox* inbox, Mailbox* worker_mbx)
     {
         Slot each;
         each.fill(inner);
-        free_outer(&each);
+        free_outer(a, &each);
     }
     got.release();
 }
@@ -50,13 +51,13 @@ fn void? finish_signal_is_a_real_pointer_check(Allocator a)
     Mailbox* worker_mbx = mtk::mailbox::create(a)!;
 
     Slot left_over;
-    defer mtk::managed::release(Holder, &left_over);
-    mtk::managed::create(Holder, a, &left_over)!;
+    defer HOLDER.release(a, &left_over);
+    HOLDER.create(a, &left_over)!;
     worker_mbx.send(&left_over)!;
 
     Slot s;
     s.fill(mtk::mailbox::to_inner(worker_mbx));
     inbox.send(&s)!;
 
-    finish_signal(inbox, worker_mbx)!;
+    finish_signal(a, inbox, worker_mbx)!;
 }

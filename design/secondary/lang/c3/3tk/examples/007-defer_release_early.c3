@@ -7,18 +7,19 @@
 *>
 module shc::defer_release_early;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef DEFER_RELEASE_EARLY_FAILED;
 
 fn void? send_a_fresh_holder(Allocator a, Mailbox* mb)
 {
     Slot s;
-    defer mtk::managed::release(Holder, &s);
-    mtk::managed::create(Holder, a, &s)!;
+    defer HOLDER.release(a, &s);
+    HOLDER.create(a, &s)!;
     s.must(Holder).id = 42;
     mb.send(&s)!;                                       // on success the defer does nothing
 }
@@ -36,5 +37,5 @@ fn void? defer_release_goes_before_the_create(Allocator a)
     shc::helpers::expect(DEFER_RELEASE_EARLY_FAILED, inner != null, "the mailbox did not keep the Holder")!;
     Slot s;
     s.fill(inner);
-    mtk::managed::release(Holder, &s);
+    HOLDER.release(a, &s);
 }

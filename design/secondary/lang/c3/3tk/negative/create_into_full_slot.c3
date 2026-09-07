@@ -5,7 +5,7 @@
  rule 1 forbids the overwrite, rule 3 puts the check at the ENTRY of every
  acquiring operation, before anything is allocated. This provokes the second.
 
- Safe build: aborts in managed::create, before the allocation.
+ Safe build: aborts in OuterHelper.create, before the allocation.
  Fast build: the check is gone, and the created outer replaces the one in the
  Slot. Exits 0, having leaked — which is what a compiled-out contract costs,
  and why the check exists.
@@ -15,16 +15,17 @@ import mtk;
 import std::io;
 
 struct Holder { int id; Inner inner; Allocator alloc; }
+alias HOLDER = mtk::OF{Holder};
 
 fn int main()
 {
     Msg m;
-    mtk::helper::init(&m);
+    mtk::stamp(&m);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&m));
+    s.fill(mtk::to_inner(&m));
 
-    if (catch mtk::managed::create(Holder, mem, &s)) return 1;   // <-- the violation
+    if (catch HOLDER.create(mem, &s)) return 1;   // <-- the violation
 
     io::printn("no check: create wrote into a full Slot");
     return 0;

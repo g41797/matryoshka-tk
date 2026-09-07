@@ -7,18 +7,19 @@
 *>
 module shc::defer_for_received_outer;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::time;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef DEFER_RECEIVED_FAILED;
 
-fn void receive_and_release(Mailbox* mb, Duration timeout)
+fn void receive_and_release(Allocator a, Mailbox* mb, Duration timeout)
 {
     Slot s;
-    defer mtk::managed::release(Holder, &s);
+    defer HOLDER.release(a, &s);
     if (catch mb.receive(&s, timeout)) return;
     s.must(Holder).id++;
 }
@@ -29,10 +30,10 @@ fn void? defer_covers_both_paths(Allocator a)
     defer { InnerQueue left; mb.close(&left); mb.release(); }
 
     Slot sent;
-    defer mtk::managed::release(Holder, &sent);
-    mtk::managed::create(Holder, a, &sent)!;
+    defer HOLDER.release(a, &sent);
+    HOLDER.create(a, &sent)!;
     mb.send(&sent)!;
 
-    receive_and_release(mb, time::ms(100));            // the normal path: the outer is released after use
-    receive_and_release(mb, time::ms(1));               // the fault path: TIMEOUT, and the empty Slot's defer does nothing
+    receive_and_release(a, mb, time::ms(100));            // the normal path: the outer is released after use
+    receive_and_release(a, mb, time::ms(1));               // the fault path: TIMEOUT, and the empty Slot's defer does nothing
 }

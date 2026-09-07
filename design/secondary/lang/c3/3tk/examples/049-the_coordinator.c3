@@ -8,12 +8,13 @@
 *>
 module shc::the_coordinator;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
 import std::time;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef THE_COORDINATOR_FAILED;
 
@@ -21,7 +22,7 @@ struct CoordinatorHooks (PoolHooks) { Allocator alloc; }
 
 fn void CoordinatorHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void CoordinatorHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -32,7 +33,7 @@ fn void CoordinatorHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 

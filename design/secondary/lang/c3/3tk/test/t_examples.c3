@@ -333,7 +333,7 @@ fn void test_example_the_thread_is_given_one_pointer() @test
 
 fn void test_example_the_allocator_in_the_outer() @test
 {
-    if (catch f = shc::the_allocator_in_the_outer::release_takes_no_allocator(mem)) always_assert(false, "the_allocator_in_the_outer example failed");
+    if (catch f = shc::the_allocator_in_the_outer::the_outer_keeps_what_it_chose_to_keep(mem)) always_assert(false, "the_allocator_in_the_outer example failed");
 }
 
 fn void test_example_an_identity_costs_no_registration() @test

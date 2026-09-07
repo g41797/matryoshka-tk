@@ -24,6 +24,263 @@ It is kept short for that reason.**
 
 ## What is live now
 
+**The plan is [3tk-staging-plan-028.md](3tk-staging-plan-028.md), written
+2026-09-07.** **026 and 027 are both spent and in `backup/`** — 027 ran no stage
+at all: the docs-site reading and the four probes overturned its charter within
+the same sitting that wrote it, so it was superseded rather than edited.
+**Three stages have not run —
+`3TK-pre-65`, then `3TK-65`, then `3TK-66`** — and 028 holds their charters.
+**Nothing is renumbered:** the new stage is `3TK-pre-65`, so
+`3tk-decisions-007.md` keeps every citation it has.
+
+**`3TK-pre-65` — the readable surface — is next, and its probes are already
+spent.** The owner read `helper.c3`, `inner.c3` and the generated docs site and
+ruled all three unreadable. One stage, and it now carries a module split it did
+not originally have.
+
+**Four probes ran 2026-09-07 and are recorded in `3tk-boundaries-001.md` 4.2a
+and 4.4a. Do not re-run them; do not design against the beliefs they replaced.**
+
+1. **Methods cannot be hidden by any attribute.** `@private` **and `@local`**
+   are both ignored, with the compiler saying so — *"'@local' modifiers are
+   ignored for method declarations"* — and the call succeeding from another
+   module. `Part 4.4` was right; the fourteen internal methods of `_Mbox`,
+   `_Pool` and `InnerStack` **cannot** become `@local`.
+2. **A separate module keeps `inner_offset` hidden.** So **3TK-63's merge was
+   never needed**, and `Part 4.2` is re-ruled: `helper.c3` becomes
+   `module mtk::helper <Outer>;` and `queue.c3` becomes `module mtk::queue;`.
+3. **`c3c docgen` ignores visibility entirely** and groups by module alone.
+   `@private` and `@local` declarations are published, `_Mbox`, `_Pool` and
+   `InnerStack` among them **as public types**.
+4. **The short module prefix works** — `alias MSG = helper::OF{Msg};` compiles,
+   so the binding line does not grow.
+
+**The rule that falls out, and it is the centre of the stage: the doc block is
+the visibility marker.** A declaration that is not the user surface gets `//`
+line comments and no `<* *>` block, **whether or not the compiler can hide it**
+— the source loses seven paragraphs, the reference never receives it, and the
+docs site shows a bare signature, which is the only *not for you* signal C3
+offers. **The marker is one line: `// For internal usage.`** It does not say
+"inner", because `Inner` is a type. The seven *"Public because C3 cannot hide a
+method"* paragraphs are **withdrawn**; where a maintainer needs the reason, it
+is stated **once per file** under the section banner.
+
+**`OuterHelper` keeps its name** — it appears 13 times in `helper.c3` and in no
+other `.c3` file, never qualified. **`InnerStack` stays as it is:** private
+inside `mtk::pool`.
+
+**`mtk` goes from 59 declarations to 36.** `run-builds.sh:215` asserts the module
+list and **fails on this correct change** — it moves in the same pass, the trap
+`Part 4.5` already warns about for the stack.
+
+**Accepted gap, ruled 2026-09-07:** the names still appear. `_Mbox`, `_Pool` and
+`InnerStack` stay listed on the docs site, **undescribed, not absent**. Docgen
+has no visibility filter and no exclude flag. **No stage goes looking for a way
+around it.**
+
+It is a relocation stage, so **its proof is that every figure stays identical —
+81 checks, four builds, 143 tests each** — with two deliberate exceptions: the
+module-list check is rewritten for six names, and **the descriptor count falls
+below 510** because internal declarations leave the reference.
+
+**INTR on 2026-09-07 — the state came out of `OuterHelper`. Not a stage, and
+nothing is owed.** The carrier is now
+
+```c3
+typedef OuterHelper = uptr;
+
+const OuterHelper OF = {};
+```
+
+**`typeid outer_tid` is deleted.** It was written once and read by nothing, and
+its removal makes the run-time identity check the doc block used to forbid
+unwriteable. **`self` stays and is structural** — C3 has no static-method
+facility and no namespace alias for a module instantiation, so a zero-state type
+is the only way a generic module offers members under one bound name.
+
+**`struct OuterHelper {}` is not available:** c3c 0.8.3 answers *"Zero sized
+structs are not permitted."* The `typedef … = uptr` spelling is the standard
+library's own, from `LibcAllocator` and `NullAllocator`. **A later reader who
+wonders why the carrier is a `uptr` is answered in the doc block, and must not
+try the empty struct again.**
+
+**Nothing at the surface changed** — the nine member bodies never referenced
+`self`, and all 65 alias sites and every call are byte-identical. **The figures
+are 3TK-64's, unchanged: `run-builds.sh` green at 81 checks, four builds, 143
+tests each.** The doc loop is clean at **510 of 510** sentences, 0 differing
+blocks, 0 banned words; 509 → 510 is the one rewritten block.
+
+`3tk-reference-008.md`'s helper paragraph is rewritten to match and **is already
+in `matryoshka-3tk`**, since design documents are edited there directly.
+**`src/helper.c3` joins the batch the owner has yet to copy.** No script and no
+`.yml` needed a change: nothing in either names the field or the struct keyword,
+and CI builds and tests the same way it did.
+
+**3TK-64 ran on 2026-09-07 — `OuterHelper`, and the end of *managed*.** It is
+plan 026's third build stage and the one where semantics change. `helper.c3` is
+**`module mtk <Outer>;`**, carrying `OuterHelper` and `const OF` (built with a
+`typeid` field, which the INTR above removed); a user binds
+`alias MSG = mtk::OF{Msg};` and calls nine members. **`managed.c3` is deleted**,
+`required_alloc_offset` with it, and **the word *managed* survives in no name.**
+
+**`run-builds.sh` is green — 81 checks, four builds, 143 tests each.** 89 → 81
+because **two compile-time negatives were retired** (four builds apart):
+`nocompile_managed_no_allocator` and `nocompile_managed_two_allocators`
+asserted a concept that no longer exists, and both shapes must now compile and
+run. **Their proof is positive and lives in `test/t_helper.c3`**, which
+replaced `t_managed.c3`. 134 → 143 tests for the same reason.
+
+**`create` and `release` take the allocator and are helper members.** `create`
+allocates zeroed, calls the outer's optional `init(a)` hook, **stamps after the
+hook** so a failed creation leaves nothing stamped, and fills the Slot;
+`release` calls the optional `destroy(a)`, empties the Slot and frees. `release`
+returns `void`, so it needs no `!`, no `!!` and no cast in a `defer`.
+
+**Three things this stage decided that the documents left open, all three in
+the log:**
+- **`mtk::init` is now `mtk::stamp`**, at about sixty call sites. `Part 3.3`
+  named the *member* `stamp`; leaving the macro called `init` would have put
+  two opposite meanings on one word in one module, since `Msg.init(a)` is now
+  the user's hook.
+- **An alias is per-module ceremony**, and c3c forces it: *"Aliases from other
+  modules must be prefixed with the module name."* A shared alias in
+  `outers.c3` buys nothing, so **each example module carries its own one-line
+  alias per outer type**, and `outers.c3` says why where they used to be.
+- **`_Mbox` and `_Pool` took their `@private` alias** — `alias MBOX @private =
+  mtk::OF{_Mbox};`, the attribute before the `=` — **except `to_inner`**, which
+  keeps the read-only macro. The helper has no non-stamping way out of an
+  `Outer*`, and that direction is crossed concurrently. Both sites say so.
+
+**About forty `release` sites had no allocator in scope** and each was given
+one honestly — a parameter on a local helper, a field on a thread's context
+struct, `self.alloc` in a hook object, `mem` in `test/`. **No site was given an
+allocator it was not created with.** `Event`, `Sensor` and both `Holder`s keep
+their `Allocator` field and now fill it in an `init` hook of their own, so the
+hook path is exercised by every example.
+
+**The doc loop is clean — 3 labelled blocks, 0 differing, 509 of 509 sentences,
+0 banned words, `move-module-docs.sh roundtrip` byte-identical.**
+`3tk-reference-008.md` was edited in place: the `mtk::managed` labelled block is
+a four-line gravestone, *The API — allocating an outer for you* is replaced by
+**The API — the helper**, and *The API — identity* documents `stamp` and
+`Inner.outer_tid`. **Parts 1 to 7 still spell `managed::create` in their prose
+and worked examples — that is 3TK-66's charter, and the new section says so in
+its first lines.**
+
+**`matryoshka-3tk/scripts/run-builds.sh` is tuned to match**, and the `diff` is
+the `ROOT` line alone. **The three `.yml` files needed no change**, though the
+first version of this file gave a wrong reason: **nothing in CI runs that
+script.** `linux.yml` re-implements build and test inline across a four-leg
+matrix.
+
+**Ruled by the owner, 2026-09-07: CI is the matrix, and the matrix is enough.**
+Every failure shows as its own leg. **The negatives and the layering greps are
+deliberately outside CI and stay hand-run** — an accepted gap, not an oversight.
+**No stage proposes moving `run-builds.sh` into CI.** The `scripts/` copy is
+still carried across every stage, because it is run by hand there.
+
+**Three dead files were removed from `matryoshka-3tk` with a plain `rm`** —
+`test/t_managed.c3` and the two `negative/nocompile_managed_*.c3` — because a
+copy adds files and never deletes them, and `t_managed.c3` would have failed
+`c3c test` on all four legs.
+
+**`3tk-decisions-007.md` is folded and 3TK-64 owes it nothing.** `RT-3`, `RT-5`,
+`RT-6` … `RT-10`, `RT-12` … `RT-18` and `HR-5` are in the body; **the parked
+section holds no live ahead-of-the-source decision**, only `RT-1`, the `MS-1`
+measurements and four entries marked RULED or DISCHARGED. Two stale things were
+corrected in the fold: the `3TK-65` heading was plan 025's numbering, and the
+field ruled as `otrid` was built as **`outer_tid`**.
+
+**The restore was skipped on the owner's ruling and is not owed by anyone.**
+189 of the 222 changed lines were the botched renumbering, 21 citations name the
+now-deleted `managed.c3`, and **3TK-66 re-anchors all 222 from the built tree in
+one pass.** The file's header says so and tells a reader to treat any citation
+older than 3TK-64 as naming a file, not a line. `reapply_decisions.py` is spent
+and need not be run.
+
+**Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`/`examples`, or
+pushed** — that is the owner's step.
+
+**3TK-63 ran on 2026-09-07 — the merge into `mtk`, and plan 026's second build
+stage.** `inner.c3` absorbed `helper.c3`'s crossing macros and declares
+`module mtk;`; `queue.c3` declares `module mtk;`; `helper.c3` is **emptied and
+kept**, and 3TK-64 refills it as `module mtk <Outer>;`. **Eight module names are
+four.** `mtk::inner`, `mtk::helper` and `mtk::queue` are gone as names, and
+`InnerQueue` is `mtk::InnerQueue` at every user site.
+
+**`run-builds.sh` is green — 89 checks, four builds, 134 tests each, identical
+to 3TK-62 in every figure.** That identity is the whole proof of a relocation
+stage, and it holds.
+
+**`inner_offset` is `@private` and it was probed, not assumed** — a foreign
+module calling it now fails to compile, while `mtk::pool` and `mtk::mailbox`
+still expand the crossings, because a macro body resolves against its defining
+module. **`reset` and `is_linked` stay public**, as `Part 4.3` predicted, and
+carry the *"public because"* line. **Two tests stopped reaching for
+`inner_offset`** and read the offset through `to_inner` instead; no test was
+lost or added.
+
+**Two deviations from the documents, both deliberate and both in the log.**
+*One:* `Part 4.4`'s unhideable-method line is **not** written onto `Slot`'s
+methods — it ends *"not part of the user surface"*, and `examples/` calls
+`.fill` 34 times. `Slot` is public by intent, not by the language's failure.
+*Two:* `required_alloc_offset` was **moved into `managed.c3` as `@local`**, not
+deleted: plan 026 said it has no caller *"once `managed.c3` goes"*, and
+`managed.c3` goes in **3TK-64**. The concept leaves the core here and leaves the
+codebase there.
+
+**`run-builds.sh` changed by exactly one string.**
+`NOCOMPILE_EXPECT[nocompile_managed_no_allocator]` was `mtk::helper`, a module
+this stage abolished; it is now `Plain`, the type name, as the other three
+compile-time negatives already were. **The check count did not move.**
+
+**The doc loop is fully clean for the first time — 4 labelled blocks, 0
+differing, 476 of 476 sentences, 0 banned words, and `move-module-docs.sh
+roundtrip` byte-identical.** `PL-10` is closed, and the status file was right
+that it was five lines and a block, not one sentence.
+
+**Both doc-loop scripts learned a rule and 3TK-64 onward depends on it: a module
+has one description however many sections it is written in.** The carrier is the
+file with a `<* *>` above its module line; the others carry a `//` banner.
+`check-doc-loop.sh` reports those as *section only, no block* and asserts every
+labelled block is carried by **exactly one** file; `move_module_docs.py` stops
+with an error on two carriers. Without that second guard it wrote the merged
+`mtk` block into `queue.c3`, purely on alphabetical order.
+
+**`3tk-reference-008.md` was edited in place again**, under the ruling that
+covered 3TK-62. The three absorbed blocks are inside `mtk`'s, the module table
+shows one module over three files, and a new subsection under *The API — the
+link* — *"Public, and why"* — states the visibility rule the source repeats.
+
+**`matryoshka-3tk/scripts/run-builds.sh` is tuned to match** — one line, the
+same expectation string. The two repos' copies now differ only in the `ROOT`
+line that is meant to differ. **The doc-loop scripts have no copy in that repo.**
+**The three `.yml` files needed no change**, same reason as 3TK-62.
+
+**Until the owner copies `src/` and `test/`, that repo's `run-builds.sh` still
+reports the one FAIL 3TK-62 left** — *"src/pool.c3 has no stack banner"* — and
+it clears with the copy.
+
+**WITHDRAWN by the owner, 2026-09-07 — the restore this stage asked for is not
+owed and will not be run.** It said `3tk-decisions-007.md` had to be restored
+with `git checkout --` and the three intended edits re-applied with
+`reapply_decisions.py`. **3TK-64 measured the pending change and the owner ruled
+it not worth the command:** 189 of the 222 changed lines were nothing but the
+botched renumbering, 21 citations name `managed.c3`, which 3TK-64 deleted, and
+**3TK-66 re-anchors all 222 from the built tree in one pass** — which overwrites
+whatever the numbers say, restored or not. `reapply_decisions.py` is spent.
+
+**What happened is still worth knowing.** A fourth thing was attempted here and
+should not have been: re-anchoring the file's citations into the three moved
+files. It ran in three passes, and the third matched on old line numbers and
+overwrote what the first two had already corrected — many-to-one, so not
+reversible from the file. **The renumbering is not retried by any stage but
+3TK-66**, and `007`'s own header now warns a reader to read a citation older
+than 3TK-64 as naming a file, not a line.
+
+**Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`, or pushed** —
+that is the owner's step.
+
 **3TK-61 ran on 2026-09-06 and changed no code.** It was declared in plan 024 as
 one subject — `managed.c3`'s `Allocator` field — with the clause *"a **62** if it
 turns out structural."* It turned out structural. The owner expanded it into a
@@ -32,12 +289,13 @@ ended as an analysis: no `src/` change, `run-builds.sh` re-measured green and
 unchanged.**
 
 **Everything it settled is in
-[matryoshka-3tk/design/3tk-rethinking-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rethinking-001.md)**,
+[matryoshka-3tk/design/3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md)**,
 written by id — `RT-n` a ruling, `HR-n` a helper requirement, `PL-n` the parking
 lot, `MS-n` a measurement. **A later stage cites an id; it does not re-argue the
-point.** The building is ordered by
-[3tk-staging-plan-025.md](3tk-staging-plan-025.md) as **3TK-62 … 3TK-66**, and
-**024 is fully spent and in `backup/`.**
+point.** The building was ordered by
+[026](backup/3tk-staging-plan-026.md) as **3TK-62 … 3TK-66**; **028 carries the
+two that have not run** and inserts `3TK-pre-65` ahead of them. **024 through 027
+are spent and in `backup/`.**
 
 **The headline rulings, in one paragraph.** `OuterHelper` becomes a **first-class
 citizen** — `struct OuterHelper { typeid otrid; }`, in `helper.c3`, module
@@ -66,10 +324,49 @@ contradicting `../3tk/src`. **Each build stage folds its own entries into the
 body with real `file:line` and deletes them from that section;** when the
 section is empty the rethinking is built.
 
-**Three points are the owner's before any building starts** — plan 025 names
-them: the `inner::to_inner` stutter the merge creates (`PL-6`), where
-`create`/`release` live given that the core is meant to allocate nothing
-(`HR-10`), and the proposed helper member list itself (`MS-1`).
+**3TK-61 had a second sitting the same day, and again changed no code.** The
+owner asked for the first of those three points — the helper's shape — to be
+**proposed** rather than left as a question, then asked two further questions
+that turned out structural. The result is
+`3tk-boundaries-001.md` **sections 10-15** and **`MS-6` … `MS-9`**, and new
+ids: **`HS-n`** a proposed element of the shape, **`V-n`** a variant, **`Q-n`**
+a question. `001` and `002` are in `matryoshka-3tk/design/backup/`.
+
+- **Sections 10-12 — the shape.** Nine members in three groups plus two in
+  `xtn`, which embeds the base helper `inline` so **one alias still reaches all
+  ten**. `HR-5` is discharged by `HS-10`: `inner()` stamps the identity
+  idempotently, writing `.type` only, which is safe on a **linked** inner.
+  Five variants, each with a recommendation and a named fallback. **`MS-4` and
+  `MS-5` are owed, not run**, and `Q-5` pre-answers the case where `MS-5`
+  fails so a probe cannot stall 3TK-65.
+- **Section 13 — how the internals stay internal.** `MS-6`: **`@private`
+  reaches the module and nothing else** — not a submodule, not the parent, and
+  C3 has no package or friend visibility. So the only lever is which symbols
+  share a module. `MS-7` probed the shape and it ran. **The mailbox and the
+  pool are already clients of the helper** — `_Mbox` and `_Pool` are Outers,
+  crossing at six sites — so **`PL-7` becomes a precondition, not a
+  preference**. `queue.c3` joins for free.
+- **Section 14 — how the outer's fields are found.** `MS-9`: matching on the
+  **name** works, with a default macro parameter, and the failure message names
+  the fix. The allocator half lets an outer keep **two** allocators, which
+  `RT-12`/`RT-13` already imply it should be allowed to.
+- **Section 15 — how it is used**, written against
+  `examples/006-defer_put_early.c3`. The user's ceremony is **one alias**, and
+  the mailbox and the pool do exactly the same thing on a `@private` alias
+  each. **The user's surface and mtk's own surface are the same surface.**
+
+**`MS-8` corrected the document seven times: `Outer.typeid` does not compile
+anywhere.** The spelling is **`Outer::typeid`**.
+
+**Three rulings are re-opened by the proposal and no stage may assume any of
+them:** `RT-3`'s module name (`Q-10`), `RT-11`/`PL-7` (`Q-11`), and `RT-13`'s
+*found twice is an error* (`Q-14`). **`Q-6` is answered** — `init` has two
+mtk-internal callers, `mailbox.c3:95` and `pool.c3:193` — unless the owner
+rejects the reasoning in 15.5.
+
+**The three points are now fifteen questions, `Q-1` … `Q-15`, and every one of
+them is smaller than the three were.** They are listed in section 12 of the
+rethinking document and none of them is a stage's to assume.
 
 **3tk has exactly two terms: `Inner` and `Outer`. There is no third.**
 **3TK-60 ran on 2026-09-04.** `Inner` is a real C3 type and the field you lend;
@@ -93,7 +390,7 @@ rulings are entries in
 where dtk will read them. The live decision is stated in
 [3tk-terms-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-terms-001.md),
 which **stays live until 3TK-66** — its section 5 is superseded by
-[3tk-rethinking-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rethinking-001.md),
+[3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md),
 and the two are spent together.
 
 **A rename must move nothing, and it moved nothing.** `run-builds.sh` is green
@@ -187,11 +484,8 @@ settled the same way by 3TK-54:**
 | stage | what it does | start it with |
 |---|---|---|
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`, run in steps grouped by catalog section. Reads [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md) and [3tk-patterns-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-003.md), both in `matryoshka-3tk/design/`. **Independent of the fix. Steps 1 through 11 ran 2026-08-31 — every catalog section with a code shape is now covered.** The catalog's two remaining sections, "The 18 that dropped" and "What this document does not do", write no code (a table of ztk entries with nothing to port, and a closing note) — **there is no step 12.** | **3TK-50 has no next step. Ask the owner what closes it** — copying and pushing the last steps to `matryoshka-3tk`, and updating this table, are what remain. |
-| **3TK-62** | **The stack goes private.** `stack.c3` to the end of `pool.c3`, module `mtk::stack` gone, `t_stack.c3` deleted. Reverses 3TK-45. Self-contained; the test count drops and the log says why. Also rewrites `stack.c3:11`, `mtk.c3:20`, `run-builds.sh:230`, `project.json` and the reference's `mtk::stack` block. `RT-4`, `MS-3`. | **Next.** Nothing blocks it. |
-| **3TK-63** | **The macros move into `inner.c3`.** `helper.c3` is emptied, not deleted — 3TK-65 refills it. Pure relocation: build numbers must be **identical**. Closes the last missing doc-loop sentence. `RT-2`, `PL-6`, `PL-10`. | After 3TK-62, **and after the owner rules `PL-6`** — the stutter, since the sweep spells the names once either way. |
-| **3TK-64** | **`xtn`, and the end of *managed*.** Allocator per call, optional `Allocator` field, optional discovery, `create` takes an optional initializer, the pool hook gets the same sentence. **Inverts `run-builds.sh`'s `nocompile_managed_no_allocator` check.** `RT-5`, `RT-12` … `RT-15`, `MS-2`. | After 3TK-63, **and after the owner rules `HR-10`** — whether the allocating pair lives in `xtn` alone. |
-| **3TK-65** | **`OuterHelper` written.** `struct OuterHelper { typeid otrid; }`, forwarding only, no member reading `self.otrid`. Decides `HR-5` — how `init` stops being forgettable. `RT-3`, `RT-6` … `RT-11`, `RT-18`, `HR-1` … `HR-9`. | After 3TK-64, **and after the owner rules the member list `MS-1` proposes.** |
-| **3TK-66** | **The books and the examples.** The bulk, last, as in 3TK-60: everything leads with the helper, all 52 examples use it. Run in steps by catalog section. **Its closing act spends `3tk-rethinking-001.md` and `3tk-terms-001.md` to `matryoshka-3tk/design/backup/`.** | After 3TK-65. |
+| **3TK-65** | **The safe-build checks.** The idempotent stamp; the identity check at the crossing and at both `@guard_insert`s, all `$if env::COMPILER_SAFE_MODE`-gated so a fast build carries nothing. Discharges `HR-5`. Reads Boundaries `Part 5.1` … `5.3`. | **Next.** `mtk::stamp` is the macro to gate around, and `OuterHelper.stamp`/`.inner` are its two callers; the crossings to guard are the four `OuterHelper` members in `helper.c3`, and `@guard_insert` is in `queue.c3` and in `pool.c3`'s stack section. |
+| **3TK-66** | **The books and the examples.** The bulk, last, as in 3TK-60: everything leads with the helper, all 52 examples use it. Run in steps by catalog section. Boundaries `Part 6` is written in as its own short section. **Its closing act spends `3tk-boundaries-001.md` and `3tk-terms-001.md` to `matryoshka-3tk/design/backup/`, and deletes Appendix B — that deletion is the proof the `007` repair finished.** | After 3TK-65. |
 
 **3TK-52, 3TK-53, 3TK-54, 3TK-55 and 3TK-56 all ran, 2026-08-28 to
 2026-08-30**, and between them the two tools carry the mechanism, the defect
@@ -358,6 +652,14 @@ out of date and this file is what holds. **`P6` / `Q-F` was ruled on
 **And these, which are not about the lifetime fix.** One line each; the document
 named holds the reasoning.
 
+- **`Q-1` … `Q-15`, the rethinking's, and they gate 3TK-63, 3TK-64 and
+  3TK-65.** Not repeated here: **section 12** of
+  [3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md)
+  is where they are asked and where they are answered, each with the variant
+  and the recommendation beside it. Three of them re-open a ruling — `Q-10`
+  (`RT-3`'s module name), `Q-11` (`RT-11`/`PL-7`), `Q-14` (`RT-13`'s *found
+  twice is an error*) — and `Q-6` is already answered by 15.5. **Whose:** the
+  owner's, all of them.
 - **Two port defects, and they are the only ones.** **P3** — a waiting call can
   return the condition variable's own fault, outside Part 19's outcome set;
   unreachable on the current posix backend, recorded because the next port copies
@@ -556,11 +858,19 @@ scripts take an optional directory and exit 2 on a bad one.
   `ref/`**, and since 3TK-60 the api table, the decisions record and the terms
   document too: `3tk-reference-008.md`, `3tk-example-rules-004.md`,
   `3tk-patterns-004.md`, `3tk-api-004.md`, `3tk-decisions-007.md`,
-  `3tk-terms-001.md`, and since 3TK-61 **`3tk-rethinking-001.md`** — the live
+  `3tk-terms-001.md`, and since 3TK-61 **`3tk-boundaries-001.md`** — the live
   working document for the 3TK-62…66 line, cited by id.
   Moved there because the owner is running builds and previews from that repo
   going forward. **Ask the owner exactly where before creating a new file
   there — every time**, even though `design/` is the default target.
+- **[`matryoshka-3tk/scripts/`](https://github.com/g41797/matryoshka-3tk/tree/main/scripts)
+  and `matryoshka-3tk/.github/workflows/`** — **every stage tunes both to what
+  it changed in `matryoshka-tk`, in the stage.** The four scripts there are
+  byte-identical to this repo's copies but for one line: `ROOT` gains `/..`.
+  Copy, re-apply that line, `diff`, and require the ROOT line to be the only
+  difference. `check-doc-loop.sh` and `move-module-docs.sh` are **not** ported.
+  The `.yml` files are the one thing a stage edits directly in that repo, and
+  **"none needed" is an answer that must be written into the log.**
 - **`backup/`** — superseded versions. **Not a source of truth**, and the owner
   empties it. `3tk-patterns-001.md`, `3tk-example-rules-001.md`,
   `3tk-reference-004.md` and `3tk-doc-loop-003.md` moved here when their
@@ -585,43 +895,92 @@ Every line begins the same way, because every stage reads this file first:
 Read design/secondary/lang/c3/3tk-status.md.
 ```
 
-**3TK-62 is next.** Start it with:
+**`3TK-pre-65` is next.** Start it with:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md and 3tk-staging-plan-025.md, then run 3TK-62
+Read design/secondary/lang/c3/3tk-status.md and 3tk-staging-plan-028.md, then run 3TK-pre-65
 ```
 
-**3TK-62 is the stack going private** — `stack.c3` to the very end of `pool.c3`,
-module `mtk::stack` gone, `test/t_stack.c3` deleted. It **reverses 3TK-45**, so
-it owes a decisions entry. It is self-contained and nothing blocks it. **The
-test count drops**, which is expected here and must be stated in the log with
-the new number — unlike a rename, this stage is allowed to move the numbers.
+**`3TK-pre-65` is the readable surface.** One stage, four parts: `helper.c3`
+becomes `module mtk::helper <Outer>;` and `queue.c3` becomes `module mtk::queue;`
+— reversing 3TK-63's merge, which `Part 4.2` has been reopened and re-ruled to
+undo; each file puts its public section before its private one; **a declaration
+that is not the user surface loses its `<* *>` block and takes the one-line
+marker `// For internal usage.`**; and the public blocks are trimmed so **the
+source says what and the reference says why**.
+
+**Its probes are already spent — do not re-run them, and do not design against
+what they replaced.** They are recorded in `3tk-boundaries-001.md` `4.2a` and
+`4.4a`, and summarised at the head of this file: methods cannot be hidden by
+`@private` **or `@local`**; a separate module keeps `inner_offset` hidden, so the
+merge was never needed; **`c3c docgen` ignores visibility entirely**, which is
+why the doc block is the only visibility marker that reaches a reader; and
+`alias MSG = helper::OF{Msg};` compiles, so the binding line does not grow.
+
+**Two traps, both already paid for once.** `run-builds.sh:215` asserts the module
+list and **fails on the correct change** — it moves in the same pass, exactly as
+`Part 4.5` warns for the stack. And `pool.c3`'s stack banner is what Part 17.2's
+layering grep cuts the file at, so it survives or the grep moves with it.
+
+**Blast radius:** 65 alias sites gain `helper::`, 47 `InnerQueue` references gain
+`queue::`, and seven *"Public because C3 cannot hide a method"* paragraphs are
+withdrawn. **`mtk` goes from 59 declarations to 36.**
+
+**It is a relocation stage, so its proof is that the figures do not move** — 81
+checks, four builds, 143 tests each — with two deliberate exceptions: the
+module-list check is rewritten for six names, and **the descriptor count falls
+below 510** because internal declarations leave the reference.
+
+**Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`/`examples`, or
+pushed** — 3TK-62, 3TK-63, 3TK-64 and the INTR are all waiting on that, and it is
+the owner's step. `3tk-boundaries-001.md` is already there, edited in place.
 
 **Read the rulings before touching anything.** Every stage from 3TK-62 to
 3TK-66 reads
-[matryoshka-3tk/design/3tk-rethinking-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rethinking-001.md)
+[matryoshka-3tk/design/3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md)
 and cites it by id. It is written to be enough on its own: the governing rule,
 the rulings `RT-1` … `RT-18`, the helper requirements `HR-1` … `HR-10`, the
-measurements `MS-1` … `MS-3` with their results, the parking lot `PL-1` …
-`PL-10`, and the rule for reading ztk. **Nothing about the rethinking lives
+measurements `MS-1` … `MS-9` with their results, the parking lot `PL-1` …
+`PL-10`, the rule for reading ztk, and — from the second sitting — the proposed
+shape `HS-1` … `HS-11`, the variants `V-1` … `V-7` and the questions `Q-1` …
+`Q-15`. **Nothing about the rethinking lives
 outside that document, this file, and the 3TK-61 log entry.**
 
-**Three things are the owner's and no stage may assume them:**
+**None of the fifteen questions is open any more.** Plan 026's own closing
+section says it: every point plan 025 held open was ruled by the second sitting
+of 3TK-61, and **a stage that finds itself needing an answer has found a gap in
+`3tk-boundaries-001.md`** — the gap is reported before the stage continues. The
+paragraph below is the pre-026 state and is kept only until 3TK-66 spends the
+document.
 
-1. **`PL-6`** — the `inner::to_inner` stutter the merge creates, before 3TK-63.
-2. **`HR-10`** — where `create`/`release` live, given that the core is meant to
-   allocate nothing, before 3TK-64.
-3. **The member list `MS-1` proposes**, before 3TK-65.
+**Fifteen questions were the owner's and no stage might assume any of them.**
+They are `Q-1` … `Q-15` in **section 12** of the rethinking document, which is
+where they are answered. Grouped by what they block:
 
-**`3tk-rethinking-001.md` and `3tk-terms-001.md` are spent together**, and not
+- **Before 3TK-63:** `Q-1` (`PL-6`, the `inner::to_inner` stutter), `Q-15`
+  (the inner found by name, and `V-7a` or `V-7b`).
+- **Before 3TK-64:** `Q-2` (`HR-10`, where `create`/`release` live), `Q-14`
+  (the allocator found by name, **and whether the compile-time refusal comes
+  with it** — without it an outer with `Allocator a;` is silently unmanaged).
+- **Before 3TK-65:** `Q-3` … `Q-13` — the member names, the member list,
+  `MSG` or `msg`, where the safe-build check goes, when `MS-4`/`MS-5` run, and
+  `Q-10` … `Q-13`, which are section 13's: is `RT-3`'s module name spent, is
+  `PL-7` ruled road 1, how far does the merge go, and does `run-builds.sh`
+  assert the module surface.
+
+**`Q-6` is answered by 15.5** and needs only a yes.
+
+**`3tk-boundaries-001.md` and `3tk-terms-001.md` are spent together**, and not
 before: they move to `matryoshka-3tk/design/backup/` with a plain `mv` once
 their content has dissolved into the code and the books. **That is 3TK-66's
 closing act**, not an earlier stage's. `3tk-terms-001.md` section 5 is
 superseded by the rethinking document's rulings on managed.
 
-**3TK-61 ran on 2026-09-06 and closed. It changed no code** —
+**3TK-61 ran on 2026-09-06 in two sittings and closed. It changed no code** —
 `run-builds.sh` was re-measured green and unchanged, which is the whole
-verification a stage that only rules and records can offer. Plan 024 is **fully
+verification a stage that only rules and records can offer. The second sitting
+added the proposal, sections 10-15, and four measurements; its probes were
+written in a scratch directory and **nothing under `3tk/` was touched.** Plan 024 is **fully
 spent** and is in `backup/`.
 
 **3TK-60 ran on 2026-09-04 and closed.** The two terms, in the source and in
@@ -714,7 +1073,7 @@ not the record.
 | **3TK-58** | `Mailbox`/`Pool` opaque handles | 2026-09-03 |
 | **3TK-59** | the `Handle` alias removed, the word kept | 2026-09-04 |
 | **3TK-60** | the two terms: `Inner` and `Outer`, no third | 2026-09-04 |
-| **3TK-61** | the rethinking — ruled, measured, no code changed | 2026-09-06 |
+| **3TK-61** | the rethinking — ruled, measured, proposed; no code changed | 2026-09-06 |
 
 **3TK-50 is missing from the list because it has not run** — it is plan 019's
 leftover and is in the table above.

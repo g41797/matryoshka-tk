@@ -128,7 +128,7 @@ fn int producer_fn(void* arg)
         Slot s;
         if (catch sh.pool.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) continue;
 
-        Holder* o = mtk::helper::must_from_slot(&s, Holder);
+        Holder* o = mtk::must_from_slot(&s, Holder);
         o.id = (int)i;                              // a plain write, no atomics
 
         if (catch sh.mb.send(&s)) { sh.pool.put(&s); }
@@ -147,7 +147,7 @@ fn int consumer_fn(void* arg)
             if (f == mtk::CLOSED) return 0;
             continue;
         }
-        Holder* o = mtk::helper::must_from_slot(&r, Holder);
+        Holder* o = mtk::must_from_slot(&r, Holder);
         sh.sum.add((usz)o.id, SEQ_CONSISTENT);      // a plain read, no atomics
         sh.received.add(1, SEQ_CONSISTENT);
         sh.pool.put(&r);                            // Part 2.10: the give-back cannot fail
@@ -173,7 +173,7 @@ fn void ConcurrentHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dyn
     usz now = self.inside.add(1, SEQ_CONSISTENT) + 1;
     if (now > self.max_inside.load(ACQUIRE)) self.max_inside.store(now, RELEASE);
     thread::sleep(time::ms(20))!!;              // hold the hook open
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) {}
+    if (catch HOLDER.create(self.alloc, slot)) {}
     self.inside.sub(1, SEQ_CONSISTENT);
 }
 
@@ -185,7 +185,7 @@ fn void ConcurrentHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 
@@ -240,9 +240,9 @@ fn void a_leaver_hands_the_signal_on() @test
         thread::sleep(time::ms(15))!!;
 
         Msg m;
-        mtk::helper::init(&m);
+        mtk::stamp(&m);
         Slot s;
-        s.fill(mtk::helper::to_inner(&m));
+        s.fill(mtk::to_inner(&m));
         if (catch mb.send(&s)) {}
 
         foreach (&t : ts) t.join()!!;
@@ -303,7 +303,7 @@ struct LateCloseHooks (PoolHooks)
 
 fn void LateCloseHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) {}
+    if (catch HOLDER.create(self.alloc, slot)) {}
 }
 
 fn void LateCloseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
@@ -320,7 +320,7 @@ fn void LateCloseHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra)
     for (usz i = 0; i < self.extras; i++)
     {
         Slot part;
-        if (catch mtk::managed::create(Holder, self.alloc, &part)) break;
+        if (catch HOLDER.create(self.alloc, &part)) break;
         extra.push_back_slot(&part);
     }
 
@@ -335,7 +335,7 @@ fn void LateCloseHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
         self.released.add(1, SEQ_CONSISTENT);
     }
 }

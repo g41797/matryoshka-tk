@@ -1,5 +1,8 @@
 <*
- Shared types for the negative programs. No aliases — H0.
+ Shared types for the negative programs.
+
+ No aliases here: a negative program that needs one declares it beside its own
+ struct, so that the line under test is in the body and not at an alias.
 
  A negative program provokes one contract violation and is expected to ABORT
  in a checking build. In a fast build the same program must run to the end and

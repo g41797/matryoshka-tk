@@ -7,39 +7,41 @@
 *>
 module shc::out_of_band;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::time;
 
+alias SENSOR = mtk::OF{Sensor};
+alias HOLDER = mtk::OF{Holder};
+
 faultdef OUT_OF_BAND_FAILED;
 
-fn void free_outer(Slot* s)
+fn void free_outer(Allocator a, Slot* s)
 {
     if (s.is_empty()) return;
-    if (s.to(Holder))  { mtk::managed::release(Holder, s); return; }
-    if (s.to(Sensor))  { mtk::managed::release(Sensor, s); return; }
+    if (s.to(Holder))  { HOLDER.release(a, s); return; }
+    if (s.to(Sensor))  { SENSOR.release(a, s); return; }
     unreachable("free_outer met an identity it was not written for");
 }
 
 fn void? oob_arrives_first(Allocator a, Mailbox* mb)
 {
     Slot ordinary;
-    mtk::managed::create(Holder, a, &ordinary)!;
+    HOLDER.create(a, &ordinary)!;
     mb.send(&ordinary)!;
 
     Slot urgent;
-    mtk::managed::create(Sensor, a, &urgent)!;
+    SENSOR.create(a, &urgent)!;
     mb.send_oob(&urgent)!;
 
     Slot first;
     mb.receive(&first, time::ms(1000))!;
     shc::helpers::expect(OUT_OF_BAND_FAILED, first.to(Sensor) != null, "the out-of-band outer arrives first")!;
-    free_outer(&first);
+    free_outer(a, &first);
 
     Slot second;
     mb.receive(&second, time::ms(1000))!;
     shc::helpers::expect(OUT_OF_BAND_FAILED, second.to(Holder) != null, "the ordinary outer arrives second")!;
-    free_outer(&second);
+    free_outer(a, &second);
 }

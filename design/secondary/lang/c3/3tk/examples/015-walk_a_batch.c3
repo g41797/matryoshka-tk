@@ -8,10 +8,11 @@
 *>
 module shc::walk_a_batch;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef WALK_A_BATCH_FAILED;
 
@@ -23,8 +24,8 @@ fn void? walk_a_received_batch(Allocator a)
     for (int i = 0; i < 3; i++)
     {
         Slot s;
-        defer mtk::managed::release(Holder, &s);
-        mtk::managed::create(Holder, a, &s)!;
+        defer HOLDER.release(a, &s);
+        HOLDER.create(a, &s)!;
         s.must(Holder).id = i;
         mb.send(&s)!;
     }
@@ -42,7 +43,7 @@ fn void? walk_a_received_batch(Allocator a)
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(a, &s);
     }
     shc::helpers::expect(WALK_A_BATCH_FAILED, batch.is_empty(), "pop_front should have drained the queue")!;
 }

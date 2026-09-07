@@ -7,20 +7,21 @@
 *>
 module shc::type_crossing;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef TYPE_CROSSING_FAILED;
 
 fn void? cross_with_dollar_type(Allocator a)
 {
     Slot s;
-    defer mtk::managed::release(Event, &s);
-    mtk::managed::create(Event, a, &s)!;
+    defer EVENT.release(a, &s);
+    EVENT.create(a, &s)!;
     Inner* inner = s.peek();
 
-    Event* free_form = mtk::helper::from_inner(inner, Event);
+    Event* free_form = mtk::from_inner(inner, Event);
     shc::helpers::expect(TYPE_CROSSING_FAILED, free_form != null, "from_inner did not find the Event")!;
     free_form.code++;
 

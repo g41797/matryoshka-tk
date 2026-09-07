@@ -7,17 +7,18 @@
 *>
 module shc::poll;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 
+alias HOLDER = mtk::OF{Holder};
+
 faultdef POLL_FAILED;
 
-fn void free_outer(Slot* s)
+fn void free_outer(Allocator a, Slot* s)
 {
     if (s.is_empty()) return;
-    if (s.to(Holder)) { mtk::managed::release(Holder, s); return; }
+    if (s.to(Holder)) { HOLDER.release(a, s); return; }
     unreachable("free_outer met an identity it was not written for");
 }
 
@@ -34,11 +35,11 @@ fn void? poll_then_send_then_poll(Allocator a, Mailbox* mb)
     }
 
     Slot sent;
-    mtk::managed::create(Holder, a, &sent)!;
+    HOLDER.create(a, &sent)!;
     mb.send(&sent)!;
 
     Slot got;
     mb.poll(&got)!;
     shc::helpers::expect(POLL_FAILED, got.to(Holder) != null, "the polled outer is the Holder that was sent")!;
-    free_outer(&got);
+    free_outer(a, &got);
 }

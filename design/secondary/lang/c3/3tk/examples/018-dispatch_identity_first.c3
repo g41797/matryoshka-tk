@@ -7,11 +7,14 @@
 *>
 module shc::dispatch_identity_first;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
 import shc::dispatch_outer_first;
+
+alias EVENT  = mtk::OF{Event};
+alias SENSOR = mtk::OF{Sensor};
+alias HOLDER = mtk::OF{Holder};
 
 faultdef DISPATCH_IDENTITY_FIRST_FAILED;
 
@@ -22,9 +25,9 @@ struct CreateByIdentityHooks (PoolHooks)
 
 fn void CreateByIdentityHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (want == Event::typeid)  { if (catch mtk::managed::create(Event,  self.alloc, slot)) {} return; }
-    if (want == Sensor::typeid) { if (catch mtk::managed::create(Sensor, self.alloc, slot)) {} return; }
-    if (want == Holder::typeid) { if (catch mtk::managed::create(Holder, self.alloc, slot)) {} return; }
+    if (want == Event::typeid)  { if (catch EVENT.create(self.alloc, slot)) {} return; }
+    if (want == Sensor::typeid) { if (catch SENSOR.create(self.alloc, slot)) {} return; }
+    if (want == Holder::typeid) { if (catch HOLDER.create(self.alloc, slot)) {} return; }
     // an identity the pool was not created with never reaches here
 }
 
@@ -36,7 +39,7 @@ fn void CreateByIdentityHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        shc::dispatch_outer_first::free_outer(&s);
+        shc::dispatch_outer_first::free_outer(self.alloc, &s);
     }
 }
 

@@ -8,10 +8,11 @@
 *>
 module shc::the_step;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef THE_STEP_FAILED;
 
@@ -26,8 +27,8 @@ fn void? StepMaster.seed_the_work(&self)
     for (int i = 1; i <= 4; i++)
     {
         Slot s;
-        defer mtk::managed::release(Event, &s);
-        mtk::managed::create(Event, self.alloc, &s)!;
+        defer EVENT.release(self.alloc, &s);
+        EVENT.create(self.alloc, &s)!;
         s.must(Event).code = i;
         self.mbx.send(&s)!;
     }
@@ -48,7 +49,7 @@ fn void? one_step_one_name(Allocator a, Mailbox* mb)
     {
         Slot s;
         s.fill(inner);
-        defer mtk::managed::release(Event, &s);
+        defer EVENT.release(a, &s);
         total += s.must(Event).code;
     }
     shc::helpers::expect(THE_STEP_FAILED, total == 1 + 2 + 3 + 4, "seed_the_work sent all four, in order")!;

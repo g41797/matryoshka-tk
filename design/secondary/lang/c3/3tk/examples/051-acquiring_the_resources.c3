@@ -7,12 +7,13 @@
 *>
 module shc::acquiring_the_resources;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
 import std::core::mem::alloc;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef ACQUIRING_THE_RESOURCES_FAILED;
 
@@ -20,7 +21,7 @@ struct AcquireHooks (PoolHooks) { Allocator alloc; }
 
 fn void AcquireHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
-    if (catch mtk::managed::create(Event, self.alloc, slot)) return;
+    if (catch EVENT.create(self.alloc, slot)) return;
 }
 
 fn void AcquireHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -31,7 +32,7 @@ fn void AcquireHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Event, &s);
+        EVENT.release(self.alloc, &s);
     }
 }
 

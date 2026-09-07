@@ -8,10 +8,11 @@
 *>
 module shc::guarding_an_expensive_check;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef GUARDING_AN_EXPENSIVE_CHECK_FAILED;
 
@@ -34,8 +35,8 @@ fn void? the_guard_costs_nothing_in_a_fast_build(Allocator a)
     defer { InnerQueue left; mb.close(&left); mb.release(); }
 
     Slot s;
-    defer mtk::managed::release(Holder, &s);
-    mtk::managed::create(Holder, a, &s)!;
+    defer HOLDER.release(a, &s);
+    HOLDER.create(a, &s)!;
     mb.send(&s)!;
 
     InnerQueue batch;
@@ -45,6 +46,6 @@ fn void? the_guard_costs_nothing_in_a_fast_build(Allocator a)
 
     Slot got;
     got.fill(inner);
-    defer mtk::managed::release(Holder, &got);
+    defer HOLDER.release(a, &got);
     shc::helpers::expect(GUARDING_AN_EXPENSIVE_CHECK_FAILED, got.is_full(), "the guarded check did not disturb the inner")!;
 }

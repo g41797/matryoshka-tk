@@ -1,24 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
-<*
- The intrusive queue. First-in first-out.
-
- The transfer container.
- Nothing here allocates, and every operation is O(1).
- The count is kept, so `len` is O(1).
- `push_back` adds at the back.
- There is no front insert.
- `pop_front` takes the outer at the front, and null on an empty queue is an answer and not a fault.
- `append_queue` moves every outer of another queue onto the back of this one, in O(1).
- `iter` and `next` are a walker, taken from the queue.
- Removing the current outer during a walk is not supported.
- Every chain ends at an inner pointing at itself, never at null.
- Nothing in the queue can fail.
-*>
-module mtk::queue;
-import mtk;
-import mtk::inner;
+//==============================================================================
+// The core, section 2 of 3: the intrusive queue.
+// No module block: `mtk.c3` carries the description of `module mtk`, and a
+// module has one description however many sections it is written in.
+// 3TK-63 merged `mtk::queue` into this module; the file did not move.
+//==============================================================================
+module mtk;
 
 <*
  The intrusive queue. First-in first-out.
@@ -58,13 +47,17 @@ struct InnerQueueIterator
  A null inner is a defect.
  An outer already on any chain is a defect.
  Both are gone from a fast build.
+
+ Public because C3 cannot hide a method — `@private` is ignored on method declarations.
+ It is not part of the user surface.
+ The containers call it; nothing else should.
 *>
-// [3tk: R6b, V4, Part 8.6]
+// [3tk: R6b, V4, Part 4.4, Part 8.6]
 macro InnerQueue.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
     // [3tk: Part 8.7]
-    mtk::@check(!mtk::inner::is_linked(inner), "the outer is already on a chain");
+    mtk::@check(!mtk::is_linked(inner), "the outer is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -152,7 +145,7 @@ fn Inner* InnerQueue.pop_front(&self)
         self.head = inner.points_to();
     }
     self.count--;
-    mtk::inner::reset(inner);
+    mtk::reset(inner);
     return inner;
 }
 

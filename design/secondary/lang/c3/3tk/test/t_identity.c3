@@ -29,21 +29,27 @@ fn void inner_is_two_parts() @test
  Part 4.3: the inner field may sit anywhere. Both ends, in one test.
 
  Invariant 7.
+
+ 3TK-63 made `inner_offset` `@private`, so the offset is read the only way a
+ caller outside `module mtk` can read it: the distance `to_inner` puts between
+ the outer and its inner. That is the same number, taken through the surface.
 *>
 fn void inner_at_any_offset() @test
 {
-    always_assert(mtk::inner::inner_offset(Msg) != 0, "Msg's inner should not be at offset zero");
-    always_assert(mtk::inner::inner_offset(Job) == 0, "Job's inner should be at offset zero");
+    Msg probe_m;
+    Job probe_j;
+    always_assert((char*)mtk::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
+    always_assert((char*)mtk::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
 
     Msg m;
     Job j;
-    mtk::helper::init(&m);
-    mtk::helper::init(&j);
+    mtk::stamp(&m);
+    mtk::stamp(&j);
 
-    always_assert(mtk::helper::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
-    always_assert(mtk::helper::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
-    always_assert(mtk::helper::from_inner(mtk::helper::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
-    always_assert(mtk::helper::from_inner(mtk::helper::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
+    always_assert(mtk::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
+    always_assert(mtk::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
+    always_assert(mtk::from_inner(mtk::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
+    always_assert(mtk::from_inner(mtk::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
 }
 
 <*
@@ -61,9 +67,9 @@ fn void identity_is_per_type() @test
     Msg  a;
     Msg  b;
     Twin t;
-    mtk::helper::init(&a);
-    mtk::helper::init(&b);
-    mtk::helper::init(&t);
+    mtk::stamp(&a);
+    mtk::stamp(&b);
+    mtk::stamp(&t);
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
@@ -79,8 +85,8 @@ fn void identity_is_per_type() @test
 fn void identity_is_stored() @test
 {
     Msg m;
-    mtk::helper::init(&m);
-    Inner* inner = mtk::helper::to_inner(&m);
+    mtk::stamp(&m);
+    Inner* inner = mtk::to_inner(&m);
     always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -95,8 +101,8 @@ fn void identity_is_stored() @test
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!mtk::helper::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
-    always_assert(mtk::helper::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
+    always_assert(!mtk::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
+    always_assert(mtk::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -108,12 +114,12 @@ fn void uninitialized_inner_is_refused() @test
 fn void checking_crossing_refuses() @test
 {
     Twin t;
-    mtk::helper::init(&t);
-    Inner* inner = mtk::helper::to_inner(&t);
+    mtk::stamp(&t);
+    Inner* inner = mtk::to_inner(&t);
 
-    always_assert(mtk::helper::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
-    always_assert(mtk::helper::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
-    always_assert(!mtk::helper::is_mine(inner, Msg), "the predicate claimed a Twin");
+    always_assert(mtk::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
+    always_assert(mtk::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
+    always_assert(!mtk::is_mine(inner, Msg), "the predicate claimed a Twin");
 }
 
 <*
@@ -121,9 +127,9 @@ fn void checking_crossing_refuses() @test
 *>
 fn void null_handle_is_nobodys() @test
 {
-    always_assert(!mtk::helper::is_mine(null, Msg), "the predicate claimed null");
-    always_assert(mtk::helper::from_inner(null, Msg) == null, "null crossed the border");
-    always_assert(mtk::helper::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
+    always_assert(!mtk::is_mine(null, Msg), "the predicate claimed null");
+    always_assert(mtk::from_inner(null, Msg) == null, "null crossed the border");
+    always_assert(mtk::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
 }
 
 <*
@@ -137,13 +143,13 @@ fn void heterogeneous_walk_claims_correctly() @test
     Msg  m1; Msg  m2;
     Twin t1;
     Job  j1;
-    mtk::helper::init(&m1); mtk::helper::init(&m2); mtk::helper::init(&t1); mtk::helper::init(&j1);
+    mtk::stamp(&m1); mtk::stamp(&m2); mtk::stamp(&t1); mtk::stamp(&j1);
 
     InnerQueue list;
-    list.push_back(mtk::helper::to_inner(&m1));
-    list.push_back(mtk::helper::to_inner(&t1));
-    list.push_back(mtk::helper::to_inner(&j1));
-    list.push_back(mtk::helper::to_inner(&m2));
+    list.push_back(mtk::to_inner(&m1));
+    list.push_back(mtk::to_inner(&t1));
+    list.push_back(mtk::to_inner(&j1));
+    list.push_back(mtk::to_inner(&m2));
 
     usz mine = 0;
     usz seen = 0;
@@ -151,7 +157,7 @@ fn void heterogeneous_walk_claims_correctly() @test
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
         seen++;
-        if (mtk::helper::from_inner(inner, Msg)) mine++;
+        if (mtk::from_inner(inner, Msg)) mine++;
     }
     always_assert(seen == 4, "the walk lost an outer");
     always_assert(mine == 2, "the walk claimed the wrong number of outers");
@@ -174,15 +180,15 @@ fn void the_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    mtk::helper::init(&m);
-    mtk::helper::init(&t);
+    mtk::stamp(&m);
+    mtk::stamp(&t);
 
-    Inner* hm = mtk::helper::to_inner(&m);
-    Inner* ht = mtk::helper::to_inner(&t);
+    Inner* hm = mtk::to_inner(&m);
+    Inner* ht = mtk::to_inner(&t);
 
     always_assert(hm.to(Msg) == &m, "h.to lost the outer");
     always_assert(hm.as(Msg) == &m, "h.as lost the outer");
-    always_assert(hm.to(Msg) == mtk::helper::from_inner(hm, Msg), "the method and the macro disagree");
+    always_assert(hm.to(Msg) == mtk::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
     // legitimate state, not a defect — `as` is what refuses this one.
@@ -200,11 +206,11 @@ fn void the_slot_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    mtk::helper::init(&m);
-    mtk::helper::init(&t);
+    mtk::stamp(&m);
+    mtk::stamp(&t);
 
     Slot s;
-    s.fill(mtk::helper::to_inner(&m));
+    s.fill(mtk::to_inner(&m));
 
     always_assert(s.to(Msg) == &m, "s.to lost the outer");
     always_assert(s.must(Msg) == &m, "s.must lost the outer");

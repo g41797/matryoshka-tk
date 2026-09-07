@@ -7,9 +7,10 @@
 *>
 module shc::dispatch_table;
 import mtk;
-import mtk::managed;
 import shc::outers;
 import shc::helpers;
+
+alias EVENT  = mtk::OF{Event};
 
 faultdef DISPATCH_TABLE_FAILED;
 
@@ -43,8 +44,8 @@ fn void? dispatch_same_identity_two_ways(Allocator a)
     Table count_table = { .rows = count_rows[..] };
 
     Slot s;
-    defer mtk::managed::release(Event, &s);
-    mtk::managed::create(Event, a, &s)!;
+    defer EVENT.release(a, &s);
+    EVENT.create(a, &s)!;
 
     Counter c;
     log_table.dispatch(&c, &s)!;

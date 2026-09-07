@@ -8,10 +8,11 @@
 *>
 module shc::available_only;
 import mtk;
-import mtk::managed;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
+
+alias HOLDER = mtk::OF{Holder};
 
 faultdef AVAILABLE_ONLY_FAILED;
 
@@ -20,7 +21,7 @@ struct CountingHooks (PoolHooks) { Allocator alloc; int created; }
 fn void CountingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 {
     self.created++;
-    if (catch mtk::managed::create(Holder, self.alloc, slot)) return;
+    if (catch HOLDER.create(self.alloc, slot)) return;
 }
 
 fn void CountingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic {}
@@ -31,11 +32,11 @@ fn void CountingHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(self.alloc, &s);
     }
 }
 
-fn usz drain(Pool* p)
+fn usz drain(Allocator a, Pool* p)
 {
     usz taken;
     while (true)
@@ -46,7 +47,7 @@ fn usz drain(Pool* p)
             break; // NOT_AVAILABLE is the end condition
         }
         taken++;
-        mtk::managed::release(Holder, &s);
+        HOLDER.release(a, &s);
     }
     return taken;
 }
@@ -67,7 +68,7 @@ fn void? drain_stops_at_not_available(Allocator a)
     }
     int seeded = hooks.created;
 
-    usz taken = drain(p);
+    usz taken = drain(a, p);
     shc::helpers::expect(AVAILABLE_ONLY_FAILED, taken == 2, "both kept outers must be drained")!;
     shc::helpers::expect(AVAILABLE_ONLY_FAILED, hooks.created == seeded, "the hook must not run on this path")!;
 }

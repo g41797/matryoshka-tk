@@ -133,6 +133,14 @@ def match(sentence):
 # `ref/3tk-doc-loop-003.md` rules on it under *Moving a module description*.
 #
 # The two checks report separately and the exit status covers both.
+#
+# 3TK-63 added the third case. A module may be written in several sections and
+# several files — `module mtk;` is now `mtk.c3`, `inner.c3` and `queue.c3` —
+# and a module has ONE description however many sections it is written in. So a
+# section that carries no `<* *>` above its module line is not a miss: it is a
+# section, and it says so in a `//` banner. What IS checked is that every
+# labelled block in the reference is carried by EXACTLY ONE file, so that a
+# description cannot go missing by every section deciding it belongs elsewhere.
 
 import doc_blocks as db
 
@@ -141,6 +149,7 @@ REF_BLOCKS = db.ref_blocks(REF_TEXT)
 print('  %d labelled block%s in the reference' % (
     len(REF_BLOCKS), '' if len(REF_BLOCKS) == 1 else 's'))
 differing = 0
+carriers = {}
 for path in files:
     text = open(path).read()
     got = db.source_block(text)
@@ -149,6 +158,10 @@ for path in files:
     if name is None:
         print('  %-12s declares no module' % base)
         continue
+    if not got[3]:
+        print('  %-12s %-14s section only, no block' % (base, name))
+        continue
+    carriers.setdefault(name, []).append(base)
     if name not in REF_BLOCKS:
         print('  %-12s %-14s NO LABELLED BLOCK in the reference' % (base, name))
         differing += 1
@@ -162,6 +175,18 @@ for path in files:
         for d in difflib.unified_diff(want, have, 'reference', base, lineterm=''):
             print('    %s' % d)
         differing += 1
+if len(files) == len(glob.glob(os.path.join(src_dir, '*.c3'))):
+    uncarried = 0
+    for name in sorted(REF_BLOCKS):
+        who = carriers.get(name, [])
+        if len(who) != 1:
+            print('  %-14s carried by %d file%s: %s'
+                  % (name, len(who), '' if len(who) == 1 else 's', ', '.join(who) or 'none'))
+            uncarried += 1
+    differing += uncarried
+    print('  -- every labelled block is carried by exactly one file' if uncarried == 0
+          else '  -- %d labelled block%s carried by the wrong number of files'
+               % (uncarried, '' if uncarried == 1 else 's'))
 print('  -- %d differing block%s' % (differing, '' if differing == 1 else 's'))
 
 # --- the descriptor check ---

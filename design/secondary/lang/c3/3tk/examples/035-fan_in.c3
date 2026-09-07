@@ -8,11 +8,13 @@
 *>
 module shc::fan_in;
 import mtk;
-import mtk::managed;
 import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 import std::thread;
+
+alias EVENT  = mtk::OF{Event};
+alias HOLDER = mtk::OF{Holder};
 
 faultdef FAN_IN_FAILED;
 
@@ -27,9 +29,9 @@ fn int send_event(void* arg)
 {
     SenderArgs* args = (SenderArgs*)arg;
     Slot s;
-    if (catch f = mtk::managed::create(Event, args.a, &s)) return 0;
+    if (catch f = EVENT.create(args.a, &s)) return 0;
     s.must(Event).code = args.code;
-    if (catch f = args.mbx.send(&s)) mtk::managed::release(Event, &s);
+    if (catch f = args.mbx.send(&s)) EVENT.release(args.a, &s);
     return 0;
 }
 
@@ -37,8 +39,8 @@ fn int send_holder(void* arg)
 {
     SenderArgs* args = (SenderArgs*)arg;
     Slot s;
-    if (catch f = mtk::managed::create(Holder, args.a, &s)) return 0;
-    if (catch f = args.mbx.send(&s)) mtk::managed::release(Holder, &s);
+    if (catch f = HOLDER.create(args.a, &s)) return 0;
+    if (catch f = args.mbx.send(&s)) HOLDER.release(args.a, &s);
     return 0;
 }
 
@@ -66,8 +68,8 @@ fn void? three_senders_one_mailbox(Allocator a, Mailbox* mbx)
     {
         Slot s;
         s.fill(inner);
-        if (s.to(Event))  { mtk::managed::release(Event, &s);  events++;  continue; }
-        if (s.to(Holder)) { mtk::managed::release(Holder, &s); holders++; continue; }
+        if (s.to(Event))  { EVENT.release(a, &s);  events++;  continue; }
+        if (s.to(Holder)) { HOLDER.release(a, &s); holders++; continue; }
         unreachable("fan-in met an identity it was not written for");
     }
 
