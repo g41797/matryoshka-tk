@@ -34,6 +34,8 @@
  This module holds `VERSION`, the faults, `@check` and `CHECKED`.
  They are the vocabulary every submodule and every user shares.
  Each subject is on the page of the module that holds it.
+
+ We present you [[LOC]] lines of source.
 *>
 // [3tk: D1 to D16, R1 to R15, H0, H0b, H5 to H10, E6, V19, Part 17.1, Part 17.2]
 module mtk;

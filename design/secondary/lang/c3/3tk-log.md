@@ -7,6 +7,171 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-08 — `3TK-69`: the source LOC, computed and injected
+
+**Model: Sonnet 5**, as `3tk-staging-plan-030.md` pinned it. Applied `L-1` …
+`L-12` from the sitting recorded below; decided nothing new.
+
+**Step 1, the counter.** `matryoshka-3tk/scripts/c3_loc.py` (the scanner) and
+`count_src_loc.sh` (the wrapper), written fresh per `L-1` — a `startswith` test
+is wrong for C3, which has `/* */` and `<* *>` as state carried across lines, not
+a per-line property. The scanner blanks every comment, doc-block and string-
+literal span across the whole file first, then counts per line on what remains,
+so a block comment opened on one line and closed lines later, and a line that is
+code with a trailing `//` comment, are both handled correctly — both were in the
+test fixture built to check it. **`src/*.c3` is 665 lines by this definition,
+against 2,073 raw** (`wc -l`); the difference is comments, doc blocks and the
+five `import` lines the definition excludes. Run twice on an unchanged tree,
+same number both times.
+
+**Step 2, the token.** `src/mtk.c3`'s module doc block gained one sentence,
+*"We present you `[[LOC]]` lines of source."*, and the identical sentence was
+added to `3tk-reference-008.md` at the matching point. **One thing was found and
+removed, not part of this charter:** the tree already carried a
+`const String LOC = "[[LOC]]";` declaration with its own doc block, undocumented
+in the reference — exactly the C3-constant shape `L-11` ruled against ("nothing
+reads such a constant today"), and `check-doc-loop.sh` caught it as one missing
+descriptor the moment the new sentence was checked. Removed; `check-doc-loop.sh`
+is clean at 410 of 410 with the removal, 411 of 410 (1 missing) without it.
+
+**Step 3, the injector.** `matryoshka-3tk/scripts/inject_src_loc.sh`, per `L-3`,
+`L-5`, `L-6`, `L-7` and `L-10`: runs the counter, replaces every `[[LOC]]` under
+`src/`, dry run by default, `--write` to touch files, `--strict` turns a missing
+token into exit 1 (CI passes both; a person passes neither unless they mean it).
+Verified: dry run on a scratch copy carrying one `[[LOC]]` reports one occurrence
+and leaves the tree unchanged; `--write` on that same copy replaces it with 665
+and nothing else; a scratch tree with no token exits 0 under default and exits 1
+under `--strict`.
+
+**Step 4, `docs.yml`.** One step, "Inject source LOC", added before `c3c docgen`
+in `matryoshka-3tk/.github/workflows/docs.yml`, running
+`scripts/inject_src_loc.sh --write --strict` against the runner's own checkout
+(`L-8` — never a copied tree, or every "Defined in" link 404s). The "Defined in"
+patch step is untouched. **`linux.yml` and `sanitizers.yml` were read, not just
+grepped, and neither needs a change** — both build and test straight from
+`src/`, and `[[LOC]]` sitting inside a `<* *>` doc-block sentence is prose, not
+code, so it compiles either substituted or not.
+
+**Step 5, the rules file.** `3tk-rules-001.md` Rule 5's sentence — *generated
+content never edits a checked-in source* — is replaced with `L-9`'s sharpened
+wording: *generated content is never committed, and is injected downstream of
+the checkout.* The three harms it names are restated to show all three still
+hold under the sharpened rule. Nothing else in the file moved.
+
+**Verification, in full.**
+
+- `run-builds.sh`: **107 checks, 0 failures, four builds green.** Unchanged from
+  before this stage — nothing here touches a declaration.
+- `check-doc-loop.sh`: **410 of 410, 0 differing, 0 banned words** (409 was the
+  count before the sentence was added to both sides; the removal above is why it
+  is 410, not 411, that is clean).
+- The two new scripts have no `matryoshka-tk` copy, per `L-2` — the first 3tk
+  script pair that is not ported.
+- The four ported scripts' `matryoshka-3tk` diff still shows only the `ROOT`
+  line as this stage's own difference. **One other line differs and is not
+  this stage's:** `run-builds.sh`'s `RUNTIME_NEGATIVES` still says
+  `insert_linked_item` in `matryoshka-3tk`, while `matryoshka-tk`'s copy already
+  reads `insert_linked_outer` — an uncommitted rename from before this stage
+  started, waiting on the owner's own port. Not touched here.
+
+---
+
+## 2026-09-08 — the sitting that ruled the source LOC, and plan 030
+
+**No stage, no code, and no `run-builds.sh` run.** A second owner sitting on the
+same day as `3TK-67`, `3TK-65`, `3TK-66` and `3TK-68`, called after `3TK-68`
+closed and before `3TK-69` was started. It answered every question 029's
+`3TK-69` charter had left open, and the answers are `L-1` … `L-12` in
+[3tk-staging-plan-030.md](3tk-staging-plan-030.md). **029 is spent and in
+`backup/`.**
+
+**Why a new plan rather than an edit.** 029's charter for `3TK-69` was a set of
+cautions and an unmeasured probe; what came out of the sitting is a specified
+stage. A plan version is not rewritten in place, and the owner ruled explicitly
+that all of it lands in the files rather than in a session's memory, **because
+the stage runs after a clear and possibly on another model.**
+
+**The route was found by elimination, and each step was the owner's.** The
+session first recommended patching the generated `docs.html`, on the ground that
+`docs.yml` already patches it once. The owner preferred injecting into
+`src/mtk.c3`, and the argument that settled it is durability: **the HTML patch is
+coupled to docgen's output shape — its own comment says so — while a placeholder
+is a string 3tk owns.** Along the way three shapes were dropped: a C3 constant in
+`src/` (a permanent doc-loop `DIFFERS`, and it divides the landing page `3TK-67`
+had just trimmed to four declarations), a generated module in its own folder
+(the owner: the file need not be C3 at all, so no module, no `project.json`
+change, no build participation), and `$include` (the manual's trust level 2,
+paid by four builds, four matrix legs, the sanitizers, docgen, **and every
+downstream user of 3tk**).
+
+**One measurement decided more than any argument.** `docs.yml` runs
+`c3c docgen --emit-stdlib=no src` — **`src` and nothing else** — and
+`3tk/project.json` says `"sources": [ "src/**" ]`. Two independent source lists,
+so the folder a file sits in is already the visibility control, for free. And
+the same file's existing patch builds source links as
+`'…/blob/main/' + filePath`, which is why the injection must happen **in the
+runner's own checkout and not into a copied tree**: docgen records the path it
+was given, and `build/src/` would 404 every "Defined in" link on the site.
+
+**Two small things the session got wrong and the owner corrected.** It proposed
+`c3c docgen … src gen`, having assumed the generated module was meant to be
+published — it is meant to be absent. And it accepted a template file holding the
+sentence to match; the owner's requirement was that `mtk.c3` be editable without
+touching the script, and a file holding the sentence is a **second place to keep
+byte-identical**, which defeats exactly that. **The token alone is the contract**,
+and if a file is ever wanted it maps token → producer.
+
+**`[[LOC]]` was chosen against three tests:** no meaning in C3, not an `@` (which
+would read as a contract directive and invite a false check), and obviously a
+slot to a human. `[[NAME]]` is reserved for any later token.
+
+**Rule 5 is sharpened rather than broken.** *Generated content never edits a
+checked-in source* becomes *generated content is never **committed**, and is
+injected downstream of the checkout* — and the three harms the rule names are all
+still avoided. **`3TK-69` carries the new wording into `3tk-rules-001.md`.**
+
+**One question is left open and it is the owner's** — `L-11`, whether a program
+must read the count as a C3 constant. Nothing reads such a constant today, so
+`3TK-69` proceeds on *no*. **If it is ruled in, `$include` and its trust flag come
+back and the stage is Opus 5 rather than Sonnet 5.**
+
+**`3tk-status.md` was brought up to date in the same sitting**: `3TK-68` closed —
+its row still said *Next* — the four stages of 2026-09-08 added to the table of
+those that have run, the measured numbers moved off `3TK-67`'s reading to
+`3TK-68`'s 107 checks and 145 tests and `3TK-66`'s 409 of 409, and *How to start
+after a clear* rewritten for `3TK-69`.
+
+---
+
+## 2026-09-08 — 3TK-68: the names and the scripts
+
+**Ran on Sonnet 5, as the charter asked.** Small, and every step was applying a
+settled rule with a check that said when it was wrong.
+
+**`negative/insert_linked_item.c3` is renamed to `negative/insert_linked_outer.c3`.**
+It was the one filename still carrying a retired word — 3TK-60's scan was over
+file *contents*, so a filename was never in its scope. `test/` and the rest of
+`negative/` stayed clean on a fresh check. `run-builds.sh:60`'s
+`RUNTIME_NEGATIVES` entry moved with it in this repo's copy.
+
+**The `matryoshka-3tk/scripts/` audit: all four ported scripts diffed clean.**
+`preview-docs.sh`, `run-builds-light.sh` and `run-sanitizers.sh` differ from this
+repo's copies only in the `ROOT` line, as the rule expects. `run-builds.sh` had a
+second difference — matryoshka-3tk's copy still reads `insert_linked_item` at
+line 60 — which is exactly the rename this stage owns; it is the owner's to port
+along with the rest of the file, per [[edit-sources-in-tk-only]].
+
+**The `.yml` review, `docs.yml` included: none needed.** `linux.yml` and
+`sanitizers.yml` invoke `c3c test` directly, not `run-builds.sh`, and `docs.yml`
+only patches docgen's generated HTML — none of the three names
+`insert_linked_item` or `RUNTIME_NEGATIVES`.
+
+**`run-builds.sh` ran full after the rename: 107 passed, 0 failed, all four
+builds green** — the renamed negative still aborts in the safe builds and exits
+0 in the fast ones, as `insert_linked_item.c3` did before it.
+
+---
+
 ## 2026-09-08 — 3TK-66: the books and the examples
 
 **Ran on Opus 5, which is what the charter asked for.** The bulk stage, and the

@@ -57,7 +57,7 @@ MODES=("safe -O0::--safe=yes -O0"
        "fast -O3::--safe=no -O3")
 
 # A runtime negative aborts where the checks are live and exits 0 where they are not.
-RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_item self_move wrong_type_must duplicate_pool_tags pool_unknown_identity
+RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_outer self_move wrong_type_must duplicate_pool_tags pool_unknown_identity
                    unstamped_insert unstamped_crossing)
 
 # 3TK-65 added the last two. Part 5.2 asserts the identity at BOTH boundaries and
