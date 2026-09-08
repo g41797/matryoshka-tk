@@ -11,7 +11,7 @@ import mtk::pool;
 import shc::outers;
 import shc::helpers;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef FALLBACK_RELEASE_FAILED;
 

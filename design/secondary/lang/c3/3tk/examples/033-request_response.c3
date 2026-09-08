@@ -15,7 +15,7 @@ import shc::helpers;
 import std::thread;
 import std::time;
 
-alias EVENT  = mtk::OF{Event};
+alias EVENT  = helper::OF{Event};
 
 faultdef REQUEST_RESPONSE_FAILED;
 

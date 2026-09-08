@@ -14,7 +14,7 @@ import std::time;
 
 faultdef INFRASTRUCTURE_WRAPPER_FAILED;
 
-alias WORKER_INBOX = mtk::OF{WorkerInbox};
+alias WORKER_INBOX = helper::OF{WorkerInbox};
 
 struct WorkerInbox
 {

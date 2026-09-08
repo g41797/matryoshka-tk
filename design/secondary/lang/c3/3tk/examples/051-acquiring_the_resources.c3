@@ -13,7 +13,7 @@ import shc::outers;
 import shc::helpers;
 import std::core::mem::alloc;
 
-alias EVENT  = mtk::OF{Event};
+alias EVENT  = helper::OF{Event};
 
 faultdef ACQUIRING_THE_RESOURCES_FAILED;
 

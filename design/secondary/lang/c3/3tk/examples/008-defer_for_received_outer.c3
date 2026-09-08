@@ -12,7 +12,7 @@ import shc::outers;
 import shc::helpers;
 import std::time;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef DEFER_RECEIVED_FAILED;
 

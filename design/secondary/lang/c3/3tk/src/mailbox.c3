@@ -38,29 +38,6 @@ module mtk::mailbox;
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 typedef Mailbox = void;
 
-// The real fields, behind the opaque Mailbox above. Every public method casts
-// its first line and works on this from there. Internal, so not a `<* *>`
-// block: see 3TK-42.
-// [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
-struct _Mbox @private
-{
-    Inner inner;
-
-    Mutex             _mu;
-    ConditionVariable _cv;
-
-    Allocator         _alloc;
-
-    bool         _closed;
-    Atomic{bool} _closed_fast;
-    usz          _active;
-
-    InnerQueue _oob;
-    InnerQueue _regular;
-
-    usz _wake_gen;
-}
-
 <*
  The identity of a `Mailbox` as an outer.
 *>
@@ -76,7 +53,7 @@ const typeid TYPE = _Mbox::typeid;
 // crossed by one thread may be on a chain being read by another. A stamp writes
 // the same bytes it finds, but it writes them, so this direction keeps the
 // read-only macro. Nothing else in the file does.
-alias MBOX @private = mtk::OF{_Mbox};
+alias MBOX @private = helper::OF{_Mbox};
 
 <*
  From a `Mailbox*` to its `Inner*`. Cannot fail.
@@ -154,23 +131,22 @@ fn void Mailbox.release(&mbox)
     alloc::free(a, self);
 }
 
-<*
- Reads the closed flag before taking the lock.
-
- A hint. Every caller that gets false re-reads the flag under the lock.
- Call `is_closed` instead.
-*>
-// [3tk: D16, Part 15.4]
+// For internal usage.
+// Reads the closed flag before taking the lock. A hint: every caller that gets
+// false re-reads the flag under the lock. `is_closed` is the one to call.
+// [3tk: D16, Part 15.4, Part 4.4a]
 macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
+// For internal usage.
 // Puts the outer on the ordinary queue, or ahead of every ordinary outer.
-// O(1) in every build mode. Internal, so not a `<* *>` block: see 3TK-42.
+// O(1) in every build mode.
 // [3tk: R7, Part 11.3]
 fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
 {
     if (oob) { self._oob.push_back(inner); } else { self._regular.push_back(inner); }
 }
 
+// For internal usage.
 // Takes the next outer.
 // Out-of-band first, then ordinary, first-in first-out within each.
 // [3tk: R7, R9, Part 11.3]
@@ -180,6 +156,7 @@ fn Inner* _Mbox.dequeue(&self)
     return inner ? inner : self._regular.pop_front();
 }
 
+// For internal usage.
 // True if anything is queued at all. Reads both queues.
 fn bool _Mbox.has_queued(&self) @inline
     => !self._oob.is_empty() || !self._regular.is_empty();
@@ -410,6 +387,7 @@ fn void Mailbox.close(&mbox, InnerQueue* out)
     self._close(out);
 }
 
+// For internal usage.
 // The state change, with the mutex already held, and nothing else.
 // The only writer of `_closed`. It never takes or releases the mutex, calls no
 // hook, destroys nothing and frees nothing. Calling it twice is safe, and the
@@ -418,7 +396,6 @@ fn void Mailbox.close(&mbox, InnerQueue* out)
 // The fast-path store is RELEASE and pairs with the ACQUIRE load in
 // `@closed_fast`: a thread that reads the flag set has also seen every write
 // made before the store, so the fast path can refuse without the mutex.
-// Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: Part 11.12, Part 15.4]
 fn void _Mbox._close(&self, InnerQueue* out)
 {
@@ -468,6 +445,35 @@ fn usz Mailbox.len(&mbox)
     defer self._active--;
     return self._oob.len() + self._regular.len();
 }
+
+//==============================================================================
+// The real fields, behind the opaque `Mailbox` above. Public before private,
+// as in `pool.c3`: everything above this line is the surface.
+//==============================================================================
+
+// For internal usage.
+// The real fields, behind the opaque `Mailbox`. Every public method casts on
+// its first line and works on this from there.
+// [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
+struct _Mbox @private
+{
+    Inner inner;
+
+    Mutex             _mu;
+    ConditionVariable _cv;
+
+    Allocator         _alloc;
+
+    bool         _closed;
+    Atomic{bool} _closed_fast;
+    usz          _active;
+
+    InnerQueue _oob;
+    InnerQueue _regular;
+
+    usz _wake_gen;
+}
+
 
 //----------------------
 // Little-endian imports

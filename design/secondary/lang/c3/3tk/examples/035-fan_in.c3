@@ -13,8 +13,8 @@ import shc::outers;
 import shc::helpers;
 import std::thread;
 
-alias EVENT  = mtk::OF{Event};
-alias HOLDER = mtk::OF{Holder};
+alias EVENT  = helper::OF{Event};
+alias HOLDER = helper::OF{Holder};
 
 faultdef FAN_IN_FAILED;
 

@@ -12,8 +12,8 @@ import shc::outers;
 import shc::helpers;
 import std::time;
 
-alias SENSOR = mtk::OF{Sensor};
-alias HOLDER = mtk::OF{Holder};
+alias SENSOR = helper::OF{Sensor};
+alias HOLDER = helper::OF{Holder};
 
 faultdef OUT_OF_BAND_FAILED;
 

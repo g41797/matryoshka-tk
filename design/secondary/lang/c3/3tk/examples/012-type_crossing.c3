@@ -10,7 +10,7 @@ import mtk;
 import shc::outers;
 import shc::helpers;
 
-alias EVENT  = mtk::OF{Event};
+alias EVENT  = helper::OF{Event};
 
 faultdef TYPE_CROSSING_FAILED;
 

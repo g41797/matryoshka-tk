@@ -17,7 +17,7 @@ import std::thread;
 import std::time;
 import std::atomic::types;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef THE_THREAD_IS_GIVEN_ONE_POINTER_FAILED;
 

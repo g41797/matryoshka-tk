@@ -112,14 +112,12 @@ enum GetMode
     AVAILABLE_ONLY,
 }
 
-<*
- The free outers of one identity, as an `InnerStack`.
-
- A stack and not a queue, and the reason is defect surfacing.
- The outer just given back is on top, so a caller still writing through a stale pointer collides with the next owner at once instead of much later.
- No order is promised.
-*>
-// [3tk: R11, Part 11.7, Part 11.10, Part 12.4]
+// For internal usage.
+// The free outers of one identity, as an `InnerStack`. A stack and not a queue,
+// and the reason is defect surfacing: the outer just given back is on top, so a
+// caller still writing through a stale pointer collides with the next owner at
+// once instead of much later. No order is promised.
+// [3tk: R11, Part 4.4a, Part 11.7, Part 11.10, Part 12.4]
 struct PoolBucket
 {
     typeid     tag;
@@ -152,7 +150,7 @@ const typeid TYPE = _Pool::typeid;
 // `to_inner` keeps the read-only macro for the reason `mailbox.c3` gives at the
 // same site: the helper's `inner()` stamps, and this direction is crossed
 // concurrently.
-alias POOL @private = mtk::OF{_Pool};
+alias POOL @private = helper::OF{_Pool};
 
 macro Inner* to_inner(Pool* p) => mtk::to_inner((_Pool*)p);
 
@@ -261,17 +259,14 @@ fn void Pool.release(&pool)
     alloc::free(a, self);
 }
 
-<*
- Reads the closed flag before taking the lock.
-
- A hint. Every caller that gets false re-reads the flag under the lock.
- Call `is_closed` instead.
-*>
-// [3tk: D16, Part 15.4]
+// For internal usage.
+// Reads the closed flag before taking the lock. A hint: every caller that gets
+// false re-reads the flag under the lock. `is_closed` is the one to call.
+// [3tk: D16, Part 15.4, Part 4.4a]
 macro bool _Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
+// For internal usage.
 // The bucket for an identity, or null. Called under the lock.
-// Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: A3, P2, Part 11.7, Part 19.3]
 fn PoolBucket* _Pool.bucket_for(&self, typeid t)
 {
@@ -572,6 +567,7 @@ fn void Pool.close(&pool)
     self._mu.unlock();
 }
 
+// For internal usage.
 // The state change, with the mutex already held, and nothing else.
 // The only writer of `_closed`. It never takes or releases the mutex, calls no
 // hook, destroys nothing and frees nothing. Calling it twice is safe, and the
@@ -584,7 +580,6 @@ fn void Pool.close(&pool)
 // `release` does not call it. Part 11.12 requires the pool to be closed before
 // it is released, and a release that closed first would pass its own check —
 // so the check comes first and nothing else runs when it fails.
-// Internal, so not a `<* *>` block: see 3TK-42.
 // [3tk: R12, Part 11.12, Part 15.4]
 fn void _Pool._close(&self, InnerQueue* out)
 {
@@ -638,9 +633,9 @@ fn usz Pool.count_of(&pool, typeid t)
     return b ? b.free.len() : 0;
 }
 
-// The real fields, behind the opaque Pool above. Every public method casts
-// its first line and works on this from there. Internal, so not a `<* *>`
-// block: see 3TK-42.
+// For internal usage.
+// The real fields, behind the opaque `Pool`. Every public method casts on its
+// first line and works on this from there.
 // [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
 struct _Pool @private
 {
@@ -667,23 +662,16 @@ struct _Pool @private
 // 3TK-45, and `InnerStack` stopped being a name a user can reach.
 //==============================================================================
 
-<*
- The intrusive stack. Last-in first-out.
-
- The storage container.
- Where the queue carries outers across, the stack holds them still.
- The pool keeps one per identity, and it is the only stack 3tk owns.
- No 3tk signature passes one: the four that take a container take an `InnerQueue*`.
- It lives inside `mtk::pool` and is not a name a user can reach.
- Four operations: no walker, and no splice.
- The order is not promised.
- No caller is entitled to which outer comes back.
- Every chain ends at an inner pointing at itself, never at null.
- Nothing in the stack can fail.
- The count is kept, so `len` is O(1).
- There is no tail, so flattening the stack is O(n).
-*>
-// [3tk: P6, R2, R11, R13, R14, V2, Part 8, Part 8.1, Part 8.4, Part 11.7, Part 11.10, Part 19.4]
+// For internal usage.
+// The intrusive stack, last-in first-out: the storage container. Where the
+// queue carries outers across, the stack holds them still. The pool keeps one
+// per identity, it is the only stack 3tk owns, and no 3tk signature passes one
+// — the four that take a container take an `InnerQueue*`. Four operations: no
+// walker and no splice. The order is not promised, no caller is entitled to
+// which outer comes back, and nothing in the stack can fail. Every chain ends
+// at an inner pointing at itself, never at null. The count is kept, so `len` is
+// O(1); there is no tail, so flattening the stack is O(n).
+// [3tk: P6, R2, R11, R13, R14, V2, Part 4.4a, Part 8, Part 8.1, Part 8.4, Part 11.7, Part 11.10, Part 19.4]
 // [3tk: R12, Part 8.1, Part 12.4]
 struct InnerStack  @local
 {
@@ -691,18 +679,10 @@ struct InnerStack  @local
     usz    count;
 }
 
-<*
- The insert guard.
-
- A null inner is a defect.
- An outer already on any chain is a defect.
- Both are gone from a fast build.
-
- Public because C3 cannot hide a method — `@private` is ignored on method declarations.
- It is not part of the user surface.
- The containers call it; nothing else should.
-*>
-// [3tk: R6b, Part 4.4, Part 8.6]
+// For internal usage.
+// The insert guard. A null inner is a defect, and so is an outer already on any
+// chain; both are gone from a fast build.
+// [3tk: R6b, Part 4.4, Part 4.4a, Part 8.6]
 macro InnerStack.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
@@ -712,25 +692,20 @@ macro InnerStack.@guard_insert(&self, Inner* inner)
 
 // --- Questions ----------------------------------------------------------------
 
-<*
- True if the stack holds nothing.
-*>
+// For internal usage.
+// True if the stack holds nothing.
 // [3tk: Part 8.2]
 fn bool InnerStack.is_empty(&self) @inline => self.count == 0;
 
-<*
- How many outers the stack holds. O(1).
-*>
+// For internal usage.
+// How many outers the stack holds. O(1).
 // [3tk: Part 8.2, Part 11.7]
 fn usz InnerStack.len(&self) @inline => self.count;
 
 // --- Adding --------------------------------------------------------------------
 
-<*
- Adds on top.
-
- There is no Slot-shaped insert.
-*>
+// For internal usage.
+// Adds on top. There is no Slot-shaped insert.
 // [3tk: P6, R13, Part 8.2]
 fn void InnerStack.push(&self, Inner* inner)
 {
@@ -742,12 +717,9 @@ fn void InnerStack.push(&self, Inner* inner)
 
 // --- Removing ---------------------------------------------------------------------
 
-<*
- Takes the outer on top.
-
- Null on an empty stack.
- The returned outer's chain link is cleared.
-*>
+// For internal usage.
+// Takes the outer on top. Null on an empty stack, and the returned outer's
+// chain link is cleared.
 // [3tk: Part 8.2, Part 8.8, Part 19.4]
 fn Inner* InnerStack.pop(&self)
 {

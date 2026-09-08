@@ -11,7 +11,7 @@ import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef DEFER_RELEASE_EARLY_FAILED;
 

@@ -12,7 +12,7 @@ import mtk::mailbox;
 import shc::outers;
 import shc::helpers;
 
-alias EVENT  = mtk::OF{Event};
+alias EVENT  = helper::OF{Event};
 
 faultdef THE_STEP_FAILED;
 

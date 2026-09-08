@@ -210,14 +210,121 @@ done
 # submodule CANNOT see its parent's `@private` declarations. So the layering is
 # enforced by the compiler, not by this grep. The grep guards the declaration
 # itself, which is the thing a careless edit would undo.
-echo "== Part 17.2: the layering =="
-for f in mailbox pool; do
-    if grep -qE "^module mtk::$f;" "src/$f.c3"; then
-        ok "src/$f.c3 is a submodule, so mtk's private declarations are out of reach"
+#
+# 3TK-pre-65 REWROTE IT FOR SIX NAMES. Part 4.5: the module line IS the design,
+# so the check asserts the whole list rather than two of it — every file
+# declares exactly what 4.2 says it declares, and no file declares anything
+# else. `helper.c3` and `queue.c3` went back to modules of their own, and a
+# check that knew only `mailbox` and `pool` would have gone red on the correct
+# change. Six declarations, six checks, plus one that nothing unexpected is
+# declared anywhere in `src/`.
+echo "== Part 17.2: the layering, and Part 4.5: the module list =="
+declare -A EXPECT_MODULE=(
+    [mtk]='module mtk;'
+    [inner]='module mtk;'
+    [queue]='module mtk::queue;'
+    [helper]='module mtk::helper <Outer>;'
+    [mailbox]='module mtk::mailbox;'
+    [pool]='module mtk::pool;'
+)
+for f in mtk inner queue helper mailbox pool; do
+    want=${EXPECT_MODULE[$f]}
+    if grep -qxF "$want" "src/$f.c3"; then
+        ok "src/$f.c3 declares '$want'"
     else
-        bad "src/$f.c3 is not 'module mtk::$f' — Part 17.2 is no longer compiler-enforced"
+        bad "src/$f.c3 does not declare '$want' — Part 4.2's module list has drifted"
     fi
 done
+# Nothing beyond the list. A seventh module name in `src/` is a partition that
+# 4.2 does not describe, and the visibility of everything in it is unruled.
+UNEXPECTED=$(grep -hoE '^module [A-Za-z_:]+( <[A-Za-z_]+>)?( @[a-z]+)?;' src/*.c3 | sort -u \
+    | grep -vxE 'module mtk;|module mtk @private;|module mtk::(queue|mailbox|pool);|module mtk::helper <Outer>;')
+if [ -z "$UNEXPECTED" ]; then
+    ok "src/ declares no module outside Part 4.2's list of six"
+else
+    bad "src/ declares a module Part 4.2 does not list: $(echo "$UNEXPECTED" | tr '\n' ' ')"
+fi
+# --- Part 4.4a, the partition of `module mtk`, and it is testable ---
+#
+# Ruled by the owner, 2026-09-07: the first part of `inner.c3` is what a user
+# has no other way to write, the second part is what `OuterHelper` does for
+# them. `examples/` is the user's voice — `test/` is white-box and exempt by
+# design — so the partition is a fact about `examples/` and this checks it.
+#
+# The banners are asserted FIRST. If a part is renamed, this check must not
+# quietly fall back to grepping nothing, which is the same guard the stack
+# banner gets above.
+echo "== Part 4.4a: the partition of module mtk =="
+PARTITION_OK=1
+for banner in '^// Part 2 of 3: public, and not yours' '^module mtk @private;'; do
+    if grep -qE "$banner" src/inner.c3; then :; else
+        bad "src/inner.c3 has lost the banner '$banner' — the partition is unmarked"
+        PARTITION_OK=0
+    fi
+done
+[ $PARTITION_OK -eq 1 ] && ok "src/inner.c3 carries the part banners the partition is written in"
+
+# The second part, by name. Two examples name a crossing on purpose and are
+# listed here rather than silently skipped: 010 asserts that `create` wrote an
+# identity, and 012's whole subject is that the free form and the method form
+# give the same answer. Any THIRD example is a user reaching past the helper,
+# and either the example is wrong or the partition is.
+INTERNAL='mtk::(to_inner|from_inner|must_from_inner|from_slot|must_from_slot|move_from_slot|is_mine|stamp|is_linked|reset|inner_offset)\b|\.(repoint_to|points_to)[[:space:]]*\('
+ALLOWED='examples/010-no_raw_allocator_call.c3|examples/012-type_crossing.c3'
+REACHING=$(grep -rEn "$INTERNAL" examples/*.c3 | grep -vE "^[^:]*:[0-9]+:[[:space:]]*//" \
+    | grep -vE "^($ALLOWED):" | cut -d: -f1 | sort -u)
+if [ -z "$REACHING" ]; then
+    ok "no example reaches past the helper into the second part of module mtk"
+else
+    bad "an example calls what the helper is there for: $(echo "$REACHING" | tr '\n' ' ')"
+fi
+
+# --- Part 4.4a, the marker and the block are exclusive ---
+#
+# A declaration cannot both say "For internal usage." and carry a DESCRIBING
+# `<* *>` block: the block is the visibility marker, so the two together mean
+# the opposite of each other.
+#
+# A CONTRACT-ONLY block is allowed and is the reason this check reads the block
+# rather than merely noticing one. 3TK-pre-65 learned it the expensive way: a
+# `@require` lives inside the `<* *>`, so stripping the block from
+# `must_from_inner` stripped its type check with it and
+# `negative/wrong_type_must` stopped aborting in a checking build. A block whose
+# every line is a contract line describes nothing, publishes nothing to the
+# reference and shows nothing on the docs site — and it keeps the contract.
+echo "== Part 4.4a: the marker and the doc block =="
+BOTH=$(${PYTHON:-python3} - src/*.c3 <<'PYEOF'
+import re, sys
+bad = []
+for p in sys.argv[1:]:
+    lines = open(p).read().splitlines()
+    for i, l in enumerate(lines):
+        if not re.match(r'^(fn|macro|struct|typedef|const|alias|enum|interface)\b', l):
+            continue
+        j = i - 1
+        marked = False
+        while j >= 0 and lines[j].startswith('//'):
+            if lines[j].strip() == '// For internal usage.':
+                marked = True
+            j -= 1
+        if not (marked and j >= 0 and lines[j].strip() == '*>'):
+            continue
+        k = j
+        while k >= 0 and lines[k].strip() != '<*':
+            k -= 1
+        body = [x.strip() for x in lines[k + 1:j]]
+        prose = [x for x in body if x and not x.startswith('@')]
+        if prose:
+            bad.append('%s:%d' % (p, i + 1))
+print(' '.join(bad))
+PYEOF
+)
+if [ -z "$BOTH" ]; then
+    ok "no declaration carries the marker and a doc block at once"
+else
+    bad "marker and doc block on the same declaration: $BOTH"
+fi
+
 # `unlink_no_repair` went with the redesign — the queue and the stack have no
 # unrepaired removal left to reach for. What remains reachable is the insert
 # guard and the link field itself, and a container that touched either would be

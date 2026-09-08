@@ -49,10 +49,10 @@ fn void? Two.init(&self, Allocator a)   { self.first = a; self.second = a; retur
 fn void? Picky.init(&self, Allocator a) => PICKY_REFUSED~;
 fn void? Noisy.destroy(&self, Allocator a) { destroyed++; return; }
 
-alias MSG    = mtk::OF{Msg};
-alias JOB    = mtk::OF{Job};
-alias TWIN   = mtk::OF{Twin};
-alias HOLDER = mtk::OF{Holder};
-alias TWO    = mtk::OF{Two};
-alias PICKY  = mtk::OF{Picky};
-alias NOISY  = mtk::OF{Noisy};
+alias MSG    = helper::OF{Msg};
+alias JOB    = helper::OF{Job};
+alias TWIN   = helper::OF{Twin};
+alias HOLDER = helper::OF{Holder};
+alias TWO    = helper::OF{Two};
+alias PICKY  = helper::OF{Picky};
+alias NOISY  = helper::OF{Noisy};

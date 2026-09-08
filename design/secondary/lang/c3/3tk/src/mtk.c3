@@ -27,9 +27,9 @@
  There is no `Master` type.
 
  One import gives the toolkit.
- `module mtk` is declared by three files, and the mailbox and the pool are submodules of it.
+ `module mtk` is declared by two files, and the helper, the queue, the mailbox and the pool are submodules of it.
  This module holds `VERSION`, the faults, `@check` and `CHECKED`.
- It holds the inner, the Slot, the link, the crossings and the queue.
+ It holds the inner, the Slot, the link and the crossings.
 
  You send and receive your own struct.
  The struct is the outer, and it is yours.

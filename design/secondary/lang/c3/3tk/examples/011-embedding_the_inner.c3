@@ -9,7 +9,7 @@ import mtk;
 import shc::outers;
 import shc::helpers;
 
-alias SENSOR = mtk::OF{Sensor};
+alias SENSOR = helper::OF{Sensor};
 
 faultdef EMBEDDING_THE_INNER_FAILED;
 

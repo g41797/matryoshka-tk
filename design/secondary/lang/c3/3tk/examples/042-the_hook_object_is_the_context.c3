@@ -12,7 +12,7 @@ import shc::outers;
 import shc::helpers;
 import std::atomic::types;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef HOOK_OBJECT_IS_THE_CONTEXT_FAILED;
 

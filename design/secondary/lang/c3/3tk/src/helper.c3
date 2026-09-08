@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: MIT
 
 //==============================================================================
-// The core, section 3 of 3: `OuterHelper`, the one thing a user binds.
+// `OuterHelper`, the one thing a user binds — and a module of its own again.
+// 3TK-63 merged it into `mtk`; `3TK-pre-65` split it back out, because one
+// generic section made the whole of `mtk` read as generic on the docs site,
+// where `Inner`, `Slot` and `InnerQueue` have nothing to do with `Outer`.
 //
-// This is `module mtk` again, in its generic form. C3 lets a module name be
-// both plain and generic, so `mtk::to_inner(&m)` and `alias MSG = mtk::OF{Msg};`
-// resolve against the same name — Appendix A.6. No module block: `mtk.c3`
-// carries the description, and a module has one description however many
-// sections it is written in.
-//
-// Refilled by 3TK-64, which deleted `managed.c3` and moved `create`/`release`
-// here as members. Every member forwards to a macro in `inner.c3` and has no
-// logic of its own.
+// Every declaration here is the user surface. Every member forwards to a macro
+// in `inner.c3` and has no logic of its own.
 //==============================================================================
-// [3tk: RT-3, HS-1 to HS-10, Part 3, Part 4.2, Part 5.1]
-module mtk <Outer>;
+<*
+ The helper, bound once per outer type.
+
+ `alias MSG = helper::OF{Msg};` — and that is the whole ceremony.
+ Nine members: four crossings, `inner`, `stamp`, `linked`, `create` and `release`.
+ It is a module of its own so that it is a page of its own, and so that nothing else in the core reads as parameterized by `Outer`.
+*>
+// [3tk: RT-3, HS-1 to HS-10, Part 3, Part 4.2, Part 4.2a, Part 5.1]
+module mtk::helper <Outer>;
 
 <*
  The one thing a user binds, one line per outer type.
 
- `alias MSG = mtk::OF{Msg};` — and that is the whole ceremony.
+ `alias MSG = helper::OF{Msg};` — and that is the whole ceremony.
 
  The carrier holds nothing.
  Its only job is to give C3's method syntax a receiver, so that `MSG.create(mem, &s)` is a line you can write.
- Every member takes `self` and no member reads it: `Outer` arrives from the module instantiation, and every member compares against `Outer::typeid`, the compile-time constant that instantiation supplies.
- C3 has no static-method facility, and no way to alias a module instantiation as a namespace, so a zero-state type is how a generic module offers its members under one bound name.
- It is a `typedef` over `uptr` because c3c refuses a struct with no members, and because the standard library spells its own zero-state carriers that way — `LibcAllocator` and `NullAllocator` are both this shape.
  The value is never read, as a number or as anything else.
 *>
 // [3tk: HS-1, Part 3.1]
@@ -36,7 +36,7 @@ typedef OuterHelper = uptr;
  The helper for `Outer`, ready to alias.
 
  Uppercase, because it is a `const`, and C3 enforces the pairing in both directions.
- An uppercase alias must alias a constant, so `alias MSG = mtk::OF{Msg};` is the only spelling.
+ An uppercase alias must alias a constant, so `alias MSG = helper::OF{Msg};` is the only spelling.
 *>
 // [3tk: HS-2, Part 3.1, A.5]
 const OuterHelper OF = {};
@@ -124,7 +124,6 @@ macro Outer* OuterHelper.must_take(self, Slot* slot)
  From your pointer to the `Inner*`, stamping the identity on the way.
 
  The stamp may be written any number of times and is safe on a linked outer, so this costs nothing to call twice.
- It is what makes the identity impossible to forget.
 
  @param outer : "a pointer to the outer"
 *>
@@ -140,7 +139,6 @@ macro Inner* OuterHelper.inner(self, Outer* outer)
 
  For an outer you allocated by hand.
  An outer made by `create` is stamped already.
- It is called `stamp` and not `init` because `init` is the name of your own hook.
 
  @param outer : "a pointer to the outer"
 *>
@@ -163,10 +161,9 @@ macro bool OuterHelper.linked(self, Outer* outer) => mtk::is_linked(mtk::to_inne
  Allocates the outer, initializes it, stamps it, and fills the Slot.
 
  Four steps in this order: allocate zeroed, call your `init(a)` hook if you declared one, stamp the inner, fill the Slot.
- Stamping after the hook is deliberate: if `init` fails the outer was never stamped, so a pointer that escaped a failed creation can never be mistaken for a live outer.
+ If `init` fails the outer was never stamped, so a pointer that escaped a failed creation can never be mistaken for a live outer.
  On a hook failure the allocation is freed and the fault is propagated unchanged.
  On an allocation failure the Slot is untouched and the fault is returned.
- It returns `void?` because its caller has a real decision to make.
 
  The toolkit reads and writes no field of your outer except the `Inner`.
  An outer that wants to keep its allocator stores this argument in its own field, under any name, in its own `init`.
@@ -195,10 +192,8 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
  Calls your `destroy(a)` hook if you declared one, empties the Slot, and frees the outer.
 
  A no-op on an empty Slot, so a `defer` registered before the acquisition is safe.
- It returns `void`, and that is not symmetry-breaking for its own sake: `release` is what you write in a `defer`, and C3 refuses a bare failable call there.
- The narrower reason is that a teardown fault has no recipient — `release` runs on a path that is usually already unwinding, nobody can act on "freeing failed", and the resource is gone either way.
+ It returns `void`, so it needs no `!` in a `defer`.
  A `destroy` fault therefore aborts in a safe build and is dropped in a fast one.
- A failing destructor is a defect, not an outcome.
 
  @param a : "the allocator the outer was created with"
  @param slot : "the Slot holding the outer; empty afterwards"
@@ -220,4 +215,5 @@ macro void OuterHelper.release(self, Allocator a, Slot* slot)
 //----------------------
 // Little-endian imports
 //----------------------
+import mtk;
 import std::core::mem::alloc;

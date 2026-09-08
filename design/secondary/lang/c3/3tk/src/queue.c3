@@ -2,12 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 //==============================================================================
-// The core, section 2 of 3: the intrusive queue.
-// No module block: `mtk.c3` carries the description of `module mtk`, and a
-// module has one description however many sections it is written in.
-// 3TK-63 merged `mtk::queue` into this module; the file did not move.
+// The intrusive queue, and a module of its own again. 3TK-63 merged it into
+// `mtk`; `3TK-pre-65` split it back out, because `c3c docgen` groups by module
+// and by nothing else, and one flat page of 59 declarations is not a page.
+//
+// `@guard_insert` is public and is not the user surface: a method cannot be
+// hidden, so it carries `// For internal usage.` and no `<* *>` block.
 //==============================================================================
-module mtk;
+<*
+ The intrusive queue and its walker.
+
+ One type to carry outers from one place to another, and one to walk what it holds.
+ It is a module of its own so that it is a page of its own.
+ A user reaches it through `import mtk;` and writes `InnerQueue` unqualified, as before.
+*>
+// [3tk: Part 4.2, Part 4.2a, Part 4.4a, Part 8]
+module mtk::queue;
 
 <*
  The intrusive queue. First-in first-out.
@@ -41,18 +51,10 @@ struct InnerQueueIterator
 
 // --- The guard -----------------------------------------------------------------
 
-<*
- The insert guard.
-
- A null inner is a defect.
- An outer already on any chain is a defect.
- Both are gone from a fast build.
-
- Public because C3 cannot hide a method — `@private` is ignored on method declarations.
- It is not part of the user surface.
- The containers call it; nothing else should.
-*>
-// [3tk: R6b, V4, Part 4.4, Part 8.6]
+// For internal usage.
+// The insert guard. A null inner is a defect, and so is an outer already on any
+// chain; both are gone from a fast build.
+// [3tk: R6b, V4, Part 4.4, Part 4.4a, Part 8.6]
 macro InnerQueue.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
@@ -191,3 +193,9 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
     other.tail = null;
     other.count = 0;
 }
+
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;

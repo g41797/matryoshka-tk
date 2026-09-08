@@ -16,7 +16,7 @@ import std::thread;
 import std::time;
 import std::atomic::types;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef FAN_OUT_FAILED;
 

@@ -12,9 +12,9 @@ import shc::outers;
 import shc::helpers;
 import shc::dispatch_outer_first;
 
-alias EVENT  = mtk::OF{Event};
-alias SENSOR = mtk::OF{Sensor};
-alias HOLDER = mtk::OF{Holder};
+alias EVENT  = helper::OF{Event};
+alias SENSOR = helper::OF{Sensor};
+alias HOLDER = helper::OF{Holder};
 
 faultdef DISPATCH_IDENTITY_FIRST_FAILED;
 

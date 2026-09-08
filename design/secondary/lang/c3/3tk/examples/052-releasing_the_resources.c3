@@ -14,7 +14,7 @@ import shc::outers;
 import shc::helpers;
 import std::core::mem::alloc;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef RELEASING_THE_RESOURCES_FAILED;
 

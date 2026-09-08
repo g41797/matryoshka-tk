@@ -15,7 +15,7 @@ import mtk;
 import std::io;
 
 struct Holder { int id; Inner inner; Allocator alloc; }
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 fn int main()
 {

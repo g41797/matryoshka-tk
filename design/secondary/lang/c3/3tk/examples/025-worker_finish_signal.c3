@@ -13,7 +13,7 @@ import shc::outers;
 import shc::helpers;
 import std::time;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef WORKER_FINISH_SIGNAL_FAILED;
 

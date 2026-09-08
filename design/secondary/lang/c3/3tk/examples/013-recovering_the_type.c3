@@ -11,7 +11,7 @@ import mtk;
 import shc::outers;
 import shc::helpers;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef RECOVERING_THE_TYPE_FAILED;
 

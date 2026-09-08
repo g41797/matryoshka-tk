@@ -12,7 +12,7 @@ import shc::outers;
 import shc::helpers;
 import std::time;
 
-alias EVENT  = mtk::OF{Event};
+alias EVENT  = helper::OF{Event};
 
 faultdef AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED;
 

@@ -13,7 +13,7 @@ import mtk::pool;
 import shc::outers;
 import shc::helpers;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef A_COMPOSITE_OUTER_GIVES_BACK_ITS_PARTS_FAILED;
 

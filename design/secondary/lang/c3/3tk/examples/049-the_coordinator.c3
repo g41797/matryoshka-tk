@@ -14,7 +14,7 @@ import shc::outers;
 import shc::helpers;
 import std::time;
 
-alias HOLDER = mtk::OF{Holder};
+alias HOLDER = helper::OF{Holder};
 
 faultdef THE_COORDINATOR_FAILED;
 
