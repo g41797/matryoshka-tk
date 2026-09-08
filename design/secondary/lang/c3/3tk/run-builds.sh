@@ -319,8 +319,8 @@ DECL = re.compile(r'^(fn|macro|struct|typedef|const|alias|enum|interface|faultde
 def block_head(lines, i):
     """The first content line of the `<* *>` block above the declaration at `i`.
 
-    None when there is no block. The `// [3tk: ...]` marks sit between the block
-    and the declaration and are stepped over, the same way `doc_blocks.py` does.
+    None when there is no block. Any `//` line between the block and the
+    declaration is stepped over, the same way `doc_blocks.py` does.
     """
     j = i - 1
     while j >= 0 and lines[j].startswith('//'):

@@ -17,7 +17,6 @@
  It is a module of its own so that it is a page of its own.
  A user reaches it through `import mtk;` and writes `InnerQueue` unqualified, as before.
 *>
-// [3tk: Part 4.2, Part 4.2a, Part 4.4a, Part 8]
 module mtk::queue;
 
 <*
@@ -29,8 +28,6 @@ module mtk::queue;
  Nothing in the queue can fail.
  The count is kept, so `len` is O(1).
 *>
-// [3tk: R2, R6b, R13, V2, Part 8, Part 8.1, Part 8.5, Part 8.10, Part 19.4]
-// [3tk: Part 8.1, Part 11.7]
 struct InnerQueue
 {
     Inner* head;
@@ -44,7 +41,6 @@ struct InnerQueue
  Exhausted when `next` returns null.
  Removing the current outer during a walk is not supported.
 *>
-// [3tk: V18, Part 6.5, Part 8.4]
 struct InnerQueueIterator
 {
     Inner* cur;
@@ -55,25 +51,21 @@ struct InnerQueueIterator
 <*
  True if the queue holds nothing.
 *>
-// [3tk: Part 8.2]
 fn bool InnerQueue.is_empty(&self) @inline => self.count == 0;
 
 <*
  How many outers the queue holds. O(1).
 *>
-// [3tk: Part 8.2, Part 11.7]
 fn usz InnerQueue.len(&self) @inline => self.count;
 
 <*
  A walker, taken from the queue.
 *>
-// [3tk: Part 8.4]
 fn InnerQueueIterator InnerQueue.iter(&self) @inline => { .cur = self.head };
 
 <*
  The next inner, or null when the walk is exhausted.
 *>
-// [3tk: Part 8.4]
 fn Inner* InnerQueueIterator.next(&self)
 {
     Inner* n = self.cur;
@@ -88,7 +80,6 @@ fn Inner* InnerQueueIterator.next(&self)
 
  There is no front insert.
 *>
-// [3tk: R15, Part 8.2]
 fn void InnerQueue.push_back(&self, Inner* inner)
 {
     self.@guard_insert(inner);
@@ -104,7 +95,6 @@ fn void InnerQueue.push_back(&self, Inner* inner)
  The Slot is empty afterwards.
  An empty Slot is a defect, not a no-op.
 *>
-// [3tk: V3, Part 8.2, Part 9.2, Part 12.5]
 fn void InnerQueue.push_back_slot(&self, Slot* s)
 {
     mtk::@check(s.is_full(), "push_back_slot from an empty Slot");
@@ -120,7 +110,6 @@ fn void InnerQueue.push_back_slot(&self, Slot* s)
  Null on an empty queue, which is an answer and not a fault.
  The returned outer's chain link is cleared.
 *>
-// [3tk: Part 8.2, Part 8.8, Part 19.4]
 fn Inner* InnerQueue.pop_front(&self)
 {
     Inner* inner = self.head;
@@ -144,7 +133,6 @@ fn Inner* InnerQueue.pop_front(&self)
 
  The queue is empty afterwards.
 *>
-// [3tk: Part 8.2]
 fn InnerQueue InnerQueue.take(&self) @inline
 {
     InnerQueue out = *self;
@@ -164,7 +152,6 @@ fn InnerQueue InnerQueue.take(&self) @inline
 
  @param other : "the queue to empty onto this one; empty afterwards"
 *>
-// [3tk: Part 8.2, Part 8.9]
 fn void InnerQueue.append_queue(&self, InnerQueue* other)
 {
     mtk::@check(other != null, "append_queue with a null queue");
@@ -197,7 +184,6 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
 *>
 // The insert guard. A null inner is a defect, and so is an outer already on any
 // chain; both are gone from a fast build.
-// [3tk: R6b, V4, Part 4.4, Part 4.4a, Part 8.6]
 macro InnerQueue.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");

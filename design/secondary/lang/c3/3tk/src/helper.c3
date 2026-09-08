@@ -17,7 +17,6 @@
  Nine members: four crossings, `inner`, `stamp`, `linked`, `create` and `release`.
  It is a module of its own so that it is a page of its own, and so that nothing else in the core reads as parameterized by `Outer`.
 *>
-// [3tk: RT-3, HS-1 to HS-10, Part 3, Part 4.2, Part 4.2a, Part 5.1]
 module mtk::helper <Outer>;
 
 <*
@@ -29,7 +28,6 @@ module mtk::helper <Outer>;
  Its only job is to give C3's method syntax a receiver, so that `MSG.create(mem, &s)` is a line you can write.
  The value is never read, as a number or as anything else.
 *>
-// [3tk: HS-1, Part 3.1]
 typedef OuterHelper = uptr;
 
 <*
@@ -38,7 +36,6 @@ typedef OuterHelper = uptr;
  Uppercase, because it is a `const`, and C3 enforces the pairing in both directions.
  An uppercase alias must alias a constant, so `alias MSG = helper::OF{Msg};` is the only spelling.
 *>
-// [3tk: HS-2, Part 3.1, A.5]
 const OuterHelper OF = {};
 
 // --- The four crossings ------------------------------------------------------
@@ -56,7 +53,6 @@ const OuterHelper OF = {};
 
  @param from : "a `Slot*` or an `Inner*`"
 *>
-// [3tk: HS-3, Part 3.2]
 macro Outer* OuterHelper.look(self, from)
 {
     $switch:
@@ -82,7 +78,6 @@ macro Outer* OuterHelper.look(self, from)
 
  @param from : "a `Slot*` or an `Inner*`"
 *>
-// [3tk: HS-4, Part 3.2]
 macro Outer* OuterHelper.must_look(self, from)
 {
     $switch:
@@ -107,7 +102,6 @@ macro Outer* OuterHelper.must_look(self, from)
 
  @param slot : "the Slot holding the outer; empty afterwards on success"
 *>
-// [3tk: HS-5, Part 3.2]
 macro Outer* OuterHelper.take(self, Slot* slot)
 {
     // [3tk: Q-8, Part 5.2]
@@ -123,7 +117,6 @@ macro Outer* OuterHelper.take(self, Slot* slot)
 
  @param slot : "the Slot holding the outer; empty afterwards"
 *>
-// [3tk: HS-6, Part 3.2]
 macro Outer* OuterHelper.must_take(self, Slot* slot)
 {
     // [3tk: Q-8, Part 5.2]
@@ -142,7 +135,6 @@ macro Outer* OuterHelper.must_take(self, Slot* slot)
 
  @param outer : "a pointer to the outer"
 *>
-// [3tk: HS-7, HR-5, Part 3.3, Part 5.1]
 macro Inner* OuterHelper.inner(self, Outer* outer)
 {
     inner::stamp(outer);
@@ -158,7 +150,6 @@ macro Inner* OuterHelper.inner(self, Outer* outer)
 
  @param outer : "a pointer to the outer"
 *>
-// [3tk: HS-8, Part 3.3, Part 5.1]
 macro void OuterHelper.stamp(self, Outer* outer) => inner::stamp(outer);
 
 <*
@@ -168,7 +159,6 @@ macro void OuterHelper.stamp(self, Outer* outer) => inner::stamp(outer);
 
  @param outer : "a pointer to the outer"
 *>
-// [3tk: HS-9, Part 3.3]
 macro bool OuterHelper.linked(self, Outer* outer) => inner::is_linked(inner::to_inner(outer));
 
 // --- Allocating and freeing --------------------------------------------------
@@ -187,7 +177,6 @@ macro bool OuterHelper.linked(self, Outer* outer) => inner::is_linked(inner::to_
  @param a : "the allocator; it is passed to your `init` hook and it is not stored"
  @param slot : "an empty Slot, filled on success"
 *>
-// [3tk: RT-5, Part 3.4, Part 9.2 rule 3]
 macro void? OuterHelper.create(self, Allocator a, Slot* slot)
 {
     // [3tk: Part 9.2 rule 3]
@@ -214,7 +203,6 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
  @param a : "the allocator the outer was created with"
  @param slot : "the Slot holding the outer; empty afterwards"
 *>
-// [3tk: RT-5, Part 3.4, Part 9.2, Part 13.1]
 macro void OuterHelper.release(self, Allocator a, Slot* slot)
 {
     if (slot.is_empty()) return;

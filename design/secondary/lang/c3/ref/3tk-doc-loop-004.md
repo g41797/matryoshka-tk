@@ -88,8 +88,6 @@ What it may not do.
 - **It writes no sentence that is not in the reference.** See *Moved, never
   composed*.
 - **It touches no contract, no signature and no body.** Doc comments only.
-- It does not delete a `// [3tk: ...]` mark. The marks are the decisions
-  file's index into the source.
 
 Output and verification.
 
@@ -144,8 +142,10 @@ Run doc-loop from-reference on pool.c3.
 - A sentence can be true, be in the reference, and still not belong in a
   source comment.
 - **Design argument and implementation notes go to
-  [3tk-decisions-007.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-007.md)**, and the `// [3tk: ...]` mark
-  points at them.
+  [3tk-decisions-007.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-007.md).**
+  The `// [3tk: ...]` marks that used to index the source into it are gone,
+  ruled and removed 2026-09-08 — nothing checked their content, only their
+  position.
 - That is what 3TK-31 was refused twice for.
 - A `<* *>` block holds the descriptor and the contracts. Nothing else.
 

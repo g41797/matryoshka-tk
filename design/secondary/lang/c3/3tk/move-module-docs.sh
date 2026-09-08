@@ -14,8 +14,7 @@
 # writes the reference in place. `roundtrip` writes neither: it copies both
 # sides to a temporary tree, moves in and back out, and compares bytes.
 #
-# The `// [3tk: ...]` mark below a block is never touched. Declarations are
-# never touched. The procedure is
+# Declarations are never touched. The procedure is
 # `design/secondary/lang/c3/ref/3tk-doc-loop-003.md`, *Moving a module
 # description*.
 

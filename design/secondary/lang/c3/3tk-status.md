@@ -93,9 +93,15 @@ estimate of 47 sites counted references, not qualified ones.
 them: a declaration is yours only if you have no other way to write it.** Part 1
 is `Inner`, `Slot`, the Slot's five operations, `Inner.outer_tid` and the five
 crossing methods; part 2 is the eight free crossings and the four chain
-primitives, each carrying `// For internal usage.`, its `[3tk:]` marks and
-nothing else; part 3 is `module mtk @private;` with `inner_offset`. **34
-declarations across `src/` carry the marker and no `<* *>` block.**
+primitives, each carrying `// For internal usage.` and nothing else; part 3 is
+`module mtk @private;` with `inner_offset`. **34 declarations across `src/`
+carry the marker and no `<* *>` block.**
+
+**The `[3tk: ...]` decision-citation marks are gone from `src/`**, ruled and
+removed 2026-09-08. Nothing checked their content — `run-builds.sh`,
+`move-module-docs.sh` and `doc_blocks.py` all stepped over any `//` line between
+a block and its declaration generically, not by parsing the mark — so removing
+them changed no script logic, only comments describing them.
 
 **Ruled by the owner, 2026-09-07, against the stage's own first reading:
 `Slot.to`, `Slot.must`, `Slot.move`, `Inner.to` and `Inner.as` stay in part 1**

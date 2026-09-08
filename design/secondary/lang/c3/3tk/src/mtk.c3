@@ -37,7 +37,6 @@
 
  We present you [[LOC]] lines of source.
 *>
-// [3tk: D1 to D16, R1 to R15, H0, H0b, H5 to H10, E6, V19, Part 17.1, Part 17.2]
 module mtk;
 import std::core::env;
 <*
@@ -54,7 +53,6 @@ const String VERSION = "0.0.1";
  `UNKNOWN_IDENTITY` is the one that is also a defect.
  It comes only from `Pool.get` and `Pool.get_wait`.
 *>
-// [3tk: D9, D15, A3, V13, Part 15.5, Part 19]
 faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN, UNKNOWN_IDENTITY;
 
 <*
@@ -65,7 +63,6 @@ faultdef CLOSED, TIMEOUT, NOT_AVAILABLE, NOT_CREATED, EMPTY, WOKEN, UNKNOWN_IDEN
  @param #cond : "the condition that must hold"
  @param $msg : "a compile-time message, named at the call site"
 *>
-// [3tk: D6, Q11, Part 17.2]
 macro @check(#cond, $msg)
 {
     $if env::COMPILER_SAFE_MODE:
@@ -78,5 +75,4 @@ macro @check(#cond, $msg)
 
  Guard an expensive check with it.
 *>
-// [3tk: D6]
 const bool CHECKED = env::COMPILER_SAFE_MODE;

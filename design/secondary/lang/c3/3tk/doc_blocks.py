@@ -80,10 +80,10 @@ def source_block(text):
     """The module's `<* *>` block: (name, first, last, lines).
 
     `first` and `last` are 0-based indices into `text.splitlines()` covering
-    `<*` through `*>`. The `// [3tk: ...]` marks sit between the block and the
-    `module` line and are stepped over, never touched. When the file has no
-    module block, `first` is the `module` line, `last` is `first - 1`, and
-    `lines` is empty — an insertion point.
+    `<*` through `*>`. Any `//` line between the block and the `module` line
+    is stepped over, never touched. When the file has no module block, `first`
+    is the `module` line, `last` is `first - 1`, and `lines` is empty — an
+    insertion point.
     """
     lines = text.splitlines()
     i = next((k for k, l in enumerate(lines) if re.match(r'^module ([\w:]+);', l)), None)

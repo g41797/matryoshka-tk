@@ -71,9 +71,6 @@
  It is a module of its own so that it is a page of its own.
  A user reaches it through `import mtk;` and writes `Inner` and `Slot` unqualified, as before.
 *>
-// [3tk: D1 to D16, R1 to R15, Part 4, Part 9, Part 10.1]
-// [3tk: R5, R6, R6b, D3, V12, Part 4.2, Part 4.4a, Part 5]
-// [3tk: D2, H0, Q2, E6, V19, Part 7, Part 7.1, Part 7.2, Part 7.4, Part 7.5, Part 15.5]
 module mtk::inner;
 
 <*
@@ -94,7 +91,6 @@ struct Inner
  Zero or one outer.
  A Slot starts empty.
 *>
-// [3tk: D5, Part 9.1, Part 9.2 rule 1, Part 9.2 rule 2]
 typedef Slot = Inner*;
 
 <*
@@ -104,7 +100,6 @@ typedef Slot = Inner*;
  It exists so that no user ever writes `inner.link.type`.
  The helper cannot do this one for you: a dispatch switch reads the identity before it knows the type.
 *>
-// [3tk: Part 3.5, Part 4.4]
 fn typeid Inner.outer_tid(&self) @inline => self.link.type;
 
 // --- The Slot's five operations ----------------------------------------------
@@ -112,13 +107,11 @@ fn typeid Inner.outer_tid(&self) @inline => self.link.type;
 <*
  Which of the two states it is in.
 *>
-// [3tk: Part 9.1, Part 9.9]
 fn bool Slot.is_empty(&self) @inline => !(Inner*)*self;
 
 <*
  Which of the two states it is in.
 *>
-// [3tk: Part 9.1, Part 9.9]
 fn bool Slot.is_full(&self) @inline => (Inner*)*self != null;
 
 <*
@@ -126,7 +119,6 @@ fn bool Slot.is_full(&self) @inline => (Inner*)*self != null;
 
  Null on an empty Slot.
 *>
-// [3tk: Part 9.9]
 fn Inner* Slot.peek(&self) @inline => (Inner*)*self;
 
 <*
@@ -134,7 +126,6 @@ fn Inner* Slot.peek(&self) @inline => (Inner*)*self;
 
  Null on an empty Slot.
 *>
-// [3tk: Part 9.2 rule 5, Part 9.9]
 fn Inner* Slot.take(&self) @inline
 {
     Inner* inner = (Inner*)*self;
@@ -150,7 +141,6 @@ fn Inner* Slot.take(&self) @inline
 
  @param inner : "the inner to place; must not be null"
 *>
-// [3tk: D6, Part 9.2 rule 1, Part 9.9]
 fn void Slot.fill(&self, Inner* inner) @inline
 {
     mtk::@check(inner != null, "Slot.fill with a null inner");
@@ -169,7 +159,6 @@ fn void Slot.fill(&self, Inner* inner) @inline
 
  @param $Type : "the outer type expected"
 *>
-// [3tk: H5, Part 6.2, Part 6.3, Part 7.2]
 macro Inner.to(&self, $Type) => from_inner((Inner*)self, $Type);
 
 <*
@@ -181,7 +170,6 @@ macro Inner.to(&self, $Type) => from_inner((Inner*)self, $Type);
  @param $Type : "the outer type asserted"
  @require is_mine((Inner*)self, $Type) : "the inner is not of this type"
 *>
-// [3tk: H7, Part 6.3, Part 7.2, Part 15.5]
 macro Inner.as(&self, $Type) => ($Type*)((char*)self - inner_offset($Type));
 
 <*
@@ -192,7 +180,6 @@ macro Inner.as(&self, $Type) => ($Type*)((char*)self - inner_offset($Type));
 
  @param $Type : "the outer type expected"
 *>
-// [3tk: Part 7.2]
 macro Slot.to(&self, $Type) => from_slot(self, $Type);
 
 <*
@@ -203,7 +190,6 @@ macro Slot.to(&self, $Type) => from_slot(self, $Type);
 
  @param $Type : "the outer type asserted"
 *>
-// [3tk: Part 7.2, Part 15.5]
 macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
 
 <*
@@ -214,7 +200,6 @@ macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
 
  @param $Type : "the outer type expected"
 *>
-// [3tk: H6, Part 7.2, Part 9.2 rule 4]
 macro Slot.move(&self, $Type) => move_from_slot(self, $Type);
 
 
@@ -235,7 +220,6 @@ macro Slot.move(&self, $Type) => move_from_slot(self, $Type);
 <*
  For internal usage.
 *>
-// [3tk: Part 5.5, Part 7.2]
 macro bool is_mine(Inner* inner, $Type) => inner != null && inner.link.type == $Type::typeid;
 
 <*
@@ -243,7 +227,6 @@ macro bool is_mine(Inner* inner, $Type) => inner != null && inner.link.type == $
 
  @require $defined($Typeof(*outer)::members) : "not a struct that embeds an Inner"
 *>
-// [3tk: H8, HR-5, Part 5.1, Part 5.4, Part 5.5, Part 7.2]
 // The identity and the chain link share one field and `.type` is not
 // assignable, so writing the identity rebuilds the whole `any`. The first
 // sub-expression is `inner.link.ptr` and NOT `null`: preserving the chain link
@@ -261,7 +244,6 @@ macro void stamp(outer)
 <*
  For internal usage.
 *>
-// [3tk: HR-5, Q-8, Part 5.1, Part 5.2]
 // The safe-build identity check, in one place so that all six sites carry the
 // same tolerance and the same shape. Null is not a violation: an empty Slot
 // and a null `Inner*` are both answers a crossing is allowed to give. An inner
@@ -283,14 +265,12 @@ macro check_stamped(Inner* inner, $msg)
 
  @require $defined($Typeof(*outer)::members) : "not a struct that embeds an Inner"
 *>
-// [3tk: H5, Part 7.2]
 macro Inner* to_inner(outer)
     => outer ? (Inner*)((char*)outer + inner_offset($Typeof(*outer))) : null;
 
 <*
  For internal usage.
 *>
-// [3tk: H5, Part 6.2, Part 6.3]
 macro from_inner(Inner* inner, $Type)
 {
     if (!is_mine(inner, $Type)) return ($Type*)null;
@@ -302,25 +282,21 @@ macro from_inner(Inner* inner, $Type)
 
  @require is_mine(inner, $Type) : "the inner is not of this type"
 *>
-// [3tk: H7, Part 5.5, Part 6.3, Part 15.5]
 macro must_from_inner(Inner* inner, $Type) => ($Type*)((char*)inner - inner_offset($Type));
 
 <*
  For internal usage.
 *>
-// [3tk: Part 7.2]
 macro from_slot(Slot* s, $Type) => from_inner(s.peek(), $Type);
 
 <*
  For internal usage.
 *>
-// [3tk: Part 7.2]
 macro must_from_slot(Slot* s, $Type) => must_from_inner(s.peek(), $Type);
 
 <*
  For internal usage.
 *>
-// [3tk: H6, Part 7.2, Part 9.2 rule 4]
 macro move_from_slot(Slot* s, $Type)
 {
     Inner* inner = s.peek();
@@ -332,26 +308,22 @@ macro move_from_slot(Slot* s, $Type)
 <*
  For internal usage.
 *>
-// [3tk: R6b, Part 4.4, Part 4.4a]
 fn void Inner.repoint_to(&self, Inner* to) @inline
     => self.link = any_make(to, self.link.type);
 
 <*
  For internal usage.
 *>
-// [3tk: R6b, Part 4.4, Part 4.4a]
 fn Inner* Inner.points_to(&self) @inline => (Inner*)self.link.ptr;
 
 <*
  For internal usage.
 *>
-// [3tk: R6b, D12, V4, V5, Part 4.3, Part 8.6, Part 8.7]
 fn bool is_linked(Inner* inner) @inline => inner != null && inner.points_to() != null;
 
 <*
  For internal usage.
 *>
-// [3tk: Part 4.3, Part 5.4, Part 8.8]
 fn void reset(Inner* inner) @inline
 {
     if (!inner) return;
@@ -371,7 +343,6 @@ module mtk::inner @private;
 <*
  For internal usage.
 *>
-// [3tk: Part 4.3, Part 4.4, Part 7.4]
 macro usz inner_offset($Type)
 {
     var $off = -1;

@@ -38,7 +38,6 @@
 
  The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
 *>
-// [3tk: R15, Part 11.7, Part 11.8, Part 11.9, Part 11.10, Part 12, Part 17.2, Part 19.2]
 module mtk::pool;
 
 <*
@@ -50,7 +49,6 @@ module mtk::pool;
  A hook does not call back into the pool.
  A hook does not block and does not wait.
 *>
-// [3tk: Part 12.1, Part 12.3]
 interface PoolHooks
 {
     <*
@@ -104,7 +102,6 @@ interface PoolHooks
 <*
  The three modes of a plain get.
 *>
-// [3tk: Part 11.7]
 enum GetMode
 {
     AVAILABLE_OR_NEW,
@@ -121,14 +118,12 @@ enum GetMode
  The identity set is fixed at creation.
  It is not empty, and it has no duplicate. Both are checked.
 *>
-// [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
 typedef Pool = void;
 
 
 <*
  The identity of a `Pool` as an outer.
 *>
-// [3tk: H0, Part 11.1]
 const typeid TYPE = _Pool::typeid;
 
 <*
@@ -161,7 +156,6 @@ macro Pool* of(Inner* inner) => (Pool*)POOL.look(inner);
  @param tags : "the identities this pool holds. Not empty, and no duplicates — both checked"
  @param hooks : "the policy"
 *>
-// [3tk: D3, Part 3.1, Part 11.7, Part 12, Part 12.1]
 fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
 {
     // [3tk: Part 11.7]
@@ -214,7 +208,6 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
  The usual way to get quiet is to join the threads that touch the pool.
  Releasing a pool that is not quiet aborts in every build mode.
 *>
-// [3tk: D6, Part 11.12, Part 13.1]
 fn void Pool.release(&pool)
 {
     _Pool* self = (_Pool*)pool;
@@ -266,7 +259,6 @@ fn void Pool.release(&pool)
  @param slot : "an empty Slot; filled on success"
  @return? mtk::CLOSED, mtk::NOT_AVAILABLE, mtk::NOT_CREATED, mtk::UNKNOWN_IDENTITY
 *>
-// [3tk: A3, Part 11.7, Part 12.3, Part 19.2, Part 19.3]
 fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
 {
     _Pool* self = (_Pool*)pool;
@@ -345,7 +337,6 @@ fn void? Pool.get(&pool, typeid want, GetMode mode, Slot* slot)
  @param timeout : "how long to wait"
  @return? mtk::CLOSED, mtk::TIMEOUT, mtk::UNKNOWN_IDENTITY
 *>
-// [3tk: A3, D7, Part 2.4, Part 2.5, Part 2.6, Part 11.9, Part 19.2]
 fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
 {
     _Pool* self = (_Pool*)pool;
@@ -413,7 +404,6 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
 
  @param slot : "a full Slot; cleared if the pool took the outer"
 *>
-// [3tk: P1, V11, Part 2.10, Part 9.4, Part 11.8, Part 12.2, Part 12.3, Part 19.2]
 fn void Pool.put(&pool, Slot* slot)
 {
     _Pool* self = (_Pool*)pool;
@@ -510,7 +500,6 @@ fn void _Pool.take_back_inner(&self, Inner* inner)
  Called once by `close`, and possibly once more with stragglers from a concurrent `put`.
  Closing does not make a pool quiet.
 *>
-// [3tk: R12, Part 11.8, Part 11.12, Part 12.2, Part 19.2]
 fn void Pool.close(&pool)
 {
     _Pool* self = (_Pool*)pool;
@@ -554,7 +543,6 @@ fn bool Pool.is_closed(&pool) => ((_Pool*)pool).@closed_fast();
  The same predicate `release()` asserts, read under the mutex. The usual way
  to reach this state is to join the threads that touch the pool.
 *>
-// [3tk: Part 11.12]
 fn bool Pool.is_quiet(&pool)
 {
     _Pool* self = (_Pool*)pool;
@@ -568,7 +556,6 @@ fn bool Pool.is_quiet(&pool)
 
  A hint. It is stale by the time you read it.
 *>
-// [3tk: Part 12.4]
 fn usz Pool.count_of(&pool, typeid t)
 {
     _Pool* self = (_Pool*)pool;
@@ -598,7 +585,6 @@ fn usz Pool.count_of(&pool, typeid t)
 // and the reason is defect surfacing: the outer just given back is on top, so a
 // caller still writing through a stale pointer collides with the next owner at
 // once instead of much later. No order is promised.
-// [3tk: R11, Part 4.4a, Part 11.7, Part 11.10, Part 12.4]
 struct PoolBucket
 {
     typeid     tag;
@@ -610,14 +596,12 @@ struct PoolBucket
 *>
 // Reads the closed flag before taking the lock. A hint: every caller that gets
 // false re-reads the flag under the lock. `is_closed` is the one to call.
-// [3tk: D16, Part 15.4, Part 4.4a]
 macro bool _Pool.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
 <*
  For internal usage.
 *>
 // The bucket for an identity, or null. Called under the lock.
-// [3tk: A3, P2, Part 11.7, Part 19.3]
 fn PoolBucket* _Pool.bucket_for(&self, typeid t)
 {
     foreach (&b : self._buckets) if (b.tag == t) return b;
@@ -639,7 +623,6 @@ fn PoolBucket* _Pool.bucket_for(&self, typeid t)
 // `release` does not call it. Part 11.12 requires the pool to be closed before
 // it is released, and a release that closed first would pass its own check —
 // so the check comes first and nothing else runs when it fails.
-// [3tk: R12, Part 11.12, Part 15.4]
 fn void _Pool._close(&self, InnerQueue* out)
 {
     if (self._closed) return;
@@ -660,7 +643,6 @@ fn void _Pool._close(&self, InnerQueue* out)
 *>
 // The real fields, behind the opaque `Pool`. Every public method casts on its
 // first line and works on this from there.
-// [3tk: V6, Part 11.1, Part 11.2, Part 11.7]
 struct _Pool @private
 {
     Inner inner;
@@ -696,8 +678,6 @@ struct _Pool @private
 // which outer comes back, and nothing in the stack can fail. Every chain ends
 // at an inner pointing at itself, never at null. The count is kept, so `len` is
 // O(1); there is no tail, so flattening the stack is O(n).
-// [3tk: P6, R2, R11, R13, R14, V2, Part 4.4a, Part 8, Part 8.1, Part 8.4, Part 11.7, Part 11.10, Part 19.4]
-// [3tk: R12, Part 8.1, Part 12.4]
 struct InnerStack  @local
 {
     Inner* top;
@@ -709,7 +689,6 @@ struct InnerStack  @local
 *>
 // The insert guard. A null inner is a defect, and so is an outer already on any
 // chain; both are gone from a fast build.
-// [3tk: R6b, Part 4.4, Part 4.4a, Part 8.6]
 macro InnerStack.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
@@ -725,14 +704,12 @@ macro InnerStack.@guard_insert(&self, Inner* inner)
  For internal usage.
 *>
 // True if the stack holds nothing.
-// [3tk: Part 8.2]
 fn bool InnerStack.is_empty(&self) @inline => self.count == 0;
 
 <*
  For internal usage.
 *>
 // How many outers the stack holds. O(1).
-// [3tk: Part 8.2, Part 11.7]
 fn usz InnerStack.len(&self) @inline => self.count;
 
 // --- Adding --------------------------------------------------------------------
@@ -741,7 +718,6 @@ fn usz InnerStack.len(&self) @inline => self.count;
  For internal usage.
 *>
 // Adds on top. There is no Slot-shaped insert.
-// [3tk: P6, R13, Part 8.2]
 fn void InnerStack.push(&self, Inner* inner)
 {
     self.@guard_insert(inner);
@@ -757,7 +733,6 @@ fn void InnerStack.push(&self, Inner* inner)
 *>
 // Takes the outer on top. Null on an empty stack, and the returned outer's
 // chain link is cleared.
-// [3tk: Part 8.2, Part 8.8, Part 19.4]
 fn Inner* InnerStack.pop(&self)
 {
     Inner* inner = self.top;

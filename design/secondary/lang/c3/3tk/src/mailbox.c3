@@ -24,7 +24,6 @@
  The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
  The fields named with a leading underscore are internal. Do not read them.
 *>
-// [3tk: D1, F2, Part 11.1, Part 11.3, Part 11.4, Part 11.5, Part 11.6, Part 17.2, Part 19.1]
 module mtk::mailbox;
 
 <*
@@ -35,13 +34,11 @@ module mtk::mailbox;
  One for out-of-band outers.
  One for ordinary outers.
 *>
-// [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 typedef Mailbox = void;
 
 <*
  The identity of a `Mailbox` as an outer.
 *>
-// [3tk: H0, Part 11.1]
 const typeid TYPE = _Mbox::typeid;
 
 // Part 4.6: `_Mbox` is an Outer, and the mailbox is an ordinary client of the
@@ -74,7 +71,6 @@ macro Mailbox* of(Inner* inner) => (Mailbox*)MBOX.look(inner);
 
  @param a : "the allocator the mailbox keeps for life"
 *>
-// [3tk: D3, Part 3.1]
 fn Mailbox*? create(Allocator a)
 {
     _Mbox* mb = alloc::new_try(a, _Mbox)!;
@@ -102,7 +98,6 @@ fn Mailbox*? create(Allocator a)
  The usual way to get quiet is to join the threads that touch the mailbox.
  Releasing a mailbox that is not quiet aborts in every build mode.
 *>
-// [3tk: D6, Part 11.12, Part 13.1]
 fn void Mailbox.release(&mbox)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -142,7 +137,6 @@ fn void Mailbox.release(&mbox)
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
  @return? mtk::CLOSED
 *>
-// [3tk: Part 9.3, Part 11.3, Part 11.6, Part 19.1]
 fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
 
 <*
@@ -154,7 +148,6 @@ fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
  @param slot : "a full Slot; cleared on success, untouched on CLOSED"
  @return? mtk::CLOSED
 *>
-// [3tk: D14, R7, Part 11.3, Part 11.4]
 fn void? Mailbox.send_oob(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, true);
 
 fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
@@ -185,7 +178,6 @@ fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
  @param slot : "an empty Slot; filled on success"
  @return? mtk::CLOSED, mtk::EMPTY
 *>
-// [3tk: D13, Part 19.1]
 fn void? Mailbox.poll(&mbox, Slot* slot)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -219,7 +211,6 @@ fn void? Mailbox.poll(&mbox, Slot* slot)
  @param timeout : "how long to wait"
  @return? mtk::CLOSED, mtk::TIMEOUT, mtk::WOKEN
 *>
-// [3tk: D7, D9, Part 2.4, Part 2.5, Part 2.6, Part 2.9, Part 15.3, Part 19.1]
 fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -278,7 +269,6 @@ fn void? Mailbox.receive(&mbox, Slot* slot, Duration timeout)
  @param out : "an empty queue; every queued outer is moved onto it, in receive order"
  @return? mtk::CLOSED
 *>
-// [3tk: R8, Part 11.3, Part 11.6, Part 19.1]
 fn void? Mailbox.receive_all(&mbox, InnerQueue* out)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -308,7 +298,6 @@ fn void? Mailbox.receive_all(&mbox, InnerQueue* out)
 
  @return? mtk::CLOSED
 *>
-// [3tk: Part 11.5]
 fn void? Mailbox.wake_all(&mbox)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -337,7 +326,6 @@ fn void? Mailbox.wake_all(&mbox)
 
  @param out : "an empty queue; the remainder is moved onto it, in receive order"
 *>
-// [3tk: R6b, R8, Part 11.6, Part 11.12, Part 19.1]
 fn void Mailbox.close(&mbox, InnerQueue* out)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -370,7 +358,6 @@ fn bool Mailbox.is_closed(&mbox) => ((_Mbox*)mbox).@closed_fast();
  The same predicate `release()` asserts, read under the mutex. The usual way
  to reach this state is to join the threads that touch the mailbox.
 *>
-// [3tk: Part 11.12]
 fn bool Mailbox.is_quiet(&mbox)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -384,7 +371,6 @@ fn bool Mailbox.is_quiet(&mbox)
 
  A hint. It is stale by the time you read it.
 *>
-// [3tk: Part 12.4]
 fn usz Mailbox.len(&mbox)
 {
     _Mbox* self = (_Mbox*)mbox;
@@ -409,7 +395,6 @@ fn usz Mailbox.len(&mbox)
 *>
 // Reads the closed flag before taking the lock. A hint: every caller that gets
 // false re-reads the flag under the lock. `is_closed` is the one to call.
-// [3tk: D16, Part 15.4, Part 4.4a]
 macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 
 <*
@@ -417,7 +402,6 @@ macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
 *>
 // Puts the outer on the ordinary queue, or ahead of every ordinary outer.
 // O(1) in every build mode.
-// [3tk: R7, Part 11.3]
 fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
 {
     if (oob) { self._oob.push_back(inner); } else { self._regular.push_back(inner); }
@@ -428,7 +412,6 @@ fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
 *>
 // Takes the next outer.
 // Out-of-band first, then ordinary, first-in first-out within each.
-// [3tk: R7, R9, Part 11.3]
 fn Inner* _Mbox.dequeue(&self)
 {
     Inner* inner = self._oob.pop_front();
@@ -453,7 +436,6 @@ fn bool _Mbox.has_queued(&self) @inline
 // The fast-path store is RELEASE and pairs with the ACQUIRE load in
 // `@closed_fast`: a thread that reads the flag set has also seen every write
 // made before the store, so the fast path can refuse without the mutex.
-// [3tk: Part 11.12, Part 15.4]
 fn void _Mbox._close(&self, InnerQueue* out)
 {
     if (self._closed) return;
@@ -472,7 +454,6 @@ fn void _Mbox._close(&self, InnerQueue* out)
 *>
 // The real fields, behind the opaque `Mailbox`. Every public method casts on
 // its first line and works on this from there.
-// [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]
 struct _Mbox @private
 {
     Inner inner;
