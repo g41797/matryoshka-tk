@@ -51,15 +51,15 @@ fn void? get_one_of_each_then_close(Allocator a)
 
     Slot s;
     p.get(Event::typeid, AVAILABLE_OR_NEW, &s)!;
-    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Event) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, EVENT.look(&s) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.get(Sensor::typeid, AVAILABLE_OR_NEW, &s)!;
-    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Sensor) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, SENSOR.look(&s) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
-    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, s.to(Holder) != null, "on_get must fill the Slot with the identity asked for")!;
+    shc::helpers::expect(DISPATCH_IDENTITY_FIRST_FAILED, HOLDER.look(&s) != null, "on_get must fill the Slot with the identity asked for")!;
     p.put(&s);
 
     p.close();          // on_close dispatches the three kept outers through free_outer

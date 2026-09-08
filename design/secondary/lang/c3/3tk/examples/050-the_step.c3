@@ -29,7 +29,7 @@ fn void? StepMaster.seed_the_work(&self)
         Slot s;
         defer EVENT.release(self.alloc, &s);
         EVENT.create(self.alloc, &s)!;
-        s.must(Event).code = i;
+        EVENT.must_look(&s).code = i;
         self.mbx.send(&s)!;
     }
 }
@@ -50,7 +50,7 @@ fn void? one_step_one_name(Allocator a, Mailbox* mb)
         Slot s;
         s.fill(inner);
         defer EVENT.release(a, &s);
-        total += s.must(Event).code;
+        total += EVENT.must_look(&s).code;
     }
     shc::helpers::expect(THE_STEP_FAILED, total == 1 + 2 + 3 + 4, "seed_the_work sent all four, in order")!;
 }

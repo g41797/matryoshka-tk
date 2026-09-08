@@ -19,7 +19,7 @@ fn void? embed_one_inner_anywhere(Allocator a)
     defer SENSOR.release(a, &s);
     SENSOR.create(a, &s)!;
 
-    Sensor* found = s.to(Sensor);
+    Sensor* found = SENSOR.look(&s);
     shc::helpers::expect(EMBEDDING_THE_INNER_FAILED, found != null, "Sensor did not cross with its Inner off offset zero")!;
     found.reading = 1;
 }

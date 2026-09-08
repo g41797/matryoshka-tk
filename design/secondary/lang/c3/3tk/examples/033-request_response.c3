@@ -31,7 +31,7 @@ fn int answer_one_request(void* arg)
     RRArgs* a = (RRArgs*)arg;
     Slot s;
     if (catch f = a.req_mbx.receive(&s, time::ms(2000))) return 0;
-    Event* e = s.must(Event);
+    Event* e = EVENT.must_look(&s);
     e.code = e.code * 2;
     if (catch f = a.resp_mbx.send(&s)) EVENT.release(a.alloc, &s);
     return 0;
@@ -45,7 +45,7 @@ fn void? one_request_one_response(Allocator a, Mailbox* req_mbx, Mailbox* resp_m
 
     Slot s;
     EVENT.create(a, &s)!;
-    s.must(Event).code = 21;
+    EVENT.must_look(&s).code = 21;
     req_mbx.send(&s)!;
 
     Slot reply;
@@ -54,5 +54,5 @@ fn void? one_request_one_response(Allocator a, Mailbox* req_mbx, Mailbox* resp_m
 
     worker.join()!!;
 
-    shc::helpers::expect(REQUEST_RESPONSE_FAILED, reply.must(Event).code == 42, "the response carries the doubled request")!;
+    shc::helpers::expect(REQUEST_RESPONSE_FAILED, EVENT.must_look(&reply).code == 42, "the response carries the doubled request")!;
 }

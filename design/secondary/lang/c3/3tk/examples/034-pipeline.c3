@@ -36,7 +36,7 @@ fn int double_and_forward(void* arg)
     {
         Slot s;
         if (catch f = a.in_mbx.receive(&s, time::ms(2000))) return 0;
-        Event* e = s.must(Event);
+        Event* e = EVENT.must_look(&s);
         if (e.code == END_OF_STREAM)
         {
             if (catch f = a.out_mbx.send(&s)) EVENT.release(a.alloc, &s);
@@ -57,12 +57,12 @@ fn void? values_cross_one_stage_doubled(Allocator a, Mailbox* in_mbx, Mailbox* o
     {
         Slot s;
         EVENT.create(a, &s)!;
-        s.must(Event).code = i;
+        EVENT.must_look(&s).code = i;
         in_mbx.send(&s)!;
     }
     Slot marker;
     EVENT.create(a, &marker)!;
-    marker.must(Event).code = END_OF_STREAM;
+    EVENT.must_look(&marker).code = END_OF_STREAM;
     in_mbx.send(&marker)!;
 
     int total = 0;
@@ -72,7 +72,7 @@ fn void? values_cross_one_stage_doubled(Allocator a, Mailbox* in_mbx, Mailbox* o
         Slot s;
         defer EVENT.release(a, &s);
         out_mbx.receive(&s, time::ms(2000))!;
-        Event* e = s.must(Event);
+        Event* e = EVENT.must_look(&s);
         if (e.code == END_OF_STREAM) { saw_marker = true; continue; }
         total += e.code;
     }

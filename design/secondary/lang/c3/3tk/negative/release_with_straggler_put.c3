@@ -73,11 +73,11 @@ fn int main()
     typeid[1] tags = { Msg::typeid };
     Pool* p = pool::create(mem, &tags, &hooks)!!;
 
-    mtk::stamp(&one);
+    inner::stamp(&one);
 
     Giving g;
     g.p = p;
-    g.outer = mtk::to_inner(&one);
+    g.outer = inner::to_inner(&one);
 
     Thread t;
     t.create(&giver, &g)!!;

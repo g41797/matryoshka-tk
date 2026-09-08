@@ -58,7 +58,7 @@ alias MBOX @private = helper::OF{_Mbox};
 <*
  From a `Mailbox*` to its `Inner*`. Cannot fail.
 *>
-macro Inner* to_inner(Mailbox* p) => mtk::to_inner((_Mbox*)p);
+macro Inner* to_inner(Mailbox* p) => inner::to_inner((_Mbox*)p);
 
 <*
  The checking crossing back. Null when the inner names another type.
@@ -131,35 +131,6 @@ fn void Mailbox.release(&mbox)
     alloc::free(a, self);
 }
 
-// For internal usage.
-// Reads the closed flag before taking the lock. A hint: every caller that gets
-// false re-reads the flag under the lock. `is_closed` is the one to call.
-// [3tk: D16, Part 15.4, Part 4.4a]
-macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
-
-// For internal usage.
-// Puts the outer on the ordinary queue, or ahead of every ordinary outer.
-// O(1) in every build mode.
-// [3tk: R7, Part 11.3]
-fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
-{
-    if (oob) { self._oob.push_back(inner); } else { self._regular.push_back(inner); }
-}
-
-// For internal usage.
-// Takes the next outer.
-// Out-of-band first, then ordinary, first-in first-out within each.
-// [3tk: R7, R9, Part 11.3]
-fn Inner* _Mbox.dequeue(&self)
-{
-    Inner* inner = self._oob.pop_front();
-    return inner ? inner : self._regular.pop_front();
-}
-
-// For internal usage.
-// True if anything is queued at all. Reads both queues.
-fn bool _Mbox.has_queued(&self) @inline
-    => !self._oob.is_empty() || !self._regular.is_empty();
 
 <*
  Puts the outer on the ordinary queue.
@@ -387,28 +358,6 @@ fn void Mailbox.close(&mbox, InnerQueue* out)
     self._close(out);
 }
 
-// For internal usage.
-// The state change, with the mutex already held, and nothing else.
-// The only writer of `_closed`. It never takes or releases the mutex, calls no
-// hook, destroys nothing and frees nothing. Calling it twice is safe, and the
-// second call transfers nothing.
-//
-// The fast-path store is RELEASE and pairs with the ACQUIRE load in
-// `@closed_fast`: a thread that reads the flag set has also seen every write
-// made before the store, so the fast path can refuse without the mutex.
-// [3tk: Part 11.12, Part 15.4]
-fn void _Mbox._close(&self, InnerQueue* out)
-{
-    if (self._closed) return;
-
-    self._closed = true;
-    self._closed_fast.store(true, RELEASE);
-
-    out.append_queue(&self._oob);
-    out.append_queue(&self._regular);
-
-    self._cv.broadcast();
-}
 
 <*
  True when it is closed.
@@ -447,11 +396,80 @@ fn usz Mailbox.len(&mbox)
 }
 
 //==============================================================================
-// The real fields, behind the opaque `Mailbox` above. Public before private,
-// as in `pool.c3`: everything above this line is the surface.
+// For internal usage - everything below this line.
+//
+// `_Mbox` is `@private` and its methods cannot be: C3 ignores `@private` and
+// `@local` on a method declaration. So the whole of the real mailbox is public
+// to the compiler and internal by position, and the banner is where that is
+// said. Every public method above casts to `_Mbox*` on its first line.
 //==============================================================================
 
-// For internal usage.
+<*
+ For internal usage.
+*>
+// Reads the closed flag before taking the lock. A hint: every caller that gets
+// false re-reads the flag under the lock. `is_closed` is the one to call.
+// [3tk: D16, Part 15.4, Part 4.4a]
+macro bool _Mbox.@closed_fast(&self) => self._closed_fast.load(ACQUIRE);
+
+<*
+ For internal usage.
+*>
+// Puts the outer on the ordinary queue, or ahead of every ordinary outer.
+// O(1) in every build mode.
+// [3tk: R7, Part 11.3]
+fn void _Mbox.enqueue(&self, Inner* inner, bool oob)
+{
+    if (oob) { self._oob.push_back(inner); } else { self._regular.push_back(inner); }
+}
+
+<*
+ For internal usage.
+*>
+// Takes the next outer.
+// Out-of-band first, then ordinary, first-in first-out within each.
+// [3tk: R7, R9, Part 11.3]
+fn Inner* _Mbox.dequeue(&self)
+{
+    Inner* inner = self._oob.pop_front();
+    return inner ? inner : self._regular.pop_front();
+}
+
+<*
+ For internal usage.
+*>
+// True if anything is queued at all. Reads both queues.
+fn bool _Mbox.has_queued(&self) @inline
+    => !self._oob.is_empty() || !self._regular.is_empty();
+
+<*
+ For internal usage.
+*>
+// The state change, with the mutex already held, and nothing else.
+// The only writer of `_closed`. It never takes or releases the mutex, calls no
+// hook, destroys nothing and frees nothing. Calling it twice is safe, and the
+// second call transfers nothing.
+//
+// The fast-path store is RELEASE and pairs with the ACQUIRE load in
+// `@closed_fast`: a thread that reads the flag set has also seen every write
+// made before the store, so the fast path can refuse without the mutex.
+// [3tk: Part 11.12, Part 15.4]
+fn void _Mbox._close(&self, InnerQueue* out)
+{
+    if (self._closed) return;
+
+    self._closed = true;
+    self._closed_fast.store(true, RELEASE);
+
+    out.append_queue(&self._oob);
+    out.append_queue(&self._regular);
+
+    self._cv.broadcast();
+}
+
+<*
+ For internal usage.
+*>
 // The real fields, behind the opaque `Mailbox`. Every public method casts on
 // its first line and works on this from there.
 // [3tk: D1, D3, D16, R7, R9, V6, V7, Part 4.4, Part 11.1, Part 11.2, Part 11.3, Part 11.5, Part 15.3, Part 15.4]

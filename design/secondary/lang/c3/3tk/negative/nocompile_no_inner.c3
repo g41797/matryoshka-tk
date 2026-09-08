@@ -13,4 +13,4 @@ import mtk;
 
 struct NotAnItem { int a; int b; }
 
-fn int main() { NotAnItem n; mtk::stamp(&n); return 0; }
+fn int main() { NotAnItem n; inner::stamp(&n); return 0; }

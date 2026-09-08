@@ -85,7 +85,7 @@ fn void? demonstrate_transfer_empties_slot(Allocator a)
     Slot to_move;
     defer HOLDER.release(a, &to_move);
     HOLDER.create(a, &to_move)!;
-    Holder* moved = to_move.move(Holder);
+    Holder* moved = HOLDER.take(&to_move);
     shc::helpers::expect(TRANSFER_FAILED, to_move.is_empty(), "move left the Slot full")!;
     shc::helpers::expect(TRANSFER_FAILED, moved != null, "move gave back null")!;
     alloc::free(a, moved);

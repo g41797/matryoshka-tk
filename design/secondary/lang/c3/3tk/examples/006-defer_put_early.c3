@@ -43,7 +43,7 @@ fn void? get_from_a_pool(Pool* p)
     Slot s;
     defer p.put(&s);                                    // nothing to do if the get failed
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
-    s.must(Holder).id = 1;
+    HOLDER.must_look(&s).id = 1;
 }
 
 fn void? defer_put_goes_before_the_get(Allocator a)

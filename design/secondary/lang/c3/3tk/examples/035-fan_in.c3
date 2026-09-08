@@ -30,7 +30,7 @@ fn int send_event(void* arg)
     SenderArgs* args = (SenderArgs*)arg;
     Slot s;
     if (catch f = EVENT.create(args.a, &s)) return 0;
-    s.must(Event).code = args.code;
+    EVENT.must_look(&s).code = args.code;
     if (catch f = args.mbx.send(&s)) EVENT.release(args.a, &s);
     return 0;
 }
@@ -68,8 +68,8 @@ fn void? three_senders_one_mailbox(Allocator a, Mailbox* mbx)
     {
         Slot s;
         s.fill(inner);
-        if (s.to(Event))  { EVENT.release(a, &s);  events++;  continue; }
-        if (s.to(Holder)) { HOLDER.release(a, &s); holders++; continue; }
+        if (EVENT.look(&s))  { EVENT.release(a, &s);  events++;  continue; }
+        if (HOLDER.look(&s)) { HOLDER.release(a, &s); holders++; continue; }
         unreachable("fan-in met an identity it was not written for");
     }
 

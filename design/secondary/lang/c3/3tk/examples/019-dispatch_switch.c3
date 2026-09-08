@@ -21,11 +21,11 @@ fn void touch_by_switch(Inner* inner)
     switch (inner.link.type)
     {
         case Event::typeid:
-            inner.as(Event).code++;
+            EVENT.must_look(inner).code++;
         case Sensor::typeid:
-            inner.as(Sensor).reading++;
+            SENSOR.must_look(inner).reading++;
         case Holder::typeid:
-            inner.as(Holder).id++;
+            HOLDER.must_look(inner).id++;
         default:
             unreachable("closed set: every identity is a prong");
     }
@@ -37,16 +37,16 @@ fn void? dispatch_by_switch(Allocator a)
 
     EVENT.create(a, &s)!;
     touch_by_switch(s.peek());
-    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Event).code == 1, "the Event prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, EVENT.must_look(&s).code == 1, "the Event prong must run")!;
     EVENT.release(a, &s);
 
     SENSOR.create(a, &s)!;
     touch_by_switch(s.peek());
-    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Sensor).reading == 1, "the Sensor prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, SENSOR.must_look(&s).reading == 1, "the Sensor prong must run")!;
     SENSOR.release(a, &s);
 
     HOLDER.create(a, &s)!;
     touch_by_switch(s.peek());
-    shc::helpers::expect(DISPATCH_SWITCH_FAILED, s.must(Holder).id == 1, "the Holder prong must run")!;
+    shc::helpers::expect(DISPATCH_SWITCH_FAILED, HOLDER.must_look(&s).id == 1, "the Holder prong must run")!;
     HOLDER.release(a, &s);
 }

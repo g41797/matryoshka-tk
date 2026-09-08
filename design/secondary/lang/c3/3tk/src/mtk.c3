@@ -6,6 +6,9 @@
 
  Three small tools, each one usable on its own.
  The core is type identity for an outer, and two containers that never allocate.
+ `mtk::inner` is the inner, the Slot, the link and the crossings.
+ `mtk::queue` is the intrusive queue and its walker.
+ `mtk::helper` is the one thing you bind, one line per outer type.
  `mtk::mailbox` is transfer of an outer between threads.
  `mtk::pool` is reuse of an outer, decided by your hooks.
  Mailbox and pool are both optional.
@@ -27,65 +30,10 @@
  There is no `Master` type.
 
  One import gives the toolkit.
- `module mtk` is declared by two files, and the helper, the queue, the mailbox and the pool are submodules of it.
+ `import mtk;` gives this module and every submodule of it.
  This module holds `VERSION`, the faults, `@check` and `CHECKED`.
- It holds the inner, the Slot, the link and the crossings.
-
- You send and receive your own struct.
- The struct is the outer, and it is yours.
- You give the infrastructure one thing, an `Inner` embedded in it.
- From then on the infrastructure never sees your type.
- It moves `Inner*`, intrusively and with the type erased.
-
- `Inner` is the field you embed.
- The chain link and the identity, in one.
- The identity sits in the same field as the chain link.
- The identity says what the outer type is.
- A pointer to an embedded `Inner` is one outer, with the type forgotten.
- It is spelled `Inner*`, because that is all it is, and 3tk transports nothing else.
- `Slot` is a box that holds one `Inner*`, or nothing.
- A Slot starts empty.
-
- The Slot is how the toolkit tells you where an outer went.
- Read the Slot after every call that gives or takes an outer.
-
- The chain link is the other half of `Inner`.
- `reset` clears the chain link and not the identity.
- Every chain ends at an inner pointing at itself, never at null.
- That is what makes `is_linked` exact.
-
- You send and receive your own struct.
- You give the infrastructure one thing, an `Inner` embedded in it.
- From then on the infrastructure never sees your type.
- It moves `Inner*`, intrusively and with the type erased.
- You get your struct back by crossing once, from `Inner*` to `Outer*`.
- The identity in the `Inner` is what makes that crossing safe.
-
- `to_inner` goes from your pointer to the `Inner*`.
- Null in, null out.
- `from_inner` goes from an `Inner*` back to `$Type*`, and is null on an identity mismatch.
- A mismatch is an answer, not a failure.
- `must_from_inner` is the same, and it aborts on a mismatch.
- The abort names your line.
- The same three take the outer from a Slot, and five of them appear again as methods.
- `from_slot` looks, and the Slot is unchanged.
- `move_from_slot` takes, and on success the Slot is left empty.
- None of these moves an outer.
- Reading an identity and casting a pointer leave every container alone.
- No alias to declare, no instantiation, no registration.
-
- The intrusive queue. First-in first-out.
- The transfer container.
- Nothing here allocates, and every operation is O(1).
- The count is kept, so `len` is O(1).
- `push_back` adds at the back.
- There is no front insert.
- `pop_front` takes the outer at the front, and null on an empty queue is an answer and not a fault.
- `append_queue` moves every outer of another queue onto the back of this one, in O(1).
- `iter` and `next` are a walker, taken from the queue.
- Removing the current outer during a walk is not supported.
- Every chain ends at an inner pointing at itself, never at null.
- Nothing in the queue can fail.
+ They are the vocabulary every submodule and every user shares.
+ Each subject is on the page of the module that holds it.
 *>
 // [3tk: D1 to D16, R1 to R15, H0, H0b, H5 to H10, E6, V19, Part 17.1, Part 17.2]
 module mtk;

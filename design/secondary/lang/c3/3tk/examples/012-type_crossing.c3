@@ -1,9 +1,14 @@
 <*
- The `$Type` crossing needs no declared helper.
+ The layer beneath the helper: the same crossing, spelled three ways.
+
+ `EVENT.look(inner)` is the spelling to reach for. The other two are what it
+ forwards to, shown here so that the forwarding is visible and so that code
+ with no helper bound has a way across.
 
  - Create an `Event` and take its inner.
- - Cross back with the free-function form.
- - Cross back with the method form, and get the same answer.
+ - Cross back with the helper member.
+ - Cross back with the free-function form, and get the same answer.
+ - Cross back with the method form, and get the same answer again.
 *>
 module shc::type_crossing;
 import mtk;
@@ -21,13 +26,17 @@ fn void? cross_with_dollar_type(Allocator a)
     EVENT.create(a, &s)!;
     Inner* inner = s.peek();
 
-    Event* free_form = mtk::from_inner(inner, Event);
-    shc::helpers::expect(TYPE_CROSSING_FAILED, free_form != null, "from_inner did not find the Event")!;
+    Event* helper_form = EVENT.look(inner);
+    shc::helpers::expect(TYPE_CROSSING_FAILED, helper_form != null, "EVENT.look did not find the Event")!;
+    helper_form.code++;
+
+    Event* free_form = inner::from_inner(inner, Event);
+    shc::helpers::expect(TYPE_CROSSING_FAILED, free_form == helper_form, "from_inner did not match EVENT.look")!;
     free_form.code++;
 
     Event* method_form = inner.to(Event);
     shc::helpers::expect(TYPE_CROSSING_FAILED, method_form == free_form, "inner.to(Event) did not match from_inner(inner, Event)")!;
     method_form.code++;
 
-    shc::helpers::expect(TYPE_CROSSING_FAILED, free_form.code == 2, "both crossings should have reached the same Event")!;
+    shc::helpers::expect(TYPE_CROSSING_FAILED, free_form.code == 3, "all three crossings should have reached the same Event")!;
 }

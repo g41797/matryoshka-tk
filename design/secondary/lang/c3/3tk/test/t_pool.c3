@@ -158,7 +158,7 @@ fn void get_creates_then_reuses() @test
     always_assert(h.gets.load() == 1, "the get hook did not run");
     always_assert(h.last_get_count.load() == 0, "the count handed to on_get is wrong");
 
-    Holder* first = mtk::must_from_slot(&s, Holder);
+    Holder* first = inner::must_from_slot(&s, Holder);
 
     p.put(&s);
     always_assert(s.is_empty(), "put did not clear the Slot");
@@ -167,7 +167,7 @@ fn void get_creates_then_reuses() @test
 
     if (catch p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) { always_assert(false, "the second get failed"); }
     always_assert(h.gets.load() == 1, "the second get called the hook instead of reusing");
-    always_assert(mtk::must_from_slot(&s, Holder) == first, "a different outer came back");
+    always_assert(inner::must_from_slot(&s, Holder) == first, "a different outer came back");
 
     p.put(&s);
 }
@@ -575,7 +575,7 @@ fn void reuse_is_last_in_first_out() @test
     {
         Slot s;
         if (catch p.get(Holder::typeid, NEW_ONLY, &s)) { always_assert(false, "get failed"); }
-        Holder* o = mtk::must_from_slot(&s, Holder);
+        Holder* o = inner::must_from_slot(&s, Holder);
         o.id = (int)i;
         outers.push_back_slot(&s);
     }
@@ -588,7 +588,7 @@ fn void reuse_is_last_in_first_out() @test
     {
         Slot s;
         if (catch p.get(Holder::typeid, AVAILABLE_ONLY, &s)) { always_assert(false, "an available get failed"); }
-        Holder* o = mtk::must_from_slot(&s, Holder);
+        Holder* o = inner::must_from_slot(&s, Holder);
         always_assert(o.id == (int)(i - 1),
             "the pool did not hand back the most recently returned outer — the bucket is not a stack any more");
         outers.push_back_slot(&s);

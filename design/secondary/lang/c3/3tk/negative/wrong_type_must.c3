@@ -14,9 +14,9 @@ import std::io;
 fn int main()
 {
     Job j;
-    mtk::stamp(&j);
+    inner::stamp(&j);
 
-    Msg* m = mtk::must_from_inner(mtk::to_inner(&j), Msg);   // <-- the violation
+    Msg* m = inner::must_from_inner(inner::to_inner(&j), Msg);   // <-- the violation
 
     io::printfn("no check: a Job crossed as a Msg at %p", (void*)m);
     return 0;

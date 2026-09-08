@@ -128,7 +128,7 @@ fn int producer_fn(void* arg)
         Slot s;
         if (catch sh.pool.get(Holder::typeid, AVAILABLE_OR_NEW, &s)) continue;
 
-        Holder* o = mtk::must_from_slot(&s, Holder);
+        Holder* o = inner::must_from_slot(&s, Holder);
         o.id = (int)i;                              // a plain write, no atomics
 
         if (catch sh.mb.send(&s)) { sh.pool.put(&s); }
@@ -147,7 +147,7 @@ fn int consumer_fn(void* arg)
             if (f == mtk::CLOSED) return 0;
             continue;
         }
-        Holder* o = mtk::must_from_slot(&r, Holder);
+        Holder* o = inner::must_from_slot(&r, Holder);
         sh.sum.add((usz)o.id, SEQ_CONSISTENT);      // a plain read, no atomics
         sh.received.add(1, SEQ_CONSISTENT);
         sh.pool.put(&r);                            // Part 2.10: the give-back cannot fail
@@ -240,9 +240,9 @@ fn void a_leaver_hands_the_signal_on() @test
         thread::sleep(time::ms(15))!!;
 
         Msg m;
-        mtk::stamp(&m);
+        inner::stamp(&m);
         Slot s;
-        s.fill(mtk::to_inner(&m));
+        s.fill(inner::to_inner(&m));
         if (catch mb.send(&s)) {}
 
         foreach (&t : ts) t.join()!!;

@@ -21,7 +21,7 @@ fn void receive_and_release(Allocator a, Mailbox* mb, Duration timeout)
     Slot s;
     defer HOLDER.release(a, &s);
     if (catch mb.receive(&s, timeout)) return;
-    s.must(Holder).id++;
+    HOLDER.must_look(&s).id++;
 }
 
 fn void? defer_covers_both_paths(Allocator a)

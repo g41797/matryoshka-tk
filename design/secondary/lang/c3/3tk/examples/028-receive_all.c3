@@ -38,7 +38,7 @@ fn void? receive_all_at_once(Allocator a, Mailbox* mb)
     {
         Slot s;
         s.fill(inner);
-        shc::helpers::expect(RECEIVE_ALL_FAILED, s.to(Holder) != null, "every drained outer is the Holder that was sent")!;
+        shc::helpers::expect(RECEIVE_ALL_FAILED, HOLDER.look(&s) != null, "every drained outer is the Holder that was sent")!;
         HOLDER.release(a, &s);
         count++;
     }

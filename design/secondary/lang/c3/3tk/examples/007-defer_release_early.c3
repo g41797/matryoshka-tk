@@ -20,7 +20,7 @@ fn void? send_a_fresh_holder(Allocator a, Mailbox* mb)
     Slot s;
     defer HOLDER.release(a, &s);
     HOLDER.create(a, &s)!;
-    s.must(Holder).id = 42;
+    HOLDER.must_look(&s).id = 42;
     mb.send(&s)!;                                       // on success the defer does nothing
 }
 

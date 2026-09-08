@@ -20,8 +20,8 @@ faultdef OUT_OF_BAND_FAILED;
 fn void free_outer(Allocator a, Slot* s)
 {
     if (s.is_empty()) return;
-    if (s.to(Holder))  { HOLDER.release(a, s); return; }
-    if (s.to(Sensor))  { SENSOR.release(a, s); return; }
+    if (HOLDER.look(s))  { HOLDER.release(a, s); return; }
+    if (SENSOR.look(s))  { SENSOR.release(a, s); return; }
     unreachable("free_outer met an identity it was not written for");
 }
 
@@ -37,11 +37,11 @@ fn void? oob_arrives_first(Allocator a, Mailbox* mb)
 
     Slot first;
     mb.receive(&first, time::ms(1000))!;
-    shc::helpers::expect(OUT_OF_BAND_FAILED, first.to(Sensor) != null, "the out-of-band outer arrives first")!;
+    shc::helpers::expect(OUT_OF_BAND_FAILED, SENSOR.look(&first) != null, "the out-of-band outer arrives first")!;
     free_outer(a, &first);
 
     Slot second;
     mb.receive(&second, time::ms(1000))!;
-    shc::helpers::expect(OUT_OF_BAND_FAILED, second.to(Holder) != null, "the ordinary outer arrives second")!;
+    shc::helpers::expect(OUT_OF_BAND_FAILED, HOLDER.look(&second) != null, "the ordinary outer arrives second")!;
     free_outer(a, &second);
 }

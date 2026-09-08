@@ -21,7 +21,7 @@ fn void? the_outer_keeps_what_it_chose_to_keep(Allocator a)
     HOLDER.create(a, &s)!;
     shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.is_full(), "create filled the Slot")!;
 
-    shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.must(Holder).alloc == a, "the outer's own init hook did not keep the allocator")!;
+    shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, HOLDER.must_look(&s).alloc == a, "the outer's own init hook did not keep the allocator")!;
 
     HOLDER.release(a, &s);
     shc::helpers::expect(THE_ALLOCATOR_IN_THE_OUTER_FAILED, s.is_empty(), "release freed the outer with the allocator it was given")!;

@@ -7,7 +7,8 @@
 // and by nothing else, and one flat page of 59 declarations is not a page.
 //
 // `@guard_insert` is public and is not the user surface: a method cannot be
-// hidden, so it carries `// For internal usage.` and no `<* *>` block.
+// hidden. It sits alone below the internal banner at the foot of the file, and
+// its block opens with `For internal usage.`
 //==============================================================================
 <*
  The intrusive queue and its walker.
@@ -47,19 +48,6 @@ struct InnerQueue
 struct InnerQueueIterator
 {
     Inner* cur;
-}
-
-// --- The guard -----------------------------------------------------------------
-
-// For internal usage.
-// The insert guard. A null inner is a defect, and so is an outer already on any
-// chain; both are gone from a fast build.
-// [3tk: R6b, V4, Part 4.4, Part 4.4a, Part 8.6]
-macro InnerQueue.@guard_insert(&self, Inner* inner)
-{
-    mtk::@check(inner != null, "insert of a null inner");
-    // [3tk: Part 8.7]
-    mtk::@check(!mtk::is_linked(inner), "the outer is already on a chain");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -147,7 +135,7 @@ fn Inner* InnerQueue.pop_front(&self)
         self.head = inner.points_to();
     }
     self.count--;
-    mtk::reset(inner);
+    inner::reset(inner);
     return inner;
 }
 
@@ -192,6 +180,31 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
     other.head = null;
     other.tail = null;
     other.count = 0;
+}
+
+
+//==============================================================================
+// For internal usage - everything below this line.
+//
+// The insert guard is public because C3 leaves no choice: `@private` and
+// `@local` are both ignored on a method declaration. `InnerQueue.push_back` and
+// `push_back_slot` are its only callers, and a caller outside this module is
+// maintaining a chain by hand instead of calling the surface.
+//==============================================================================
+
+<*
+ For internal usage.
+*>
+// The insert guard. A null inner is a defect, and so is an outer already on any
+// chain; both are gone from a fast build.
+// [3tk: R6b, V4, Part 4.4, Part 4.4a, Part 8.6]
+macro InnerQueue.@guard_insert(&self, Inner* inner)
+{
+    mtk::@check(inner != null, "insert of a null inner");
+    // [3tk: Part 8.7]
+    mtk::@check(!inner::is_linked(inner), "the outer is already on a chain");
+    // [3tk: Q-8, Part 5.2]
+    inner::check_stamped(inner, "the outer was never stamped: make it with `create`, or call `stamp` once");
 }
 
 

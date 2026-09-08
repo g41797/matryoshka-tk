@@ -22,7 +22,7 @@ fn void? reach_in_then_send(Allocator a, Mailbox* mb)
     Slot s;
     defer HOLDER.release(a, &s);
     HOLDER.create(a, &s)!;
-    s.must(Holder).id = 42;
+    HOLDER.must_look(&s).id = 42;
     shc::helpers::expect(REACH_INTO_A_FULL_SLOT_FAILED, s.is_full(), "reaching in with must() must leave the Slot full")!;
     mb.send(&s)!;
 

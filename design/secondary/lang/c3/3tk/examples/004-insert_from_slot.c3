@@ -21,7 +21,7 @@ fn void? insert_from_a_slot(Allocator a)
     Slot s;
     defer HOLDER.release(a, &s);
     HOLDER.create(a, &s)!;
-    s.must(Holder).id = 7;
+    HOLDER.must_look(&s).id = 7;
 
     q.push_back_slot(&s);
     shc::helpers::expect(INSERT_FROM_SLOT_FAILED, s.is_empty(), "push_back_slot left the Slot full")!;

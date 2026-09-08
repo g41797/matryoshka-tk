@@ -65,11 +65,24 @@ def norm(s):
     return re.sub(r'\s+', ' ', s).strip().lower().rstrip('.')
 
 
+# 3TK-67. `For internal usage.` is a MARKER, not a sentence owed to the
+# reference. Rule 2 of plan 029 put it at the head of every internal
+# declaration's `<* *>` block, so the loop would otherwise report 31 new
+# descriptors missing and the 418 would climb by 31 having proved nothing.
+#
+# The exclusion is by EXACT MATCH on the whole line, never by reasoning about
+# punctuation or about what an internal declaration looks like. That is the same
+# discipline `run-builds.sh` uses on the part banners and the stack banner: a
+# marker that drifts by one character stops being excluded and goes red here,
+# which is the outcome that says so.
+MARKER = 'For internal usage.'
+
+
 def doc_lines(text):
     """The descriptor lines of every `<* *>` block, with their line numbers.
 
-    Dropped: blank lines, contract lines (`@param`, `@require`, ...), and
-    fenced code blocks. What is left is what the file claims.
+    Dropped: blank lines, contract lines (`@param`, `@require`, ...), fenced
+    code blocks, and the internal marker. What is left is what the file claims.
     """
     out, inblk, fence = [], False, False
     for i, raw in enumerate(text.splitlines(), 1):
@@ -85,7 +98,7 @@ def doc_lines(text):
         if line.startswith('```'):
             fence = not fence
             continue
-        if fence or not line or line.startswith('@'):
+        if fence or not line or line.startswith('@') or line == MARKER:
             continue
         out.append((i, line))
     return out

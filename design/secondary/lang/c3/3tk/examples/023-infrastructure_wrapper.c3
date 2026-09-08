@@ -30,7 +30,7 @@ fn void? wrap_and_send(Allocator a, Mailbox* to, Mailbox* inbox, int job_id)
     defer WORKER_INBOX.release(a, &s);
     WORKER_INBOX.create(a, &s)!;
 
-    WorkerInbox* w = s.must(WorkerInbox);
+    WorkerInbox* w = WORKER_INBOX.must_look(&s);
     w.mbx = inbox;
     w.job_id = job_id;
 
@@ -45,7 +45,7 @@ fn void? wrapper_carries_the_job_id(Allocator a, Mailbox* to, Mailbox* inbox)
     defer WORKER_INBOX.release(a, &s);
     to.receive(&s, time::ms(1000))!;
 
-    WorkerInbox* w = s.must(WorkerInbox);
+    WorkerInbox* w = WORKER_INBOX.must_look(&s);
     shc::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.mbx == inbox, "the wrapper must carry the same inbox pointer")!;
     shc::helpers::expect(INFRASTRUCTURE_WRAPPER_FAILED, w.job_id == 42, "the wrapper must carry the job id")!;
 }

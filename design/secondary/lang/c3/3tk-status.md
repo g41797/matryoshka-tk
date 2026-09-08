@@ -24,13 +24,51 @@ It is kept short for that reason.**
 
 ## What is live now
 
-**The plan is [3tk-staging-plan-028.md](3tk-staging-plan-028.md), written
-2026-09-07.** **026 and 027 are both spent and in `backup/`** — 027 ran no stage
-at all: the docs-site reading and the four probes overturned its charter within
-the same sitting that wrote it, so it was superseded rather than edited.
-**Two stages have not run — `3TK-65`, then `3TK-66`** — and 028 holds their
-charters. **`3TK-pre-65` ran on 2026-09-07 and closed.** **Nothing is
-renumbered**, so `3tk-decisions-007.md` keeps every citation it has.
+**The plan is [3tk-staging-plan-029.md](3tk-staging-plan-029.md), written
+2026-09-08.** **026, 027 and 028 are all spent and in `backup/`.** **Two stages
+have not run — `3TK-68`, then `3TK-69`** — and 029 holds both charters.
+**`3TK-pre-65` ran on 2026-09-07, and `3TK-67`, `3TK-65` and `3TK-66` on
+2026-09-08; all four are closed.** **Nothing is renumbered** — and that is why
+**execution order and numeric order differ, deliberately: 67, 65, 66, 68, 69.**
+**No stage "corrects" that.**
+
+**`3tk-decisions-007.md`'s citations are no longer stale.** `3TK-66` re-anchored
+all of them, and the api table's, from the built tree on 2026-09-08 — **326
+citations, none resolved from the number it carried**. The repair is finished
+and the debt is closed. Anything that moves a line in `../3tk/src` re-runs that
+resolution in the same stage; it is not a debt for a later one.
+
+**`3tk-boundaries-001.md` and `3tk-terms-001.md` are spent** and in
+`matryoshka-3tk/design/backup/` since 2026-09-08 — `3TK-66`'s closing act.
+**`backup/` is transient, so neither is a source of truth.** Their content is in
+the source, in [3tk-reference-008.md] and in
+[3tk-rules-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rules-001.md).
+`3tk-decisions-007.md` still cites Boundaries by part number, and its header now
+frames those as **historical markers** — which sitting ruled the entry — with
+`007` and `../3tk/src` as what stands where they would differ.
+
+**The sitting of 2026-09-08 ruled six things and changed no code.** They are
+**`3TK-67` carried all six into effect on 2026-09-08, and the rules among them
+now live in
+[matryoshka-3tk/design/3tk-rules-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rules-001.md).**
+**That file is the source of truth for every rule that binds 3tk and is not in
+the common tk set, and it is where a rule is changed.** It has two parts: the
+port rules (how 3tk source is written) and the stage rules (how a 3tk stage is
+run, including *compact/clear/nothing*, the model recommendation, the exemplar
+before the sweep, the script-and-CI port, and *fix the definition, do not halt*).
+**Nothing about those rules is restated here or in 029; cite that file.**
+
+**The two superseded `run-builds.sh` checks are gone, replaced by `3TK-67`.**
+What stands in their place is one two-directional check — every declaration below
+a file's internal banner opens with `For internal usage.`, none above one does, a
+file has at most one banner, and each banner's presence is asserted by name.
+`check-doc-loop.sh` excludes the marker by exact match on the whole line.
+
+**The order inverted, and it worked.** The landing page was a module-layout
+change, not a docs change, so it preceded `3TK-66`, which rewrote the books and
+all 52 examples against module names that were already settled. `3TK-66` kept
+its closing act because `Parts 4.2` and `4.2a` were still live when `3TK-67`
+needed them. **The inversion is spent; nothing later depends on it.**
 
 **`3TK-pre-65` ran on 2026-09-07 — the readable surface.** Six module names
 again: `helper.c3` is `module mtk::helper <Outer>;` and `queue.c3` is
@@ -65,7 +103,9 @@ stopped aborting in a checking build. **An internal declaration that has a
 contract keeps a contract-only block — every line a `@` line, no prose** — and
 `run-builds.sh` now asserts exactly that. **No stage tidies one away.**
 
-**`run-builds.sh` is 81 → 89 checks, 0 failures, four builds, 143 tests each.**
+**`run-builds.sh` is 107 checks, 0 failures, four builds, 145 tests each, and the doc loop is 409 of 409** — `3TK-65`'s figures, and the current ones. The paragraphs below are each stage's own reading at the time it ran.
+
+**`run-builds.sh` was 81 → 89 checks, 0 failures, four builds, 143 tests each.**
 Three checks were added: the six-name module list (`Part 4.5`, replacing the
 two-name grep that would have gone red on this correct change), *no example
 reaches past the helper* — with `010` and `012` listed as allowed rather than
@@ -223,9 +263,9 @@ hook path is exercised by every example.
 `3tk-reference-008.md` was edited in place: the `mtk::managed` labelled block is
 a four-line gravestone, *The API — allocating an outer for you* is replaced by
 **The API — the helper**, and *The API — identity* documents `stamp` and
-`Inner.outer_tid`. **Parts 1 to 7 still spell `managed::create` in their prose
-and worked examples — that is 3TK-66's charter, and the new section says so in
-its first lines.**
+`Inner.outer_tid`. **3TK-66 finished it on 2026-09-08:** the helper section moved to the front of
+Part 3, *Usual flow* is four steps off `MSG.create`, and no `managed::` remains
+anywhere in the book.
 
 **`matryoshka-3tk/scripts/run-builds.sh` is tuned to match**, and the `diff` is
 the `ROOT` line alone. **The three `.yml` files needed no change**, though the
@@ -251,12 +291,12 @@ measurements and four entries marked RULED or DISCHARGED. Two stale things were
 corrected in the fold: the `3TK-65` heading was plan 025's numbering, and the
 field ruled as `otrid` was built as **`outer_tid`**.
 
-**The restore was skipped on the owner's ruling and is not owed by anyone.**
-189 of the 222 changed lines were the botched renumbering, 21 citations name the
-now-deleted `managed.c3`, and **3TK-66 re-anchors all 222 from the built tree in
-one pass.** The file's header says so and tells a reader to treat any citation
-older than 3TK-64 as naming a file, not a line. `reapply_decisions.py` is spent
-and need not be run.
+**The restore was skipped on the owner's ruling and is owed by nobody.**
+189 of the 222 changed lines were the botched renumbering, and 21 citations named
+the deleted `managed.c3`. **3TK-66 re-anchored them on 2026-09-08** — 326
+citations across `007` and the api table, each resolved from its own entry's
+text rather than from the number it carried. `reapply_decisions.py` is spent and
+will not be run.
 
 **Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`/`examples`, or
 pushed** — that is the owner's step.
@@ -327,16 +367,17 @@ with `git checkout --` and the three intended edits re-applied with
 `reapply_decisions.py`. **3TK-64 measured the pending change and the owner ruled
 it not worth the command:** 189 of the 222 changed lines were nothing but the
 botched renumbering, 21 citations name `managed.c3`, which 3TK-64 deleted, and
-**3TK-66 re-anchors all 222 from the built tree in one pass** — which overwrites
-whatever the numbers say, restored or not. `reapply_decisions.py` is spent.
+**3TK-66 re-anchored all of them from the built tree on 2026-09-08** — which
+overwrote whatever the numbers said, restored or not. `reapply_decisions.py` is
+spent.
 
 **What happened is still worth knowing.** A fourth thing was attempted here and
 should not have been: re-anchoring the file's citations into the three moved
 files. It ran in three passes, and the third matched on old line numbers and
 overwrote what the first two had already corrected — many-to-one, so not
-reversible from the file. **The renumbering is not retried by any stage but
-3TK-66**, and `007`'s own header now warns a reader to read a citation older
-than 3TK-64 as naming a file, not a line.
+reversible from the file. **3TK-66 did it once, differently — resolving each citation from its entry's own
+text, never from its old number — and `007`'s header now records how, and what a
+citation means when it lands on a `module` line.**
 
 **Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`, or pushed** —
 that is the owner's step.
@@ -353,9 +394,9 @@ unchanged.**
 written by id — `RT-n` a ruling, `HR-n` a helper requirement, `PL-n` the parking
 lot, `MS-n` a measurement. **A later stage cites an id; it does not re-argue the
 point.** The building was ordered by
-[026](backup/3tk-staging-plan-026.md) as **3TK-62 … 3TK-66**; **028 carries the
-two that have not run** and inserts `3TK-pre-65` ahead of them. **024 through 027
-are spent and in `backup/`.**
+[026](backup/3tk-staging-plan-026.md) as **3TK-62 … 3TK-66**; **029 carries the
+three of those that have not run** — reordered, and with `3TK-67`, `3TK-68` and
+`3TK-69` added. **024 through 028 are spent and in `backup/`.**
 
 **The headline rulings, in one paragraph.** `OuterHelper` becomes a **first-class
 citizen** — `struct OuterHelper { typeid otrid; }`, in `helper.c3`, module
@@ -447,11 +488,10 @@ module paths and value identifiers in separate namespaces). *Two:* the field
 **This supersedes 3TK-59, which kept *handle* as an English word.** Both
 rulings are entries in
 [matryoshka-3tk/design/3tk-decisions-007.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-007.md),
-where dtk will read them. The live decision is stated in
-[3tk-terms-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-terms-001.md),
-which **stays live until 3TK-66** — its section 5 is superseded by
-[3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md),
-and the two are spent together.
+where dtk will read them. **Both `3tk-terms-001.md` and `3tk-boundaries-001.md` were spent by 3TK-66 on
+2026-09-08 and are in `matryoshka-3tk/design/backup/`, which is transient.** The
+two-term ruling is carried by the books themselves now — each states it and dates
+it to 3TK-60 rather than pointing at a document.
 
 **A rename must move nothing, and it moved nothing.** `run-builds.sh` is green
 — **87 checks, 0 failures, four builds, 140 tests each, identical to 3TK-59.**
@@ -544,14 +584,19 @@ settled the same way by 3TK-54:**
 | stage | what it does | start it with |
 |---|---|---|
 | **3TK-50** | **The examples tree**, plan 019's leftover and the first code under `3tk/examples/`, run in steps grouped by catalog section. Reads [3tk-example-rules-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-example-rules-003.md) and [3tk-patterns-003.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-patterns-003.md), both in `matryoshka-3tk/design/`. **Independent of the fix. Steps 1 through 11 ran 2026-08-31 — every catalog section with a code shape is now covered.** The catalog's two remaining sections, "The 18 that dropped" and "What this document does not do", write no code (a table of ztk entries with nothing to port, and a closing note) — **there is no step 12.** | **3TK-50 has no next step. Ask the owner what closes it** — copying and pushing the last steps to `matryoshka-3tk`, and updating this table, are what remain. |
-| **3TK-65** | **The safe-build checks.** The idempotent stamp; the identity check at the crossing and at both `@guard_insert`s, all `$if env::COMPILER_SAFE_MODE`-gated so a fast build carries nothing. Discharges `HR-5`. Reads Boundaries `Part 5.1` … `5.3`. | **Next.** *How to start after a clear* carries the detail 3TK-pre-65 left it: `mtk::stamp` is in part 2 of `inner.c3` with a contract-only block, `OuterHelper.stamp`/`.inner` are its two callers, and `@guard_insert` is in `mtk::queue` and in `pool.c3`'s stack section. |
-| **3TK-66** | **The books and the examples.** The bulk, last, as in 3TK-60: everything leads with the helper, all 52 examples use it. Run in steps by catalog section. Boundaries `Part 6` is written in as its own short section. **Its closing act spends `3tk-boundaries-001.md` and `3tk-terms-001.md` to `matryoshka-3tk/design/backup/`, and deletes Appendix B — that deletion is the proof the `007` repair finished.** | After 3TK-65. |
+| **3TK-67** | **The landing page, the marker, and the rules file.** Ran 2026-09-08 on Opus 5. `inner.c3` is `module mtk::inner;`, `mtk` a landing page of four source declarations. One internal banner per file and the marker in 31 blocks — **31, not 34; the 34 was a grep of the string, three hits being prose about it** — across **four** files, not five. The two superseded checks are replaced by one two-directional partition check, written and negative-tested before the sweep. Created `3tk-rules-001.md`; migrated Boundaries `4.4a` into it, marked superseded and left in place. | **Closed.** 95 checks green, 143 tests in each of four builds, every per-build figure identical. `PL-6`/`Q-1` answered: the prefix costs **two** lines in all of `examples/`, both already allow-listed, and the spelling is `inner::`. |
+| **3TK-65** | **The safe-build checks.** Ran 2026-09-08 on Opus 5. The stamp keeps its reason in the file; `check_stamped` is one shared guard at **both** boundaries — the four crossings of `helper.c3` (**six call sites**, `look` and `must_look` each having two `$Typeof` arms) and both `@guard_insert`s. Gated by `mtk::@check`, so a fast build carries nothing. Discharges `HR-5`, answers `Q-8`. | **Closed.** 107 checks green, 145 tests in each of four builds, doc loop 409 of 409. Two new negatives, `unstamped_insert` and `unstamped_crossing`, one per boundary. **`[&in]` on `to_inner` was refused deliberately** — null in, null out — and two tests in `t_identity.c3` hold the refusal. |
+| **3TK-66** | **The books and the examples.** Ran 2026-09-08 on Opus 5. **58 crossing sites across `examples/` moved to the helper**, leaving five method sites and one free site — all six inside `012` and `013`, the two files whose subject is the layering. The helper section moved to the front of the reference's Part 3, `mtk::managed` is gone from all four books, Boundaries `Part 6` is in as *What is deliberately absent*, and the example rules gained a MUST naming the two exempt files. **326 citations re-anchored** across `007` and the api table, each from its entry's own text. | **Closed.** 107 checks green, 145 tests in each of four builds, doc loop 409 of 409 and 0 banned words. Appendix B deleted and the `007` *not yet built* section closed with it; `3tk-boundaries-001.md` and `3tk-terms-001.md` moved to `matryoshka-3tk/design/backup/`. **`3tk-api-005.md` replaces `004`** — revised in place first, then versioned on the owner's ruling; `004` is not in `backup/` and the log says why. |
+| **3TK-68** | **The names and the scripts.** `negative/insert_linked_item.c3` — the **one** filename still carrying a retired word, which 3TK-60's contents-only `grep` could never have seen — renamed, and `run-builds.sh:60` (`RUNTIME_NEGATIVES`) with it in both repos. Plus the `matryoshka-3tk/scripts/` diff audit and the `.yml` review with `docs.yml` in scope. | **Next.** See *How to start after a clear*. One stage, not two: the rename and the script edit are the same line. |
+| **3TK-69** | **The source LOC.** A line count computed at build time and shown with the generated docs, injected in `docs.yml` **downstream of the source** — never into a checked-in file. `$include`/`$exec`/`$embed` and their trust levels are already established in 029; four cautions to measure, `$exec` in shipped `src/` probably disqualified because trust is paid by every consumer. | Last, and separate on the owner's ruling of 2026-09-08. |
+
+**The table is in run order, not numeric order.** `3TK-50` is independent of all
+of it and blocks nothing.
 
 **3TK-52, 3TK-53, 3TK-54, 3TK-55 and 3TK-56 all ran, 2026-08-28 to
 2026-08-30**, and between them the two tools carry the mechanism, the defect
 list agrees with them, the shared specification states the rule and `on_close`
-is by value. **3TK-50 is the only stage left, and it does not block or get
-blocked by anything above.**
+is by value.
 
 **3TK-50 step 1 ran 2026-08-31**, catalog section "Slot and transfer idioms."
 `3tk/examples/` now exists: `outers.c3` and `helpers.c3` are the shared
@@ -816,27 +861,33 @@ plans.
 ## The measured numbers
 
 **Re-measure before trusting any of these.** A scan counts only when it has just
-been run. **`run-builds.sh` and `check-doc-loop.sh` were both re-run on
-2026-09-07 by 3TK-pre-65 and the numbers below are that stage's.** The `handle`/
-`item`/`node` scan was last run 2026-09-04 by 3TK-60.
+been run. **`run-builds.sh`, `check-doc-loop.sh` and the docgen probe were all
+re-run on 2026-09-08 by 3TK-67 and the numbers below are that stage's.** The
+`handle`/`item`/`node` scan was last run 2026-09-04 by 3TK-60.
 
 ```
-./3tk/run-builds.sh        89 checks, 0 failures, four builds green
+./3tk/run-builds.sh        95 checks, 0 failures, four builds green
                            143 tests in each build
-                           81 -> 89: the two-name layering grep became the
-                           six-name module list plus one "nothing else"
-                           check, and 3TK-pre-65 added the partition check
-                           and the marker/block check
-./3tk/check-doc-loop.sh    4 labelled blocks, 0 differing, 418 of 418
+                           89 -> 95: 3TK-67 replaced the marker/block check
+                           with one two-directional partition check and
+                           added six banner assertions, four for the files
+                           that have internal declarations and two for the
+                           two files that must not grow one
+./3tk/check-doc-loop.sh    5 labelled blocks, 0 differing, 408 of 408
                            sentences, 0 missing, 0 banned words.
-                           510 -> 418 is 3TK-pre-65 moving internal
-                           declarations out of the reference, and it is the
-                           one stage where a falling count is the point
+                           418 -> 408 is 3TK-67 rewriting mtk's module
+                           block to orient, and NOT the marker: mailbox
+                           (85), pool (134) and queue (34) all held while
+                           gaining 18 markers between them, and THAT is the
+                           invariant that proves the exclusion, not the
+                           total, which any prose edit moves
 ./3tk/move-module-docs.sh
-                roundtrip  byte-identical
-./3tk/preview-docs.sh      mtk 36 declarations; mtk::helper the only page
-                           marked generic; mtk, mtk::queue, mtk::mailbox,
-                           mtk::pool all is_generic=false
+                roundtrip  byte-identical, over five blocks
+./3tk/preview-docs.sh      mtk 10 docgen entries (four source declarations,
+                           the faultdef expanded to seven); mtk::inner 26;
+                           10 + 26 = the 36 mtk carried before the split.
+                           mtk::helper the only page marked generic; every
+                           module carries a description
 
 --- superseded, kept for the shape of the fall ---
 ./3tk/run-builds.sh        87 checks, 0 failures, four builds green (3TK-61)
@@ -890,7 +941,26 @@ scripts take an optional directory and exit 2 on a bad one.
 ## Rules that hold across every stage
 
 - **Each stage starts cold.** Its named inputs plus this file are enough.
-- **Each stage ends with advice**: clear the context, or do not, and why.
+- **Before the first stage and after every stage, the session says whether to
+  compact, clear, or do nothing** — unasked, with the reason — **and when it is
+  clear, it gives the exact prompt to continue with**, the two-line shape in
+  *How to start after a clear*. **Ruled by the owner 2026-09-08**, strengthening
+  the older *"each stage ends with advice"*.
+- **Before every stage, the session says which model is suitable for performing
+  it, by name, and why.** **Ruled by the owner 2026-09-08**, names pinned the
+  same day. Two-way: a stage that is a mechanical sweep against a settled rule
+  **says so**, rather than silently taking the strongest model. The basis is how
+  much of the stage is **deciding** rather than **applying**. **Advice, not an
+  action** — the session names the model and the choice stays the owner's. **029
+  pins one per charter: `3TK-67`, `3TK-65`, `3TK-66` and `3TK-69` are Opus 5;
+  `3TK-68` is Sonnet 5.** **A pinned name that has gone stale is not a reason to
+  stall** — the basis in `Rule 7` governs and the stage picks its nearest
+  equivalent.
+- **Both of the above are *stage rules* and their statement moves to
+  `3tk-rules-001.md`'s second part**, created by `3TK-67`. This file then keeps
+  only the operational line a cold session needs — which stage is next, which
+  model, which prompt — and cites rather than re-argues, the way it already
+  treats `3tk-boundaries-001.md`.
 - **Finishing a stage does not start the next.** The owner names it.
 - **inner** = the embedded structure. **outer** = the struct that embeds it.
   Never "parent".
@@ -934,9 +1004,14 @@ scripts take an optional directory and exit 2 on a bad one.
   example rules and the pattern catalog live there now, not in this repo's
   `ref/`**, and since 3TK-60 the api table, the decisions record and the terms
   document too: `3tk-reference-008.md`, `3tk-example-rules-004.md`,
-  `3tk-patterns-004.md`, `3tk-api-004.md`, `3tk-decisions-007.md`,
+  `3tk-patterns-004.md`, `3tk-api-005.md`, `3tk-decisions-007.md`,
   `3tk-terms-001.md`, and since 3TK-61 **`3tk-boundaries-001.md`** — the live
-  working document for the 3TK-62…66 line, cited by id.
+  working document for the 3TK-62…66 line, cited by id. **`3tk-rules-001.md` is
+  created there by `3TK-67`** — 3tk's own rules document, normative, for every
+  rule that binds the C3 port and is not already a rule in the common tk set.
+  **Its name and location are already confirmed by the owner**, so 3TK-67 does
+  not ask again — that satisfies the ask-first rule for this one file and no
+  other. It does not bind `3tk/examples/`, which the example rules govern.
   Moved there because the owner is running builds and previews from that repo
   going forward. **Ask the owner exactly where before creating a new file
   there — every time**, even though `design/` is the default target.
@@ -972,84 +1047,82 @@ Every line begins the same way, because every stage reads this file first:
 Read design/secondary/lang/c3/3tk-status.md.
 ```
 
-**`3TK-65` is next.** Start it with:
+**`3TK-68` is next.** Start it with:
 
 ```
-Read design/secondary/lang/c3/3tk-status.md and 3tk-staging-plan-028.md, then run 3TK-65
+Read design/secondary/lang/c3/3tk-status.md and 3tk-staging-plan-029.md, then run 3TK-68
 ```
 
-**`3TK-65` is the safe-build checks** — the idempotent stamp, the identity check
-at the crossing and at both `@guard_insert`s, every one of them
-`$if env::COMPILER_SAFE_MODE`-gated so a fast build carries nothing. It
-discharges `HR-5` and reads Boundaries `Part 5.1` … `5.3`.
+**Model for `3TK-68`: Sonnet 5** (`claude-sonnet-5`). 029 calls it the stage
+that proves Rule 7 cuts both ways: a rename, one line in `RUNTIME_NEGATIVES` in
+two repos, four `diff`s that must show only the `ROOT` line, and a read of three
+`.yml` files. Every step applies a settled rule with a check that says when it
+is wrong, and the one judgment it carries — whether a `.yml` needs a change —
+is answered by reading three short files.
 
-**What 3TK-pre-65 left it, and the names it must use.** `mtk::stamp` is the
-macro to gate around and it is now in **part 2 of `inner.c3`**, carrying
-`// For internal usage.` and a **contract-only** `<* *>` block. `OuterHelper.stamp`
-and `.inner` are its two callers, in `mtk::helper`. The crossings to guard are
-the four `OuterHelper` members in `helper.c3`; `@guard_insert` is in `queue.c3`
-(now `mtk::queue`) and in `pool.c3`'s stack section.
+**What 3TK-66 leaves it.** The books, the examples and the citations are all
+current, so **3TK-68 touches no `.md` in `matryoshka-3tk/design/` except to
+record what it did**. The rename is `negative/insert_linked_item.c3`, the one
+filename still carrying a retired word — 3TK-60's scan was `grep` over file
+*contents*, so a filename was never in its scope. `test/` and the rest of
+`negative/` were checked clean on 2026-09-08.
 
-**Three things 3TK-pre-65 built that 3TK-65 must not undo:**
+**Two documents are gone and must not be cited.** `3tk-boundaries-001.md` and
+`3tk-terms-001.md` are in `matryoshka-3tk/design/backup/`, which the owner
+empties. The surface and the absences are in `3tk-reference-008.md`; the rules
+that bind a stage are in `3tk-rules-001.md`.
 
-1. **A `@require` lives inside the `<* *>` block.** An internal declaration with
-   a contract keeps a contract-only block — every line a `@` line, no prose.
-   Deleting one deletes the check, silently; that is how
-   `negative/wrong_type_must` broke mid-stage.
-2. **`run-builds.sh` asserts the module list of six**, that no example reaches
-   past the helper into part 2, and that no declaration carries the marker and a
-   describing block at once. A new declaration in part 2 takes the marker, or
-   the build says so.
-3. **The banners in `inner.c3` are load-bearing** — `// Part 2 of 3: public, and
-   not yours` and `module mtk @private;` are what the partition check greps for,
-   the same way `pool.c3`'s stack banner is.
+**The rules every stage is written against are in
+[matryoshka-3tk/design/3tk-rules-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-rules-001.md),
+and are not restated here.** The ones that bit `3TK-65`: **Rule 1**, a
+`@require` lives inside the `<* *>` block and an assert is not a substitute;
+**Rules 2 and 3**, an internal declaration opens its block with the exact line
+`For internal usage.`, carries only working directives after it, and sits below
+its file's internal banner — which is why the stamp's reason went into a `//`
+block and not into its doc block; **Rule 8**, the new checks were broken in both
+directions before they were trusted; and **Rule 10**, which settled the
+crossing count at six sites rather than the charter's four.
+
+**`[&in]` on `to_inner` was refused, and the refusal is closed.** `3TK-67` left
+the call to `3TK-65` and `3TK-65` said no: `to_inner` accepts null on purpose,
+and the annotation would be a new runtime abort smuggled in under a formatting
+rule. `test/t_identity.c3`'s `to_inner_takes_null_and_answers_null` and
+`the_identity_check_tolerates_null` hold it. **No stage reopens it without a
+program showing what the annotation would catch.**
 
 **Not yet copied to `matryoshka-3tk`'s `src`/`test`/`negative`/`examples`, or
-pushed** — 3TK-62, 3TK-63, 3TK-64, the INTR and 3TK-pre-65 are all waiting on
-that, and it is the owner's step. `3tk-boundaries-001.md`,
-`3tk-reference-008.md` and `scripts/run-builds.sh` are already there, edited in
-place.
+pushed** — 3TK-62, 3TK-63, 3TK-64, the INTR, 3TK-pre-65, 3TK-67, 3TK-65 and
+3TK-66 are all waiting on that, and it is the owner's step. **3TK-66 changed no
+`src/`**, so what it adds to the queue is `examples/` alone — 26 files. Every
+`design/` document it touched was edited directly in `matryoshka-3tk` and needs
+no copy.
 
-**Read the rulings before touching anything.** Every stage from 3TK-62 to
-3TK-66 reads
-[matryoshka-3tk/design/3tk-boundaries-001.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-boundaries-001.md)
-and cites it by id. It is written to be enough on its own: the governing rule,
-the rulings `RT-1` … `RT-18`, the helper requirements `HR-1` … `HR-10`, the
-measurements `MS-1` … `MS-9` with their results, the parking lot `PL-1` …
-`PL-10`, the rule for reading ztk, and — from the second sitting — the proposed
-shape `HS-1` … `HS-11`, the variants `V-1` … `V-7` and the questions `Q-1` …
-`Q-15`. **Nothing about the rethinking lives
-outside that document, this file, and the 3TK-61 log entry.**
+**The rethinking is spent, and its document with it.**
+`3tk-boundaries-001.md` and `3tk-terms-001.md` moved to
+`matryoshka-3tk/design/backup/` on 2026-09-08 — 3TK-66's closing act, and the
+content had dissolved into the source and the books first. **`backup/` is
+transient, so neither is a source of truth and no stage cites either as one.**
 
-**None of the fifteen questions is open any more.** Plan 026's own closing
-section says it: every point plan 025 held open was ruled by the second sitting
-of 3TK-61, and **a stage that finds itself needing an answer has found a gap in
-`3tk-boundaries-001.md`** — the gap is reported before the stage continues. The
-paragraph below is the pre-026 state and is kept only until 3TK-66 spends the
-document.
+**Where each part of it lives now.** The governing rule, the rulings `RT-1` …
+`RT-18`, the helper requirements, the proposed shape and the variants are
+entries in
+[3tk-decisions-007.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-decisions-007.md),
+which cites them by marker as **history** — which sitting ruled the entry — with
+`007` and `../3tk/src` as what stands where they would differ. The surface, the
+invariants and *what is deliberately absent* are in
+[3tk-reference-008.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-008.md).
+The rules that bind a stage are in `3tk-rules-001.md`. **The measurements and
+the narrative are in [3tk-log.md](3tk-log.md), under 3TK-61 and 3TK-66.**
 
-**Fifteen questions were the owner's and no stage might assume any of them.**
-They are `Q-1` … `Q-15` in **section 12** of the rethinking document, which is
-where they are answered. Grouped by what they block:
+**All fifteen questions were closed before the document was spent** — `Q-1` …
+`Q-15`, ruled by the second sitting of 3TK-61 on 2026-09-06 and built by
+3TK-62 … 3TK-66. **A stage that finds itself needing an answer has found a gap;
+it reports the gap to the owner before continuing, and does not go to `backup/`
+for it.**
 
-- **Before 3TK-63:** `Q-1` (`PL-6`, the `inner::to_inner` stutter), `Q-15`
-  (the inner found by name, and `V-7a` or `V-7b`).
-- **Before 3TK-64:** `Q-2` (`HR-10`, where `create`/`release` live), `Q-14`
-  (the allocator found by name, **and whether the compile-time refusal comes
-  with it** — without it an outer with `Allocator a;` is silently unmanaged).
-- **Before 3TK-65:** `Q-3` … `Q-13` — the member names, the member list,
-  `MSG` or `msg`, where the safe-build check goes, when `MS-4`/`MS-5` run, and
-  `Q-10` … `Q-13`, which are section 13's: is `RT-3`'s module name spent, is
-  `PL-7` ruled road 1, how far does the merge go, and does `run-builds.sh`
-  assert the module surface.
-
-**`Q-6` is answered by 15.5** and needs only a yes.
-
-**`3tk-boundaries-001.md` and `3tk-terms-001.md` are spent together**, and not
-before: they move to `matryoshka-3tk/design/backup/` with a plain `mv` once
-their content has dissolved into the code and the books. **That is 3TK-66's
-closing act**, not an earlier stage's. `3tk-terms-001.md` section 5 is
-superseded by the rethinking document's rulings on managed.
+**What remains parked is parked, and is not the rethinking's.** `PL-1`, `PL-2`,
+`PL-4`, `PL-5`, `PL-8`, `PL-9` and the container re-entrancy guard are in
+`007`'s body, where a later stage will find them.
 
 **3TK-61 ran on 2026-09-06 in two sittings and closed. It changed no code** —
 `run-builds.sh` was re-measured green and unchanged, which is the whole

@@ -32,7 +32,7 @@ fn void CappedHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 
 fn void CappedHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    Holder* outer = slot.must(Holder);
+    Holder* outer = HOLDER.must_look(slot);
     outer.id = 0; // cleaned, and kept
 }
 
@@ -58,7 +58,7 @@ fn void? no_cast_needed(Allocator a)
 
     Slot s;
     p.get(Holder::typeid, AVAILABLE_OR_NEW, &s)!;
-    s.must(Holder).id = 7;
+    HOLDER.must_look(&s).id = 7;
     p.put(&s);
 
     shc::helpers::expect(HOOK_OBJECT_IS_THE_CONTEXT_FAILED, hooks.live.load(ACQUIRE) == 1, "the hook's own field must reflect what it did")!;

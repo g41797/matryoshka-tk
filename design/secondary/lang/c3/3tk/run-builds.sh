@@ -57,7 +57,14 @@ MODES=("safe -O0::--safe=yes -O0"
        "fast -O3::--safe=no -O3")
 
 # A runtime negative aborts where the checks are live and exits 0 where they are not.
-RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_item self_move wrong_type_must duplicate_pool_tags pool_unknown_identity)
+RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_item self_move wrong_type_must duplicate_pool_tags pool_unknown_identity
+                   unstamped_insert unstamped_crossing)
+
+# 3TK-65 added the last two. Part 5.2 asserts the identity at BOTH boundaries and
+# the two programs are not variants of one another: `unstamped_insert` reaches
+# `@guard_insert` and never reaches a crossing, `unstamped_crossing` fills the
+# Slot by hand and so never reaches a guard. A suite with one of them would go
+# green with the other boundary unguarded.
 
 # A TIER 1 negative aborts in EVERY mode, including --safe=no -O3. Part 11.12 is
 # the one precondition the specification refuses to soften, and this is the only
@@ -221,7 +228,7 @@ done
 echo "== Part 17.2: the layering, and Part 4.5: the module list =="
 declare -A EXPECT_MODULE=(
     [mtk]='module mtk;'
-    [inner]='module mtk;'
+    [inner]='module mtk::inner;'
     [queue]='module mtk::queue;'
     [helper]='module mtk::helper <Outer>;'
     [mailbox]='module mtk::mailbox;'
@@ -238,7 +245,7 @@ done
 # Nothing beyond the list. A seventh module name in `src/` is a partition that
 # 4.2 does not describe, and the visibility of everything in it is unruled.
 UNEXPECTED=$(grep -hoE '^module [A-Za-z_:]+( <[A-Za-z_]+>)?( @[a-z]+)?;' src/*.c3 | sort -u \
-    | grep -vxE 'module mtk;|module mtk @private;|module mtk::(queue|mailbox|pool);|module mtk::helper <Outer>;')
+    | grep -vxE 'module mtk;|module mtk::inner;|module mtk::inner @private;|module mtk::(queue|mailbox|pool);|module mtk::helper <Outer>;')
 if [ -z "$UNEXPECTED" ]; then
     ok "src/ declares no module outside Part 4.2's list of six"
 else
@@ -256,7 +263,7 @@ fi
 # banner gets above.
 echo "== Part 4.4a: the partition of module mtk =="
 PARTITION_OK=1
-for banner in '^// Part 2 of 3: public, and not yours' '^module mtk @private;'; do
+for banner in '^// Part 2 of 3: public, and not yours' '^module mtk::inner @private;'; do
     if grep -qE "$banner" src/inner.c3; then :; else
         bad "src/inner.c3 has lost the banner '$banner' — the partition is unmarked"
         PARTITION_OK=0
@@ -269,7 +276,7 @@ done
 # identity, and 012's whole subject is that the free form and the method form
 # give the same answer. Any THIRD example is a user reaching past the helper,
 # and either the example is wrong or the partition is.
-INTERNAL='mtk::(to_inner|from_inner|must_from_inner|from_slot|must_from_slot|move_from_slot|is_mine|stamp|is_linked|reset|inner_offset)\b|\.(repoint_to|points_to)[[:space:]]*\('
+INTERNAL='inner::(to_inner|from_inner|must_from_inner|from_slot|must_from_slot|move_from_slot|is_mine|stamp|is_linked|reset|inner_offset)\b|\.(repoint_to|points_to)[[:space:]]*\('
 ALLOWED='examples/010-no_raw_allocator_call.c3|examples/012-type_crossing.c3'
 REACHING=$(grep -rEn "$INTERNAL" examples/*.c3 | grep -vE "^[^:]*:[0-9]+:[[:space:]]*//" \
     | grep -vE "^($ALLOWED):" | cut -d: -f1 | sort -u)
@@ -279,51 +286,101 @@ else
     bad "an example calls what the helper is there for: $(echo "$REACHING" | tr '\n' ' ')"
 fi
 
-# --- Part 4.4a, the marker and the block are exclusive ---
+# --- Rule 2 and Rule 3 of plan 029: the banner, and the marker ---
 #
-# A declaration cannot both say "For internal usage." and carry a DESCRIBING
-# `<* *>` block: the block is the visibility marker, so the two together mean
-# the opposite of each other.
+# 3TK-67 REPLACED the two checks 3TK-pre-65 put here — *no declaration carries
+# the marker and a describing block at once*, and *a contract-only block is
+# every line a `@` line, no prose*. Both were correct against the rule as it
+# stood, and the rule changed: Rule 2 requires precisely the combination they
+# forbid. An internal declaration now KEEPS its `<* *>` block, opening with the
+# exact line `For internal usage.` and carrying, after it, only directives that
+# do work.
 #
-# A CONTRACT-ONLY block is allowed and is the reason this check reads the block
-# rather than merely noticing one. 3TK-pre-65 learned it the expensive way: a
-# `@require` lives inside the `<* *>`, so stripping the block from
-# `must_from_inner` stripped its type check with it and
-# `negative/wrong_type_must` stopped aborting in a checking build. A block whose
-# every line is a contract line describes nothing, publishes nothing to the
-# reference and shows nothing on the docs site — and it keeps the contract.
-echo "== Part 4.4a: the marker and the doc block =="
-BOTH=$(${PYTHON:-python3} - src/*.c3 <<'PYEOF'
+# The reason the block came back is the reason those checks existed at all: a
+# `@require` lives INSIDE the `<* *>`, so obeying a rule that deleted the block
+# deleted the check, silently. `negative/wrong_type_must` stopped aborting and
+# only a negative program noticed.
+#
+# POSITION IS THE TRUTH, AND THE MARKER IS ITS CONSEQUENCE. A per-declaration
+# marker fails by omission and nothing looks wrong; a declaration cannot fail to
+# be somewhere. So one banner per file names the boundary and the check runs
+# BOTH WAYS across it: every declaration below the banner opens with the marker,
+# and none above it does.
+echo "== Rule 2, Rule 3: the internal banner and the marker =="
+INTERNAL_BANNER='// For internal usage - everything below this line.'
+MARKERS=$(${PYTHON:-python3} - src/*.c3 <<'PY_END'
 import re, sys
+
+BANNER = '// For internal usage - everything below this line.'
+MARKER = 'For internal usage.'
+DECL = re.compile(r'^(fn|macro|struct|typedef|const|alias|enum|interface|faultdef)\b')
+
+
+def block_head(lines, i):
+    """The first content line of the `<* *>` block above the declaration at `i`.
+
+    None when there is no block. The `// [3tk: ...]` marks sit between the block
+    and the declaration and are stepped over, the same way `doc_blocks.py` does.
+    """
+    j = i - 1
+    while j >= 0 and lines[j].startswith('//'):
+        j -= 1
+    if j < 0 or lines[j].strip() != '*>':
+        return None
+    k = j
+    while k >= 0 and lines[k].strip() != '<*':
+        k -= 1
+    if k < 0:
+        return None
+    body = [x.strip() for x in lines[k + 1:j]]
+    return body[0] if body else ''
+
+
 bad = []
 for p in sys.argv[1:]:
     lines = open(p).read().splitlines()
+    at = [n for n, l in enumerate(lines) if l.strip() == BANNER]
+    if len(at) > 1:
+        bad.append('%s:has-%d-banners' % (p, len(at)))
+        continue
+    b = at[0] if at else None
     for i, l in enumerate(lines):
-        if not re.match(r'^(fn|macro|struct|typedef|const|alias|enum|interface)\b', l):
+        if not DECL.match(l):
             continue
-        j = i - 1
-        marked = False
-        while j >= 0 and lines[j].startswith('//'):
-            if lines[j].strip() == '// For internal usage.':
-                marked = True
-            j -= 1
-        if not (marked and j >= 0 and lines[j].strip() == '*>'):
-            continue
-        k = j
-        while k >= 0 and lines[k].strip() != '<*':
-            k -= 1
-        body = [x.strip() for x in lines[k + 1:j]]
-        prose = [x for x in body if x and not x.startswith('@')]
-        if prose:
-            bad.append('%s:%d' % (p, i + 1))
+        marked = block_head(lines, i) == MARKER
+        below = b is not None and i > b
+        if below and not marked:
+            bad.append('%s:%d:below-the-banner-and-unmarked' % (p, i + 1))
+        elif marked and not below:
+            bad.append('%s:%d:marked-and-not-below-a-banner' % (p, i + 1))
 print(' '.join(bad))
-PYEOF
+PY_END
 )
-if [ -z "$BOTH" ]; then
-    ok "no declaration carries the marker and a doc block at once"
+if [ -z "$MARKERS" ]; then
+    ok "every declaration below an internal banner is marked, and none above one is"
 else
-    bad "marker and doc block on the same declaration: $BOTH"
+    bad "the internal partition has drifted: $MARKERS"
 fi
+
+# The banner itself, per file, asserted by name. A renamed banner must go red
+# here rather than let the check above quietly find no boundary and pass — the
+# same guard the stack banner and the part banners already get.
+for f in inner queue mailbox pool; do
+    if grep -qxF "$INTERNAL_BANNER" "src/$f.c3"; then
+        ok "src/$f.c3 carries the internal banner"
+    else
+        bad "src/$f.c3 has lost its internal banner — its internal declarations are unbounded"
+    fi
+done
+# `mtk.c3` and `helper.c3` have none, because every declaration in them is the
+# user surface. A banner appearing in either is a design change, not a tidy.
+for f in mtk helper; do
+    if grep -qxF "$INTERNAL_BANNER" "src/$f.c3"; then
+        bad "src/$f.c3 has grown an internal banner — every declaration in it is the user surface"
+    else
+        ok "src/$f.c3 declares nothing internal"
+    fi
+done
 
 # `unlink_no_repair` went with the redesign — the queue and the stack have no
 # unrepaired removal left to reach for. What remains reachable is the insert
@@ -374,6 +431,56 @@ if printf '%s\n' "$CONTAINER_HALF" | grep -nE '(@guard_insert|\.repoint_to|any_m
     bad "a container reaches around the InnerQueue/InnerStack surface"
 else
     ok "no container reaches around the InnerQueue/InnerStack surface"
+fi
+# --- Part 5.2: the identity is checked at BOTH boundaries ---
+#
+# 3TK-65. Eight call sites, and a count rather than a list of files, because
+# the failure this guards against is a site being DELETED, not a site being
+# wrong. The four crossings of `helper.c3` are the late boundary and the two
+# `@guard_insert` bodies are the early one; a suite that only ran the negatives
+# would still go green with sites missing, since two programs cannot reach
+# eight of them.
+#
+# THE CROSSINGS ARE FOUR AND THEIR CALL SITES ARE SIX. Plan 029 says four, and
+# it is counting crossings; `look` and `must_look` each dispatch on `$Typeof`
+# into a `Slot*` arm and an `Inner*` arm, and each arm is a site of its own
+# that can be dropped on its own. The measurement wins over the charter's
+# figure and this is where it is written down (`3tk-rules-001.md` Rule 10).
+#
+# The count is the check and the negatives are the proof: `unstamped_insert`
+# proves the guard aborts, `unstamped_crossing` proves the crossing does, and
+# this proves the other four were not quietly dropped by a later stage.
+#
+# `check_stamped` is grepped and not `@check`, because the whole point of the
+# shared macro is that all six carry the same null tolerance. A site that
+# open-coded the condition would be a site that could get the tolerance wrong,
+# and it must go red here.
+echo "== Part 5.2: the identity check at both boundaries =="
+CROSSINGS=$(grep -c 'inner::check_stamped(' src/helper.c3)
+if [ "$CROSSINGS" -eq 6 ]; then
+    ok "the four crossings of src/helper.c3 check the identity, on all six arms"
+else
+    bad "src/helper.c3 has $CROSSINGS of the 6 identity checks Part 5.2 requires"
+fi
+for f in queue pool; do
+    N=$(grep -c 'inner::check_stamped(' "src/$f.c3")
+    if [ "$N" -eq 1 ]; then
+        ok "src/$f.c3's @guard_insert checks the identity"
+    else
+        bad "src/$f.c3 has $N of the 1 identity check Part 5.2 requires at its insertion"
+    fi
+done
+# And the gate. `check_stamped` goes through `mtk::@check`, which is
+# `$if env::COMPILER_SAFE_MODE`-gated, so a fast build carries nothing: the
+# condition is not evaluated and `outer_tid` is never called. A body that
+# reached for `always_assert` or a bare `assert` instead would put the check
+# into every build, which is the one thing Part 5.2 forbids.
+GUARD_BODY=$(awk '/^macro check_stamped\(/,/^}/' src/inner.c3)
+if printf '%s\n' "$GUARD_BODY" | grep -q 'mtk::@check(' \
+   && ! printf '%s\n' "$GUARD_BODY" | grep -qE '(^|[^:@])\b(assert|always_assert)\('; then
+    ok "check_stamped is gated on the safe build and a fast build carries nothing"
+else
+    bad "check_stamped no longer goes through mtk::@check — the check is in every build"
 fi
 echo
 

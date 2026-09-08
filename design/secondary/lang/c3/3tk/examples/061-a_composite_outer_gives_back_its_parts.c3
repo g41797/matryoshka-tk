@@ -26,7 +26,7 @@ fn void PartHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
 
 fn void PartHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    Holder* outer = slot.must(Holder);
+    Holder* outer = HOLDER.must_look(slot);
     outer.id = 0;
     self.on_put_calls++;
     // a composite outer would push its parts onto `extra` here; this one

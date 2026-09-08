@@ -26,7 +26,7 @@ fn void? walk_a_received_batch(Allocator a)
         Slot s;
         defer HOLDER.release(a, &s);
         HOLDER.create(a, &s)!;
-        s.must(Holder).id = i;
+        HOLDER.must_look(&s).id = i;
         mb.send(&s)!;
     }
 

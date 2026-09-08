@@ -38,18 +38,18 @@ fn void inner_at_any_offset() @test
 {
     Msg probe_m;
     Job probe_j;
-    always_assert((char*)mtk::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
-    always_assert((char*)mtk::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
+    always_assert((char*)inner::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
+    always_assert((char*)inner::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
 
     Msg m;
     Job j;
-    mtk::stamp(&m);
-    mtk::stamp(&j);
+    inner::stamp(&m);
+    inner::stamp(&j);
 
-    always_assert(mtk::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
-    always_assert(mtk::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
-    always_assert(mtk::from_inner(mtk::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
-    always_assert(mtk::from_inner(mtk::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
+    always_assert(inner::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
+    always_assert(inner::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
+    always_assert(inner::from_inner(inner::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
+    always_assert(inner::from_inner(inner::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
 }
 
 <*
@@ -67,9 +67,9 @@ fn void identity_is_per_type() @test
     Msg  a;
     Msg  b;
     Twin t;
-    mtk::stamp(&a);
-    mtk::stamp(&b);
-    mtk::stamp(&t);
+    inner::stamp(&a);
+    inner::stamp(&b);
+    inner::stamp(&t);
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
@@ -85,8 +85,8 @@ fn void identity_is_per_type() @test
 fn void identity_is_stored() @test
 {
     Msg m;
-    mtk::stamp(&m);
-    Inner* inner = mtk::to_inner(&m);
+    inner::stamp(&m);
+    Inner* inner = inner::to_inner(&m);
     always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -101,8 +101,8 @@ fn void identity_is_stored() @test
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!mtk::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
-    always_assert(mtk::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
+    always_assert(!inner::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
+    always_assert(inner::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -114,12 +114,12 @@ fn void uninitialized_inner_is_refused() @test
 fn void checking_crossing_refuses() @test
 {
     Twin t;
-    mtk::stamp(&t);
-    Inner* inner = mtk::to_inner(&t);
+    inner::stamp(&t);
+    Inner* inner = inner::to_inner(&t);
 
-    always_assert(mtk::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
-    always_assert(mtk::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
-    always_assert(!mtk::is_mine(inner, Msg), "the predicate claimed a Twin");
+    always_assert(inner::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
+    always_assert(inner::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
+    always_assert(!inner::is_mine(inner, Msg), "the predicate claimed a Twin");
 }
 
 <*
@@ -127,9 +127,9 @@ fn void checking_crossing_refuses() @test
 *>
 fn void null_handle_is_nobodys() @test
 {
-    always_assert(!mtk::is_mine(null, Msg), "the predicate claimed null");
-    always_assert(mtk::from_inner(null, Msg) == null, "null crossed the border");
-    always_assert(mtk::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
+    always_assert(!inner::is_mine(null, Msg), "the predicate claimed null");
+    always_assert(inner::from_inner(null, Msg) == null, "null crossed the border");
+    always_assert(inner::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
 }
 
 <*
@@ -143,13 +143,13 @@ fn void heterogeneous_walk_claims_correctly() @test
     Msg  m1; Msg  m2;
     Twin t1;
     Job  j1;
-    mtk::stamp(&m1); mtk::stamp(&m2); mtk::stamp(&t1); mtk::stamp(&j1);
+    inner::stamp(&m1); inner::stamp(&m2); inner::stamp(&t1); inner::stamp(&j1);
 
     InnerQueue list;
-    list.push_back(mtk::to_inner(&m1));
-    list.push_back(mtk::to_inner(&t1));
-    list.push_back(mtk::to_inner(&j1));
-    list.push_back(mtk::to_inner(&m2));
+    list.push_back(inner::to_inner(&m1));
+    list.push_back(inner::to_inner(&t1));
+    list.push_back(inner::to_inner(&j1));
+    list.push_back(inner::to_inner(&m2));
 
     usz mine = 0;
     usz seen = 0;
@@ -157,7 +157,7 @@ fn void heterogeneous_walk_claims_correctly() @test
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
         seen++;
-        if (mtk::from_inner(inner, Msg)) mine++;
+        if (inner::from_inner(inner, Msg)) mine++;
     }
     always_assert(seen == 4, "the walk lost an outer");
     always_assert(mine == 2, "the walk claimed the wrong number of outers");
@@ -180,15 +180,15 @@ fn void the_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    mtk::stamp(&m);
-    mtk::stamp(&t);
+    inner::stamp(&m);
+    inner::stamp(&t);
 
-    Inner* hm = mtk::to_inner(&m);
-    Inner* ht = mtk::to_inner(&t);
+    Inner* hm = inner::to_inner(&m);
+    Inner* ht = inner::to_inner(&t);
 
     always_assert(hm.to(Msg) == &m, "h.to lost the outer");
     always_assert(hm.as(Msg) == &m, "h.as lost the outer");
-    always_assert(hm.to(Msg) == mtk::from_inner(hm, Msg), "the method and the macro disagree");
+    always_assert(hm.to(Msg) == inner::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
     // legitimate state, not a defect — `as` is what refuses this one.
@@ -206,11 +206,11 @@ fn void the_slot_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    mtk::stamp(&m);
-    mtk::stamp(&t);
+    inner::stamp(&m);
+    inner::stamp(&t);
 
     Slot s;
-    s.fill(mtk::to_inner(&m));
+    s.fill(inner::to_inner(&m));
 
     always_assert(s.to(Msg) == &m, "s.to lost the outer");
     always_assert(s.must(Msg) == &m, "s.must lost the outer");
@@ -222,4 +222,44 @@ fn void the_slot_methods_cross_the_same_border() @test
 
     always_assert(s.move(Msg) == &m, "s.move lost the outer");
     always_assert(s.is_empty(), "a successful move left the Slot full");
+}
+
+<*
+ Part 5.2: what the identity check tolerates, and it is deliberate.
+
+ The safe-build guard reads `inner == null || the identity is set`. Null is
+ NOT the violation. An empty Slot and a null `Inner*` are answers a checking
+ crossing is allowed to give, and a guard that refused them would turn `look`
+ on an empty Slot — the ordinary way to ask *did anything arrive* — into an
+ abort.
+
+ The unstamped case, which IS the violation, is not testable from here: it
+ aborts. `negative/unstamped_insert` and `negative/unstamped_crossing` are its
+ two halves.
+*>
+fn void the_identity_check_tolerates_null() @test
+{
+    Slot empty;
+    always_assert(MSG.look(&empty) == null, "look on an empty Slot did not answer null");
+    always_assert(MSG.take(&empty) == null, "take on an empty Slot did not answer null");
+    always_assert(MSG.look((Inner*)null) == null, "look on a null inner did not answer null");
+}
+
+<*
+ Part 5.2, and why `to_inner` carries no `@param [&in]`.
+
+ 3TK-67 left the annotation to 3TK-65 deliberately, and 3TK-65 did not add it.
+ `[&in]` is a null check, and `to_inner` accepts null ON PURPOSE — null in,
+ null out, which is the sentence its own module block has carried since the
+ crossings were written. Adding the annotation would smuggle a new runtime
+ abort in under a formatting rule and would break the line below, which is the
+ only thing standing between the two.
+
+ The same reasoning is why the guard added by 3TK-65 tolerates null rather
+ than asserting on it.
+*>
+fn void to_inner_takes_null_and_answers_null() @test
+{
+    Msg* none = null;
+    always_assert(inner::to_inner(none) == null, "null in did not give null out");
 }

@@ -61,9 +61,13 @@ macro Outer* OuterHelper.look(self, from)
 {
     $switch:
         $case $Typeof(from) == Slot*:
-            return mtk::from_slot(from, Outer);
+            // [3tk: Q-8, Part 5.2]
+            inner::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::from_slot(from, Outer);
         $case $Typeof(from) == Inner*:
-            return mtk::from_inner(from, Outer);
+            // [3tk: Q-8, Part 5.2]
+            inner::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::from_inner(from, Outer);
         $default:
             $error "look takes a Slot* or an Inner*";
     $endswitch
@@ -83,9 +87,13 @@ macro Outer* OuterHelper.must_look(self, from)
 {
     $switch:
         $case $Typeof(from) == Slot*:
-            return mtk::must_from_slot(from, Outer);
+            // [3tk: Q-8, Part 5.2]
+            inner::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::must_from_slot(from, Outer);
         $case $Typeof(from) == Inner*:
-            return mtk::must_from_inner(from, Outer);
+            // [3tk: Q-8, Part 5.2]
+            inner::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::must_from_inner(from, Outer);
         $default:
             $error "must_look takes a Slot* or an Inner*";
     $endswitch
@@ -100,7 +108,12 @@ macro Outer* OuterHelper.must_look(self, from)
  @param slot : "the Slot holding the outer; empty afterwards on success"
 *>
 // [3tk: HS-5, Part 3.2]
-macro Outer* OuterHelper.take(self, Slot* slot) => mtk::move_from_slot(slot, Outer);
+macro Outer* OuterHelper.take(self, Slot* slot)
+{
+    // [3tk: Q-8, Part 5.2]
+    inner::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+    return inner::move_from_slot(slot, Outer);
+}
 
 <*
  Same as `take`, and it aborts on a mismatch.
@@ -113,7 +126,9 @@ macro Outer* OuterHelper.take(self, Slot* slot) => mtk::move_from_slot(slot, Out
 // [3tk: HS-6, Part 3.2]
 macro Outer* OuterHelper.must_take(self, Slot* slot)
 {
-    Outer* outer = mtk::must_from_slot(slot, Outer);
+    // [3tk: Q-8, Part 5.2]
+    inner::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+    Outer* outer = inner::must_from_slot(slot, Outer);
     slot.take();
     return outer;
 }
@@ -130,8 +145,8 @@ macro Outer* OuterHelper.must_take(self, Slot* slot)
 // [3tk: HS-7, HR-5, Part 3.3, Part 5.1]
 macro Inner* OuterHelper.inner(self, Outer* outer)
 {
-    mtk::stamp(outer);
-    return mtk::to_inner(outer);
+    inner::stamp(outer);
+    return inner::to_inner(outer);
 }
 
 <*
@@ -139,11 +154,12 @@ macro Inner* OuterHelper.inner(self, Outer* outer)
 
  For an outer you allocated by hand.
  An outer made by `create` is stamped already.
+ Forgetting it is caught in a safe build, at the next crossing or at the next insertion, whichever comes first.
 
  @param outer : "a pointer to the outer"
 *>
 // [3tk: HS-8, Part 3.3, Part 5.1]
-macro void OuterHelper.stamp(self, Outer* outer) => mtk::stamp(outer);
+macro void OuterHelper.stamp(self, Outer* outer) => inner::stamp(outer);
 
 <*
  True when the outer is on some chain.
@@ -153,7 +169,7 @@ macro void OuterHelper.stamp(self, Outer* outer) => mtk::stamp(outer);
  @param outer : "a pointer to the outer"
 *>
 // [3tk: HS-9, Part 3.3]
-macro bool OuterHelper.linked(self, Outer* outer) => mtk::is_linked(mtk::to_inner(outer));
+macro bool OuterHelper.linked(self, Outer* outer) => inner::is_linked(inner::to_inner(outer));
 
 // --- Allocating and freeing --------------------------------------------------
 
@@ -184,8 +200,8 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
             return f~;
         }
     $endif
-    mtk::stamp(outer);
-    slot.fill(mtk::to_inner(outer));
+    inner::stamp(outer);
+    slot.fill(inner::to_inner(outer));
 }
 
 <*
@@ -202,7 +218,7 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
 macro void OuterHelper.release(self, Allocator a, Slot* slot)
 {
     if (slot.is_empty()) return;
-    Outer* outer = mtk::must_from_slot(slot, Outer);
+    Outer* outer = inner::must_from_slot(slot, Outer);
     $if $defined(outer.destroy):
         fault f = @catch(outer.destroy(a));
         mtk::@check(!f, "destroy failed during release");

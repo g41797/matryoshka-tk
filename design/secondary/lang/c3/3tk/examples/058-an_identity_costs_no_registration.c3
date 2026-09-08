@@ -20,11 +20,11 @@ fn void? a_new_type_costs_nothing(Allocator a, Mailbox* mb)
 {
     Slot s;
     EVENT.create(a, &s)!;
-    s.must(Event).code = 1;
+    EVENT.must_look(&s).code = 1;
     mb.send(&s)!;
 
     Slot got;
     defer EVENT.release(a, &got);
     mb.receive(&got, time::ms(2000))!;
-    shc::helpers::expect(AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED, got.must(Event).code == 1, "the new type crossed the mailbox unchanged")!;
+    shc::helpers::expect(AN_IDENTITY_COSTS_NO_REGISTRATION_FAILED, EVENT.must_look(&got).code == 1, "the new type crossed the mailbox unchanged")!;
 }

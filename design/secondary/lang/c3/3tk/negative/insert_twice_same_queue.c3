@@ -33,11 +33,11 @@ import std::io;
 fn int main()
 {
     Msg m;
-    mtk::stamp(&m);
+    inner::stamp(&m);
 
     InnerQueue q;
-    q.push_back(mtk::to_inner(&m));
-    q.push_back(mtk::to_inner(&m));   // <-- the violation
+    q.push_back(inner::to_inner(&m));
+    q.push_back(inner::to_inner(&m));   // <-- the violation
 
     io::printn("no check: the outer was inserted twice");
     return 0;
