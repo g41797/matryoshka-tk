@@ -25,43 +25,49 @@ import std::atomic::types;
 
 struct ParkingHooks (PoolHooks)
 {
-    Atomic{usz} inside;      // the close is in on_close
-    Atomic{usz} go;          // the main thread is about to release
+	Atomic{usz} inside; // the close is in on_close
+	Atomic{usz} go; // the main thread is about to release
 }
 
-fn void ParkingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
-fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
+fn void ParkingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
+{
+}
+fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
+{
+}
 
 fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* inner = remaining.pop_front()) { }
-    self.inside.store(1, RELEASE);
-    while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    thread::sleep(time::ms(200))!!;     // the release has run by now
+	while (Inner* inner = remaining.pop_front())
+	{
+	}
+	self.inside.store(1, RELEASE);
+	while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	thread::sleep(time::ms(200))!!; // the release has run by now
 }
 
 fn int closer(void* arg)
 {
-    Pool* p = (Pool*)arg;
-    p.close();                          // parks inside on_close
-    return 0;
+	Pool* p = (Pool*)arg;
+	p.close(); // parks inside on_close
+	return 0;
 }
 
 fn int main()
 {
-    ParkingHooks hooks;
-    typeid[1] tags = { Msg::typeid };
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	ParkingHooks hooks;
+	typeid[1] tags = { Msg::typeid };
+	Pool* p        = pool::create(mem, &tags, &hooks)!!;
 
-    Thread t;
-    t.create(&closer, p)!!;
+	Thread t;
+	t.create(&closer, p)!!;
 
-    while (hooks.inside.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    hooks.go.store(1, RELEASE);
+	while (hooks.inside.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	hooks.go.store(1, RELEASE);
 
-    p.release();                        // <-- the violation: closed, not quiet
+	p.release(); // <-- the violation: closed, not quiet
 
-    io::printn("SOFTENED: a pool was released while its close hook was running");
-    t.join()!!;
-    return 0;
+	io::printn("SOFTENED: a pool was released while its close hook was running");
+	t.join()!!;
+	return 0;
 }

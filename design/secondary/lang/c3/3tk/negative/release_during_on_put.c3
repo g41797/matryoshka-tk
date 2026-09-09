@@ -24,64 +24,69 @@ import std::atomic::types;
 
 struct ParkingHooks (PoolHooks)
 {
-    Atomic{usz} inside;      // the put is in on_put
-    Atomic{usz} go;          // the main thread is about to release
+	Atomic{usz} inside; // the put is in on_put
+	Atomic{usz} go; // the main thread is about to release
 }
 
-fn void ParkingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
+fn void ParkingHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
+{
+}
 
 fn void ParkingHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    self.inside.store(1, RELEASE);
-    while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    thread::sleep(time::ms(200))!!;     // the release has run by now
+	self.inside.store(1, RELEASE);
+	while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	thread::sleep(time::ms(200))!!; // the release has run by now
 }
 
 fn void ParkingHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    while (Inner* inner = remaining.pop_front()) { }
+	while (Inner* inner = remaining.pop_front())
+	{
+	}
 }
 
 struct Giving
 {
-    Pool*  p;
-    Inner* outer;
+	Pool* p;
+	Inner* outer;
 }
 
 fn int giver(void* arg)
 {
-    Giving* g = (Giving*)arg;
-    Slot s;
-    s.fill(g.outer);
-    g.p.put(&s);                        // parks inside on_put
-    return 0;
+	Giving* g = (Giving*)arg;
+	Slot s;
+	s.fill(g.outer);
+	g.p.put(&s); // parks inside on_put
+	return 0;
 }
 
-Msg one;
+alias MSG = helper::OF{Msg};
 
 fn int main()
 {
-    ParkingHooks hooks;
-    typeid[1] tags = { Msg::typeid };
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	ParkingHooks hooks;
+	typeid[1] tags = { Msg::typeid };
+	Pool* p        = pool::create(mem, &tags, &hooks)!!;
 
-    inner::internal::stamp(&one);
+	Slot one;
+	if (catch MSG.create(mem, &one)) return 1;
 
-    Giving g;
-    g.p = p;
-    g.outer = inner::internal::to_inner(&one);
+	Giving g;
+	g.p = p;
+	g.outer = inner::internal::to_inner(MSG.must_look(&one));
 
-    Thread t;
-    t.create(&giver, &g)!!;
+	Thread t;
+	t.create(&giver, &g)!!;
 
-    while (hooks.inside.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	while (hooks.inside.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
 
-    p.close();                          // CLOSED, and the put is still in its hook
-    hooks.go.store(1, RELEASE);
+	p.close(); // CLOSED, and the put is still in its hook
+	hooks.go.store(1, RELEASE);
 
-    p.release();                        // <-- the violation: closed, not quiet
+	p.release(); // <-- the violation: closed, not quiet
 
-    io::printn("SOFTENED: a pool was released while a put was inside on_put");
-    t.join()!!;
-    return 0;
+	io::printn("SOFTENED: a pool was released while a put was inside on_put");
+	t.join()!!;
+	return 0;
 }

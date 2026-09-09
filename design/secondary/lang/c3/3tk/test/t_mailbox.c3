@@ -49,11 +49,13 @@ fn void a_mailbox_is_an_item() @test
     always_assert(mailbox::of(inner) == mb, "the mailbox did not survive the round trip");
 
     // and it sits on a list, beside an outer of another type
-    Msg m;
-    inner::internal::stamp(&m);
+    Slot ms;
+    defer MSG.release(mem, &ms);
+    if (catch MSG.create(mem, &ms)) { always_assert(false, "create failed"); }
+
     InnerQueue list;
     list.push_back(inner);
-    list.push_back(inner::internal::to_inner(&m));
+    list.push_back(inner::internal::to_inner(MSG.must_look(&ms)));
     always_assert(list.len() == 2, "a mailbox would not go on a list");
     always_assert(mailbox::of(list.pop_front()) == mb, "the mailbox came off wrong");
     list.pop_front();
@@ -67,19 +69,21 @@ fn void send_then_poll() @test
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Msg m;
-    inner::internal::stamp(&m);
+    Slot s;
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
     m.id = 5;
 
-    Slot s;
-    s.fill(inner::internal::to_inner(&m));
     if (catch mb.send(&s)) { always_assert(false, "send failed on an open mailbox"); }
     always_assert(s.is_empty(), "send did not clear the Slot");
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll found nothing"); }
-    always_assert(inner::internal::move_from_slot(&r, Msg) == &m, "the wrong outer came back");
+    always_assert(inner::internal::move_from_slot(&r, Msg) == m, "the wrong outer came back");
     always_assert(r.is_empty(), "the claim did not clear the Slot");
+
+    s.fill(inner::internal::to_inner(m));       // back into the Slot the defer releases
 }
 
 <*
@@ -105,16 +109,17 @@ fn void poll_on_an_empty_mailbox() @test
 *>
 fn void ordinary_items_are_fifo() @test
 {
+    MsgBag ms;
+    defer ms.release();
+    ms.create(6);
+
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Msg[6] ms;
     for (usz i = 0; i < 6; i++)
     {
-        ms[i].id = (int)i;
-        inner::internal::stamp(&ms[i]);
         Slot s;
-        s.fill(inner::internal::to_inner(&ms[i]));
+        s.fill(inner::internal::to_inner(ms.at(i)));
         if (catch mb.send(&s)) { always_assert(false, "send failed"); }
     }
 
@@ -139,18 +144,19 @@ fn void ordinary_items_are_fifo() @test
 *>
 fn void out_of_band_ordering() @test
 {
+    MsgBag ms;
+    defer ms.release();
+    ms.create(6);
+
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Msg[6] ms;
-    for (usz i = 0; i < 6; i++) { ms[i].id = (int)i; inner::internal::stamp(&ms[i]); }
-
     // ordinary 0, oob 1, ordinary 2, oob 3, ordinary 4
-    send_one(mb, &ms[0], false);
-    send_one(mb, &ms[1], true);
-    send_one(mb, &ms[2], false);
-    send_one(mb, &ms[3], true);
-    send_one(mb, &ms[4], false);
+    send_one(mb, ms.at(0), false);
+    send_one(mb, ms.at(1), true);
+    send_one(mb, ms.at(2), false);
+    send_one(mb, ms.at(3), true);
+    send_one(mb, ms.at(4), false);
 
     // expected: 1, 3 (oob, in order), then 0, 2, 4 (ordinary, in order)
     int[5] want = { 1, 3, 0, 2, 4 };
@@ -186,21 +192,22 @@ fn void send_one(Mailbox* mb, Msg* m, bool oob)
 *>
 fn void the_anchor_is_cleared() @test
 {
+    MsgBag ms;
+    defer ms.release();
+    ms.create(4);
+
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Msg[4] ms;
-    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; inner::internal::stamp(&ms[i]); }
-
-    send_one(mb, &ms[0], true);      // oob
-    send_one(mb, &ms[1], false);     // ordinary
+    send_one(mb, ms.at(0), true);      // oob
+    send_one(mb, ms.at(1), false);     // ordinary
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
     always_assert(inner::internal::move_from_slot(&r, Msg).id == 0, "the out-of-band outer did not come first");
 
     // the out-of-band run is drained; the anchor must be gone
-    send_one(mb, &ms[2], true);
+    send_one(mb, ms.at(2), true);
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
     always_assert(inner::internal::move_from_slot(&r, Msg).id == 2, "the new out-of-band outer did not go to the front");
 }
@@ -210,11 +217,14 @@ fn void the_anchor_is_cleared() @test
 *>
 fn void receive_the_batch() @test
 {
+    MsgBag ms;
+    defer ms.release();
+    ms.create(4);
+
     Mailbox* mb = new_mailbox();
     defer drop_mailbox(mb);
 
-    Msg[4] ms;
-    for (usz i = 0; i < 4; i++) { ms[i].id = (int)i; inner::internal::stamp(&ms[i]); send_one(mb, &ms[i], false); }
+    for (usz i = 0; i < 4; i++) { send_one(mb, ms.at(i), false); }
 
     InnerQueue got;
     if (catch mb.receive_all(&got)) { always_assert(false, "receive_all failed"); }
@@ -239,8 +249,10 @@ fn void close_gives_the_remainder_back() @test
 {
     Mailbox* mb = mailbox::create(mem)!!;
 
-    Msg[3] ms;
-    for (usz i = 0; i < 3; i++) { ms[i].id = (int)i; inner::internal::stamp(&ms[i]); send_one(mb, &ms[i], false); }
+    MsgBag ms;
+    defer ms.release();
+    ms.create(3);
+    for (usz i = 0; i < 3; i++) { send_one(mb, ms.at(i), false); }
 
     InnerQueue left;
     mb.close(&left);
@@ -269,14 +281,14 @@ fn void a_closed_mailbox_refuses_everything() @test
     mb.close(&left);
     always_assert(left.is_empty(), "an empty mailbox returned a remainder");
 
-    Msg m;
-    inner::internal::stamp(&m);
     Slot s;
-    s.fill(inner::internal::to_inner(&m));
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
 
     always_assert(@catch_is(mb.send(&s), mtk::CLOSED), "a closed mailbox accepted a send");
     always_assert(s.is_full(), "a refused send did not leave the Slot alone");
-    always_assert(s.peek() == inner::internal::to_inner(&m), "a refused send changed the Slot");
+    always_assert(s.peek() == inner::internal::to_inner(m), "a refused send changed the Slot");
 
     always_assert(@catch_is(mb.send_oob(&s), mtk::CLOSED), "a closed mailbox accepted an out-of-band send");
     always_assert(s.is_full(), "a refused send_oob did not leave the Slot alone");
@@ -293,8 +305,7 @@ fn void a_closed_mailbox_refuses_everything() @test
     // and the mailbox is still a valid outer
     always_assert(mailbox::of(mailbox::to_inner(mb)) == mb, "a closed mailbox stopped being an outer");
 
-    s.take();
-    mb.release();
+    mb.release();                              // `s` still holds the outer; the defer frees it
 }
 
 <*
@@ -305,9 +316,11 @@ fn void close_is_idempotent() @test
 {
     Mailbox* mb = mailbox::create(mem)!!;
 
-    Msg m;
-    inner::internal::stamp(&m);
-    send_one(mb, &m, false);
+    Slot s;
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
+    send_one(mb, m, false);
 
     InnerQueue first;
     mb.close(&first);
@@ -317,7 +330,7 @@ fn void close_is_idempotent() @test
     mb.close(&second);
     always_assert(second.is_empty(), "the second close produced outers from nowhere");
 
-    first.pop_front();
+    first.pop_front();                         // `s` still holds the outer; the defer frees it
     mb.release();
 }
 
@@ -378,13 +391,13 @@ fn void a_closed_mailbox_is_empty() @test
 {
     Mailbox* mb = new_mailbox();
 
-    Msg[3] m;
+    MsgBag m;
+    defer m.release();
+    m.create(3);
     for (usz i = 0; i < 3; i++)
     {
-        inner::internal::stamp(&m[i]);
-        m[i].id = (int)i;
         Slot s;
-        s.fill(inner::internal::to_inner(&m[i]));
+        s.fill(inner::internal::to_inner(m.at(i)));
         if (catch mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
     }
     always_assert(mb.len() == 3, "the mailbox did not take three");
@@ -493,6 +506,9 @@ fn void close_then_join_then_release() @test
     {
         sd[i].mb = mb;
         sd[i].first = (int)(i * 3);
+        sd[i].outers.create(3);                // allocated HERE: `mem` is per-thread,
+                                               // and this thread is the one that frees
+
         t.create(&sender_fn, &sd[i])!!;
     }
     foreach (&t : senders) t.join()!!;
@@ -505,6 +521,10 @@ fn void close_then_join_then_release() @test
     while (Inner* inner = left.pop_front()) { back++; }
     always_assert(back == 9, "the close did not hand back every outer that was sent");
 
+    // the outers were created on the sender threads and are freed here, once
+    // every one of them has come back out of the mailbox
+    foreach (&one : sd) one.outers.release();
+
     always_assert(mb.is_quiet(), "a joined mailbox is not quiet");
     mb.release();
 }
@@ -513,15 +533,15 @@ struct Sending
 {
     Mailbox* mb;
     int      first;
-    Msg[3]   outers;
+    MsgBag   outers;
 }
 
 fn int sender_fn(void* arg)
 {
     Sending* sd = (Sending*)arg;
-    foreach (usz k, &one : sd.outers)
+    for (usz k = 0; k < 3; k++)
     {
-        inner::internal::stamp(one);
+        Msg* one = sd.outers.at(k);
         one.id = sd.first + (int)k;
         Slot s;
         s.fill(inner::internal::to_inner(one));

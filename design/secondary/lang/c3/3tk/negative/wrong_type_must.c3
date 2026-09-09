@@ -11,13 +11,15 @@ module neg;
 import mtk;
 import std::io;
 
+alias JOB = helper::OF{Job};
+
 fn int main()
 {
-    Job j;
-    inner::internal::stamp(&j);
+	Slot s;
+	if (catch JOB.create(mem, &s)) return 1;
 
-    Msg* m = inner::internal::must_from_inner(inner::internal::to_inner(&j), Msg);   // <-- the violation
+	Msg* m = inner::internal::must_from_inner(s.peek(), Msg); // <-- the violation
 
-    io::printfn("no check: a Job crossed as a Msg at %p", (void*)m);
-    return 0;
+	io::printfn("no check: a Job crossed as a Msg at %p", (void*)m);
+	return 0;
 }

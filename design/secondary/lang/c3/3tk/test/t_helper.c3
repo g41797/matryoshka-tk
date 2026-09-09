@@ -189,19 +189,23 @@ fn void neither_hook_is_required() @test
 *>
 fn void the_stamp_is_idempotent_and_safe_on_a_linked_outer() @test
 {
-    Msg m;
-    MSG.stamp(&m);
-    MSG.stamp(&m);
-    always_assert(MSG.look(MSG.inner(&m)) == &m, "a repeated stamp broke the identity");
+    Slot s;
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
+
+    MSG.stamp(m);
+    MSG.stamp(m);
+    always_assert(MSG.look(MSG.inner(m)) == m, "a repeated stamp broke the identity");
 
     InnerQueue q;
-    q.push_back(MSG.inner(&m));
-    always_assert(MSG.linked(&m), "the outer did not go onto the queue");
+    q.push_back(MSG.inner(m));
+    always_assert(MSG.linked(m), "the outer did not go onto the queue");
 
-    MSG.stamp(&m);                                  // the dangerous moment
-    always_assert(MSG.linked(&m), "the stamp unlinked a linked outer");
+    MSG.stamp(m);                                   // the dangerous moment
+    always_assert(MSG.linked(m), "the stamp unlinked a linked outer");
     always_assert(q.len() == 1, "the stamp emptied the queue");
-    always_assert(MSG.look(q.pop_front()) == &m, "the outer came back as something else");
+    always_assert(MSG.look(q.pop_front()) == m, "the outer came back as something else");
 }
 
 <*
@@ -212,26 +216,29 @@ fn void the_stamp_is_idempotent_and_safe_on_a_linked_outer() @test
 *>
 fn void the_four_crossings() @test
 {
-    Msg m;
     Slot s;
-    s.fill(MSG.inner(&m));
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
 
-    always_assert(MSG.look(&s) == &m, "look on a Slot");
-    always_assert(MSG.look(s.peek()) == &m, "look on an Inner*");
-    always_assert(MSG.must_look(&s) == &m, "must_look on a Slot");
-    always_assert(MSG.must_look(s.peek()) == &m, "must_look on an Inner*");
+    always_assert(MSG.look(&s) == m, "look on a Slot");
+    always_assert(MSG.look(s.peek()) == m, "look on an Inner*");
+    always_assert(MSG.must_look(&s) == m, "must_look on a Slot");
+    always_assert(MSG.must_look(s.peek()) == m, "must_look on an Inner*");
     always_assert(s.is_full(), "a look emptied the Slot");
 
     always_assert(TWIN.look(&s) == null, "a mismatch is an answer, not a match");
     always_assert(TWIN.take(&s) == null, "a refused take returned something");
     always_assert(s.is_full(), "a refused take emptied the Slot");
 
-    always_assert(MSG.take(&s) == &m, "take on a Slot");
+    always_assert(MSG.take(&s) == m, "take on a Slot");
     always_assert(s.is_empty(), "take did not empty the Slot");
 
-    s.fill(MSG.inner(&m));
-    always_assert(MSG.must_take(&s) == &m, "must_take on a Slot");
+    s.fill(MSG.inner(m));
+    always_assert(MSG.must_take(&s) == m, "must_take on a Slot");
     always_assert(s.is_empty(), "must_take did not empty the Slot");
+
+    s.fill(MSG.inner(m));                           // back into the Slot the defer releases
 }
 
 <*
@@ -240,6 +247,8 @@ fn void the_four_crossings() @test
 *>
 fn void inner_stamps_on_the_way_out() @test
 {
+    // Not allocated through the helper, and the sentence above says why: the
+    // subject is an outer the user made by hand, which `create` never sees.
     Job j;
     always_assert(JOB.inner(&j).outer_tid() == Job::typeid, "the crossing out did not stamp");
 }
@@ -255,12 +264,13 @@ fn void only_the_outer_that_wants_one_pays() @test
 {
     always_assert(Inner::size == uptr::size + typeid::size, "the inner grew a field; D3 part 2 is broken");
     always_assert(Holder::size > Msg::size - 8, "sanity: Holder carries the allocator, Msg does not");
-    Holder probe;
-    always_assert((char*)HOLDER.inner(&probe) - (char*)&probe == 8, "Holder's inner moved");
+    Slot s;
+    defer HOLDER.release(mem, &s);
+    if (catch HOLDER.create(mem, &s)) { always_assert(false, "create failed"); }
+    Holder* probe = HOLDER.must_look(&s);
+    always_assert((char*)HOLDER.inner(probe) - (char*)probe == 8, "Holder's inner moved");
 }
 
-//----------------------
-// Little-endian imports
-//----------------------
+
 import mtk;
 import std::core::mem::alloc;

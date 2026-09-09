@@ -36,20 +36,22 @@ fn void inner_is_two_parts() @test
 *>
 fn void inner_at_any_offset() @test
 {
-    Msg probe_m;
-    Job probe_j;
-    always_assert((char*)inner::internal::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
-    always_assert((char*)inner::internal::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
+    Slot sm;
+    Slot sj;
+    defer MSG.release(mem, &sm);
+    defer JOB.release(mem, &sj);
+    if (catch MSG.create(mem, &sm)) { always_assert(false, "create failed"); }
+    if (catch JOB.create(mem, &sj)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&sm);
+    Job* j = JOB.must_look(&sj);
 
-    Msg m;
-    Job j;
-    inner::internal::stamp(&m);
-    inner::internal::stamp(&j);
+    always_assert((char*)inner::internal::to_inner(m) - (char*)m != 0, "Msg's inner should not be at offset zero");
+    always_assert((char*)inner::internal::to_inner(j) - (char*)j == 0, "Job's inner should be at offset zero");
 
-    always_assert(inner::internal::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
-    always_assert(inner::internal::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
-    always_assert(inner::internal::from_inner(inner::internal::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
-    always_assert(inner::internal::from_inner(inner::internal::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
+    always_assert(inner::internal::to_inner(m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
+    always_assert(inner::internal::to_inner(j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
+    always_assert(inner::internal::from_inner(inner::internal::to_inner(m), Msg) == m, "Msg: the round trip lost the outer");
+    always_assert(inner::internal::from_inner(inner::internal::to_inner(j), Job) == j, "Job: the round trip lost the outer");
 }
 
 <*
@@ -64,12 +66,17 @@ fn void inner_at_any_offset() @test
 *>
 fn void identity_is_per_type() @test
 {
-    Msg  a;
-    Msg  b;
-    Twin t;
-    inner::internal::stamp(&a);
-    inner::internal::stamp(&b);
-    inner::internal::stamp(&t);
+    Slot sa;
+    Slot sb;
+    Slot st;
+    defer MSG.release(mem, &sa);
+    defer MSG.release(mem, &sb);
+    defer TWIN.release(mem, &st);
+    if (catch MSG.create(mem, &sa)) { always_assert(false, "create failed"); }
+    if (catch MSG.create(mem, &sb)) { always_assert(false, "create failed"); }
+    if (catch TWIN.create(mem, &st)) { always_assert(false, "create failed"); }
+    Msg* a = MSG.must_look(&sa);
+    Msg* b = MSG.must_look(&sb);
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
@@ -84,9 +91,11 @@ fn void identity_is_per_type() @test
 *>
 fn void identity_is_stored() @test
 {
-    Msg m;
-    inner::internal::stamp(&m);
-    Inner* inner = inner::internal::to_inner(&m);
+    Slot s;
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+
+    Inner* inner = inner::internal::to_inner(MSG.must_look(&s));
     always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -100,6 +109,10 @@ fn void identity_is_stored() @test
 *>
 fn void uninitialized_inner_is_refused() @test
 {
+    // The one outer in this file that is NOT allocated through the helper, and
+    // it cannot be: `create` always stamps, and an outer that was never
+    // stamped is the whole subject here. A zeroed frame outer is the only way
+    // to hold one.
     Msg m = {};
     always_assert(!inner::internal::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
     always_assert(inner::internal::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
@@ -113,12 +126,14 @@ fn void uninitialized_inner_is_refused() @test
 *>
 fn void checking_crossing_refuses() @test
 {
-    Twin t;
-    inner::internal::stamp(&t);
-    Inner* inner = inner::internal::to_inner(&t);
+    Slot s;
+    defer TWIN.release(mem, &s);
+    if (catch TWIN.create(mem, &s)) { always_assert(false, "create failed"); }
+    Twin* t = TWIN.must_look(&s);
+    Inner* inner = inner::internal::to_inner(t);
 
     always_assert(inner::internal::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
-    always_assert(inner::internal::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
+    always_assert(inner::internal::from_inner(inner, Twin) == t, "a Twin failed to cross as a Twin");
     always_assert(!inner::internal::is_mine(inner, Msg), "the predicate claimed a Twin");
 }
 
@@ -140,16 +155,25 @@ fn void null_handle_is_nobodys() @test
 *>
 fn void heterogeneous_walk_claims_correctly() @test
 {
-    Msg  m1; Msg  m2;
-    Twin t1;
-    Job  j1;
-    inner::internal::stamp(&m1); inner::internal::stamp(&m2); inner::internal::stamp(&t1); inner::internal::stamp(&j1);
+    Slot sm1; Slot sm2;
+    Slot st1;
+    Slot sj1;
+    defer MSG.release(mem, &sm1);
+    defer MSG.release(mem, &sm2);
+    defer TWIN.release(mem, &st1);
+    defer JOB.release(mem, &sj1);
+    if (catch MSG.create(mem, &sm1))  { always_assert(false, "create failed"); }
+    if (catch MSG.create(mem, &sm2))  { always_assert(false, "create failed"); }
+    if (catch TWIN.create(mem, &st1)) { always_assert(false, "create failed"); }
+    if (catch JOB.create(mem, &sj1))  { always_assert(false, "create failed"); }
 
+    // The four Slots keep the outers alive for the release; the queue is what
+    // the walk reads.
     InnerQueue list;
-    list.push_back(inner::internal::to_inner(&m1));
-    list.push_back(inner::internal::to_inner(&t1));
-    list.push_back(inner::internal::to_inner(&j1));
-    list.push_back(inner::internal::to_inner(&m2));
+    list.push_back(inner::internal::to_inner(MSG.must_look(&sm1)));
+    list.push_back(inner::internal::to_inner(TWIN.must_look(&st1)));
+    list.push_back(inner::internal::to_inner(JOB.must_look(&sj1)));
+    list.push_back(inner::internal::to_inner(MSG.must_look(&sm2)));
 
     usz mine = 0;
     usz seen = 0;
@@ -178,16 +202,20 @@ fn void heterogeneous_walk_claims_correctly() @test
 *>
 fn void the_methods_cross_the_same_border() @test
 {
-    Msg  m;
-    Twin t;
-    inner::internal::stamp(&m);
-    inner::internal::stamp(&t);
+    Slot sm;
+    Slot st;
+    defer MSG.release(mem, &sm);
+    defer TWIN.release(mem, &st);
+    if (catch MSG.create(mem, &sm))  { always_assert(false, "create failed"); }
+    if (catch TWIN.create(mem, &st)) { always_assert(false, "create failed"); }
+    Msg*  m = MSG.must_look(&sm);
+    Twin* t = TWIN.must_look(&st);
 
-    Inner* hm = inner::internal::to_inner(&m);
-    Inner* ht = inner::internal::to_inner(&t);
+    Inner* hm = inner::internal::to_inner(m);
+    Inner* ht = inner::internal::to_inner(t);
 
-    always_assert(hm.to(Msg) == &m, "h.to lost the outer");
-    always_assert(hm.as(Msg) == &m, "h.as lost the outer");
+    always_assert(hm.to(Msg) == m, "h.to lost the outer");
+    always_assert(hm.as(Msg) == m, "h.as lost the outer");
     always_assert(hm.to(Msg) == inner::internal::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
@@ -204,24 +232,23 @@ fn void the_methods_cross_the_same_border() @test
 *>
 fn void the_slot_methods_cross_the_same_border() @test
 {
-    Msg  m;
-    Twin t;
-    inner::internal::stamp(&m);
-    inner::internal::stamp(&t);
-
     Slot s;
-    s.fill(inner::internal::to_inner(&m));
+    defer MSG.release(mem, &s);
+    if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
+    Msg* m = MSG.must_look(&s);
 
-    always_assert(s.to(Msg) == &m, "s.to lost the outer");
-    always_assert(s.must(Msg) == &m, "s.must lost the outer");
+    always_assert(s.to(Msg) == m, "s.to lost the outer");
+    always_assert(s.must(Msg) == m, "s.must lost the outer");
     always_assert(s.to(Twin) == null, "s.to claimed a Msg as a Twin");
     always_assert(!s.is_empty(), "a look emptied the Slot");
 
     always_assert(s.move(Twin) == null, "s.move claimed a Msg as a Twin");
     always_assert(!s.is_empty(), "a failed move took the outer anyway");
 
-    always_assert(s.move(Msg) == &m, "s.move lost the outer");
+    always_assert(s.move(Msg) == m, "s.move lost the outer");
     always_assert(s.is_empty(), "a successful move left the Slot full");
+
+    s.fill(inner::internal::to_inner(m));           // back into the Slot the defer releases
 }
 
 <*

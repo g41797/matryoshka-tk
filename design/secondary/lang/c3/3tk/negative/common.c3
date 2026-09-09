@@ -17,8 +17,16 @@ module neg;
 import mtk;
 import mtk::pool;
 
-struct Msg { int id; Inner inner; }
-struct Job { Inner inner; int pri; }
+struct Msg
+{
+	int id;
+	Inner inner;
+}
+struct Job
+{
+	Inner inner;
+	int pri;
+}
 
 <*
  A minimal hook object for the container negatives. Part 12.1: the implementing
@@ -26,9 +34,15 @@ struct Job { Inner inner; int pri; }
 *>
 struct NullHooks (PoolHooks)
 {
-    int unused;
+	int unused;
 }
 
-fn void NullHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
-fn void NullHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic { }
-fn void NullHooks.on_close(&self, InnerQueue remaining) @dynamic { }
+fn void NullHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
+{
+}
+fn void NullHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
+{
+}
+fn void NullHooks.on_close(&self, InnerQueue remaining) @dynamic
+{
+}

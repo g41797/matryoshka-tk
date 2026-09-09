@@ -12,6 +12,7 @@ struct Shared
     usz      n;
     Atomic{usz} received;
     Atomic{usz} sum;
+    Atomic{uptr} caught;        // the inner a waiter took, handed back to be freed
 }
 
 // **Part 2.5 MUST, invariant 4 — the deadline is anchored once, before the
@@ -239,10 +240,9 @@ fn void a_leaver_hands_the_signal_on() @test
 
         thread::sleep(time::ms(15))!!;
 
-        Msg m;
-        inner::internal::stamp(&m);
         Slot s;
-        s.fill(inner::internal::to_inner(&m));
+        defer MSG.release(mem, &s);
+        if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
         if (catch mb.send(&s)) {}
 
         foreach (&t : ts) t.join()!!;
@@ -252,7 +252,10 @@ fn void a_leaver_hands_the_signal_on() @test
         // the outer is either with a receiver or still queued; never lost
         always_assert(sh.received.load(ACQUIRE) + left.len() == 1,
             "Part 2.6: the outer was lost between a leaver and the queue");
-        while (left.pop_front()) {}
+        // and it comes back to this thread to be freed, from wherever it ended:
+        // `mem` is per-thread, so the thread that allocated is the one that frees
+        if (Inner* got = (Inner*)(void*)sh.caught.load(SEQ_CONSISTENT)) s.fill(got);
+        while (Inner* inner = left.pop_front()) s.fill(inner);
         mb.release();
     }
 }
@@ -263,6 +266,7 @@ fn int short_waiter(void* arg)
     Slot r;
     if (catch sh.mb.receive(&r, time::ms(25))) return 0;
     sh.received.add(1, SEQ_CONSISTENT);
+    sh.caught.store((uptr)(void*)r.take(), SEQ_CONSISTENT);
     return 0;
 }
 
@@ -401,9 +405,7 @@ fn int late_closer(void* arg)
     return 0;
 }
 
-//----------------------
-// Little-endian imports
-//----------------------
+
 import mtk;
 import mtk::pool;
 import mtk::mailbox;

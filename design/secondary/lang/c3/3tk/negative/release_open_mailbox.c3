@@ -3,8 +3,8 @@
 
  This is the one contract violation the specification refuses to soften:
 
-   "Both stop the program. In every build mode. Not an assert that compiles
-    out. This is the one precondition the toolkit refuses to soften."
+ "Both stop the program. In every build mode. Not an assert that compiles
+ out. This is the one precondition the toolkit refuses to soften."
 
  So unlike every other negative program, this one must **abort in all four
  builds**, including `--safe=no -O3`. It uses `always_assert`, not `@check`.
@@ -17,19 +17,19 @@ import mtk::mailbox;
 import std::io;
 import std::core::mem::alloc;
 
+alias MSG = helper::OF{Msg};
+
 fn int main()
 {
-    Mailbox* mb = mailbox::create(mem)!!;
+	Mailbox* mb = mailbox::create(mem)!!;
 
-    // A queued outer, so a softened check would also leak it.
-    Msg m;
-    inner::internal::stamp(&m);
-    Slot s;
-    s.fill(inner::internal::to_inner(&m));
-    if (catch mb.send(&s)) return 1;
+	// A queued outer, so a softened check would also leak it.
+	Slot s;
+	if (catch MSG.create(mem, &s)) return 1;
+	if (catch mb.send(&s)) return 1;
 
-    mb.release();                    // <-- the violation: never closed
+	mb.release(); // <-- the violation: never closed
 
-    io::printn("SOFTENED: an open mailbox was released");
-    return 0;
+	io::printn("SOFTENED: an open mailbox was released");
+	return 0;
 }

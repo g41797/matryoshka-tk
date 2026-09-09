@@ -18,13 +18,15 @@ alias MSG = helper::OF{Msg};
 
 fn int main()
 {
-    Msg m;                                  // never stamped
+	// NOT allocated through the helper, and it cannot be: `create` always
+	// stamps, and an outer that was never stamped is the whole subject here.
+	Msg m; // never stamped
 
-    Slot s;
-    s.fill(inner::internal::to_inner(&m));
+	Slot s;
+	s.fill(inner::internal::to_inner(&m));
 
-    Msg* p = MSG.look(&s);                  // <-- the violation
+	Msg* p = MSG.look(&s); // <-- the violation
 
-    io::printfn("no check: an unstamped outer crossed as %p", (void*)p);
-    return 0;
+	io::printfn("no check: an unstamped outer crossed as %p", (void*)p);
+	return 0;
 }

@@ -27,38 +27,41 @@ import std::atomic::types;
 
 struct Parked
 {
-    Mailbox*     mb;
-    Atomic{usz}  waiting;
+	Mailbox* mb;
+	Atomic{usz} waiting;
 }
 
 fn int receiver(void* arg)
 {
-    Parked* p = (Parked*)arg;
-    Slot got;
-    p.waiting.store(1, RELEASE);
-    if (catch f = p.mb.receive(&got, time::sec(30))) { return 0; }
-    return 0;
+	Parked* p = (Parked*)arg;
+	Slot got;
+	p.waiting.store(1, RELEASE);
+	if (catch f = p.mb.receive(&got, time::sec(30)))
+	{
+		return 0;
+	}
+	return 0;
 }
 
 fn int main()
 {
-    Mailbox* mb = mailbox::create(mem)!!;
+	Mailbox* mb = mailbox::create(mem)!!;
 
-    Parked p;
-    p.mb = mb;
+	Parked p;
+	p.mb = mb;
 
-    Thread t;
-    t.create(&receiver, &p)!!;
+	Thread t;
+	t.create(&receiver, &p)!!;
 
-    while (p.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    thread::sleep(time::ms(100))!!;      // it is inside wait_until by now
+	while (p.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	thread::sleep(time::ms(100))!!; // it is inside wait_until by now
 
-    InnerQueue left;
-    mb.close(&left);                     // CLOSED, and the receiver is woken
+	InnerQueue left;
+	mb.close(&left); // CLOSED, and the receiver is woken
 
-    mb.release();                        // <-- the violation: closed, not quiet
+	mb.release(); // <-- the violation: closed, not quiet
 
-    io::printn("SOFTENED: a mailbox that was not quiet was released");
-    t.join()!!;
-    return 0;
+	io::printn("SOFTENED: a mailbox that was not quiet was released");
+	t.join()!!;
+	return 0;
 }

@@ -7,6 +7,183 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-09 — 3TK-71: the tests allocate their outers
+
+**Plan [3tk-staging-plan-032.md](3tk-staging-plan-032.md), rulings `T-1` … `T-11`.
+Ran on Opus 5, as the charter asked.** Every outer in `test/` and `negative/` is
+allocated through `OuterHelper.create` now, bar four sites whose subject forbids
+it, and each of those four says so at the site. Closed.
+
+**The figures did not move, which is the proof `T-10` asked for.**
+`run-builds.sh` is **107 checks, 0 failures, four builds, 145 tests in each**.
+`check-doc-loop.sh` is **11 labelled blocks, 0 differing, 443 of 443 sentences,
+0 banned words**, and `move-module-docs.sh roundtrip` is byte-identical over all
+eleven. No test was added or removed. **`run-sanitizers.sh` is 3 of 3 clean** —
+and it was not clean the first time it ran; see below.
+
+### The count the plan carried was not the count on disk
+
+**The plan counted 41 stack outers in `test/` and 12 in `negative/`, per
+declaration. It counted only the SCALAR declarations.** An array of outers —
+`Msg[8] ms;` — is one declaration and eight stack outers, and there were
+**nineteen such arrays**: ten in `t_queue.c3`, eight in `t_mailbox.c3`, one in
+`negative/self_move.c3`. Rule 10 as it then was, Rule 11 now: the measurement
+wins, the definition is fixed in passing, and the stage does not come back to
+ask. **Every array converted along with the scalars.**
+
+`t_mailbox.c3`'s `Sending.outers` was the sharpest of them: three stack outers
+inside a struct, stamped and sent into a mailbox **on a worker thread**, with the
+parent frame owning the storage.
+
+### `MsgBag`, and why the sweep did not become 150 Slots
+
+Nineteen arrays would have become one `Slot` per element and a `defer` per Slot.
+**`test/common.c3` grew `MsgBag` instead** — `usz n` and `Slot[8]`, with
+`create(n)`, `release()` and `at(i)`. `at(i)` is exactly what `&ms[i]` was, and
+`create` numbers the outers `id = i`, which is what every ordering assertion in
+`t_queue.c3` reads. `fresh_msgs()` is gone; the bag replaced it.
+
+### Three things the conversion found that the stack was hiding
+
+**1. `mem` is per-thread, and an outer must be freed by the thread that
+allocated it.** `close_then_join_then_release` was converted with
+`sd.outers.create(3)` inside `sender_fn` and the release in the parent, and it
+aborted with signal 4. The outers are created in the parent's spawn loop now,
+before the thread starts. **This is written into Rule 6**, because nothing else
+in the port says it and the next test that spawns a producer will meet it again.
+
+**2. A `defer release` must be registered BEFORE the container's `defer`, not
+after.** Defers are LIFO, so a bag declared under `defer drop_mailbox(mb)` frees
+its outers *first* and the close then walks freed memory.
+**`the_anchor_is_cleared` did exactly that, and AddressSanitizer caught it** —
+heap-use-after-free in `Inner.repoint_to` and `internal::reset`, three sanitizer
+builds red. The outer-owning declaration moved above the mailbox in every
+affected test and all three went clean.
+
+**Neither defect was reachable while the outers were on the stack**, because a
+frame address is still readable after the outer is logically dead. That is the
+argument Stage A made in the abstract, and this is it happening.
+
+**3. `matryoshka-3tk/scripts/run-builds.sh` still named `insert_linked_item`**, a
+negative program that was renamed to `insert_linked_outer` in this repo and never
+renamed there. The ported copy was silently checking a program that does not
+exist. Fixed in `matryoshka-3tk` — Rule 10 as it now is: **the four ported
+scripts differ only in the `ROOT` line**, and they do again.
+
+### The four exemptions, and each says so at the site
+
+`T-4` named three and said the list was open. **It is four.**
+
+- `test/t_identity.c3` `uninitialized_inner_is_refused` — `create` always
+  stamps, and an unstamped outer is the subject.
+- `negative/unstamped_insert.c3`, `negative/unstamped_crossing.c3` — the same
+  reason, at the two boundaries.
+- `test/t_helper.c3` `inner_stamps_on_the_way_out` — **the one the plan did not
+  list.** Its own doc block says *"an outer allocated by hand never has to be
+  stamped separately"*, so an outer `create` made is not the subject.
+
+**Nothing else survived the question.** `t_identity.c3`'s offset probes converted
+as `T-1` and step 2 said they should; the two probes there merged with the two
+outers below them, four allocations becoming two, because the probes existed only
+to be a second unstamped pair.
+
+### `T-7`: both globals converted, and the reason is not the lifetime
+
+`negative/release_during_on_put.c3` and `negative/release_with_straggler_put.c3`
+declared `Msg one;` at global scope. **The lifetime argument does not reach a
+global** — its address is valid for the life of the program — so `T-7` asked for
+each to be ruled on its own. **Both convert**, and not because they were unsafe:
+
+- Neither subject is the outer. Both are about releasing a pool while a hook is
+  still inside one, and the outer is a prop.
+- The outer **crosses a thread boundary into a pool**, which is the shape a
+  reader of a negative program copies.
+- Global was never a decision. It is where the outer went when a frame outer
+  would have looked wrong — the historic reason `T-1` is about.
+
+In the aborting builds `main` never returns, and in the fast builds the program
+exits with the outer unfreed. That was true of the global too; freeing it is not
+what either program proves.
+
+### A defect of `3TK-70` was sitting in the baseline
+
+**`run-builds.sh` was 106 of 107 before this stage touched anything.** Three
+declarations in `::internal` modules carried no doc block at all —
+`_Mbox.send_at`, `_Pool.take_back`, `_Pool.take_back_inner` — which Rule 2
+forbids without exception. **Fixed first, so the stage had a green baseline to
+measure against**, and it is the only line of `src/` this stage wrote. It moved
+no sentence: the marker is excluded from the doc loop by exact match, and 443
+stayed 443.
+
+### `c3fmt` ran on `src/` mid-stage, and the doc loop refused it
+
+**The owner ran `c3fmt`, at 14:36:37.** The stage did not know that at the time
+and reported it as damage from outside the session; **that was wrong, and this
+paragraph is the correction.** What the formatter did: spaces to tabs, doc blocks
+re-wrapped at about 120 columns, single-line `if` bodies expanded to braces,
+signatures split one parameter per line, and the *Little-endian imports* banners
+deleted with their imports moved under them.
+
+**The doc loop refused it, and the numbers are the finding: 4 module blocks
+`DIFFERS` and 453 descriptor sentences instead of 443.** A wrapped continuation
+line is counted as a sentence of its own, and a wrapped block no longer matches
+its labelled block in `3tk-reference-009.md`. This is a genuine conflict between
+`c3fmt` and the doc loop, not a formatting preference.
+
+**The stage restored `src/` from `matryoshka-3tk/src/`, byte-identical to the
+pre-`c3fmt` state, and re-applied the three doc blocks** — 0 differing and 443
+again, which is what says the restore was exact. **No git was used: it is the
+owner's, always.** But the restore undid an action the owner had taken
+deliberately, and a stage should establish that before reverting six files it
+did not write.
+
+**Ruled by the owner the same day, once told: leave `src/` unformatted.** Written
+into `3tk-rules-003.md` under Rule 4, beside the sentence that says
+`check-doc-loop.sh` diffs every module block — **a stage that wants the source
+formatted answers the doc loop first.**
+
+### The rules file, and the renumbering
+
+**`3tk-rules-003.md`**, `002` to `matryoshka-3tk/design/backup/`. **Rule 6 is new
+and it is a PORT rule**, at the end of Part 1: *an outer in `test/` or
+`negative/` is heap-allocated through the helper, unless the test's subject
+forbids it — and then the site says so.* It carries the pattern, the four
+exemptions, the per-thread allocator fact, and `T-6`'s argument for why no check
+enforces it. **The five stage rules renumbered 6–10 into 7–11.**
+
+**`T-9`'s three citations resolved to two edits.** Each was resolved from the
+rule's own text and never from the number it carried:
+
+- `3tk-status.md`, *"the basis in `Rule 7` governs"* → **Rule 8**, the model rule.
+- `3tk-status.md`, 3TK-70's row, *"— Rule 10"* → **Rule 11**, *fix the
+  definition*, marked with the number 3TK-70 cited so the row stays readable as
+  history.
+- `3tk-status.md`, *"Rule 5 carries `L-9`'s sharpened wording"* — **Rule 5 did
+  not move.** The new rule went in after it, so Part 1's numbering is untouched.
+  The sentence is reworded to say so rather than left to be re-checked.
+- The plan's third citation, `3tk-staging-plan-030.md`'s `L-9`, **is in
+  `backup/`** and backup is transient, so it is not a live citation and was not
+  edited.
+
+Every pointer that says *this is the rules file* now says `003`, in
+`3tk-status.md` and in `3tk-decisions-007.md`. The two sentences that record what
+3TK-70 itself produced still name `002`, because they are history and it is
+accurate.
+
+### Rule 10 — the scripts and the CI
+
+**One script change, and it is the `insert_linked_item` rename above.** The four
+ported scripts differ only in the `ROOT` line. `check-doc-loop.sh` and
+`move-module-docs.sh` are this repo's only and were not touched.
+
+**The three `.yml` files needed no change, and that is written here because Rule
+10 says "none needed" is an answer that must be.** `linux.yml` is a build-and-test
+matrix and this stage added no file, flag or target; `docs.yml` runs docgen over
+`src/`, which is unchanged; `sanitizers.yml` runs the same suite, which now
+exercises real allocation and free — a gain, and it needs nothing said to it.
+
+---
+
 ## 2026-09-09 — 3TK-70: the module split, and the hooks page
 
 **Plan [3tk-staging-plan-031.md](3tk-staging-plan-031.md), rulings `M-1` … `M-8`.

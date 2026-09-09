@@ -684,6 +684,9 @@ fn void _Pool._close(&self, InnerQueue* out)
     self._cv.broadcast();
 }
 
+<*
+ For internal usage.
+*>
 // Stores one outer the hook decided to keep. Called under the lock.
 fn void _Pool.take_back(&self, Slot* s)
 {
@@ -691,6 +694,9 @@ fn void _Pool.take_back(&self, Slot* s)
     self.take_back_inner(s.take());
 }
 
+<*
+ For internal usage.
+*>
 fn void _Pool.take_back_inner(&self, Inner* inner)
 {
     PoolBucket* b = self.bucket_for(inner.link.type);

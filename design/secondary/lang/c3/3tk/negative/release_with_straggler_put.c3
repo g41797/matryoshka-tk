@@ -24,75 +24,80 @@ import std::atomic::types;
 
 struct StragglerHooks (PoolHooks)
 {
-    Atomic{usz} in_put;       // the put is in on_put
-    Atomic{usz} closed;       // the main thread has closed
-    Atomic{usz} straggling;   // the put is in the straggler on_close
-    Atomic{usz} go;           // the main thread is about to release
+	Atomic{usz} in_put; // the put is in on_put
+	Atomic{usz} closed; // the main thread has closed
+	Atomic{usz} straggling; // the put is in the straggler on_close
+	Atomic{usz} go; // the main thread is about to release
 }
 
-fn void StragglerHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic { }
+fn void StragglerHooks.on_get(&self, typeid want, usz in_pool, Slot* slot) @dynamic
+{
+}
 
 fn void StragglerHooks.on_put(&self, usz in_pool, Slot* slot, InnerQueue* extra) @dynamic
 {
-    // keep the outer, so the close that arrives meanwhile makes it a straggler
-    self.in_put.store(1, RELEASE);
-    while (self.closed.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	// keep the outer, so the close that arrives meanwhile makes it a straggler
+	self.in_put.store(1, RELEASE);
+	while (self.closed.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
 }
 
 fn void StragglerHooks.on_close(&self, InnerQueue remaining) @dynamic
 {
-    bool straggler = !remaining.is_empty();
-    while (Inner* inner = remaining.pop_front()) { }
-    if (!straggler) return;             // the close's own call, which is empty here
+	bool straggler = !remaining.is_empty();
+	while (Inner* inner = remaining.pop_front())
+	{
+	}
+	if (!straggler) return; // the close's own call, which is empty here
 
-    self.straggling.store(1, RELEASE);
-    while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    thread::sleep(time::ms(200))!!;     // the release has run by now
+	self.straggling.store(1, RELEASE);
+	while (self.go.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	thread::sleep(time::ms(200))!!; // the release has run by now
 }
 
 struct Giving
 {
-    Pool*  p;
-    Inner* outer;
+	Pool* p;
+	Inner* outer;
 }
 
 fn int giver(void* arg)
 {
-    Giving* g = (Giving*)arg;
-    Slot s;
-    s.fill(g.outer);
-    g.p.put(&s);
-    return 0;
+	Giving* g = (Giving*)arg;
+	Slot s;
+	s.fill(g.outer);
+	g.p.put(&s);
+	return 0;
 }
 
-Msg one;
+alias MSG = helper::OF{Msg};
 
 fn int main()
 {
-    StragglerHooks hooks;
-    typeid[1] tags = { Msg::typeid };
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	StragglerHooks hooks;
+	typeid[1] tags = { Msg::typeid };
+	Pool* p        = pool::create(mem, &tags, &hooks)!!;
 
-    inner::internal::stamp(&one);
+	Slot one;
+	if (catch MSG.create(mem, &one)) return 1;
 
-    Giving g;
-    g.p = p;
-    g.outer = inner::internal::to_inner(&one);
+	Giving g;
+	g.p = p;
+	g.outer = inner::internal::to_inner(MSG.must_look(&one));
 
-    Thread t;
-    t.create(&giver, &g)!!;
+	Thread t;
+	t.create(&giver, &g)!!;
 
-    while (hooks.in_put.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	while (hooks.in_put.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
 
-    p.close();                          // the close's own hook gets nothing
-    hooks.closed.store(1, RELEASE);     // the put wakes, and strags
+	p.close(); // the close's own hook gets nothing
+	hooks.closed.store(1, RELEASE); // the put wakes, and strags
 
-    while (hooks.straggling.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    hooks.go.store(1, RELEASE);
+	while (hooks.straggling.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	hooks.go.store(1, RELEASE);
 
-    p.release();                        // <-- the violation: closed, not quiet
+	p.release(); // <-- the violation: closed, not quiet
 
-    io::printn("SOFTENED: a pool was released while a straggler hook was running");
-    t.join()!!;
-    return 0;
+	io::printn("SOFTENED: a pool was released while a straggler hook was running");
+	t.join()!!;
+	return 0;
 }

@@ -22,15 +22,15 @@ import std::core::mem::alloc;
 
 fn int main()
 {
-    NullHooks hooks;
+	NullHooks hooks;
 
-    typeid[3] tags = { Msg::typeid, Job::typeid, Msg::typeid };   // <-- the violation
+	typeid[3] tags = { Msg::typeid, Job::typeid, Msg::typeid }; // <-- the violation
 
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	Pool* p = pool::create(mem, &tags, &hooks)!!;
 
-    io::printn("no check: the pool was created with a duplicate identity");
+	io::printn("no check: the pool was created with a duplicate identity");
 
-    p.close();
-    p.release();
-    return 0;
+	p.close();
+	p.release();
+	return 0;
 }

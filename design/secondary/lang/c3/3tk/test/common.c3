@@ -49,6 +49,38 @@ fn void? Two.init(&self, Allocator a)   { self.first = a; self.second = a; retur
 fn void? Picky.init(&self, Allocator a) => PICKY_REFUSED~;
 fn void? Noisy.destroy(&self, Allocator a) { destroyed++; return; }
 
+<*
+ A bag of allocated `Msg` outers, and the reason it exists.
+
+ The tests used to declare `Msg[8] ms;` on the frame. A stack outer is illegal
+ — 3tk computes an outer's address from its embedded `Inner` at every crossing,
+ and a frame address is valid for one lexical instance of one frame — so the
+ bag holds each outer in a Slot of its own, created through the helper, and
+ `release` is what frees them.
+
+ `at(i)` is what `&ms[i]` was. `create` numbers the outers `id = i`, which is
+ what every ordering assertion in `t_queue.c3` reads.
+*>
+struct MsgBag { usz n; Slot[8] slots; }
+
+fn void MsgBag.create(&self, usz n)
+{
+    always_assert(n <= 8, "a MsgBag holds at most eight outers");
+    self.n = n;
+    for (usz i = 0; i < n; i++)
+    {
+        if (catch MSG.create(mem, &self.slots[i])) { always_assert(false, "create failed"); }
+        MSG.must_look(&self.slots[i]).id = (int)i;
+    }
+}
+
+fn void MsgBag.release(&self)
+{
+    for (usz i = 0; i < self.n; i++) MSG.release(mem, &self.slots[i]);
+}
+
+fn Msg* MsgBag.at(&self, usz i) => MSG.must_look(&self.slots[i]);
+
 alias MSG    = helper::OF{Msg};
 alias JOB    = helper::OF{Job};
 alias TWIN   = helper::OF{Twin};

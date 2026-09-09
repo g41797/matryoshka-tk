@@ -456,6 +456,9 @@ fn void _Mbox._close(&self, InnerQueue* out)
     self._cv.broadcast();
 }
 
+<*
+ For internal usage.
+*>
 fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
 {
     mtk::@check(slot.is_full(), "Mailbox.send from an empty Slot");

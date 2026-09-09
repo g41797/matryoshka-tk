@@ -18,11 +18,13 @@ import std::io;
 
 fn int main()
 {
-    Msg m;                                  // never stamped
+	// NOT allocated through the helper, and it cannot be: `create` always
+	// stamps, and an outer that was never stamped is the whole subject here.
+	Msg m; // never stamped
 
-    InnerQueue list;
-    list.push_back(inner::internal::to_inner(&m));    // <-- the violation
+	InnerQueue list;
+	list.push_back(inner::internal::to_inner(&m)); // <-- the violation
 
-    io::printfn("no check: an unstamped outer is on a queue of %d", (int)list.len());
-    return 0;
+	io::printfn("no check: an unstamped outer is on a queue of %d", (int)list.len());
+	return 0;
 }

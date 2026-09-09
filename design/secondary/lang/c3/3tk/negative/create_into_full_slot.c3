@@ -14,19 +14,23 @@ module neg;
 import mtk;
 import std::io;
 
-struct Holder { int id; Inner inner; Allocator alloc; }
+struct Holder
+{
+	int id;
+	Inner inner;
+	Allocator alloc;
+}
 alias HOLDER = helper::OF{Holder};
+
+alias MSG = helper::OF{Msg};
 
 fn int main()
 {
-    Msg m;
-    inner::internal::stamp(&m);
+	Slot s;
+	if (catch MSG.create(mem, &s)) return 1;    // the Slot is full from here
 
-    Slot s;
-    s.fill(inner::internal::to_inner(&m));
+	if (catch HOLDER.create(mem, &s)) return 1; // <-- the violation
 
-    if (catch HOLDER.create(mem, &s)) return 1;   // <-- the violation
-
-    io::printn("no check: create wrote into a full Slot");
-    return 0;
+	io::printn("no check: create wrote into a full Slot");
+	return 0;
 }

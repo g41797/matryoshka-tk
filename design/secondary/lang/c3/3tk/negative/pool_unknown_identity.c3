@@ -32,49 +32,54 @@ import std::time;
 *>
 macro fault @unknown(#expr)
 {
-    if (catch f = #expr) return f;
-    always_assert(false, "the call succeeded, and an unknown identity cannot be served");
-    return {};
+	if (catch f = #expr) return f;
+	always_assert(false, "the call succeeded, and an unknown identity cannot be served");
+	return { };
 }
 
 fn int main()
 {
-    NullHooks hooks;
+	NullHooks hooks;
 
-    typeid[1] tags = { Msg::typeid };
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	typeid[1] tags = { Msg::typeid };
+	Pool* p        = pool::create(mem, &tags, &hooks)!!;
 
-    Slot s;
+	Slot s;
 
-    // Job is a real type and a legal identity. It is simply not one this pool
-    // was created with, which is the violation. In a checking build the first
-    // call below aborts and nothing after it runs.
-    //
-    // `@catch_is` is not reachable here — it belongs to the test runner, and a
-    // negative is compiled as an ordinary program. `if (catch f = ...)` is the
-    // same assertion written by hand, and it reads the fault rather than only
-    // noticing that there was one.
-    fault f;
+	// Job is a real type and a legal identity. It is simply not one this pool
+	// was created with, which is the violation. In a checking build the first
+	// call below aborts and nothing after it runs.
+	// 
+	// `@catch_is` is not reachable here — it belongs to the test runner, and a
+	// negative is compiled as an ordinary program. `if (catch f = ...)` is the
+	// same assertion written by hand, and it reads the fault rather than only
+	// noticing that there was one.
+	fault f;
 
-    f = @unknown(p.get(Job::typeid, AVAILABLE_OR_NEW, &s));
-    always_assert(f == mtk::UNKNOWN_IDENTITY,
-                  "Part 19.3: available-or-new on an unknown identity must not report NOT_AVAILABLE");
+	f = @unknown(p.get(Job::typeid, AVAILABLE_OR_NEW, &s));
+	always_assert(
+		f == mtk::UNKNOWN_IDENTITY,
+		"Part 19.3: available-or-new on an unknown identity must not report NOT_AVAILABLE"
+	);
 
-    f = @unknown(p.get(Job::typeid, NEW_ONLY, &s));
-    always_assert(f == mtk::UNKNOWN_IDENTITY,
-                  "Part 19.3: new-only on an unknown identity must not report NOT_AVAILABLE");
+	f = @unknown(p.get(Job::typeid, NEW_ONLY, &s));
+	always_assert(
+		f == mtk::UNKNOWN_IDENTITY,
+		"Part 19.3: new-only on an unknown identity must not report NOT_AVAILABLE"
+	);
 
-    f = @unknown(p.get(Job::typeid, AVAILABLE_ONLY, &s));
-    always_assert(f == mtk::UNKNOWN_IDENTITY,
-                  "an unknown identity is a defect, not the available-only mode's not-available");
+	f = @unknown(p.get(Job::typeid, AVAILABLE_ONLY, &s));
+	always_assert(
+		f == mtk::UNKNOWN_IDENTITY,
+		"an unknown identity is a defect, not the available-only mode's not-available"
+	);
 
-    f = @unknown(p.get_wait(Job::typeid, &s, time::ms(60)));
-    always_assert(f == mtk::UNKNOWN_IDENTITY,
-                  "A3: the waiting get reports the same defect and does not sleep on it");
+	f = @unknown(p.get_wait(Job::typeid, &s, time::ms(60)));
+	always_assert(f == mtk::UNKNOWN_IDENTITY, "A3: the waiting get reports the same defect and does not sleep on it");
 
-    io::printn("no check: three get modes and get_wait reported UNKNOWN_IDENTITY");
+	io::printn("no check: three get modes and get_wait reported UNKNOWN_IDENTITY");
 
-    p.close();
-    p.release();
-    return 0;
+	p.close();
+	p.release();
+	return 0;
 }

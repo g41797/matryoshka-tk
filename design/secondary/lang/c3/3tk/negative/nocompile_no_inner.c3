@@ -11,6 +11,15 @@
 module neg_nc;
 import mtk;
 
-struct NotAnItem { int a; int b; }
+struct NotAnItem
+{
+	int a;
+	int b;
+}
 
-fn int main() { NotAnItem n; inner::internal::stamp(&n); return 0; }
+fn int main()
+{
+	NotAnItem n;
+	inner::internal::stamp(&n);
+	return 0;
+}

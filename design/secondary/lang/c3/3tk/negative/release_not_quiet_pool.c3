@@ -25,39 +25,42 @@ import std::atomic::types;
 
 struct Parked
 {
-    Pool*       p;
-    Atomic{usz} waiting;
+	Pool* p;
+	Atomic{usz} waiting;
 }
 
 fn int getter(void* arg)
 {
-    Parked* k = (Parked*)arg;
-    Slot got;
-    k.waiting.store(1, RELEASE);
-    if (catch f = k.p.get_wait(Msg::typeid, &got, time::sec(30))) { return 0; }
-    return 0;
+	Parked* k = (Parked*)arg;
+	Slot got;
+	k.waiting.store(1, RELEASE);
+	if (catch f = k.p.get_wait(Msg::typeid, &got, time::sec(30)))
+	{
+		return 0;
+	}
+	return 0;
 }
 
 fn int main()
 {
-    NullHooks hooks;
-    typeid[1] tags = { Msg::typeid };
-    Pool* p = pool::create(mem, &tags, &hooks)!!;
+	NullHooks hooks;
+	typeid[1] tags = { Msg::typeid };
+	Pool* p        = pool::create(mem, &tags, &hooks)!!;
 
-    Parked k;
-    k.p = p;
+	Parked k;
+	k.p = p;
 
-    Thread t;
-    t.create(&getter, &k)!!;
+	Thread t;
+	t.create(&getter, &k)!!;
 
-    while (k.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
-    thread::sleep(time::ms(100))!!;      // it is inside wait_until by now
+	while (k.waiting.load(ACQUIRE) == 0) thread::sleep(time::ms(1))!!;
+	thread::sleep(time::ms(100))!!; // it is inside wait_until by now
 
-    p.close();                           // CLOSED, and the getter is woken
+	p.close(); // CLOSED, and the getter is woken
 
-    p.release();                         // <-- the violation: closed, not quiet
+	p.release(); // <-- the violation: closed, not quiet
 
-    io::printn("SOFTENED: a pool that was not quiet was released");
-    t.join()!!;
-    return 0;
+	io::printn("SOFTENED: a pool that was not quiet was released");
+	t.join()!!;
+	return 0;
 }

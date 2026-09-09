@@ -8,15 +8,17 @@ module neg;
 import mtk;
 import std::io;
 
+alias MSG = helper::OF{Msg};
+
 fn int main()
 {
-    Msg a; Msg b;
-    inner::internal::stamp(&a); inner::internal::stamp(&b);
+	Slot s;
+	Slot other;
+	if (catch MSG.create(mem, &s)) return 1;
+	if (catch MSG.create(mem, &other)) return 1;
 
-    Slot s;
-    s.fill(inner::internal::to_inner(&a));
-    s.fill(inner::internal::to_inner(&b));          // <-- the violation
+	s.fill(inner::internal::to_inner(MSG.must_look(&other))); // <-- the violation
 
-    io::printn("no check: the full Slot was overwritten");
-    return 0;
+	io::printn("no check: the full Slot was overwritten");
+	return 0;
 }

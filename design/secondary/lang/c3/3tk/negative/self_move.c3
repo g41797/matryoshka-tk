@@ -14,25 +14,28 @@ module neg;
 import mtk;
 import std::io;
 
+alias MSG = helper::OF{Msg};
+
 fn int main()
 {
-    Msg[3] ms;
-    InnerQueue a;
-    for (usz i = 0; i < 3; i++)
-    {
-        ms[i].id = (int)i;
-        inner::internal::stamp(&ms[i]);
-        a.push_back(inner::internal::to_inner(&ms[i]));
-    }
+	Slot[3] ms;
+	InnerQueue a;
+	for (usz i = 0; i < 3; i++)
+	{
+		if (catch MSG.create(mem, &ms[i])) return 1;
+		Msg* one = MSG.must_look(&ms[i]);
+		one.id = (int)i;
+		a.push_back(inner::internal::to_inner(one));
+	}
 
-    a.append_queue(&a);                // <-- the violation
+	a.append_queue(&a); // <-- the violation
 
-    always_assert(a.len() == 3, "the early return did not save the queue");
-    for (usz i = 0; i < 3; i++)
-    {
-        Msg* m = inner::internal::from_inner(a.pop_front(), Msg);
-        always_assert(m != null && m.id == (int)i, "the self-move lost an outer");
-    }
-    io::printn("no check: the early return saved the queue");
-    return 0;
+	always_assert(a.len() == 3, "the early return did not save the queue");
+	for (usz i = 0; i < 3; i++)
+	{
+		Msg* m = inner::internal::from_inner(a.pop_front(), Msg);
+		always_assert(m != null && m.id == (int)i, "the self-move lost an outer");
+	}
+	io::printn("no check: the early return saved the queue");
+	return 0;
 }

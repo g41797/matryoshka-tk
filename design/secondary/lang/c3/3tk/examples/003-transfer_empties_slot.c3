@@ -97,9 +97,7 @@ fn void? demonstrate_transfer_empties_slot(Allocator a)
     shc::helpers::expect(TRANSFER_FAILED, to_queue.is_empty(), "push_back_slot left the Slot full")!;
 }
 
-//----------------------
-// Little-endian imports
-//----------------------
+
 import std::core::mem::alloc;
 
 alias HOLDER = helper::OF{Holder};

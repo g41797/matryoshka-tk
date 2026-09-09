@@ -17,18 +17,24 @@ module neg;
 import mtk;
 import std::io;
 
+alias MSG = helper::OF{Msg};
+
 fn int main()
 {
-    Msg a; Msg b;
-    inner::internal::stamp(&a); inner::internal::stamp(&b);
+	Slot sa;
+	Slot sb;
+	if (catch MSG.create(mem, &sa)) return 1;
+	if (catch MSG.create(mem, &sb)) return 1;
+	Inner* a = inner::internal::to_inner(MSG.must_look(&sa));
+	Inner* b = inner::internal::to_inner(MSG.must_look(&sb));
 
-    InnerQueue one;
-    InnerQueue two;
-    one.push_back(inner::internal::to_inner(&a));
-    one.push_back(inner::internal::to_inner(&b));
+	InnerQueue one;
+	InnerQueue two;
+	one.push_back(a);
+	one.push_back(b);
 
-    two.push_back(inner::internal::to_inner(&a));    // <-- the violation: a is on `one`
+	two.push_back(a); // <-- the violation: a is on `one`
 
-    io::printn("no check: a linked outer was inserted on a second queue");
-    return 0;
+	io::printn("no check: a linked outer was inserted on a second queue");
+	return 0;
 }
