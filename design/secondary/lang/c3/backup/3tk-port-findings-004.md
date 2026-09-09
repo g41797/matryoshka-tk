@@ -1,10 +1,23 @@
-# What the C3 port decided, and why (004)
+# What the C3 port decided, and why (005)
 
-Stage 3TK-56, 2026-08-30. **Description and reasoning. Not recommendations.**
+**Description and reasoning. Not recommendations.**
 
-Version 004 of the document stage 3TK-20 cut as
-[`backup/3tk-port-findings-001.md`](backup/3tk-port-findings-001.md). 002 and
-003 are in [`backup/`](backup/3tk-port-findings-003.md).
+Written by 3TK-20 on 2026-08-24 and grown by 3TK-22, 3TK-24 and 3TK-56.
+**3TK-73 crossed it into this repository on 2026-09-09** — this is where a
+reader of the port lands. `001` to `004` are in `matryoshka-tk`'s
+`design/secondary/lang/c3/backup/`, which is transient and is not a source of
+truth.
+
+**Every `file:line` into 3tk was re-resolved by 3TK-73 against the built tree**,
+because 3TK-63, 3TK-64 and 3TK-70 rewrote four files between 2026-08-30 and
+2026-09-09 and every number here had moved. Quoted 3tk code was re-cut from the
+same tree in the same pass, which is why the blocks below say `Inner*` where
+earlier versions said `Handle`: the port retired that word. **The ztk citations
+are left exactly as measured** — none of them was re-read, and re-pointing a
+measurement would falsify it.
+
+**Three claims changed with the code and are marked where they appear**: the
+mailbox's Part 2.6 hand-off, §9's `P4`, and §8's Part 7.4 sentence.
 
 ## What this is
 
@@ -22,9 +35,9 @@ informs.**
 
 ## Who it is for
 
-- **dtk**, the D port, which has run no stage and starts from
-  [`../common/matryoshka-specification-004.md`](../common/matryoshka-specification-004.md)
-  alone — [`../d/dtk-status.md`](../d/dtk-status.md). It has no way to learn
+- **dtk**, the D port, which has run no stage and starts from the shared
+  specification alone — `matryoshka-specification-005.md`, in `matryoshka-tk`'s
+  `design/secondary/lang/common/`. It has no way to learn
   from the specification that a port deleted a field, deleted a walk and got a
   MUST weakened, because the specification records the outcome and not the
   argument.
@@ -52,12 +65,14 @@ judgment about somebody else's schedule. **§1a, §4a and §5a are peers of §1,
 §4 and §5**, numbered that way because §1 to §10 keep the numbers they were
 first read under.
 
-**The citations.** `R1` to `R15` are the rulings of
-[3tk-core-redesign-proposal-002.md](3tk-core-redesign-proposal-002.md), §9. `D1`
-to `D16` are the design decisions of
-[3tk-porting-proposal-004.md](3tk-porting-proposal-004.md), §D. `V1` to `V19`
-and `P1` to `P6` are the findings of
-[3tk-deviations-001.md](3tk-deviations-001.md). Parts and invariants are 004's.
+**The citations, and what they are.** `R1` to `R15`, `D1` to `D16`, `V1` to
+`V19`, `H0` and `P1` to `P6` are **historical markers, not live links.** They
+name the 2026-08 sitting that ruled each point — the core redesign proposal,
+the porting proposal, and the port's own audit against the specification — and
+those three documents are spent and in `matryoshka-tk`'s `backup/`, which is
+transient. **A marker says who ruled it; the sentence beside it says what
+stands, and where the two would differ the source is what stands.** Parts and
+invariants are the specification's.
 
 ---
 
@@ -65,7 +80,7 @@ and `P1` to `P6` are the findings of
 
 ## What 3tk does
 
-`Inner` is one field, and that field is a built-in pair — `inner.c3:75-78`:
+`Inner` is one field, and that field is a built-in pair — `inner.c3:90`:
 
 ```c3
 struct Inner
@@ -88,17 +103,20 @@ after.
 **The last item of every chain points at itself.** A queue of one is
 self-linked; the tail of a queue of ten points at itself; the bottom of the
 pool's stack points at itself. So the link is **never null on a chain and always
-null off one**, and the membership question becomes one load — `inner.c3:261`:
+null off one**, and the membership question becomes one load —
+`inner.c3:346`:
 
 ```c3
-fn bool is_linked(Handle h) @inline => h != null && h.points_to() != null;
+fn bool is_linked(Inner* inner) @inline => inner != null && inner.points_to() != null;
 ```
 
 Every walk ends at `n.points_to() == n` rather than at null — the iterator at
-`queue.c3:123` and `InnerStack.pop` at `stack.c3:124` spell that test.
+`queue.c3:71` and `InnerStack.pop` at `pool.c3:802` spell that test.
 `InnerQueue.pop_front` recognises the sole item by `head == tail` instead
-(`queue.c3:187-194`), and `InnerStack.push` self-links the new bottom
-(`stack.c3:108`). Those are the four sites the invariant touches.
+(`queue.c3:115`), and `InnerStack.push` self-links the new bottom
+(`pool.c3:787`). Those are the four sites the invariant touches. **The stack
+has no file of its own**: it lives at the foot of `pool.c3`, in
+`mtk::pool::internal`, because the pool is the only thing that has one.
 
 ## Why
 
@@ -151,8 +169,8 @@ on the item itself, which is valid memory.
 > loops forever rather than aborting.
 
 That price is why the field was later renamed: **3TK-18 made it `Inner.link`**,
-after the owner rejected three shapes of a type-erased alternative —
-[3tk-any-options-001.md](backup/3tk-any-options-001.md). `next` asserts *the following
+after the owner rejected three shapes of a type-erased alternative, in a
+document that is spent and no longer cited. `next` asserts *the following
 item*, which the field is not when it points at itself. **The name survived the
 change of 2026-08-25 and the rejection did not**: the owner ruled one of those
 shapes in a day later, and §1a is what that produced.
@@ -203,8 +221,11 @@ The inner's two parts are not two fields. They are one `any` — C3's built-in
 pair of a `void*` and a `typeid` — and the port reads them by name: `link.ptr`
 is the chain link, `link.type` is the identity. **Nothing about the two meanings
 moved.** R6b's self-link is the same invariant, Part 5's stored identity is the
-same identity, and the public surface — `Handle`, `Slot`, `InnerQueue`,
+same identity, and the public surface — the handle type, `Slot`, `InnerQueue`,
 `InnerStack`, `inner_offset`, the faults, `Inner.to`, `Inner.as` — is unchanged.
+**The port has since retired the word `Handle`**, and the type is spelled
+`Inner*` throughout; the sentence is left in its own terms because it records
+what was measured then.
 **16 bytes before and 16 after, measured.**
 
 **The halves are read-only, and that is what the shape costs.** C3's stdlib
@@ -217,22 +238,25 @@ elsewhere, as a wrong-type refusal on an item that was never wrong. **The
 two-field shape did not have that hazard**: there, a link write touched the link
 and could not reach the identity.
 
-**Two methods on `Inner` are the answer to it** — `inner.c3:123-124` and
-`inner.c3:133`:
+**Two methods on `Inner` are the answer to it** — `inner.c3:335` and
+`inner.c3:341`:
 
 ```c3
-fn void Inner.repoint_to(&self, Handle to) @inline
+fn void Inner.repoint_to(&self, Inner* to) @inline
     => self.link = any_make(to, self.link.type);
 
-fn Handle Inner.points_to(&self) @inline => (Handle)self.link.ptr;
+fn Inner* Inner.points_to(&self) @inline => (Inner*)self.link.ptr;
 ```
 
 `repoint_to` keeps the identity and swaps the pointer, which is the fourth
 corner of a table the stdlib leaves open: `any_make` replaces both halves,
 `any.retype_to` keeps the pointer and swaps the type, `any.as_inner` keeps the
 pointer and derives the type. **Nine link writes exist in the port and eight go
-through `repoint_to`**; the ninth is `helper::init` at `helper.c3:100-104`, the
-one place the identity is supposed to change. `points_to` is the reader, and it
+through `repoint_to`**; the ninth is `inner::internal::stamp` at
+`inner.c3:263`, the one place the identity is supposed to change. **It was
+`helper::init` when this was written**; 3TK-64 refilled `helper.c3` and the
+write moved to `inner.c3`, where the helper's `stamp` member now forwards to
+it. `points_to` is the reader, and it
 lets the walk sites state the design's own sentence — *the last item of a chain
 points at itself* — as `n.points_to() == n`.
 
@@ -360,11 +384,11 @@ both the mailbox and the pool.
 
 ## What 3tk does
 
-`Mailbox` holds `InnerQueue _oob` and `InnerQueue _regular` — `mailbox.c3:72-73`.
+`Mailbox` holds `InnerQueue _oob` and `InnerQueue _regular` — `mailbox.c3:502-503`, inside `_Mbox`, the real struct behind the opaque `Mailbox`.
 `send` pushes the back of `_regular`, `send_oob` pushes the back of `_oob`
-(`mailbox.c3:173`), and every take tries `_oob` first (`mailbox.c3:186-187`).
+(`mailbox.c3:412`), and every take tries `_oob` first (`mailbox.c3:422`).
 Where the mailbox gives items back as a list — `close`, `receive_all` — it
-appends `_oob` then `_regular`: `mailbox.c3:364-365`, `:419-420`.
+appends `_oob` then `_regular`: `mailbox.c3:270-271` in `receive_all`, and `:453-454` in `_close`.
 
 ## Why
 
@@ -407,8 +431,18 @@ repeating because neither is a container concern: `Mailbox.len` must add both
 queues, and the Part 2.6 hand-off in `receive` must test **both** queues before
 signalling. *Invariant 5 is the easiest thing in this redesign to half-fix* —
 a leaver that checks only `_regular` leaves a queued out-of-band item with
-nobody woken. The code carries the warning at `mailbox.c3:324` and the test at
-`mailbox.c3:328` is `has_queued()`, which reads both.
+nobody woken.
+
+**The code answered it a second way, and the first way is gone.** When this was
+written, a timed-out waiter ran `if (self.has_queued()) self._cv.signal()`, and
+`has_queued` — `mailbox.c3:432` — reads both queues, which was the half-fix
+avoided. 3TK-70 removed that branch as one it could not reach: the waiter
+reaches it only when the `dequeue` two lines above returned null, under the same
+held mutex, so the condition cannot be true. **Part 2.6 is satisfied by the
+stronger route instead** — a waiter that finds an outer does not leave at all,
+so the wakeup it might have consumed, it consumed by taking the outer — and
+`receive`'s Part 2.6 marker still stands. `mailbox.c3:195`. The two-queue
+lesson is unchanged and is why `Mailbox.len` still adds both, `mailbox.c3:355`.
 
 ## Where the specification stands
 
@@ -435,7 +469,7 @@ example.
 `Pool.put` takes the item from the caller's Slot under the mutex, **releases the
 mutex across the hook** — which Part 12.3 requires — and re-reads the closed
 flag when it relocks. If the pool closed in that window, everything the call is
-still holding is handed to the **close** hook — `pool.c3:525-535`:
+still holding is handed to the **close** hook — `pool.c3:476-494`:
 
 ```c3
     if (self._closed)
@@ -444,14 +478,27 @@ still holding is handed to the **close** hook — `pool.c3:525-535`:
         if (mine.is_full()) stragglers.push_back(mine.take());
         stragglers.append_queue(&extra);
 
-        self._mu.unlock();                   // Part 12.3, as for every hook call
-        if (!stragglers.is_empty()) self._hooks.on_close(&stragglers);
+        // [3tk: Part 12.3]
+        self._mu.unlock();
+        if (!stragglers.is_empty()) self._hooks.on_close(stragglers.take());
+
+        // Lowered after the straggler hook, not before it. A count that stopped
+        // at `on_put` would leave application code running with pool-derived
+        // outers while a release saw zero.
+        // [3tk: Part 11.12]
+        self._mu.lock();
+        self._active--;
+        self._mu.unlock();
         return;
     }
 ```
 
+**The `_active` bookkeeping around it is not part of this finding** — it is the
+lifetime fix of §9's neighbourhood, built later, and it is in the block because
+re-cutting a quotation means quoting what is there.
+
 **One rule, and it is the pool's own: what the pool holds when it discovers it
-is closed goes to `on_close`** — `pool.c3:505-507`.
+is closed goes to `on_close`** — `pool.c3:475-484`.
 
 ## Why
 
@@ -490,7 +537,7 @@ by accident:
 
 **The obligation this puts on a hook is small and it is not optional**: the
 close hook writes the same loop either way — process or release every item — and
-must not free its own context on the first call. `pool.c3:98-104` carries it.
+must not free its own context on the first call. `pool.c3:64-78` carries it.
 
 ## What ztk does
 
@@ -513,15 +560,15 @@ runs once.*
 fn void on_close(InnerQueue remaining);
 ```
 
-— `pool.c3:101`. Both call sites move a copy in with the new
-`InnerQueue.take()`, O(1) and unable to fail (`queue.c3`): the straggler path
-at `pool.c3:494`, `self._hooks.on_close(stragglers.take())`, and the main close
-at `pool.c3:564`, `self._hooks.on_close(remaining.take())`.
+— `pool.c3:78`. Both call sites move a copy in with the new
+`InnerQueue.take()` — `queue.c3:138`, O(1) and unable to fail: the straggler
+path at `pool.c3:484`, `self._hooks.on_close(stragglers.take())`, and the main
+close at `pool.c3:541`, `self._hooks.on_close(remaining.take())`.
 
 ## Why
 
-**Ruled by the owner, 2026-08-28**, closing `P6` of
-[3tk-open-defects.md](3tk-open-defects.md): *a pool can lose items and never
+**Ruled by the owner, 2026-08-28**, closing `P6`, the last open item on 3tk's
+own defect list: *a pool can lose items and never
 know*, because nothing checks that a close hook actually freed or filed what it
 was handed. Three answers were on the table — count what came back, assert the
 queue is empty in a checked build, or trust the hook and write it down. **The
@@ -569,12 +616,12 @@ cut, not this document's to argue.
 
 ## What 3tk does
 
-One free **stack** per identity — `pool.c3:123`, R11. The item just put is on
+One free **stack** per identity — `pool.c3:634`, R11. The item just put is on
 top, and the next `get` for that identity hands it straight out.
 
 **Part 11.7 promises no order and Part 11.10 says so**, and the doc comment
 turns that into the reason the property is useful: *what makes the property
-useful is that no caller is entitled to it* — `pool.c3:132-133`.
+useful is that no caller is entitled to it* — `pool.c3:744`, on the `InnerStack` block, and `pool.c3:630-633` on `PoolBucket`.
 
 ## Why
 
@@ -603,7 +650,7 @@ put the argument in the source rather than in a document:
 
 **R12** is the other half of the pool's ordering story: `Pool.close` empties
 every bucket into one `InnerQueue`, O(n) once, **and promises no order** —
-`pool.c3:107`, the `on_close` parameter.
+`pool.c3:75`, the `on_close` parameter.
 
 ## Where the specification stands
 
@@ -636,26 +683,27 @@ the shape R12 describes, reached without R12.
 ## What 3tk does
 
 **A get that finds a stored item returns it without calling `on_get`.**
-`Pool.get`, available-or-new mode — `pool.c3:337-345`:
+`Pool.get`, available-or-new mode — `pool.c3:311-321`:
 
 ```c3
     if (mode != NEW_ONLY)
     {
-        Handle h = b.free.pop();
-        if (h)
+        Inner* inner = b.free.pop();
+        if (inner)
         {
+            self._active--;
             self._mu.unlock();
-            slot.fill(h);
+            slot.fill(inner);
             return;
         }
     }
 ```
 
 The hook is below that block and is reached only when the pop found nothing —
-`pool.c3:358-360`, with the count that Part 12.4 asks for:
+`pool.c3:333-335`, with the count that Part 12.4 asks for:
 
 ```c3
-    // Part 12.3, Part 15.2: no lock is held across a call into application code.
+    // [3tk: Part 12.3, Part 15.2]
     self._mu.unlock();
     self._hooks.on_get(want, in_pool, slot);
 ```
@@ -663,14 +711,14 @@ The hook is below that block and is reached only when the pop found nothing —
 The three modes, as the code arranges them:
 
 - **available or new** — pop; on a hit, return; on a miss, fall through to the
-  hook. `pool.c3:337-346`, then `:356-360`.
+  hook. `pool.c3:311-321`, then `:330-335`.
 - **available only** — the same pop, and on a miss `NOT_AVAILABLE` rather than
-  the hook. `pool.c3:348-352`.
-- **new only** — the `mode != NEW_ONLY` guard at `pool.c3:337` skips the pop
+  the hook. `pool.c3:323-328`.
+- **new only** — the `mode != NEW_ONLY` guard at `pool.c3:311` skips the pop
   entirely, so the hook is always called and the free stack is not read.
 
 **So `on_get` sees an empty Slot on every call it ever gets**, and the only
-thing the pool checks afterwards is the identity — `pool.c3:363`. Nothing in
+thing the pool checks afterwards is the identity — `pool.c3:348`. Nothing in
 `pool.c3` gives a hook a way to touch an item that came back from the stack.
 
 ## Why
@@ -684,7 +732,7 @@ identity. Leaving it empty is the `NOT_CREATED` outcome.*
 than an omission from this document: the redesign never treated it as a
 question, because the specification the port was written from reads as settled
 on the point. The doc comment on `Pool.get` cites Part 11.7 and Part 19 and
-records no choice here — `pool.c3:304-322`.
+records no choice here — `pool.c3:271-287`.
 
 The port's stated rule when its sources disagree is next to the one place it
 knew they did — the waiting get, `3tk-porting-proposal-004.md:1220-1226`: *the
@@ -852,7 +900,7 @@ from the original order* — and *So check the list after the call.*
 | 2 | `mtk::@check` | every other contract violation | **Compiled out entirely** |
 | 3 | `$if env::COMPILER_SAFE_MODE:` block | was Part 8.6's walk | Not compiled at all |
 
-Tier 2 is four lines — `inner.c3:216-221`:
+Tier 2 is four lines — `mtk.c3:66`, and it moved there with the module split:
 
 ```c3
 macro @check(#cond, $msg)
@@ -897,7 +945,8 @@ and the message is a **compile-time** string, because `always_assert` takes one.
 **After R6b the port has almost no tier 3 left.** The insert walk was tier 3's
 only container site and the exact link test deleted it; the last reader of the
 tier 3 flag is the pool's duplicate-identity scan at creation — the flag is
-`inner.c3:230` and its one reader is `pool.c3:235`.
+`mtk::CHECKED`, `mtk.c3:78`, and its one reader is the `$if mtk::CHECKED:` at
+`pool.c3:193`.
 
 ## Where the specification stands
 
@@ -921,12 +970,16 @@ Contracts are guarded with `std.debug.assert` — for example `pool.zig:557` in
 
 **No per-type object and no instantiation, for any type, ever.** The members of
 Part 7.2 are macros over a type parameter, generated at each call site from the
-type named there — `helper.c3:76-232`. A new outer type costs nothing before it
-can be used.
+type named there — `helper.c3:40`, the module line, and the nine members below
+it. A new outer type costs nothing before it can be used.
 
 ```c3
-macro bool is_mine(Handle h, $Type) => h != null && h.link.type == $Type::typeid;
+macro bool is_mine(Inner* inner, $Type) => inner != null && inner.link.type == $Type::typeid;
 ```
+
+— `inner.c3:247`. **The helper is a generic module, `module mtk::helper <Outer>;`,
+and binding it is one line**: `alias MSG = helper::OF{Msg};`. `helper.c3:51` and
+`helper.c3:59` are the carrier and the constant that line names.
 
 ## Why
 
@@ -941,8 +994,14 @@ is a SPECIFICATION defect, not a port defect* and told the next reader **not to
 3TK-17 cut 004 to settle it.
 
 **The one thing that lost against the per-type instantiation is named rather
-than buried** — `helper.c3:47-49`: a type that is declared but never crossed with
-is never validated, because there is no instantiation to force Part 7.4's check.
+than buried**: a type that is declared but never crossed with is never
+validated, because there is no instantiation to force Part 7.4's check.
+**Re-cut 2026-09-09** — the lines quoted here in earlier versions went with the
+file that held them, and the live wording of the same hazard is on the helper's
+module block, `helper.c3:40`. The two outer hooks are found structurally by
+`$defined`, so *a hook with the wrong NAME is silent — `$defined` answers false,
+the branch vanishes, and no stage reports it.* Same shape one level down: what
+is never named is never checked.
 
 ## Where the specification stands
 
@@ -978,32 +1037,45 @@ Each Matryoshka type instantiates it once: `pool.zig:631` is
 
 # 9. What this port gets wrong and knows it
 
-**Two findings of 3tk's own audit are open, and they are here because a port
-that copies a shape copies its defects with it.** Neither is a rule that moved;
-both are places where the specification is right and the code is not.
+**Two findings of 3tk's own audit were open when this section was written, and
+they are here because a port that copies a shape copies its defects with it.**
+Neither is a rule that moved; both were places where the specification is right
+and the code was not. **Re-read against the built tree on 2026-09-09: one is
+still live and one is closed** — and both are kept, because a port reading this
+wants the shape and the reason as much as the verdict.
 
-- **P3 — a condition variable's own fault can escape the outcome set.**
-  `pool.c3:432` and `mailbox.c3:314` return `f~` — the C3 standard library's
-  fault — to the application, where Part 19 fixes the outcome set of every
-  operation. **It is unreachable on the current backend**, which is the whole of
-  its severity: posix `wait_until` returns timeout or ok and aborts on anything
-  else. The audit recorded it anyway, and gave the reason in a sentence that is
-  the reason it appears here too: *it is a contract statement sitting in the
-  port's two most-copied loops, and the next port will copy the shape before it
-  checks its own backend.*
-- **P4 — the pool's leaver signals on one bucket over a shared condition
-  variable.** `pool.c3:438-439`. Part 2.6 says a leaver checks the container and
-  signals if it is not empty; the pool has one condition variable and *n*
-  buckets, so a waiter for identity A leaving on a timeout does not signal for a
-  non-empty bucket B. **004 left Part 2.6 untouched** and said why in its change
-  log: *the rule is right as written. Moving a rule to accommodate a port's
-  defect is how a specification stops being one.*
+- **P3 — a condition variable's own fault can escape the outcome set. Still
+  live.** `pool.c3:412` and `mailbox.c3:232` return `f~` — the C3 standard
+  library's fault — to the application, where Part 19 fixes the outcome set of
+  every operation. **It is unreachable on the current backend**, which is the
+  whole of its severity: posix `wait_until` returns timeout or ok and aborts on
+  anything else. The audit recorded it anyway, and gave the reason in a sentence
+  that is the reason it appears here too: *it is a contract statement sitting in
+  the port's two most-copied loops, and the next port will copy the shape before
+  it checks its own backend.* **Both sites now carry that reason in the code**,
+  as a trailing comment: *dead today: `wait_until` can only fail with
+  `WAIT_TIMEOUT`, kept for future wait failures.*
+- **P4 — the pool's leaver signalled on one bucket over a shared condition
+  variable. Closed by the code, and this is the version that says so.** Part 2.6
+  says a leaver checks the container and signals if it is not empty; the pool has
+  one condition variable and *n* buckets, so a waiter for identity A leaving on a
+  timeout did not signal for a non-empty bucket B. **The branch the finding names
+  no longer exists.** Re-read 2026-09-09: there is no `signal()` anywhere in
+  `pool.c3`. Every wake the pool performs is a `broadcast` — `pool.c3:502` in
+  `put`, `pool.c3:684` in `_close` — and `Pool.get_wait`'s timeout path leaves
+  without signalling at all. The audit's own reason why nothing was ever lost —
+  *every path that makes an outer available calls broadcast* — is now the whole
+  mechanism rather than the thing that covered for a half-fix. **004 left Part
+  2.6 untouched** and said why in its change log: *the rule is right as written.
+  Moving a rule to accommodate a port's defect is how a specification stops being
+  one.* That reasoning is worth more now, not less: the rule did not move and the
+  port came to it.
 
 **One finding of the same audit is closed and is worth the line**, because the
 question it asked belongs to every port: `Pool.get` used to return
 *not-available* from all three modes for an identity the pool was never created
 with, against Part 19.3's MUST. The port now reports `UNKNOWN_IDENTITY` —
-`pool.c3:335`, `pool.c3:417` — a fault **deliberately outside Part 19's sets**,
+`pool.c3:309` in `get` and `pool.c3:384` in `get_wait` — a fault **deliberately outside Part 19's sets**,
 because Part 11.7 makes an identity outside the pool's set a caller defect and
 not a runtime condition. ztk answers the same question with
 `std.debug.assert(self.*.lists.contains(tag))` — `pool.zig:345`, `:573`.
@@ -1027,16 +1099,17 @@ added or removed.**
 - **An audit of ztk.** Every ztk fact here was read from `src/*.zig` at the
   repository root and is cited to a line, and none of them is scored. The
   document that audits ztk against the specification is
-  [`../common/ztk-audit-001.md`](../common/ztk-audit-001.md), which predates all
-  of this, and any successor to it is ztk's own work.
+  `ztk-audit-001.md`, in `matryoshka-tk`'s `design/secondary/lang/common/`,
+  which predates all of this, and any successor to it is ztk's own work.
 - **A plan.** Nothing here declares a stage in any line.
 
-**Where the full arguments live**, for a reader who wants one of them entire:
-[3tk-core-redesign-proposal-002.md](3tk-core-redesign-proposal-002.md) for R1 to
-R15, [3tk-porting-proposal-004.md](3tk-porting-proposal-004.md) for D1 to D16,
-[3tk-deviations-001.md](3tk-deviations-001.md) for the 96-element audit that
-produced V1 to V19 and P1 to P6, and
-[3tk-status.md](3tk-status.md) for what is current.
+**Where the arguments went.** The three documents that held them entire — the
+core redesign proposal for `R1` to `R15`, the porting proposal for `D1` to
+`D16`, and the 96-element audit that produced `V1` to `V19` and `P1` to `P6` —
+were retired by 3TK-73 on 2026-09-09, spent. What each ruled that still stands
+is in this file and in [3tk-decisions-007.md](3tk-decisions-007.md), which is
+the registry of what the port decided and where it lives in the code. **What is
+current, and what has not run, is `3tk-status.md` in `matryoshka-tk`.**
 
 ---
 
@@ -1048,3 +1121,4 @@ produced V1 to V19 and P1 to P6, and
 | 002 | 2026-08-25 | Stage 3TK-22, after 3TK-21 made `struct Inner` one `any`. §1's code block, its `is_linked` block and its four walk citations were re-cut from `inner.c3`, `queue.c3` and `stack.c3`; §7's tier 2 and tier 3 citations and §8's `is_mine` block were re-cut the same way; `helper.c3`'s span moved to `76-232`. **New: §1a**, the identity and the chain link stored as one built-in pair — the ruling, the read-only halves, `repoint_to` and `points_to`, the two outcomes the language decided, and what ztk does instead. Every `file:line` in the document, 3tk's and ztk's, was printed and read again; no ztk citation had moved. The word *should* appears **nowhere**, as in 001. Describes; recommends nothing. |
 | 003 | 2026-08-25 | Stage 3TK-24. **New: §5a**, the creation hook on a get that found a stored item — 3tk returns without calling it (`pool.c3:337-345`), ztk calls it with the Slot full (`pool.zig:565-590`). All three modes of both ports read and set out, the specification's two passages quoted by line, and the disagreement named between 004 on one side and `ztk-audit-001.md` 2.7 and `matryoshka-api-reference-042.md` on the other. Every `file:line` in the new section, 3tk's and ztk's, was printed and read before it was written down; nothing outside §5a changed but this row, the version line and one sentence in *How to read it*. The word *should* appears **nowhere**, as in 001 and 002. Describes; recommends nothing. |
 | 004 | 2026-08-30 | Stage 3TK-56. **New: §4a**, `on_close` takes the queue by value, not by pointer — `P6` ruled 2026-08-28, built by this stage. Both call sites and `InnerQueue.take()` cited, ztk's still-by-pointer `on_close` read at `pool.zig:127-130` and named as an open divergence, not a recommendation. Nothing outside §4a changed but this row and one sentence in *How to read it*. The word *should* appears **nowhere**, as in every earlier version. Describes; recommends nothing. |
+| 005 | 2026-09-09 | Stage 3TK-73, the design-folder audit — `A-7` and `A-10` of staging plan 034. **Crossed from `matryoshka-tk` into this repository**, where the port's reader lands, after being read against [3tk-decisions-007.md](3tk-decisions-007.md) and ruled a different subject from it: that file is the registry of what stands, this one is the argument, and neither does the other's job. **Every 3tk `file:line` re-resolved against the built tree** and every quoted 3tk block re-cut, because 3TK-63, 3TK-64 and 3TK-70 had rewritten four files — `Handle` became `Inner*`, `stack.c3` and `managed.c3` are gone, `@check` moved to `mtk.c3`, and the identity write moved from `helper::init` to `inner::internal::stamp`. **ztk's citations were not re-read and were not touched.** **Three claims changed with the code**: the mailbox's Part 2.6 hand-off in §3, `P4` in §9 — **closed; the pool has no `signal()` left** — and §8's Part 7.4 sentence. `P3` re-read and still live. Six links into documents that retired the same day became historical markers — `A-10`. No section was added and none was removed. The word *should* appears **nowhere**, as in every earlier version. Describes; recommends nothing. |

@@ -1,11 +1,23 @@
 # 3tk — the sanitizer notes (001)
 
-Stage 3TK-9 of [3tk-staging-plan-005.md](backup/3tk-staging-plan-005.md), 2026-08-23.
+Stage 3TK-9, 2026-08-23. Its staging plan is spent and is not cited: it was in
+`backup/`, which the owner empties, and which is never a source of truth.
 
-What the sanitizers said about the port, what it cost to ask them, and what a
-later port should copy. Same shape as `3tk-toolkit-notes-001.md` and
-`3tk-containers-notes-001.md`: findings, numbered, with the command that
-produced each one.
+What the sanitizers said about the port, what it cost to ask them, and what was
+learned. Findings, numbered, with the command that produced each one.
+
+**This file stays in `matryoshka-tk` — ruled by 3TK-73, 2026-09-09, under `A-6`
+of staging plan 034.** What is load bearing in it is this machine and this
+repository: Fedora ships no `libtsan`, `--cc clang` is the way in and needs no
+root, and `run-sanitizers.sh` exits 2 rather than 0 on a skip. **That is what a
+session reads, and a document only a session reads does not cross.** Its
+port-facing half would have to be rewritten as description before it could
+cross, and what survived that rewrite is already carried by Part 12.3 and by
+the port's decisions record.
+
+**The line numbers below were measured on 2026-08-23 and are not re-anchored.**
+Four stages have rewritten `src/` since. A measurement is left as measured;
+re-pointing one falsifies it.
 
 **The headline.** The port is clean under ThreadSanitizer and AddressSanitizer.
 The first run was not — four data races — and **all four were in the toolkit's

@@ -24,10 +24,43 @@ It is kept short for that reason.**
 
 ## What is live now
 
-**Nothing is next. The owner names the stage.** Plan
-[3tk-staging-plan-033.md](3tk-staging-plan-033.md) is **spent**: `3TK-72` was its
-only stage and it closed on 2026-09-09. `031` and `032` are spent too and are in
-`backup/`.
+**Nothing is declared. Plan `034` is spent** — `3TK-73` was its only stage and
+it closed on 2026-09-09 — and it stays in this folder until the next plan
+supersedes it. `033` is in `backup/` with `031` and `032`. **Only `3TK-50`
+remains from any earlier plan, and it waits on the owner.**
+
+**`3TK-73` ran 2026-09-09 on Opus 5 and closed. This folder is classified.**
+Sixteen documents and one script, read and sorted by `A-1`'s two questions —
+*is it still true*, then *who is its reader*. **Five stay, two crossed, twelve
+retired.** What stays: `3tk-log.md`, `3tk-status.md`, `3tk-staging-plan-034.md`,
+`3tk-sanitizer-notes-001.md` and `ref/3tk-doc-loop-005.md`. **Every figure is
+identical to 3TK-72's** — 107 checks, four builds, 145 tests each, doc loop 11
+blocks and 443 of 443, sanitizers 3 of 3 — which is `A-11`'s proof that the
+stage stayed inside `design/`.
+
+**What crossed to `matryoshka-3tk/design/`:** `c3-capabilities-003.md`, trimmed
+of two 2026-08 scaffolding sections and carrying a new **Q13** on packaging;
+and **`3tk-port-findings-005.md`**, which `A-7` ruled a different subject from
+`3tk-decisions-007.md` — that file is the registry of what stands, this one is
+the argument, and neither does the other's job. **Every 3tk `file:line` in it
+was re-resolved against the built tree and every quoted block re-cut**; ztk's
+were left as measured.
+
+**`P4` is closed and `P3` is not.** Both were carried out of
+`3tk-deviations-001.md` before it retired; see *Open questions*. **`P3` is now
+the only port defect on this file.**
+
+**Two items outside 3tk stay open and are the owner's.**
+`design/matryoshka-api-reference-042.md` still says the pool calls `on_close`
+*once, with the full list*, against Part 12.2; and Part 12.3 of
+`matryoshka-specification-005.md` still cites `pool.c3:445-480` for a window
+that has moved twice. **Reported by 3TK-73, not fixed** — the shared books are
+not 3tk's to rule on.
+
+**Reported under Part 5 and awaiting a word:** the two documents that crossed
+carry a handful of banned words — `drain` and `idiomatic` once each,
+`settle`/`settled` six times between them. They left a folder the scan skips for
+one it does not. **Not fixed without approval.**
 
 **`3TK-72` ran 2026-09-09 on Opus 5 and closed. `examples/` is eleven groups.**
 An example's module is `shc::<group>::<name>`, each group has a carrier file
@@ -56,6 +89,13 @@ example rules now say so.
 **`3tk-example-rules-005.md` replaces `004`** — *The file name* rewritten and
 *The groups* added — and **`3tk-rules-004.md` replaces `003`**, adding Rule 12.
 Both superseded files are in `matryoshka-3tk/design/backup/`.
+
+**`c3-capabilities-003.md` is in `matryoshka-3tk/design/`** — crossed there by
+3TK-73 on 2026-09-09, with `002` and `001` in this folder's `backup/`. `002` was
+**Rule 12's first use.** Q6 gained the failure half: the three `defer` forms all
+verified, **`defer (catch f)`** binding the fault — the parentheses go around
+`catch f`, and five other spellings are refused — and `return BOOM~;`, not `?`.
+**No `mtk` site uses the bound form and none is owed one.**
 
 **One flag, and it is the owner's call: the docs site does not build
 `examples/`.** `docs.yml` runs `c3c docgen --emit-stdlib=no src`, and the line
@@ -536,7 +576,7 @@ unchanged.**
 written by id — `RT-n` a ruling, `HR-n` a helper requirement, `PL-n` the parking
 lot, `MS-n` a measurement. **A later stage cites an id; it does not re-argue the
 point.** The building was ordered by
-[026](backup/3tk-staging-plan-026.md) as **3TK-62 … 3TK-66**; 029 carried the
+`026` as **3TK-62 … 3TK-66**; 029 carried the
 three of those that had not run — reordered, and with `3TK-67`, `3TK-68` and
 `3TK-69` added — **and all of them but `3TK-69` have now run. 024 through 029
 are spent and in `backup/`.**
@@ -697,13 +737,13 @@ at `005`. **The lifetime fix is complete, in code and in text.**
 > **Release while a call is in flight is not prevented. It is written down as a
 > thing the caller must not do, and it is checked. It is not waited for.**
 
-**[3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) bound 3TK-53 and 3TK-54 and
+**`3tk-lifetime-fix-005.md` bound 3TK-53 and 3TK-54 and
 has now been built.** Three review rounds are absorbed into it and **reviewing of
 it is closed.** Section 4 is the ruling and the text it owes; section 15 is what
 the ruling closed. **The one thing it asked for and did not decide — what the
 added lock in `Pool.get` costs — is measured in the log's 3TK-54 entry.**
 
-**Where [3tk-staging-plan-020.md](3tk-staging-plan-020.md) disagrees with it, the
+**Where `3tk-staging-plan-020.md` disagrees with it, the
 document wins.** The plan is published and is not edited in place, so its 3TK-53
 charter still says `release(InnerQueue* out)` and *the `always_assert` removed*.
 **Both are wrong**: no signature changes, and the assertion is **rewritten**, to
@@ -735,6 +775,7 @@ settled the same way by 3TK-54:**
 | **3TK-70** | **The module split, and the hooks page.** Ran 2026-09-09 on Opus 5. Four `::internal` submodules and **`mtk::pool::hooks`**, the section that opens `pool.c3`. **6 module names became 11**, over the same six files. `inner.c3`'s third section folded in and `inner_offset` lost its `@private`; so did `_Mbox` and `_Pool`, because a `@private` in a submodule is invisible to its parent. Rewrote Rules 2, 3 and 4 as `3tk-rules-002.md`, reference `009`, and re-anchored 320 citations. | **Closed.** 107 checks green, 145 tests in each of four builds, doc loop **11 blocks**, 0 differing, 443 of 443, roundtrip byte-identical. `mtk::inner` fell **26 → 13** on the generated page. The qualification sweep was **221 sites, not the ~35 the plan estimated** — Rule 11 (Rule 10 when 3TK-70 cited it). `M-8`'s probe answered yes. |
 | **3TK-71** | **The tests allocate their outers.** Ran 2026-09-09 on Opus 5. Every outer in `test/` and `negative/` goes through `OuterHelper.create`, bar **four** sites whose subject forbids it, each annotated at the site. The plan's 53 was the scalar declarations only — **nineteen arrays of outers** were missed and all converted; `test/common.c3` grew **`MsgBag`** and `fresh_msgs()` is gone. `T-7`'s two global outers both converted. **`3tk-rules-003.md`** adds **Rule 6**, a port rule, and renumbers the stage rules 6–10 into 7–11. | **Closed.** 107 checks green, 145 tests in each of four builds, doc loop 11 blocks, 0 differing, 443 of 443, roundtrip byte-identical, **sanitizers 3 of 3**. The baseline was **106 of 107** — three `::internal` declarations of 3TK-70 had no doc block. **`c3fmt`, run by the owner mid-stage, broke the doc loop** (4 blocks `DIFFERS`, 453 sentences); `src/` restored with no git, and **Rule 4 now says `c3fmt` is not run on `src/`**. `mem` is per-thread and defers are LIFO: two real defects the stack was hiding. |
 | **3TK-72** | **The example groups.** Ran 2026-09-09 on Opus 5. Eleven group modules, each with a carrier file that declares nothing; **49 example `module` lines** gained a group segment and **no file was renamed**. `b_cleanup` is an eleventh group split out of the catalog's first section by the owner. `test/t_examples.c3`'s **52 leaf imports became one `import shc;`** on a probe that was checked both ways, and its 52 call sites were qualified. `3tk-example-rules-005.md` and `3tk-rules-004.md` replace `004` and `003`. | **Closed.** 107 checks green, 145 tests in each of four builds, doc loop 11 blocks, 0 differing, 443 of 443, roundtrip byte-identical, **sanitizers 3 of 3** — every figure identical to `3TK-71`'s, which is the proof of a grouping stage. **The plan's 52 was 103** (call sites, not imports) and its named intra-example import pair was wrong; both corrected in the stage under `G-9`. |
+| **3TK-73** | **The design-folder audit. Ran 2026-09-09 on Opus 5. Closed.** Sixteen documents and one script classified — five stay, two crossed to `matryoshka-3tk/design/`, twelve retired to `backup/`. The capability study trimmed, re-measured and crossed as `c3-capabilities-003.md` with a new Q13 folded in from `3tk-build-dist.md`; `3tk-port-findings-005.md` crossed after `A-7` ruled it a different subject from `3tk-decisions-007.md`, with every 3tk `file:line` re-resolved; `3tk-release-while-busy-001.md` read against the ruling of 2026-08-28 and retired with nothing owed; `ref/3tk-doc-loop-005.md` written. **No code was written**, and every figure is identical to 3TK-72's — `A-11`. | **Findings: `P4` closed by the code, `P3` carried into this file, `_Mbox.has_queued` has no readers, and two items in the shared books are still open.** The full account is the log entry of 2026-09-09. |
 
 **The table is in run order, not numeric order.** `3TK-50` is independent of all
 of it and blocks nothing.
@@ -894,7 +935,7 @@ step.
 
 **Nothing is open in the lifetime-fix / `P6` set.** `Q-A`, `Q-B`, `Q-C`, `Q-E`
 and `Q-G` were closed by the ruling of 2026-08-28 —
-[3tk-lifetime-fix-005.md](3tk-lifetime-fix-005.md) section 15 says how each
+`3tk-lifetime-fix-005.md` section 15 said how each
 went. `Q-D.1` and `Q-D.2` were ruled on 2026-08-28 and 3TK-52 built both
 answers, so section 14 of that document, which still lists `Q-D` as open, is
 out of date and this file is what holds. **`P6` / `Q-F` was ruled on
@@ -911,13 +952,38 @@ named holds the reasoning.
   (`RT-3`'s module name), `Q-11` (`RT-11`/`PL-7`), `Q-14` (`RT-13`'s *found
   twice is an error*) — and `Q-6` is already answered by 15.5. **Whose:** the
   owner's, all of them.
-- **Two port defects, and they are the only ones.** **P3** — a waiting call can
-  return the condition variable's own fault, outside Part 19's outcome set;
-  unreachable on the current posix backend, recorded because the next port copies
-  the shape. **P4** — Part 2.6 MUST: the pool's leaver signals on one bucket over
-  a condition variable shared by *n*. Nothing is lost today, because every path
-  that makes an item available calls `broadcast`. **Both `3tk-only`, neither
-  ruled.** [3tk-deviations-001.md](3tk-deviations-001.md).
+- **One port defect, and it is the only one. `P3`.** Written out in full here by
+  **3TK-73 on 2026-09-09**, because the audit that held it —
+  `3tk-deviations-001.md` — retired the same day, and a live finding may not be
+  the only thing in `backup/` that matters. **Nothing cites that file any
+  more.**
+  - **What it is.** A waiting call can return the condition variable's own
+    fault, outside Part 19's outcome set. Both wait loops carry
+    `if (f != thread::WAIT_TIMEOUT) return f~;`, which hands the application a
+    value from `std::thread`'s faultdef where Part 19 fixes the outcome set of
+    every operation. A caller matching on `mtk::CLOSED`, `mtk::TIMEOUT` and
+    `mtk::WOKEN` meets something else.
+  - **Where.** `pool.c3:412` in `Pool.get_wait` and `mailbox.c3:232` in
+    `Mailbox.receive`, re-read 2026-09-09. **Re-print before trusting them.**
+  - **Its severity, which is the whole of it.** Unreachable on the current
+    posix backend: `NativeConditionVariable.wait_until` returns `WAIT_TIMEOUT`
+    or `OK` and aborts on anything else. It is recorded because it is a
+    *contract* statement sitting in the port's two most-copied loops, and the
+    next port will copy the shape before it checks its own backend. **Both
+    sites now say so in a trailing comment**, added since the audit: *dead
+    today: `wait_until` can only fail with `WAIT_TIMEOUT`, kept for future wait
+    failures.*
+  - **`3tk-only`, and not ruled.** Whose: the owner's.
+- **`P4` is closed, and 3TK-73 closed it by reading the code rather than by
+  ruling anything.** The finding was that the pool's leaver signalled on one
+  bucket over a condition variable shared by *n*, against Part 2.6.
+  **`grep -n 'signal()' src/pool.c3` returns nothing**, 2026-09-09: every wake
+  the pool performs is a `broadcast` — `pool.c3:502` in `put`, `pool.c3:684` in
+  `_close` — and `Pool.get_wait`'s timeout path leaves without signalling at
+  all. The branch the finding names went with 3TK-70's removal of the two
+  vacuous Part 2.6 signals. What used to be the reason nothing was ever lost —
+  every path that makes an outer available broadcasts — is now the whole
+  mechanism. **The specification did not move for it, and did not have to.**
 - **The port said `Item` where the owner's word is `Outer`. 3tk's half is
   closed; the shared half is not.** The 2026-08-26 ruling was *new work says
   Outer; the existing tree is not searched and replaced* — **superseded by
@@ -931,7 +997,7 @@ named holds the reasoning.
   found a stored item.** 3tk does not, ztk does; Parts 11.7 and 12.2 side with
   3tk, the ztk audit and book with ztk. **Recorded, not ruled** — whichever way
   it goes, one of three things moves.
-  [3tk-port-findings-004.md](3tk-port-findings-004.md) §5a.
+  [3tk-port-findings-005.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-port-findings-005.md) §5a.
 - **Two lines of the ztk book are wrong about `on_get`** — `042.md:1288` and
   `:1448-1449`. **The ztk line's work, not this one.** The port is right and
   everything else agrees with it.
@@ -1191,7 +1257,7 @@ scripts take an optional directory and exit 2 on a bad one.
   specification, the ztk audit, `port-flow-001.md`. Moved there 2026-08-23
   because a shared input inside one consumer's folder is a fork waiting to
   happen.
-- **`ref/`** — **holds only [ref/3tk-doc-loop-004.md](ref/3tk-doc-loop-004.md)
+- **`ref/`** — **holds only [ref/3tk-doc-loop-005.md](ref/3tk-doc-loop-005.md)
   now.** 3TK-60 moved the api table and the decisions record to
   `matryoshka-3tk/design/` and the superseded copies to `backup/`. **`ref/`
   takes no new versions** — owner's ruling: every new document goes to
@@ -1335,7 +1401,7 @@ spent** and is in `backup/`.
 the books; six documents written, three moved repo.
 
 **3TK-59 ran on 2026-09-04 and closed**, all six steps —
-[3tk-staging-plan-023.md](backup/3tk-staging-plan-023.md) is spent and moved to
+`3tk-staging-plan-023.md` is spent and moved to
 `backup/`.
 
 **3TK-58 ran on 2026-09-03 and closed** — `Mailbox`/`Pool` are opaque
@@ -1449,7 +1515,7 @@ The owner ruled the 2026-09-09 one **INTR 11**, and that settles it.
 | **unnumbered, 2026-09-07** | the state came out of `OuterHelper`; `typeid outer_tid` deleted | **yes**, and nothing was owed |
 | **INTR 11** | an outside AI review of the **published archive** triaged — five pieces of advice answered and closed, three flags raised, and **60 surviving `[3tk: ...]` marks measured** against a status sentence that said they were gone | no |
 
-**[3tk-open-defects.md](3tk-open-defects.md) is the working list** for what INTR
+**`3tk-open-defects.md` was the working list** for what INTR
 1–3 found: one table and one section per item, edited in place. **`P6` was the
 last item open** and was ruled on 2026-08-28; **3TK-56 built it on 2026-08-30.
 Nothing on that list is open any more.**

@@ -7,9 +7,179 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-09 — 3TK-73: the design-folder audit
+
+**Plan [3tk-staging-plan-034.md](3tk-staging-plan-034.md), rulings `A-1` … `A-14`.
+Ran on Opus 5, as the charter asked.** Sixteen documents and one script in
+`design/secondary/lang/c3/` read and classified into stays / moves / retires.
+**Five stay, two crossed to `matryoshka-3tk/design/`, twelve retired.** No code
+was written. Closed.
+
+**The figures did not move, which is `A-11`'s proof.** `run-builds.sh` is **107
+checks, 0 failures, four builds, 145 tests in each**; `check-doc-loop.sh` is
+**11 labelled blocks, 0 differing, 443 of 443 sentences, 0 banned words**;
+`move-module-docs.sh roundtrip` is byte-identical; `run-sanitizers.sh` is **3 of
+3**. Identical to 3TK-72's in every figure.
+
+**Rule 10, and the answer is none needed — written down because the rule says
+an answer must be.** No script changed in this stage, the four ported scripts
+still differ from this repo's copies only in the `ROOT` line, and none of
+`linux.yml`, `docs.yml` or `sanitizers.yml` names any document this stage
+touched.
+
+### What crossed, and why
+
+**`c3-capabilities-003.md`** — `A-4`. The twelve questions, the verified
+spellings and the two naming hazards are what C3 does, and the port's reader is
+who needs them. *For 3TK-5* and *What this study rules on* were **deleted, not
+carried**: the first instructed a stage that ran in 2026-08, and the second
+resolved eleven conflicts between seven drafts that no longer exist. Nothing in
+either was still true and unrecorded elsewhere — Q4 already ends by saying it
+reopens what the drafts thought closed, and the `anylist` collision is in the
+spellings table. **One word of `A-4` overturned, under `A-13`:** its survivor
+list omits *What Matryoshka gains, and what it still pays*, and that section is
+evergreen by `A-4`'s own criterion — it says what C3 gives and costs and names
+no stage — so it crossed. **The toolchain was re-measured first and had not
+moved: 0.8.3, git `1d155ee`, LLVM 22.1.8**, which is the sentence `A-4` asks for
+rather than a silence. Six markers into deleted documents (`C1` … `C7` "of the
+review") were rewritten as what they mean, and `C7` — *stays open* — was
+**closed against the decisions record**, which rules both halves of the
+allocator question.
+
+**`3tk-port-findings-005.md`** — `A-7`, and the ruling is **the two are
+genuinely different subjects, so it moves as it is.** `3tk-decisions-007.md`
+says of itself *it accumulates; it does not argue — an entry says what stands,
+not the case that was made for it*; the findings document is nothing but the
+case, four parts per section, with what ztk does beside it. Neither does the
+other's job, and retiring either would lose something the other never held.
+
+### The two bugs files, which were most of the stage
+
+**`3tk-bugs-pool.md` and `3tk-bugs- mailbox.md`, 2,916 lines, read in full —
+`A-9`. The expectation held: no live defect in either.** Every *must fix* in the
+pool file's §29 is the `Q5` lifetime item, ruled 2026-08-28 and built by 3TK-53
+and 3TK-54. Everything else is either endorsement of what the port already does
+— §18 through §24 and §28, the flat bucket array, `broadcast` over `signal`, the
+`extra` mechanism, `UNKNOWN_IDENTITY` as a defect — or the *release waits for
+active callers* model **the owner overturned**: the port asserts quiet rather
+than waiting for it. The mailbox file's §2 and §15 argue for dropping *release
+requires closed*; that was refused as `Q-B` and the rule stands. Both are
+history, and both retired. **The name lost its space on the way**:
+`backup/3tk-bugs-mailbox.md`.
+
+### Two findings the stage made and did not fix
+
+**`P4` is closed, and reading the code is what closed it.** The audit's finding
+— the pool's leaver signals on one bucket over a condition variable shared by
+*n*, against Part 2.6 — names a branch that no longer exists.
+`grep -n 'signal()' src/pool.c3` returns nothing: every wake the pool performs
+is a `broadcast`, and `Pool.get_wait`'s timeout path leaves without signalling
+at all. It went with 3TK-70's removal of the two vacuous Part 2.6 signals. What
+used to be the reason nothing was ever lost is now the whole mechanism.
+**Recorded in the status, in `3tk-decisions-007.md` and in §9 of the findings
+document, which is the version that says so.**
+
+**`P3` is still live, and it was carried out of a document that retired the
+same day.** The status cited `3tk-deviations-001.md` for it, and `backup/` is
+not a source of truth, so `P3` is now **written out in full in the status** —
+what it is, both sites, and why its severity is only that the next port copies
+the shape. Both sites now carry the reason in the code as a trailing comment,
+which they did not when the audit found it. **Nothing live cites that file any
+more.**
+
+**And one small thing, reported and not fixed, because this stage writes no
+code:** `_Mbox.has_queued` — `mailbox.c3:432` — has no readers anywhere in
+`src/`. Its last one was the vacuous Part 2.6 signal 3TK-70 removed. It is a
+declaration with nothing behind it, not a defect.
+
+### Two items outside 3tk, raised in 2026-08 and still open
+
+**`3tk-on-close-policy-001.md` §5 named two, and both are still there**, checked
+2026-09-09 before that file retired. `design/matryoshka-api-reference-042.md`
+still says *"The pool calls it once, with the full list"*, which contradicts
+Part 12.2's *called once by close, and once more per straggling put*. And
+`matryoshka-specification-005.md` Part 12.3 still cites *3tk: `pool.c3:445-480`*
+for a window that has moved twice since. **Reported, not fixed**: both are the
+shared books, and neither is 3tk's to rule on.
+
+### The rest of the classification
+
+**`3tk-release-while-busy-001.md` retires — `A-14`, and nothing in it is
+unbuilt.** It called itself *a deferred item, not yet scheduled*, and the
+ruling of 2026-08-28 is the whole of what it asked for: the hazard is enforced
+by `_active` in both tools, the shared clause it deferred was written by 3TK-52
+as Part 11.12 *closed and quiet*, and `3tk-lifetime-fix-005.md` says outright
+that it supersedes this file. Its interim `W3` warning was to be written out
+again when enforcement landed, and enforcement landed. **Nothing goes to the
+status from it.**
+
+**`3tk-build-dist.md` folds and retires — `A-8`, and the stage took the fold
+rather than the move.** It is language material, but it is 2026-08-23 prose
+written in the second person around a proposed `project.json` the port never
+used, and crossing it beside twelve measured probes would have put unmeasured
+recommendations into a study whose whole standard is *this was compiled and
+run*. **Q13 was rebuilt from the compiler instead** — `c3c --help` and
+`c3c init-lib` on 0.8.3 — and it found two things the original did not say: a
+`manifest.json` carries `//` comments, and the one c3c generates ends its
+`targets` object with a trailing comma. A strict JSON parser rejects what the
+compiler wrote.
+
+**`3tk-sanitizer-notes-001.md` stays — `A-6`, first branch.** What is load
+bearing in it is this machine and this repository: Fedora ships no `libtsan`,
+`--cc clang` is the way in and needs no root, `run-sanitizers.sh` exits 2 rather
+than 0 on a skip. A document only a session reads does not cross. Its
+port-facing half is the recommendation `A-6` bars, and what would survive being
+rewritten as description is already carried by Part 12.3 and by the decisions
+record. Its header sentence *what a later port should copy* was reworded so the
+file stops advertising a recommendation it does not make, and its measured line
+numbers were **left as measured** — re-pointing a measurement falsifies it.
+
+**`ref/3tk-doc-loop-005.md`** — stays, and Rule 12 versioned it because more
+than a sentence changed: five citations to `3tk-reference-005.md` were four
+versions behind, and two links named `3tk-staging-plan-016.md`, which is not in
+this folder at all. The rule that plan held — *a description is moved, never
+composed* — is now stated where it is used instead of pointed at.
+
+**The four short ones were confirmed, not overturned.** `3tk-open-defects.md`
+(ten items, eight fixed, zero open), `3tk-on-close-policy-001.md` (*fixed the
+same day*, its own words), `3tk-on-close-handoff-001.md` (`P6`'s charter, built
+2026-08-30) and `3tk-debts-notes-001.md` (3TK-15's two debts, discharged). So
+were the two long ones: `3tk-lifetime-fix-005.md`, built, whose own §14 still
+lists `Q-D` as open where the status records it built; and
+`3tk-deviations-001.md`, 3TK-12's measurement of a tree since rebuilt, against
+a specification now in `common/backup/`.
+
+**`reapply_decisions.py` retires, and it was not in the plan's table.** A
+one-off restore script that `3tk-decisions-007.md` calls spent. `A-2` says every
+file lands in a bucket, so it was named to the owner and moved with the rest.
+
+### The definition this stage fixed rather than halting on
+
+**Rule 11, and it is the only place the stage read outside `design/`.** `A-11`
+says `src/` is not opened; `A-10` says whatever survives has its citations
+re-anchored. The findings document carries about forty `file:line` citations
+into a tree that 3TK-63, 3TK-64 and 3TK-70 rewrote after it was written, and
+publishing them stale is the defect `A-10` names. **So `src/` was read,
+read-only, and nothing in it was written** — `A-11`'s actual guarantee is that
+no figure moves and no code is touched, and the four scripts prove both.
+`Handle` became `Inner*` in every quoted block, `stack.c3` and `managed.c3` are
+gone, `@check` moved to `mtk.c3`, and the identity write moved from
+`helper::init` to `inner::internal::stamp`. **ztk's citations were not re-read
+and were not touched**, and the document says so.
+
+### Reported under Part 5, not fixed
+
+**Banned words in the two documents that crossed**, because they left a folder
+the scan skips for one it does not: `drain` and `idiomatic` once each in the
+findings document, `settle`/`settled` twice there and four times in the
+capability study. Part 5 says report and do not fix without approval, and the
+owner has not been asked for that yet.
+
+---
+
 ## 2026-09-09 — 3TK-72: the example groups
 
-**Plan [3tk-staging-plan-033.md](3tk-staging-plan-033.md), rulings `G-1` … `G-9`.
+**Plan [3tk-staging-plan-033.md](backup/3tk-staging-plan-033.md), rulings `G-1` … `G-9`.
 Ran on Opus 5, as the charter asked.** `examples/` is eleven groups. An example
 declares `module shc::<group>::<name>;`, each group has a carrier file
 `<group>.c3` describing it and declaring nothing, and **no file was renamed and
@@ -124,6 +294,21 @@ change cannot appear in. **This stage's grouping is therefore correct and
 invisible**: it is what the site would show, the moment that line is
 uncommented. Uncommenting it publishes 63 new modules and is the owner's call,
 not the stage's, so it was left exactly as found and raised instead.
+
+**`c3-capabilities-002.md` replaces `001`**, `001` to this folder's `backup/`,
+and it is **Rule 12's first use** — the version was written in the stage, not
+asked about. The owner asked a question about `Mailbox.create`'s
+`defer catch mb._mu.destroy();` — why it sits after the `init` and not before —
+and the answer turned out to be a capability the study never recorded — though
+`MANUAL.md` §6_12_2 documents it plainly, so what the probe added is
+confirmation and the five refused spellings, not a discovery. **The owner
+asked for the manual to be checked, and it said what the probe said.** Q6 now
+carries the three `defer` forms, all verified together; **`defer (catch f)`**,
+which binds the fault the way Zig's `errdefer |err|` does, with the parentheses
+around `catch f` and not around the binding; the **five refused spellings** with
+c3c's own misleading messages, *Expected a type here* among them; and the `~`
+fault return. **Nothing in `mtk` or in the C3 standard library uses the bound
+form**, so this is a capability recorded, not a change owed.
 
 **Not yet copied to `matryoshka-3tk`'s `examples`/`test`, or pushed** — that is
 the owner's step. The design documents were written directly in

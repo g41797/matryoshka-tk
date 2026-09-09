@@ -23,7 +23,7 @@ worded it described the object rather than the promise.
 
 003 was stage 3TK-13 of
 [3tk-staging-plan-007.md](../c3/backup/3tk-staging-plan-007.md), written from
-[3tk-deviations-001.md](../c3/3tk-deviations-001.md) — the audit that measured
+`3tk-deviations-001.md` — the audit that measured
 the C3 port against version 002, Part by Part, and split what it found into
 *this port only* and *every port*. **Only the every-port half is in this
 document.** Versions 001, 002 and 003 are in [backup/](backup/).
@@ -58,8 +58,12 @@ version where that is visible on the page.
 
 - [ztk-audit-001.md](ztk-audit-001.md) — the read-only record of the Zig
   realization. Section numbers of the audit are cited as `audit 2.1`.
-- [3tk-deviations-001.md](../c3/3tk-deviations-001.md) — the read-only record of
-  the C3 realization measured against 002. Cited for the *3tk* lines.
+- `3tk-deviations-001.md` — the read-only record of the C3 realization measured
+  against 002. Cited for the *3tk* lines. **Spent and retired to
+  `../c3/backup/` by 3TK-73 on 2026-09-09**, so the name below is a historical
+  marker and not a live link: it says which audit produced the line. What the
+  C3 port decided, and why, is now `3tk-port-findings-005.md` in
+  `matryoshka-3tk/design/`.
 - Porting is not transpiling. This file says what a port preserves. How a port
   spells it is the port's business.
 
@@ -1750,7 +1754,7 @@ deadline, for the same reason, as the `Item`/`Outer` wording the C3 port carries
 ### What a reader of 003 would have got wrong
 
 One row. **V-numbers are
-[3tk-deviations-001.md](../c3/3tk-deviations-001.md)'s.**
+`3tk-deviations-001.md`'s.**
 
 | # | Part | What 002 and 003 said | What 004 says |
 |---|---|---|---|
@@ -1787,7 +1791,7 @@ V18 are consumed by 003, and V7b was recorded-not-fixed deliberately.
 ### What a reader of 002 would have got wrong
 
 Every difference, so nobody has to diff the two files. **V-numbers are
-[3tk-deviations-001.md](../c3/3tk-deviations-001.md)'s.**
+`3tk-deviations-001.md`'s.**
 
 | # | Part | What 002 said | What 003 says |
 |---|---|---|---|
