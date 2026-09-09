@@ -55,7 +55,7 @@ alias MBOX @private = helper::OF{_Mbox};
 <*
  From a `Mailbox*` to its `Inner*`. Cannot fail.
 *>
-macro Inner* to_inner(Mailbox* p) => inner::to_inner((_Mbox*)p);
+macro Inner* to_inner(Mailbox* p) => inner::internal::to_inner((_Mbox*)p);
 
 <*
  The checking crossing back. Null when the inner names another type.
@@ -381,14 +381,40 @@ fn usz Mailbox.len(&mbox)
     return self._oob.len() + self._regular.len();
 }
 
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+import std::atomic::types;
+
+
 //==============================================================================
 // For internal usage - everything below this line.
 //
-// `_Mbox` is `@private` and its methods cannot be: C3 ignores `@private` and
-// `@local` on a method declaration. So the whole of the real mailbox is public
-// to the compiler and internal by position, and the banner is where that is
-// said. Every public method above casts to `_Mbox*` on its first line.
+// `_Mbox` and its methods are public, and the reason is now the docs site
+// rather than the compiler. C3 ignores `@private` and `@local` on a method
+// declaration, so the methods never could be hidden; 3TK-70 gave the whole of
+// the real mailbox a module of its own instead, because `c3c docgen` groups by
+// module and by nothing else and publishes a `@private` declaration as public.
+// A page of its own is the only thing that keeps it off the page a user reads.
+//
+// `_Mbox` LOST ITS `@private` here, and it had to: `mtk::mailbox` casts to
+// `_Mbox*` on the first line of every public method, and a `@private` in a
+// submodule is not visible to its parent. The owner's ruling is that the intent
+// is visibility and not preventing use, so where an attribute and the split
+// disagree the split wins.
 //==============================================================================
+<*
+ The real mailbox, behind the opaque `Mailbox`. Not the user surface.
+
+ `Mailbox` is an empty typedef and this is what is behind it.
+ Every public method of `mtk::mailbox` casts to `_Mbox*` on its first line and works on this from there.
+ It is a module of its own so that it is a page of its own.
+*>
+module mtk::mailbox::internal;
 
 <*
  For internal usage.
@@ -454,7 +480,7 @@ fn void _Mbox._close(&self, InnerQueue* out)
 *>
 // The real fields, behind the opaque `Mailbox`. Every public method casts on
 // its first line and works on this from there.
-struct _Mbox @private
+struct _Mbox
 {
     Inner inner;
 

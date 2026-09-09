@@ -10,4 +10,4 @@ import mtk;
 
 struct TwoInners { Inner a; int mid; Inner b; }
 
-fn int main() { TwoInners t; inner::stamp(&t); return 0; }
+fn int main() { TwoInners t; inner::internal::stamp(&t); return 0; }

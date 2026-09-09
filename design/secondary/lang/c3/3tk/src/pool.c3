@@ -1,53 +1,32 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 g41797
 // SPDX-License-Identifier: MIT
 
+//==============================================================================
+// The hooks, and a module of its own. 3TK-70.
+//
+// This is the one place in `src/` where the toolkit is the caller and you are
+// the implementer. Everything else on `mtk::pool`'s page is what you call, and
+// the charter below is a contract on YOUR code, which read as a digression on a
+// page about calling the pool. It is the subject of a page now.
+//
+// The section opens the file, the way `std::atomic::types` opens `atomic.c3`.
+//==============================================================================
 <*
- Reuse of an outer, decided by your hooks. A keeper of free outers, grouped by type identity.
+ The hooks. You implement them; the pool calls them.
 
- Write the hooks, create, get, put, close, release.
- Policy is not in the pool. Policy is in the hooks.
- The pool answers whether a reusable outer is free right now.
- A pool is itself an outer: it can travel through a mailbox.
-
- One bucket per identity, in a flat slice allocated once at creation.
- The identity set is fixed at creation.
- It is not empty, and it has no duplicate. Both are checked.
- A stack and not a queue, and the reason is defect surfacing.
- The implementing struct is the context. There is no `ctx` parameter.
- The hooks are a parameter of creation. A pool cannot exist without them.
- On get an empty Slot goes in, and a full Slot comes back on success.
- A free outer is taken, or `on_get` is asked to make one.
- On put the Slot is the answer: cleared means the pool took the outer, unchanged means it was refused and you still have the outer.
- On close nothing comes back to you. Everything goes to `on_close`.
- Close it first. Releasing an open pool aborts in every build mode.
- Closing does not make a pool quiet: release it only after every call on it has returned.
- The mailbox gives everything back to a caller.
- The pool's close gives nothing back at all.
-
- There is no `put_all`. A caller giving a batch back writes the loop.
-
- ```c3
- while (Inner* inner = batch.pop_front())
- {
-     Slot s;
-     s.fill(inner);
-     p.put(&s);
-     if (s.is_full()) { batch.push_back(inner); break; }
- }
- ```
-
- The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
-*>
-module mtk::pool;
-
-<*
- Three methods. Implement them to give a pool its policy.
-
+ This is where your code runs inside the toolkit.
  The implementing struct is the context. There is no `ctx` parameter.
  A hook runs outside the pool's mutex, several at once on different threads.
  A hook that touches shared state protects it itself.
  A hook does not call back into the pool.
  A hook does not block and does not wait.
+ It is a module of its own so that it is a page of its own.
+ A user reaches it through `import mtk;` and writes `PoolHooks` unqualified, as before.
+*>
+module mtk::pool::hooks;
+
+<*
+ Three methods. Implement them to give a pool its policy.
 *>
 interface PoolHooks
 {
@@ -95,9 +74,56 @@ interface PoolHooks
 
      @param remaining : "everything the pool still held, flattened across every identity, by value. No order is promised"
     *>
-    // [3tk: R12, V11, Part 12.2]
+    // [3tk: Part 12.2]
     fn void on_close(InnerQueue remaining);
 }
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+
+
+
+
+<*
+ Reuse of an outer, decided by your hooks. A keeper of free outers, grouped by type identity.
+
+ Write the hooks, create, get, put, close, release.
+ Policy is not in the pool. Policy is in the hooks.
+ The pool answers whether a reusable outer is free right now.
+ A pool is itself an outer: it can travel through a mailbox.
+
+ One bucket per identity, in a flat slice allocated once at creation.
+ The identity set is fixed at creation.
+ It is not empty, and it has no duplicate. Both are checked.
+ A stack and not a queue, and the reason is defect surfacing.
+ The hooks are a parameter of creation. A pool cannot exist without them.
+ `mtk::pool::hooks` is what you implement; this module is what you call.
+ On get an empty Slot goes in, and a full Slot comes back on success.
+ A free outer is taken, or `on_get` is asked to make one.
+ On put the Slot is the answer: cleared means the pool took the outer, unchanged means it was refused and you still have the outer.
+ On close nothing comes back to you. Everything goes to `on_close`.
+ Close it first. Releasing an open pool aborts in every build mode.
+ Closing does not make a pool quiet: release it only after every call on it has returned.
+ The mailbox gives everything back to a caller.
+ The pool's close gives nothing back at all.
+
+ There is no `put_all`. A caller giving a batch back writes the loop.
+
+ ```c3
+ while (Inner* inner = batch.pop_front())
+ {
+     Slot s;
+     s.fill(inner);
+     p.put(&s);
+     if (s.is_full()) { batch.push_back(inner); break; }
+ }
+ ```
+
+ The mailbox and the pool use only the public surface of the core, and `run-builds.sh` tests that.
+*>
+module mtk::pool;
 
 <*
  The three modes of a plain get.
@@ -136,7 +162,7 @@ const typeid TYPE = _Pool::typeid;
 // concurrently.
 alias POOL @private = helper::OF{_Pool};
 
-macro Inner* to_inner(Pool* p) => inner::to_inner((_Pool*)p);
+macro Inner* to_inner(Pool* p) => inner::internal::to_inner((_Pool*)p);
 
 <*
  The checking crossing back. Null when the inner names another type.
@@ -163,7 +189,7 @@ fn Pool*? create(Allocator a, typeid[] tags, PoolHooks hooks)
     // [3tk: Part 12.1]
     mtk::@check(hooks != null, "a pool cannot exist without hooks");
 
-    // [3tk: D6, Part 11.7]
+    // [3tk: Part 11.7]
     $if mtk::CHECKED:
         foreach (i, t : tags)
         {
@@ -352,7 +378,9 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
 
     PoolBucket* b = self.bucket_for(want);
     mtk::@check(b != null, "Pool.get_wait for an identity the pool was not created with");
-    // [3tk: A3]
+    // `get_wait` reports it too, on two grounds that are not conformance: the
+    // two gets must not disagree about the same defect, and a defect that
+    // sleeps for the whole timeout gets diagnosed as a performance problem.
     if (!b) return mtk::UNKNOWN_IDENTITY~;
 
     // A rejected entry never becomes active. This check duplicates the one at
@@ -374,7 +402,8 @@ fn void? Pool.get_wait(&pool, typeid want, Slot* slot, Duration timeout)
         // [3tk: Part 2.4]
         if (self._closed) return mtk::CLOSED~;
 
-        // [3tk: A3]
+        // No `if (b)` guard: the check above made `b` non-null, and a
+        // live-looking branch that cannot be taken is a reader's trap.
         Inner* inner = b.free.pop();
         if (inner) { slot.fill(inner); return; }
 
@@ -443,7 +472,7 @@ fn void Pool.put(&pool, Slot* slot)
     self._hooks.on_put(in_pool, &mine, &extra);
     self._mu.lock();
 
-    // [3tk: P1, V11, Part 11.8, Part 12.2, Part 12.3]
+    // [3tk: Part 11.8, Part 12.2, Part 12.3]
     if (self._closed)
     {
         InnerQueue stragglers;
@@ -516,7 +545,8 @@ fn void Pool.close(&pool)
     // [3tk: Part 11.12]
     self._active++;
 
-    // [3tk: R12]
+    // One flat queue, and no order is promised: the close hook never sees
+    // buckets or per-identity groups.
     InnerQueue remaining;
     self._close(&remaining);
 
@@ -568,15 +598,46 @@ fn usz Pool.count_of(&pool, typeid t)
 }
 
 
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+import std::thread;
+import std::time;
+import std::core::mem::alloc;
+import std::atomic::types;
+
+
 //==============================================================================
 // For internal usage - everything below this line.
 //
-// `_Pool` is `@private` and its methods cannot be: C3 ignores `@private` and
-// `@local` on a method declaration, so `PoolBucket` and the real pool are
-// public to the compiler and internal by position. `InnerStack` below is the
-// same case one level down — the stack is private to the pool, and the only
-// enforcement there is is the grep in `run-builds.sh` that cuts at its banner.
+// `PoolBucket`, `_Pool` and its methods are public, and the reason is now the
+// docs site rather than the compiler. C3 ignores `@private` and `@local` on a
+// method declaration, so the methods never could be hidden; 3TK-70 gave the
+// whole of the real pool a module of its own instead, because `c3c docgen`
+// groups by module and by nothing else and publishes a `@private` declaration
+// as public. A page of its own is the only thing that keeps it off the page a
+// user reads.
+//
+// `_Pool` LOST ITS `@private` here, and it had to: `mtk::pool` casts to
+// `_Pool*` on the first line of every public method, and a `@private` in a
+// submodule is not visible to its parent. The owner's ruling is that the intent
+// is visibility and not preventing use, so where an attribute and the split
+// disagree the split wins.
+//
+// `InnerStack` KEEPS ITS `@local`, because nothing obstructs it: the stack and
+// every caller of it are in this one section. The only enforcement there is is
+// still the grep in `run-builds.sh` that cuts at its banner.
 //==============================================================================
+<*
+ The real pool, its buckets and its stack. Not the user surface.
+
+ `Pool` is an empty typedef and this is what is behind it.
+ Every public method of `mtk::pool` casts to `_Pool*` on its first line and works on this from there.
+ The intrusive stack is here too: it is the storage container, private to the pool, and no 3tk signature passes one.
+ It is a module of its own so that it is a page of its own.
+*>
+module mtk::pool::internal;
 
 <*
  For internal usage.
@@ -643,7 +704,7 @@ fn void _Pool._close(&self, InnerQueue* out)
 *>
 // The real fields, behind the opaque `Pool`. Every public method casts on its
 // first line and works on this from there.
-struct _Pool @private
+struct _Pool
 {
     Inner inner;
 
@@ -663,8 +724,8 @@ struct _Pool @private
 
 //==============================================================================
 // The intrusive stack — private to the pool. No module line: this is
-// `module mtk::pool` still. `stack.c3` was deleted by 3TK-62, reversing
-// 3TK-45, and `InnerStack` stopped being a name a user can reach.
+// `module mtk::pool::internal` still. `stack.c3` was deleted by 3TK-62,
+// reversing 3TK-45, and `InnerStack` stopped being a name a user can reach.
 //==============================================================================
 
 <*
@@ -693,9 +754,8 @@ macro InnerStack.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
     // [3tk: Part 8.7]
-    mtk::@check(!inner::is_linked(inner), "the outer is already on a chain");
-    // [3tk: Q-8, Part 5.2]
-    inner::check_stamped(inner, "the outer was never stamped: make it with `create`, or call `stamp` once");
+    mtk::@check(!inner::internal::is_linked(inner), "the outer is already on a chain");
+    inner::internal::check_stamped(inner, "the outer was never stamped: make it with `create`, or call `stamp` once");
 }
 
 // --- Questions ----------------------------------------------------------------
@@ -739,7 +799,7 @@ fn Inner* InnerStack.pop(&self)
     if (!inner) return null;
     self.top = (inner.points_to() == inner) ? null : inner.points_to();
     self.count--;
-    inner::reset(inner);
+    inner::internal::reset(inner);
     return inner;
 }
 

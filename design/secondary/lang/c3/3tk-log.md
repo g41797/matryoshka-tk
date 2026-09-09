@@ -7,6 +7,399 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-09 — 3TK-70: the module split, and the hooks page
+
+**Plan [3tk-staging-plan-031.md](3tk-staging-plan-031.md), rulings `M-1` … `M-8`.
+Ran on Opus 5, as the charter asked.** Six module names are eleven, over the same
+six files. Closed.
+
+**The figures. `run-builds.sh` is 107 checks, 0 failures, four builds, 145 tests
+in each — every per-build figure identical to 3TK-68's.** The check count did not
+move, and the plan expected it might: the module-list check went from six
+per-file greps to six per-file *ordered-list* comparisons, and the partition
+block kept its one check and its six banner assertions. Two checks went red on
+the correct change and were moved in the same pass, exactly as the plan said they
+would — the module list, and the partition check. **`check-doc-loop.sh` is 11
+labelled blocks, 0 differing, 443 of 443 sentences, 0 banned words, roundtrip
+byte-identical over all eleven.**
+
+### Step 0 — the probe, and the answer is yes
+
+**`M-8`: a non-generic submodule under the generic `mtk::helper` renders
+sanely.** Written in a scratch directory with nothing under `3tk/` touched, the
+way 3TK-61 ran its four. `gtk::helper::sub` compiles, is callable from the
+generic parent, and docgen gives it **a page of its own with `is_generic: false`
+and its own description**, while the parent stays `is_generic: true`. No generic
+parameter leaks onto the child. **It gates nothing here — `M-6` puts no submodule
+under the helper — and it is recorded so a later stage does not re-probe it.**
+
+### The two visibility facts the split turned on, and both were measured
+
+**A `@private` declaration in a submodule is NOT visible to its parent.** The
+compiler says so — *"The struct 'Hidden' in gtk::inner::internal is '@private'
+and not visible from other modules"*. That decided `M-5` in one direction:
+`_Mbox` and `_Pool` **lost `@private`**, because `mtk::mailbox` and `mtk::pool`
+cast to them on the first line of every public method. `inner_offset` lost its
+`module mtk::inner @private;` section for the same reason. **`InnerStack` kept
+`@local`**, because the stack and every caller of it are in the one section.
+**No new attribute was added anywhere.**
+
+**A parent reaches its child without an import; a cousin needs one.** `mtk::inner`
+writes `internal::from_inner(...)` with no import at all. `mtk::queue::internal`
+reaches `mtk::inner::internal` because `import mtk;` brings a module and every
+submodule of it. **Each new section got its own import block**, at the foot of the
+section in the file's little-endian style — that was the plan's named silent
+hazard, since a section's imports are its own and `pool.c3`'s single bottom block
+would otherwise have belonged to the last section only.
+
+### Step 1 — the exemplar, and it was negative-tested both ways
+
+**Rule 8, and it caught nothing this time, which is what a tested check looks
+like.** The partition check was rewritten to key on **which module section a
+declaration is in** rather than on its position relative to the banner, and
+`queue.c3` alone was converted. The check then went **red on 31 declarations
+across the three unswept files** and green on `queue.c3`. Both directions were
+then broken deliberately: a marked declaration moved into the public section
+reported `queue.c3:54:marked-and-outside-an-internal-module`, and an unmarked one
+in the internal section reported
+`queue.c3:205:in-an-internal-module-and-unmarked`.
+
+**The module is strictly stronger than the position, and Rule 3 now says why.** A
+banner is a comment — renameable, duplicable, deletable — so a check keyed on it
+has to assert its own boundary first or it quietly greps nothing. A declaration
+cannot fail to be in a module section. **The banner stays as a section header for
+a human reader and is still asserted by name; it is no longer the truth.**
+
+### Steps 2 and 4 — the sweep, and the cost the plan measured wrong
+
+**`inner.c3` is two parts, not three.** The old part 3 folded into
+`mtk::inner::internal`. `mailbox.c3` and `queue.c3` are two sections, `pool.c3`
+is three, in the order `M-4` ruled: `mtk::pool::hooks`, `mtk::pool`,
+`mtk::pool::internal` — the hooks section opens the file the way
+`std::atomic::types` opens `atomic.c3`.
+
+**The qualification sweep is 221 sites, not the ~35 the plan estimated. Rule 10:
+the measurement wins.** The plan's `examples/` figure was exactly right — **two
+lines**, `010-no_raw_allocator_call.c3` and `012-type_crossing.c3`, both already
+the allow-listed layering pair — and its `test/` figure was low by an order of
+magnitude: `t_queue.c3` 63, `t_identity.c3` 43, `t_mailbox.c3` 27, `t_slot.c3`
+20, `t_concurrency.c3` 4, `t_pool.c3` 4. `src/` is 28 and `negative/` is 29. The
+sweep was mechanical and the compiler is the check, so the size cost nothing; the
+number is recorded because the next stage that estimates one of these should
+estimate from a grep and not from a reading.
+
+**Zero call sites changed for the ~16 method declarations and for `PoolHooks`**,
+exactly as the plan predicted: a method is found through its receiver type, and a
+type identifier needs no module prefix.
+
+### Step 3 — `mtk::pool::hooks`, and a correction to `M-2`
+
+**`M-2` said the four-clause charter was prose in `mtk::pool`'s module block. It
+was not** — it was in `PoolHooks`'s own declaration block, at `pool.c3:47-50`.
+**Rule 10: the measurement wins and the stage says so here.** The charter moved
+from the declaration block into `mtk::pool::hooks`'s module block, which is what
+`M-2` was reaching for: the charter is the module's subject, and `PoolHooks`'s
+own block is now one line — *Three methods. Implement them to give a pool its
+policy.*
+
+**One sentence did migrate out of `mtk::pool`'s block**, and it is the one that
+was a contract on user code: *The implementing struct is the context. There is no
+`ctx` parameter.* `mtk::pool`'s block gained *`mtk::pool::hooks` is what you
+implement; this module is what you call.* in its place. **Nothing was deleted, and
+the clean doc loop proves it.**
+
+**The new module block says out loud what the toolkit had never said anywhere:
+*This is where your code runs inside the toolkit.***
+
+### Step 5 — the marks: 60 classified, 11 gone, 49 stand
+
+**Ruled from the code each mark sits on, never from the number it carries**, and
+the plan's two-way split needed a third finding.
+
+- **The eight `[3tk: Q-8, Part 5.2]` marks go**, whole lines. All eight sit on a
+  `check_stamped` call. Specification `5.2` is *"What it is not"* — identity is
+  not a string or an index — which has nothing to do with those lines; Boundaries
+  `5.2` was *"The safe-build identity check — at both boundaries"*, which is
+  exactly what they do. The reason is not lost: it is in `check_stamped`'s own
+  comment and in the abort message.
+- **`A3`, `D6` and `P1` also go, and the plan did not name them.** It named `Q-`,
+  `R-` and `V-` as Boundaries ids and left these three unclassified. Resolved:
+  they are ids of `3tk-drafts-review-001.md`, which is in `backup/` in this
+  folder — **a transient directory, so exactly the same defect as a Boundaries
+  citation.** The finding is that the test is not *which document* but *is the
+  document live*.
+- **Three marks were the whole comment** — `A3` twice and `R12` once — and each
+  became plain words carrying the reason, per `M-7`. The rest were mixed and lost
+  only the dead id.
+- **49 marks stand, every one resolving to a live specification Part**, and each
+  was checked against the code it sits on rather than assumed: `9.2 rule 3` seven
+  times on *an acquisition asserts the Slot is empty on entry*, `11.12` nine
+  times on the closed-and-quiet sites, and so on.
+
+### Step 6 — `mtk::helper`, and the hooks module that is refused
+
+**`M-6` stands and the block says it.** `mtk::helper`'s module description now
+names `init` and `destroy`, their exact signatures, their optionality, that
+nothing is registered and there is no interface to implement, and **the
+silent-misspelling hazard**: a wrong signature or return type is loud because the
+branch compiles and then fails, a wrong *name* is silent because `$defined`
+answers false and the branch vanishes. `Init`, `initialize` and `deinit` are named
+as the near misses. **This stage documents; the compile-time guard is still a
+candidate stage and nobody owes it.**
+
+### Step 7 — the books, and one thing the plan did not foresee
+
+**`3tk-reference-009.md`**, `008` to `matryoshka-3tk/design/backup/` by plain
+`mv`. Part 7's module table is eleven rows, the six new blocks are in, and the
+*not a container library* sentence is corrected in both places it stands — it now
+reads *Not a container library, though `InnerQueue` is public and yours to use*,
+which INTR 11 raised.
+
+**`3tk-rules-002.md`**, `001` to that repo's `backup/`. **Rule 3's truth moved
+from position to module and its argument changed with it** — `001` argued from
+*C3 ignores `@private` on a method*, and the answer is now *they are on their own
+page*, with `std::core::cpudetect` as the standard library's precedent. **Rule 4
+gained `M-3`'s direction criterion** and the *inversion with nothing to declare
+gets no module* clause. **Rule 2's *no prose in an internal block* is restated as
+a ruling with its reason**, and with the consequence written down: a declaration
+may carry an example if and only if it is not in an `::internal` module.
+
+**The doc-loop tooling had to be widened, and the plan did not say so.** The
+verification asked for *5 labelled blocks → 11*, and 11 was not reachable:
+`doc_blocks.py` found **one** module per file, by matching `module X;`. Two
+changes, both in `doc_blocks.py` and its two readers: the walk is over **sections
+rather than files**, and the module pattern accepts a trailing `<...>` and a
+trailing `@attr`. The second closes a wart 3TK-pre-65 recorded and nobody owned —
+**`mtk::helper`'s description is a labelled block now**, diffed like every other,
+where it had been prose checked sentence by sentence because a generic module line
+was not the shape the parser knew. Neither script is ported to `matryoshka-3tk`,
+so Rule 9 is untouched by it.
+
+**The citations were re-anchored, and the anchors changed shape.** 230 in
+`3tk-decisions-007.md` and 90 in `3tk-api-005.md`, each resolved from its own
+entry's text against the current tree — the api table quotes the contract or check
+clause verbatim, so those resolved by searching for the clause, and the decisions
+record names the declaration, so those resolved by name. **A citation now names
+one line, the declaration's own.** The ranges and lists the older anchors carried
+— `helper.c3:195-205`, `helper.c3:60,86,111,127` — collapsed into the declarations
+they pointed into. Two of them were already stale before this stage:
+`mtk.c3:39` was `module mtk;` before 3TK-69 added two lines to that block, and
+`pool.c3:761` was past the end of a 754-line file. **Resolving from the text is
+what found both; arithmetic on the numbers would have carried them forward.**
+
+### Verification, read off the generated page
+
+**`preview-docs.sh`, and the counts are docgen's own, not predicted.**
+`mtk::inner` **falls from 26 to 13**; `mtk::inner::internal` is 14, which is the
+13 that were below the banner plus `inner_offset` from the folded third section.
+`mtk` 10, `mtk::helper` 11 and still **the only page marked generic**,
+`mtk::queue` 11, `mtk::queue::internal` 1, `mtk::mailbox` 17,
+`mtk::mailbox::internal` 6, `mtk::pool::hooks` 1, `mtk::pool` 16,
+`mtk::pool::internal` 11. **Every one of the eleven carries a description.**
+
+**The negatives still abort in the safe builds** — `unstamped_insert`,
+`unstamped_crossing`, `wrong_type_must`, `insert_linked_outer` — and every other
+negative behaves as specified; that is inside the 107.
+
+**Rule 9.** `run-builds.sh` is the only ported script this stage changed, and
+`matryoshka-3tk/scripts/run-builds.sh` is tuned to match. The `diff` is two
+lines: the `ROOT` line, which is meant to differ, and `run-builds.sh:60`'s
+`insert_linked_item`, which is **3TK-68's finding and still the owner's to port**
+— it names a file the owner has not copied across yet, so changing it there would
+break that repo's copy today. **The three `.yml` files needed no change**, and
+this is the sentence the plan requires: `linux.yml` runs `c3c build mtk`, a target
+name in `project.json` that no module rename touches; `docs.yml` runs `c3c docgen
+--emit-stdlib=no src` over the directory; `sanitizers.yml` names nothing this
+stage moved.
+
+**`src/*.c3` is now 684 lines by `L-1`'s definition**, up from 665. Computed on
+demand and not committed, per Rule 5; `[[LOC]]` is still the token in
+`src/mtk.c3` and in the reference.
+
+### What is flagged and not taken
+
+- **The two `examples/` lines read `inner::internal::` now**, as the plan said
+  they would. Whether `010` and `012` should demonstrate layering differently is
+  the owner's, later.
+- **The near-miss hook guard is still a candidate stage**, unchanged by this one.
+- **Nothing in `matryoshka-3tk`'s `src`/`test`/`negative`/`examples` is copied**,
+  and this stage adds all six `src/` files, `test/` and `negative/` to that queue.
+
+---
+
+## 2026-09-09 — INTR 11: an outside review triaged, and 60 marks that are still there
+
+**Numbered 11 by the owner.** The count is worth stating because the file
+disagreed with itself: `3tk-status.md` said *"Seven have run"*, its table listed
+rows through **INTR 8**, and an unnumbered INTR of 2026-09-07 — the one that
+took the state out of `OuterHelper` — is recorded in the status file and in no
+table. The owner ruled this one **INTR 11**, so the numbering is now the owner's
+and not a count of rows. Rule 10: the definition is revised in passing and the
+disagreement is recorded rather than argued.
+
+**The input was `~/Downloads/3tk-analysis.md`** — several AI sittings analysing
+the C3 toolkit, ending in a summary judgement and nineteen numbered pieces of
+advice. **It was read once and is not a source of truth**; what it found is
+triaged here so that nothing depends on that file surviving. The sections on
+mailbox/pool policies were excluded by the owner and are not triaged.
+
+### What it was actually looking at, and why a whole class of its findings is void
+
+**The published archive** — `matryoshka-3tk`, version 0.0.1, sources only. So
+*"zero tests, zero examples, zero build integration in the archive"*, *"the
+script is not present"* and *"no design document or test suite accompanies the
+sources"* are **artifacts of the copy lag, not findings about the project.**
+`test/` runs 145 tests in four builds, `examples/` is 52 files wrapped by
+`t_examples.c3`, `design/` is eight documents, and `run-builds.sh` is 107 checks.
+A reader of the published repo sees none of it, because nothing since 3TK-62 has
+been copied.
+
+**That is worth keeping for its own sake: it is what an outsider currently
+sees.** It is not a defect and no stage fixes it; the copy is the owner's step.
+
+### The finding that changes a stage: the marks are not gone
+
+**`3tk-status.md` said the `[3tk: ...]` marks *"are gone from `src/`"*. Measured
+2026-09-09: 60 remain** — `pool.c3` 37, `mailbox.c3` 10, `helper.c3` 7,
+`queue.c3` 3, `inner.c3` 3.
+
+**The log was precise where the status summary was not.** The entry of
+2026-09-08 removed **103** marks and named them exactly: the citations into
+`3tk-decisions-007.md`, of the shape `// [3tk: D1 to D16, ...]`. The 60
+survivors are a different shape — `[3tk: Part 9.2 rule 3]`, `[3tk: Q-8, Part
+5.2]`, `[3tk: R12, V11, Part 12.2]`. Nothing was reverted and nothing was
+half-done; the status sentence generalised a removal that was specific.
+
+**And the survivors are not one kind of thing.**
+
+- **14 carry a non-`Part` id** — `Q-8` at eight sites, `R12` twice, `V11` twice,
+  `A3` twice, `D6` once, `P1` once. `Q-`, `R-` and `V-` are
+  **`3tk-boundaries-001.md`** ids, and that document is **spent, in
+  `matryoshka-3tk/design/backup/`, which is transient and is not a source of
+  truth.** These point at nothing a stage may cite.
+- **46 are a bare `Part N.M`, and those are ambiguous by construction.** The
+  shared specification and the spent Boundaries document **both number Parts the
+  same way**, and the mark does not say which it means.
+
+**The ambiguity was measured, not assumed.** `[3tk: Q-8, Part 5.2]` sits on the
+`$Typeof` arms of `look`, `must_look` and `take`. Specification `Part 5.2` is
+*"What it is not"* — identity is not a string, not an index — which has nothing
+to do with those arms. Boundaries `5.2` is *"The safe-build identity check — at
+both boundaries"*, which is exactly what they do. **The mark resolves only by
+reading what it sits on.**
+
+**Ruled: classify, do not blanket-remove.** A mark that resolves to the live
+shared specification is a working citation and stays. A mark that resolves to
+Boundaries is dangling and goes. **Each one is resolved from the code it sits on,
+never from the number it carries** — 3TK-66's method, and the same reason: the
+number is the thing that went stale.
+
+**Execution belongs to `3TK-70`**, which has all four files open for the module
+split. Comment noise and declaration noise are one problem with two symptoms,
+and the stage that opens the files pays for both.
+
+### Two more findings that reach into 3TK-70
+
+- **The *not a container library* sentence.** The review is right that the claim
+  sits beside a shipped public `InnerQueue`. `3tk-reference-009.md` fixes the
+  sentence; nothing about the design changes.
+- **`InnerStack` gets its documentation for free.** The review called it
+  *"consistent but undocumented"*. After the split it is listed **and described
+  as internal** on the `mtk::pool::internal` page — which is what was missing.
+  Only the other half of that advice, *make it public*, contradicts a ruling.
+
+### Advice answered, so it is not re-raised as open
+
+- **Advice 1 — remove the "dead" `if (s.is_empty()) return;` after the `@check`
+  in `push_back_slot`. Wrong, and the reason matters.** `mtk::@check` is gated
+  and compiles out in a fast build, so that line is the **fast-build guard**, not
+  dead code. The review assumed the check is always present. `queue.c3:100-101`
+  stays as it is.
+- **Advice 4 — make `InnerStack` public.** Reverses 3TK-62, which deliberately
+  reversed 3TK-45.
+- **Advice 9 and 10 — `try_release`, `wait_quiet`, an epoch or refcount wait.**
+  These reopen the owner's ruling of 2026-08-28: *release while a call is in
+  flight is not prevented, it is written down and it is checked, and it is not
+  waited for.*
+- **4.5 on `Inner.as`** — *"`@require is_mine` but the body does the arithmetic
+  unconditionally"* is Rule 1 working exactly as designed.
+- **Advice 14 — "once C3 visibility works on methods, delete the banner+grep
+  enforcement."** It never will; `@private` and `@local` are both ignored on a
+  method. `3TK-70` gets the outcome the advice wanted by another route: the
+  banner becomes a **module boundary**.
+
+### Flags, not acted on
+
+- **`UNKNOWN_IDENTITY` is both a fault and a defect** and the dual nature is not
+  documented in one place (advice 2).
+- **The memory-order assumptions are undocumented** beyond the ACQUIRE/RELEASE
+  pair on the closed flag (advice 3).
+- **`send` returns `CLOSED` where `put` returns `void`** — the *Slot is the
+  answer* convention covers both, and the failure modes differ (advice 6).
+
+### One flag found in this sitting, not from the review
+
+**A misspelled hook name is silently not called.** `OuterHelper.create` compiles
+`$if $defined(outer.init):`, so:
+
+- a wrong **signature** is loud — `$defined` still finds the name, the branch
+  compiles, and `outer.init(a)` then fails to compile;
+- a wrong **return type** is loud — `if (catch f = ...)` on a non-optional does
+  not compile, and the same holds for `destroy` under `@catch`;
+- a wrong **name** — `Init`, `initialize`, `deinit` — answers false, the branch
+  vanishes, and **nothing is reported at any stage.**
+
+`alloc::new_try` zeroes, so the result is not garbage but a **plausible zeroed
+outer**: since 3TK-64, `Event`, `Sensor` and both `Holder`s fill their
+`Allocator` field in an `init` hook, and a missed hook leaves that field null to
+fail far from its cause. No test can catch it — every example with a hook
+exercises it, which proves the mechanism and never proves a given user spelled
+the name right.
+
+**A candidate later stage:** a compile-time near-miss guard that `$error`s when
+an outer defines `Init`, `initialize`, `Deinit`, `deinit`, `Destroy` or
+`dispose` and defines neither `init` nor `destroy`. Compile-time, no runtime
+cost, no ceremony added, and the same shape as `MS-9`'s field matching, whose
+failure message already names the fix. **`3TK-70` only documents the hazard**,
+in `mtk::helper`'s new hooks paragraph.
+
+**Port note:** this is a finding about 3tk's structural hook detection and it
+stays in 3tk's folder. Whether dtk or otk care is theirs to rule.
+
+### What this INTR changed
+
+**No code.** Two corrections and a set of flags in `3tk-status.md`, and the
+rulings that `3tk-staging-plan-031.md` then cites. `run-builds.sh` was not re-run
+and did not need to be: nothing under `3tk/` was touched.
+
+---
+
+## 2026-09-08 — the `[3tk: ...]` marks removed, no stage
+
+**No charter, no plan entry — an owner instruction, ruled and done directly.**
+All 103 `// [3tk: D1 to D16, ...]`-shaped marks, the citations into
+`3tk-decisions-007.md`, are gone from `src/*.c3` in `matryoshka-tk`'s copy.
+
+**Nothing checked their content.** `run-builds.sh`'s `block_head`,
+`doc_blocks.py`'s `source_block` and `move-module-docs.sh` all stepped over any
+`//` line sitting between a `<* *>` block and its declaration, generically —
+not by parsing what a mark said — so removing the marks changed no check
+outcome, only the comments in those three files that described them (ported to
+`matryoshka-3tk/scripts/run-builds.sh`'s copy too; `doc_blocks.py` and
+`move-module-docs.sh` have none there and were not touched). `ref/3tk-doc-loop-004.md`
+and `3tk-status.md` had their own stale descriptions of the marks corrected to
+match.
+
+**Verified after:** `check-doc-loop.sh` 410 of 410, 0 differing, 0 banned words;
+`run-builds.sh` 107 checks, 0 failures, four builds green — both identical to
+the figures before the removal.
+
+**`matryoshka-3tk/src/*.c3` still carries the marks**, waiting on the owner's
+own copy across, per the standing rule that 3tk sources are edited in
+`matryoshka-tk` only.
+
+---
+
 ## 2026-09-08 — `3TK-69`: the source LOC, computed and injected
 
 **Model: Sonnet 5**, as `3tk-staging-plan-030.md` pinned it. Applied `L-1` …

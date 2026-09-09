@@ -20,14 +20,14 @@ import std::io;
 fn int main()
 {
     Msg a; Msg b;
-    inner::stamp(&a); inner::stamp(&b);
+    inner::internal::stamp(&a); inner::internal::stamp(&b);
 
     InnerQueue one;
     InnerQueue two;
-    one.push_back(inner::to_inner(&a));
-    one.push_back(inner::to_inner(&b));
+    one.push_back(inner::internal::to_inner(&a));
+    one.push_back(inner::internal::to_inner(&b));
 
-    two.push_back(inner::to_inner(&a));    // <-- the violation: a is on `one`
+    two.push_back(inner::internal::to_inner(&a));    // <-- the violation: a is on `one`
 
     io::printn("no check: a linked outer was inserted on a second queue");
     return 0;

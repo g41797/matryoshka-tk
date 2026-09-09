@@ -26,7 +26,7 @@
 set -u
 
 ROOT=$(cd "$(dirname "$0")" && pwd) || exit 2
-REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-008.md}
+REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-009.md}
 RULES=${RULES:-$ROOT/../../../../rules-049.md}
 PY=${PYTHON:-python3}
 
@@ -148,12 +148,21 @@ def match(sentence):
 # The two checks report separately and the exit status covers both.
 #
 # 3TK-63 added the third case. A module may be written in several sections and
-# several files — `module mtk;` is now `mtk.c3`, `inner.c3` and `queue.c3` —
-# and a module has ONE description however many sections it is written in. So a
+# several files — `module mtk;` was `mtk.c3`, `inner.c3` and `queue.c3` — and a
+# module has ONE description however many sections it is written in. So a
 # section that carries no `<* *>` above its module line is not a miss: it is a
 # section, and it says so in a `//` banner. What IS checked is that every
 # labelled block in the reference is carried by EXACTLY ONE file, so that a
 # description cannot go missing by every section deciding it belongs elsewhere.
+#
+# 3TK-70 TURNED THAT AROUND: it is now the ordinary case for one FILE to carry
+# several modules, rather than one module to be spread over several files. Each
+# of `inner.c3`, `queue.c3` and `mailbox.c3` carries two sections and `pool.c3`
+# carries three, so the loop below walks SECTIONS and a file is checked as many
+# times as it has module lines. `mtk::helper` joins them: the widened module
+# pattern in `doc_blocks.py` sees a generic module line, so the helper's
+# description is a labelled block that is diffed like every other, where it used
+# to be prose the loop could not check at all. Eleven modules, eleven blocks.
 
 import doc_blocks as db
 
@@ -165,35 +174,35 @@ differing = 0
 carriers = {}
 for path in files:
     text = open(path).read()
-    got = db.source_block(text)
-    name = got[0] if got else None
     base = os.path.basename(path)
-    if name is None:
+    got = db.source_blocks(text)
+    if not got:
         print('  %-12s declares no module' % base)
         continue
-    if not got[3]:
-        print('  %-12s %-14s section only, no block' % (base, name))
-        continue
-    carriers.setdefault(name, []).append(base)
-    if name not in REF_BLOCKS:
-        print('  %-12s %-14s NO LABELLED BLOCK in the reference' % (base, name))
-        differing += 1
-        continue
-    want = db.to_source(REF_BLOCKS[name])
-    have = got[3]
-    if have == want:
-        print('  %-12s %-14s same, %d lines' % (base, name, len(have)))
-    else:
-        print('  %-12s %-14s DIFFERS' % (base, name))
-        for d in difflib.unified_diff(want, have, 'reference', base, lineterm=''):
-            print('    %s' % d)
-        differing += 1
+    for name, _first, _last, block in got:
+        if not block:
+            print('  %-12s %-22s section only, no block' % (base, name))
+            continue
+        carriers.setdefault(name, []).append(base)
+        if name not in REF_BLOCKS:
+            print('  %-12s %-22s NO LABELLED BLOCK in the reference' % (base, name))
+            differing += 1
+            continue
+        want = db.to_source(REF_BLOCKS[name])
+        have = block
+        if have == want:
+            print('  %-12s %-22s same, %d lines' % (base, name, len(have)))
+        else:
+            print('  %-12s %-22s DIFFERS' % (base, name))
+            for d in difflib.unified_diff(want, have, 'reference', base, lineterm=''):
+                print('    %s' % d)
+            differing += 1
 if len(files) == len(glob.glob(os.path.join(src_dir, '*.c3'))):
     uncarried = 0
     for name in sorted(REF_BLOCKS):
         who = carriers.get(name, [])
         if len(who) != 1:
-            print('  %-14s carried by %d file%s: %s'
+            print('  %-22s carried by %d file%s: %s'
                   % (name, len(who), '' if len(who) == 1 else 's', ', '.join(who) or 'none'))
             uncarried += 1
     differing += uncarried

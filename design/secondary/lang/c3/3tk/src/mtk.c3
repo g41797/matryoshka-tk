@@ -19,7 +19,7 @@
  One place has the outer at a time.
  That gives a concurrent program with no lock around application data.
 
- Not a container library.
+ Not a container library, though `InnerQueue` is public and yours to use.
  The queue and the stack exist because the mailbox and the pool need them, and a caller may use the queue directly.
  The stack is private to the pool.
  Not an allocator.

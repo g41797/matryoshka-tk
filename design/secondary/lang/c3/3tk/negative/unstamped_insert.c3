@@ -21,7 +21,7 @@ fn int main()
     Msg m;                                  // never stamped
 
     InnerQueue list;
-    list.push_back(inner::to_inner(&m));    // <-- the violation
+    list.push_back(inner::internal::to_inner(&m));    // <-- the violation
 
     io::printfn("no check: an unstamped outer is on a queue of %d", (int)list.len());
     return 0;

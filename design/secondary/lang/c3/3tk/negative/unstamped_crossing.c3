@@ -21,7 +21,7 @@ fn int main()
     Msg m;                                  // never stamped
 
     Slot s;
-    s.fill(inner::to_inner(&m));
+    s.fill(inner::internal::to_inner(&m));
 
     Msg* p = MSG.look(&s);                  // <-- the violation
 

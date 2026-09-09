@@ -7,8 +7,10 @@
 // and by nothing else, and one flat page of 59 declarations is not a page.
 //
 // `@guard_insert` is public and is not the user surface: a method cannot be
-// hidden. It sits alone below the internal banner at the foot of the file, and
-// its block opens with `For internal usage.`
+// hidden. It sits alone in `module mtk::queue::internal;` at the foot of the
+// file, below the internal banner, and its block opens with
+// `For internal usage.` One declaration is still a module: 3TK-70 ruled that a
+// rule with an exception is a rule a later stage has to remember.
 //==============================================================================
 <*
  The intrusive queue and its walker.
@@ -124,7 +126,7 @@ fn Inner* InnerQueue.pop_front(&self)
         self.head = inner.points_to();
     }
     self.count--;
-    inner::reset(inner);
+    inner::internal::reset(inner);
     return inner;
 }
 
@@ -170,6 +172,12 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
 }
 
 
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
+
+
 //==============================================================================
 // For internal usage - everything below this line.
 //
@@ -177,7 +185,19 @@ fn void InnerQueue.append_queue(&self, InnerQueue* other)
 // `@local` are both ignored on a method declaration. `InnerQueue.push_back` and
 // `push_back_slot` are its only callers, and a caller outside this module is
 // maintaining a chain by hand instead of calling the surface.
+//
+// It is a module of its own so that it is a page of its own: `c3c docgen`
+// groups by module and by nothing else, and it publishes `@private` and
+// `@local` declarations as public. A submodule is the only way to keep an
+// internal declaration off the page a user reads.
 //==============================================================================
+<*
+ The queue's internals. Not the user surface.
+
+ One declaration: the insert guard, which `push_back` and `push_back_slot` call.
+ A caller outside `mtk::queue` is maintaining a chain by hand instead of calling the surface.
+*>
+module mtk::queue::internal;
 
 <*
  For internal usage.
@@ -188,9 +208,8 @@ macro InnerQueue.@guard_insert(&self, Inner* inner)
 {
     mtk::@check(inner != null, "insert of a null inner");
     // [3tk: Part 8.7]
-    mtk::@check(!inner::is_linked(inner), "the outer is already on a chain");
-    // [3tk: Q-8, Part 5.2]
-    inner::check_stamped(inner, "the outer was never stamped: make it with `create`, or call `stamp` once");
+    mtk::@check(!inner::internal::is_linked(inner), "the outer is already on a chain");
+    inner::internal::check_stamped(inner, "the outer was never stamped: make it with `create`, or call `stamp` once");
 }
 
 

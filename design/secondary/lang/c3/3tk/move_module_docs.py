@@ -17,10 +17,15 @@ def sources(src_dir):
     """The file that carries each module's description.
 
     3TK-63 made this a choice rather than a lookup. A module may be written in
-    several files — `module mtk;` is `mtk.c3`, `inner.c3` and `queue.c3` — and
+    several files — `module mtk;` was `mtk.c3`, `inner.c3` and `queue.c3` — and
     it has ONE description however many sections it is written in. The carrier
     is the file that already holds a `<* *>` above its module line; the others
     are sections and carry a `//` banner saying so.
+
+    3TK-70 made the other direction ordinary: one file now carries two or three
+    modules. So the walk is over SECTIONS, and a file appears once per module
+    line it holds. A module still has exactly one carrier, and two is still the
+    defect that stops the move.
 
     Two carriers for one module is a defect and stops the move: writing to
     either would leave the other stale, and `check-doc-loop.sh` reports the same
@@ -30,10 +35,8 @@ def sources(src_dir):
     seen = {}
     for p in sorted(glob.glob(os.path.join(src_dir, '*.c3'))):
         text = open(p).read()
-        name = db.module_of(text)
-        if not name:
-            continue
-        seen.setdefault(name, []).append((p, bool(db.source_block(text)[3])))
+        for name, _first, _last, block in db.source_blocks(text):
+            seen.setdefault(name, []).append((p, bool(block)))
     out = {}
     for name, entries in seen.items():
         carriers = [p for p, has in entries if has]
@@ -50,7 +53,7 @@ def move_in(ref_text, blocks, files, wanted):
     for name in wanted:
         path = files[name]
         text = open(path).read()
-        found = db.source_block(text)
+        found = next(b for b in db.source_blocks(text) if b[0] == name)
         _, first, last, old = found
         new = db.to_source(blocks[name])
         if old == new:
@@ -71,7 +74,7 @@ def move_out(ref_path, ref_text, blocks, files, wanted):
     spans = []
     for name in wanted:
         text = open(files[name]).read()
-        _, first, last, src = db.source_block(text)
+        _, first, last, src = next(b for b in db.source_blocks(text) if b[0] == name)
         spans.append((name, db.to_ref(src)))
     open_re = db.OPEN
     marks, cur, fence = {}, None, False

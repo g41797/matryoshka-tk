@@ -9,6 +9,17 @@
 //
 // Every declaration here is the user surface. Every member forwards to a macro
 // in `inner.c3` and has no logic of its own.
+//
+// NO HOOKS SUBMODULE, and 3TK-70 ruled why. `create` and `release` do call user
+// code — `$if $defined(outer.init)` and `$defined(outer.destroy)` — so the
+// inversion `mtk::pool::hooks` exists for is real here too. But the hooks are
+// declared NOWHERE, being resolved structurally at compile time, and a module
+// needs declarations. Moving `create` and `release` into one would invert the
+// inversion: they are the two most-called members in the toolkit and the USER
+// calls them. Declaring an inert `interface OuterHooks` would be worse than
+// nothing — a user meeting an interface on the docs site concludes it must be
+// implemented, when both hooks are optional and that optionality is what lets
+// an outer with neither exist. So the module block above names them instead.
 //==============================================================================
 <*
  The helper, bound once per outer type.
@@ -16,6 +27,15 @@
  `alias MSG = helper::OF{Msg};` — and that is the whole ceremony.
  Nine members: four crossings, `inner`, `stamp`, `linked`, `create` and `release`.
  It is a module of its own so that it is a page of its own, and so that nothing else in the core reads as parameterized by `Outer`.
+
+ Your outer may declare two hooks, and the helper is where they run.
+ `fn void? Outer.init(&self, Allocator a)` is called by `create`, after the allocation and before the stamp.
+ `fn void? Outer.destroy(&self, Allocator a)` is called by `release`, before the Slot is emptied and the outer freed.
+ Both are optional and neither is declared anywhere: they are found at compile time by `$defined`, which is what lets an outer with neither exist.
+ Nothing is registered, and there is no interface to implement.
+ A hook with the wrong signature or the wrong return type is loud: the branch compiles and then fails.
+ A hook with the wrong NAME is silent — `$defined` answers false, the branch vanishes, and no stage reports it.
+ `Init`, `initialize` and `deinit` are the near misses to watch for.
 *>
 module mtk::helper <Outer>;
 
@@ -57,13 +77,11 @@ macro Outer* OuterHelper.look(self, from)
 {
     $switch:
         $case $Typeof(from) == Slot*:
-            // [3tk: Q-8, Part 5.2]
-            inner::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
-            return inner::from_slot(from, Outer);
+                    inner::internal::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::internal::from_slot(from, Outer);
         $case $Typeof(from) == Inner*:
-            // [3tk: Q-8, Part 5.2]
-            inner::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
-            return inner::from_inner(from, Outer);
+                    inner::internal::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::internal::from_inner(from, Outer);
         $default:
             $error "look takes a Slot* or an Inner*";
     $endswitch
@@ -82,13 +100,11 @@ macro Outer* OuterHelper.must_look(self, from)
 {
     $switch:
         $case $Typeof(from) == Slot*:
-            // [3tk: Q-8, Part 5.2]
-            inner::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
-            return inner::must_from_slot(from, Outer);
+                    inner::internal::check_stamped(from.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::internal::must_from_slot(from, Outer);
         $case $Typeof(from) == Inner*:
-            // [3tk: Q-8, Part 5.2]
-            inner::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
-            return inner::must_from_inner(from, Outer);
+                    inner::internal::check_stamped(from, "the outer was never stamped: make it with `create`, or call `stamp` once");
+            return inner::internal::must_from_inner(from, Outer);
         $default:
             $error "must_look takes a Slot* or an Inner*";
     $endswitch
@@ -104,9 +120,8 @@ macro Outer* OuterHelper.must_look(self, from)
 *>
 macro Outer* OuterHelper.take(self, Slot* slot)
 {
-    // [3tk: Q-8, Part 5.2]
-    inner::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
-    return inner::move_from_slot(slot, Outer);
+    inner::internal::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+    return inner::internal::move_from_slot(slot, Outer);
 }
 
 <*
@@ -119,9 +134,8 @@ macro Outer* OuterHelper.take(self, Slot* slot)
 *>
 macro Outer* OuterHelper.must_take(self, Slot* slot)
 {
-    // [3tk: Q-8, Part 5.2]
-    inner::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
-    Outer* outer = inner::must_from_slot(slot, Outer);
+    inner::internal::check_stamped(slot.peek(), "the outer was never stamped: make it with `create`, or call `stamp` once");
+    Outer* outer = inner::internal::must_from_slot(slot, Outer);
     slot.take();
     return outer;
 }
@@ -137,8 +151,8 @@ macro Outer* OuterHelper.must_take(self, Slot* slot)
 *>
 macro Inner* OuterHelper.inner(self, Outer* outer)
 {
-    inner::stamp(outer);
-    return inner::to_inner(outer);
+    inner::internal::stamp(outer);
+    return inner::internal::to_inner(outer);
 }
 
 <*
@@ -150,7 +164,7 @@ macro Inner* OuterHelper.inner(self, Outer* outer)
 
  @param outer : "a pointer to the outer"
 *>
-macro void OuterHelper.stamp(self, Outer* outer) => inner::stamp(outer);
+macro void OuterHelper.stamp(self, Outer* outer) => inner::internal::stamp(outer);
 
 <*
  True when the outer is on some chain.
@@ -159,7 +173,7 @@ macro void OuterHelper.stamp(self, Outer* outer) => inner::stamp(outer);
 
  @param outer : "a pointer to the outer"
 *>
-macro bool OuterHelper.linked(self, Outer* outer) => inner::is_linked(inner::to_inner(outer));
+macro bool OuterHelper.linked(self, Outer* outer) => inner::internal::is_linked(inner::internal::to_inner(outer));
 
 // --- Allocating and freeing --------------------------------------------------
 
@@ -189,8 +203,8 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
             return f~;
         }
     $endif
-    inner::stamp(outer);
-    slot.fill(inner::to_inner(outer));
+    inner::internal::stamp(outer);
+    slot.fill(inner::internal::to_inner(outer));
 }
 
 <*
@@ -206,7 +220,7 @@ macro void? OuterHelper.create(self, Allocator a, Slot* slot)
 macro void OuterHelper.release(self, Allocator a, Slot* slot)
 {
     if (slot.is_empty()) return;
-    Outer* outer = inner::must_from_slot(slot, Outer);
+    Outer* outer = inner::internal::must_from_slot(slot, Outer);
     $if $defined(outer.destroy):
         fault f = @catch(outer.destroy(a));
         mtk::@check(!f, "destroy failed during release");

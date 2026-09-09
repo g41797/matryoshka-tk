@@ -30,7 +30,7 @@ fn void? cross_with_dollar_type(Allocator a)
     shc::helpers::expect(TYPE_CROSSING_FAILED, helper_form != null, "EVENT.look did not find the Event")!;
     helper_form.code++;
 
-    Event* free_form = inner::from_inner(inner, Event);
+    Event* free_form = inner::internal::from_inner(inner, Event);
     shc::helpers::expect(TYPE_CROSSING_FAILED, free_form == helper_form, "from_inner did not match EVENT.look")!;
     free_form.code++;
 

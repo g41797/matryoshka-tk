@@ -7,24 +7,31 @@
 // groups by module and by nothing else, and `mtk` is a landing page of four
 // declarations.
 //
-// The file is written in three parts, in this order:
+// The file is written in two parts, in this order:
 //
-//   1. `module mtk::inner;`           yours, and there is no other way to write it
-//   2. `module mtk::inner;`           public, and not yours — the helper is your way in
-//   3. `module mtk::inner @private;`  hidden from every other module
+//   1. `module mtk::inner;`            yours, and there is no other way to write it
+//   2. `module mtk::inner::internal;`  public, and not yours — the helper is your way in
 //
 // Part 1 is the whole of what a user calls directly, and it is there because
 // the helper cannot replace it: you embed the field, you read the Slot, and a
 // dispatch switch reads an identity before it knows the type. Everything in
 // part 2 has a member of `OuterHelper` that does it for you.
 //
-// A declaration in part 2 or 3 carries a `<* *>` block whose first line is
+// 3TK-70 MADE PART 2 A MODULE, and folded the old part 3 into it. Docgen groups
+// by module and by nothing else and publishes `@private` as public, so the only
+// way to keep an internal declaration off the page a user reads is to give it a
+// page of its own. `inner_offset` lost the `module mtk::inner @private;` section
+// it used to live in: `@private` reaches the module and nothing else, so a
+// submodule could not keep it and stay reachable from part 1. It is an ordinary
+// cross-module call with an `internal::` prefix now.
+//
+// A declaration in part 2 carries a `<* *>` block whose first line is
 // `For internal usage.` and which holds, after it, only directives that do
 // work. The block stays: a `@require` lives inside it, so deleting the block
 // deletes the check and says nothing. Part 2 is public because the compiler
 // leaves no choice — `@private` and `@local` are both ignored on method
 // declarations, and `InnerStack`, in `mtk::pool`, calls two free functions of
-// part 2 from outside this module altogether.
+// it from outside this module altogether.
 //==============================================================================
 <*
  The inner, the Slot, the link and the crossings.
@@ -159,7 +166,7 @@ fn void Slot.fill(&self, Inner* inner) @inline
 
  @param $Type : "the outer type expected"
 *>
-macro Inner.to(&self, $Type) => from_inner((Inner*)self, $Type);
+macro Inner.to(&self, $Type) => internal::from_inner((Inner*)self, $Type);
 
 <*
  From an `Inner*` back to `$Type*`, and it aborts on a mismatch.
@@ -168,9 +175,9 @@ macro Inner.to(&self, $Type) => from_inner((Inner*)self, $Type);
  The abort names your line.
 
  @param $Type : "the outer type asserted"
- @require is_mine((Inner*)self, $Type) : "the inner is not of this type"
+ @require internal::is_mine((Inner*)self, $Type) : "the inner is not of this type"
 *>
-macro Inner.as(&self, $Type) => ($Type*)((char*)self - inner_offset($Type));
+macro Inner.as(&self, $Type) => ($Type*)((char*)self - internal::inner_offset($Type));
 
 <*
  From the Slot back to `$Type*`. It looks, and the Slot is unchanged.
@@ -180,7 +187,7 @@ macro Inner.as(&self, $Type) => ($Type*)((char*)self - inner_offset($Type));
 
  @param $Type : "the outer type expected"
 *>
-macro Slot.to(&self, $Type) => from_slot(self, $Type);
+macro Slot.to(&self, $Type) => internal::from_slot(self, $Type);
 
 <*
  From the Slot back to `$Type*`, and it aborts on a mismatch. The Slot is unchanged.
@@ -190,7 +197,7 @@ macro Slot.to(&self, $Type) => from_slot(self, $Type);
 
  @param $Type : "the outer type asserted"
 *>
-macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
+macro Slot.must(&self, $Type) => internal::must_from_slot(self, $Type);
 
 <*
  From the Slot back to `$Type*`, and it takes.
@@ -200,22 +207,39 @@ macro Slot.must(&self, $Type) => must_from_slot(self, $Type);
 
  @param $Type : "the outer type expected"
 *>
-macro Slot.move(&self, $Type) => move_from_slot(self, $Type);
+macro Slot.move(&self, $Type) => internal::move_from_slot(self, $Type);
+
+
+//----------------------
+// Little-endian imports
+//----------------------
+import mtk;
 
 
 //==============================================================================
-// Part 2 of 3: public, and not yours. Still `module mtk::inner;`.
+// Part 2 of 2: public, and not yours. `module mtk::inner::internal;`.
 //
 // For internal usage - everything below this line.
 //
 // Every declaration below has a member of `OuterHelper` that does it for you —
 // `stamp`, `inner`, `look`, `must_look`, `take`, `must_take`, `linked` — or is
 // a chain primitive only the queue and the stack may touch. Measured across
-// `examples/`: two of these thirteen are named, once each.
+// `examples/`: two of these fourteen are named, once each.
 //
 // `Inner.link` is public and writable besides, so this is a stated boundary and
-// not a locked one.
+// not a locked one. What the submodule buys is the docs site: a page of its own,
+// which is the one thing `@private` cannot buy, because docgen publishes a
+// `@private` declaration as public.
 //==============================================================================
+<*
+ The crossings, the chain primitives and the offset. Not the user surface.
+
+ Every declaration here has a member of `OuterHelper` that does it for you, or is a chain primitive only the queue and the stack may touch.
+ They are public because the compiler leaves no choice: `@private` and `@local` are both ignored on a method declaration, and `InnerStack`, in `mtk::pool`, calls two of the free functions from outside this module altogether.
+ `Inner.link` is public and writable besides, so this is a stated boundary and not a locked one.
+ It is a module of its own so that it is a page of its own.
+*>
+module mtk::inner::internal;
 
 <*
  For internal usage.
@@ -331,15 +355,12 @@ fn void reset(Inner* inner) @inline
 }
 
 
-//==============================================================================
-// Part 3 of 3: hidden. `module mtk::inner @private;` — the section default, so no
-// declaration below names the attribute. Nothing outside this module can reach
-// what is here; the crossings above reach it because a macro body resolves
-// against its defining module. `@local` does NOT work here and was measured:
-// with it, this file's own macros fail to resolve the name.
-//==============================================================================
-module mtk::inner @private;
-
+// `inner_offset` was a third section, `module mtk::inner @private;`, until
+// 3TK-70. `@private` reaches the module and nothing else, so a submodule could
+// not both keep it and stay reachable from part 1's crossings; the split won,
+// per the owner's ruling that the intent is visibility on the docs site and not
+// preventing use. `@local` does not work here either and was measured: with it,
+// this file's own macros fail to resolve the name.
 <*
  For internal usage.
 *>

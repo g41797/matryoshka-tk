@@ -38,18 +38,18 @@ fn void inner_at_any_offset() @test
 {
     Msg probe_m;
     Job probe_j;
-    always_assert((char*)inner::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
-    always_assert((char*)inner::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
+    always_assert((char*)inner::internal::to_inner(&probe_m) - (char*)&probe_m != 0, "Msg's inner should not be at offset zero");
+    always_assert((char*)inner::internal::to_inner(&probe_j) - (char*)&probe_j == 0, "Job's inner should be at offset zero");
 
     Msg m;
     Job j;
-    inner::stamp(&m);
-    inner::stamp(&j);
+    inner::internal::stamp(&m);
+    inner::internal::stamp(&j);
 
-    always_assert(inner::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
-    always_assert(inner::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
-    always_assert(inner::from_inner(inner::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
-    always_assert(inner::from_inner(inner::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
+    always_assert(inner::internal::to_inner(&m) == (Inner*)&m.inner, "Msg: to_inner is not the inner");
+    always_assert(inner::internal::to_inner(&j) == (Inner*)&j.inner, "Job: to_inner is not the inner");
+    always_assert(inner::internal::from_inner(inner::internal::to_inner(&m), Msg) == &m, "Msg: the round trip lost the outer");
+    always_assert(inner::internal::from_inner(inner::internal::to_inner(&j), Job) == &j, "Job: the round trip lost the outer");
 }
 
 <*
@@ -67,9 +67,9 @@ fn void identity_is_per_type() @test
     Msg  a;
     Msg  b;
     Twin t;
-    inner::stamp(&a);
-    inner::stamp(&b);
-    inner::stamp(&t);
+    inner::internal::stamp(&a);
+    inner::internal::stamp(&b);
+    inner::internal::stamp(&t);
 
     always_assert(Msg::size == Twin::size, "the test types are no longer twins");
     always_assert(Msg::typeid != Twin::typeid, "Part 5.1: two identically-shaped types share an identity");
@@ -85,8 +85,8 @@ fn void identity_is_per_type() @test
 fn void identity_is_stored() @test
 {
     Msg m;
-    inner::stamp(&m);
-    Inner* inner = inner::to_inner(&m);
+    inner::internal::stamp(&m);
+    Inner* inner = inner::internal::to_inner(&m);
     always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -101,8 +101,8 @@ fn void identity_is_stored() @test
 fn void uninitialized_inner_is_refused() @test
 {
     Msg m = {};
-    always_assert(!inner::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
-    always_assert(inner::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
+    always_assert(!inner::internal::is_mine((Inner*)&m.inner, Msg), "an uninitialized inner was claimed");
+    always_assert(inner::internal::from_inner((Inner*)&m.inner, Msg) == null, "an uninitialized inner crossed the border");
 }
 
 <*
@@ -114,12 +114,12 @@ fn void uninitialized_inner_is_refused() @test
 fn void checking_crossing_refuses() @test
 {
     Twin t;
-    inner::stamp(&t);
-    Inner* inner = inner::to_inner(&t);
+    inner::internal::stamp(&t);
+    Inner* inner = inner::internal::to_inner(&t);
 
-    always_assert(inner::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
-    always_assert(inner::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
-    always_assert(!inner::is_mine(inner, Msg), "the predicate claimed a Twin");
+    always_assert(inner::internal::from_inner(inner, Msg) == null, "a Twin crossed as a Msg");
+    always_assert(inner::internal::from_inner(inner, Twin) == &t, "a Twin failed to cross as a Twin");
+    always_assert(!inner::internal::is_mine(inner, Msg), "the predicate claimed a Twin");
 }
 
 <*
@@ -127,9 +127,9 @@ fn void checking_crossing_refuses() @test
 *>
 fn void null_handle_is_nobodys() @test
 {
-    always_assert(!inner::is_mine(null, Msg), "the predicate claimed null");
-    always_assert(inner::from_inner(null, Msg) == null, "null crossed the border");
-    always_assert(inner::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
+    always_assert(!inner::internal::is_mine(null, Msg), "the predicate claimed null");
+    always_assert(inner::internal::from_inner(null, Msg) == null, "null crossed the border");
+    always_assert(inner::internal::to_inner((Msg*)null) == null, "to_inner invented an inner from null");
 }
 
 <*
@@ -143,13 +143,13 @@ fn void heterogeneous_walk_claims_correctly() @test
     Msg  m1; Msg  m2;
     Twin t1;
     Job  j1;
-    inner::stamp(&m1); inner::stamp(&m2); inner::stamp(&t1); inner::stamp(&j1);
+    inner::internal::stamp(&m1); inner::internal::stamp(&m2); inner::internal::stamp(&t1); inner::internal::stamp(&j1);
 
     InnerQueue list;
-    list.push_back(inner::to_inner(&m1));
-    list.push_back(inner::to_inner(&t1));
-    list.push_back(inner::to_inner(&j1));
-    list.push_back(inner::to_inner(&m2));
+    list.push_back(inner::internal::to_inner(&m1));
+    list.push_back(inner::internal::to_inner(&t1));
+    list.push_back(inner::internal::to_inner(&j1));
+    list.push_back(inner::internal::to_inner(&m2));
 
     usz mine = 0;
     usz seen = 0;
@@ -157,7 +157,7 @@ fn void heterogeneous_walk_claims_correctly() @test
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
         seen++;
-        if (inner::from_inner(inner, Msg)) mine++;
+        if (inner::internal::from_inner(inner, Msg)) mine++;
     }
     always_assert(seen == 4, "the walk lost an outer");
     always_assert(mine == 2, "the walk claimed the wrong number of outers");
@@ -180,15 +180,15 @@ fn void the_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    inner::stamp(&m);
-    inner::stamp(&t);
+    inner::internal::stamp(&m);
+    inner::internal::stamp(&t);
 
-    Inner* hm = inner::to_inner(&m);
-    Inner* ht = inner::to_inner(&t);
+    Inner* hm = inner::internal::to_inner(&m);
+    Inner* ht = inner::internal::to_inner(&t);
 
     always_assert(hm.to(Msg) == &m, "h.to lost the outer");
     always_assert(hm.as(Msg) == &m, "h.as lost the outer");
-    always_assert(hm.to(Msg) == inner::from_inner(hm, Msg), "the method and the macro disagree");
+    always_assert(hm.to(Msg) == inner::internal::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
     // legitimate state, not a defect — `as` is what refuses this one.
@@ -206,11 +206,11 @@ fn void the_slot_methods_cross_the_same_border() @test
 {
     Msg  m;
     Twin t;
-    inner::stamp(&m);
-    inner::stamp(&t);
+    inner::internal::stamp(&m);
+    inner::internal::stamp(&t);
 
     Slot s;
-    s.fill(inner::to_inner(&m));
+    s.fill(inner::internal::to_inner(&m));
 
     always_assert(s.to(Msg) == &m, "s.to lost the outer");
     always_assert(s.must(Msg) == &m, "s.must lost the outer");
@@ -261,5 +261,5 @@ fn void the_identity_check_tolerates_null() @test
 fn void to_inner_takes_null_and_answers_null() @test
 {
     Msg* none = null;
-    always_assert(inner::to_inner(none) == null, "null in did not give null out");
+    always_assert(inner::internal::to_inner(none) == null, "null in did not give null out");
 }

@@ -21,8 +21,8 @@ fn int main()
     for (usz i = 0; i < 3; i++)
     {
         ms[i].id = (int)i;
-        inner::stamp(&ms[i]);
-        a.push_back(inner::to_inner(&ms[i]));
+        inner::internal::stamp(&ms[i]);
+        a.push_back(inner::internal::to_inner(&ms[i]));
     }
 
     a.append_queue(&a);                // <-- the violation
@@ -30,7 +30,7 @@ fn int main()
     always_assert(a.len() == 3, "the early return did not save the queue");
     for (usz i = 0; i < 3; i++)
     {
-        Msg* m = inner::from_inner(a.pop_front(), Msg);
+        Msg* m = inner::internal::from_inner(a.pop_front(), Msg);
         always_assert(m != null && m.id == (int)i, "the self-move lost an outer");
     }
     io::printn("no check: the early return saved the queue");

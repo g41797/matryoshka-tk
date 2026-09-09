@@ -10,7 +10,7 @@
 #     ./move-module-docs.sh out [module ...]   src -> reference
 #     ./move-module-docs.sh roundtrip          in, then out, on copies
 #
-# With no module named, all eight. `in` writes `src/*.c3` in place. `out`
+# With no module named, all eleven. `in` writes `src/*.c3` in place. `out`
 # writes the reference in place. `roundtrip` writes neither: it copies both
 # sides to a temporary tree, moves in and back out, and compares bytes.
 #
@@ -21,7 +21,7 @@
 set -u
 
 ROOT=$(cd "$(dirname "$0")" && pwd) || exit 2
-REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-008.md}
+REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-009.md}
 PY=${PYTHON:-python3}
 
 [ $# -ge 1 ] || { sed -n '4,20p' "$0"; exit 2; }

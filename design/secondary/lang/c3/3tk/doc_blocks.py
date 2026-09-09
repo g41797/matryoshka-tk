@@ -67,37 +67,66 @@ def to_ref(lines):
     return [l[1:] if l.startswith(' ') else l for l in lines]
 
 
+# 3TK-70 WIDENED THIS, twice over.
+#
+# One: a file is no longer one module. `pool.c3` carries three sections and
+# three of the others carry two, because `c3c docgen` groups by module and by
+# nothing else and a module page wants one subject. So the readers below work in
+# SECTIONS, not files, and a file contributes as many blocks as it has module
+# lines.
+#
+# Two: the generic module line is the same shape. `module mtk::helper <Outer>;`
+# was invisible to the old pattern, which is why `mtk::helper`'s description was
+# prose in the reference rather than a labelled block it could diff. A trailing
+# `<...>` and a trailing `@attr` are both accepted and neither is part of the
+# name.
+MODULE_LINE = re.compile(r'^module ([\w:]+)(?: *<[^>]*>)?(?: *@\w+)?;')
+
+
 def module_of(text):
-    """The module a source file declares, or None."""
-    for line in text.splitlines():
-        m = re.match(r'^module ([\w:]+);', line)
-        if m:
-            return m.group(1)
-    return None
+    """The module a source file declares first, or None."""
+    names = modules_of(text)
+    return names[0] if names else None
 
 
-def source_block(text):
-    """The module's `<* *>` block: (name, first, last, lines).
+def modules_of(text):
+    """Every module a source file declares, in the order the sections sit."""
+    return [m.group(1) for m in
+            (MODULE_LINE.match(l) for l in text.splitlines()) if m]
+
+
+def source_blocks(text):
+    """Every section's `<* *>` block: [(name, first, last, lines), ...].
 
     `first` and `last` are 0-based indices into `text.splitlines()` covering
     `<*` through `*>`. Any `//` line between the block and the `module` line
-    is stepped over, never touched. When the file has no module block, `first`
-    is the `module` line, `last` is `first - 1`, and `lines` is empty — an
-    insertion point.
+    is stepped over, never touched. When a section has no block, `first` is the
+    `module` line, `last` is `first - 1`, and `lines` is empty — an insertion
+    point.
     """
     lines = text.splitlines()
-    i = next((k for k, l in enumerate(lines) if re.match(r'^module ([\w:]+);', l)), None)
-    if i is None:
-        return None
-    name = re.match(r'^module ([\w:]+);', lines[i]).group(1)
-    j = i - 1
-    while j >= 0 and lines[j].startswith('//'):
-        j -= 1
-    if j < 0 or lines[j].strip() != '*>':
-        return (name, i, i - 1, [])
-    end = j
-    while j >= 0 and lines[j].strip() != '<*':
-        j -= 1
-    if j < 0:
-        raise ValueError('a `*>` above `module %s;` with no `<*`' % name)
-    return (name, j, end, lines[j + 1:end])
+    out = []
+    for i, l in enumerate(lines):
+        m = MODULE_LINE.match(l)
+        if not m:
+            continue
+        name = m.group(1)
+        j = i - 1
+        while j >= 0 and lines[j].startswith('//'):
+            j -= 1
+        if j < 0 or lines[j].strip() != '*>':
+            out.append((name, i, i - 1, []))
+            continue
+        end = j
+        while j >= 0 and lines[j].strip() != '<*':
+            j -= 1
+        if j < 0:
+            raise ValueError('a `*>` above `module %s;` with no `<*`' % name)
+        out.append((name, j, end, lines[j + 1:end]))
+    return out
+
+
+def source_block(text):
+    """The FIRST section's block, for a caller that wants one. See `source_blocks`."""
+    blocks = source_blocks(text)
+    return blocks[0] if blocks else None

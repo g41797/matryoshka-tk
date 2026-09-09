@@ -23,5 +23,5 @@ fn void? never_a_raw_allocator_call(Allocator a)
     defer HOLDER.release(a, &s);
     HOLDER.create(a, &s)!;
 
-    shc::helpers::expect(NO_RAW_ALLOCATOR_CALL_FAILED, inner::is_mine(s.peek(), Holder), "the outer carries no identity")!;
+    shc::helpers::expect(NO_RAW_ALLOCATOR_CALL_FAILED, inner::internal::is_mine(s.peek(), Holder), "the outer carries no identity")!;
 }

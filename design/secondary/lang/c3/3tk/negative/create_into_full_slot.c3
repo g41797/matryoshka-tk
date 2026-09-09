@@ -20,10 +20,10 @@ alias HOLDER = helper::OF{Holder};
 fn int main()
 {
     Msg m;
-    inner::stamp(&m);
+    inner::internal::stamp(&m);
 
     Slot s;
-    s.fill(inner::to_inner(&m));
+    s.fill(inner::internal::to_inner(&m));
 
     if (catch HOLDER.create(mem, &s)) return 1;   // <-- the violation
 

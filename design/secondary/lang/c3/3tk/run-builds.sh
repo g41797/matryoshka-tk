@@ -220,36 +220,47 @@ done
 #
 # 3TK-pre-65 REWROTE IT FOR SIX NAMES. Part 4.5: the module line IS the design,
 # so the check asserts the whole list rather than two of it — every file
-# declares exactly what 4.2 says it declares, and no file declares anything
-# else. `helper.c3` and `queue.c3` went back to modules of their own, and a
-# check that knew only `mailbox` and `pool` would have gone red on the correct
-# change. Six declarations, six checks, plus one that nothing unexpected is
-# declared anywhere in `src/`.
+# declares exactly what the design says it declares, and no file declares
+# anything else. `helper.c3` and `queue.c3` went back to modules of their own,
+# and a check that knew only `mailbox` and `pool` would have gone red on the
+# correct change.
+#
+# 3TK-70 REWROTE IT AGAIN, FOR ELEVEN NAMES IN SIX FILES, and the shape had to
+# change with the count: a file is no longer one module. Each of `inner.c3`,
+# `queue.c3` and `mailbox.c3` carries two sections and `pool.c3` carries three,
+# so what is asserted per file is the ORDERED LIST of its module lines. Order
+# is part of it: `pool.c3` opens on `mtk::pool::hooks` the way `atomic.c3` opens
+# on `std::atomic::types`, and a section that drifted to the wrong place would
+# take its imports with it.
+#
+# This is the trap `3TK-pre-65` and `3TK-67` both hit, and it is deliberate: a
+# correct module change goes RED here first, and the list moves in the same pass.
 echo "== Part 17.2: the layering, and Part 4.5: the module list =="
 declare -A EXPECT_MODULE=(
     [mtk]='module mtk;'
-    [inner]='module mtk::inner;'
-    [queue]='module mtk::queue;'
+    [inner]='module mtk::inner;|module mtk::inner::internal;'
+    [queue]='module mtk::queue;|module mtk::queue::internal;'
     [helper]='module mtk::helper <Outer>;'
-    [mailbox]='module mtk::mailbox;'
-    [pool]='module mtk::pool;'
+    [mailbox]='module mtk::mailbox;|module mtk::mailbox::internal;'
+    [pool]='module mtk::pool::hooks;|module mtk::pool;|module mtk::pool::internal;'
 )
 for f in mtk inner queue helper mailbox pool; do
     want=${EXPECT_MODULE[$f]}
-    if grep -qxF "$want" "src/$f.c3"; then
-        ok "src/$f.c3 declares '$want'"
+    have=$(grep -hoE '^module [A-Za-z_:]+( <[A-Za-z_]+>)?( @[a-z]+)?;' "src/$f.c3" | paste -sd'|' -)
+    if [ "$have" = "$want" ]; then
+        ok "src/$f.c3 declares '$(echo "$want" | tr '|' ' ')'"
     else
-        bad "src/$f.c3 does not declare '$want' — Part 4.2's module list has drifted"
+        bad "src/$f.c3 declares '$have', not '$want' — the module list has drifted"
     fi
 done
-# Nothing beyond the list. A seventh module name in `src/` is a partition that
-# 4.2 does not describe, and the visibility of everything in it is unruled.
+# Nothing beyond the list. A twelfth module name in `src/` is a partition the
+# design does not describe, and the visibility of everything in it is unruled.
 UNEXPECTED=$(grep -hoE '^module [A-Za-z_:]+( <[A-Za-z_]+>)?( @[a-z]+)?;' src/*.c3 | sort -u \
-    | grep -vxE 'module mtk;|module mtk::inner;|module mtk::inner @private;|module mtk::(queue|mailbox|pool);|module mtk::helper <Outer>;')
+    | grep -vxE 'module mtk;|module mtk::helper <Outer>;|module mtk::(inner|queue|mailbox|pool);|module mtk::(inner|queue|mailbox|pool)::internal;|module mtk::pool::hooks;')
 if [ -z "$UNEXPECTED" ]; then
-    ok "src/ declares no module outside Part 4.2's list of six"
+    ok "src/ declares no module outside the list of eleven"
 else
-    bad "src/ declares a module Part 4.2 does not list: $(echo "$UNEXPECTED" | tr '\n' ' ')"
+    bad "src/ declares a module the list does not carry: $(echo "$UNEXPECTED" | tr '\n' ' ')"
 fi
 # --- Part 4.4a, the partition of `module mtk`, and it is testable ---
 #
@@ -263,7 +274,7 @@ fi
 # banner gets above.
 echo "== Part 4.4a: the partition of module mtk =="
 PARTITION_OK=1
-for banner in '^// Part 2 of 3: public, and not yours' '^module mtk::inner @private;'; do
+for banner in '^// Part 2 of 2: public, and not yours' '^module mtk::inner::internal;'; do
     if grep -qE "$banner" src/inner.c3; then :; else
         bad "src/inner.c3 has lost the banner '$banner' — the partition is unmarked"
         PARTITION_OK=0
@@ -276,7 +287,7 @@ done
 # identity, and 012's whole subject is that the free form and the method form
 # give the same answer. Any THIRD example is a user reaching past the helper,
 # and either the example is wrong or the partition is.
-INTERNAL='inner::(to_inner|from_inner|must_from_inner|from_slot|must_from_slot|move_from_slot|is_mine|stamp|is_linked|reset|inner_offset)\b|\.(repoint_to|points_to)[[:space:]]*\('
+INTERNAL='inner::internal::(to_inner|from_inner|must_from_inner|from_slot|must_from_slot|move_from_slot|is_mine|stamp|is_linked|reset|inner_offset)\b|\.(repoint_to|points_to)[[:space:]]*\('
 ALLOWED='examples/010-no_raw_allocator_call.c3|examples/012-type_crossing.c3'
 REACHING=$(grep -rEn "$INTERNAL" examples/*.c3 | grep -vE "^[^:]*:[0-9]+:[[:space:]]*//" \
     | grep -vE "^($ALLOWED):" | cut -d: -f1 | sort -u)
@@ -286,34 +297,38 @@ else
     bad "an example calls what the helper is there for: $(echo "$REACHING" | tr '\n' ' ')"
 fi
 
-# --- Rule 2 and Rule 3 of plan 029: the banner, and the marker ---
+# --- Rule 2 and Rule 3: the internal module, and the marker ---
 #
-# 3TK-67 REPLACED the two checks 3TK-pre-65 put here — *no declaration carries
-# the marker and a describing block at once*, and *a contract-only block is
-# every line a `@` line, no prose*. Both were correct against the rule as it
-# stood, and the rule changed: Rule 2 requires precisely the combination they
-# forbid. An internal declaration now KEEPS its `<* *>` block, opening with the
-# exact line `For internal usage.` and carrying, after it, only directives that
-# do work.
+# 3TK-70 MOVED THE TRUTH FROM POSITION TO MODULE. 3TK-67 keyed this check on
+# where a declaration sits relative to `// For internal usage - everything below
+# this line.`, and that was the strongest form available while a file was one
+# module. It is not any more: each of `inner.c3`, `queue.c3`, `mailbox.c3` and
+# `pool.c3` now carries an `mtk::X::internal` section, because `c3c docgen`
+# groups by module and by nothing else and a page wants one subject.
 #
-# The reason the block came back is the reason those checks existed at all: a
-# `@require` lives INSIDE the `<* *>`, so obeying a rule that deleted the block
-# deleted the check, silently. `negative/wrong_type_must` stopped aborting and
-# only a negative program noticed.
+# The module is strictly stronger than the position. A banner is a comment: it
+# can be renamed, duplicated or deleted, and the check has to assert its
+# presence first to stop itself quietly grepping nothing. A module section is
+# the compiler's own partition — a declaration cannot fail to be in one, and
+# nothing between the module line and the next one can be outside it.
 #
-# POSITION IS THE TRUTH, AND THE MARKER IS ITS CONSEQUENCE. A per-declaration
-# marker fails by omission and nothing looks wrong; a declaration cannot fail to
-# be somewhere. So one banner per file names the boundary and the check runs
-# BOTH WAYS across it: every declaration below the banner opens with the marker,
-# and none above it does.
-echo "== Rule 2, Rule 3: the internal banner and the marker =="
+# THE BANNER STAYS, and it stays as a section header for a human reading the
+# file. It is asserted below, by name, exactly as before. What changed is that
+# it no longer decides anything.
+#
+# The check still runs BOTH WAYS: every declaration in an `::internal` section
+# opens its block with the marker, and no declaration outside one does. The
+# marker is what crosses to the docs site; docgen publishes no file structure
+# and no `//` comment, so a reader on the generated page has the marker and the
+# page title and nothing else.
+echo "== Rule 2, Rule 3: the internal module and the marker =="
 INTERNAL_BANNER='// For internal usage - everything below this line.'
 MARKERS=$(${PYTHON:-python3} - src/*.c3 <<'PY_END'
 import re, sys
 
-BANNER = '// For internal usage - everything below this line.'
 MARKER = 'For internal usage.'
 DECL = re.compile(r'^(fn|macro|struct|typedef|const|alias|enum|interface|faultdef)\b')
+MODULE = re.compile(r'^module[ \t]+([A-Za-z_][A-Za-z_0-9:]*)')
 
 
 def block_head(lines, i):
@@ -339,37 +354,43 @@ def block_head(lines, i):
 bad = []
 for p in sys.argv[1:]:
     lines = open(p).read().splitlines()
-    at = [n for n, l in enumerate(lines) if l.strip() == BANNER]
-    if len(at) > 1:
-        bad.append('%s:has-%d-banners' % (p, len(at)))
-        continue
-    b = at[0] if at else None
+    mod = None
+    sections = 0
     for i, l in enumerate(lines):
+        m = MODULE.match(l)
+        if m:
+            mod = m.group(1)
+            if mod.endswith('::internal'):
+                sections += 1
+            continue
         if not DECL.match(l):
             continue
         marked = block_head(lines, i) == MARKER
-        below = b is not None and i > b
-        if below and not marked:
-            bad.append('%s:%d:below-the-banner-and-unmarked' % (p, i + 1))
-        elif marked and not below:
-            bad.append('%s:%d:marked-and-not-below-a-banner' % (p, i + 1))
+        internal = mod is not None and mod.endswith('::internal')
+        if internal and not marked:
+            bad.append('%s:%d:in-an-internal-module-and-unmarked' % (p, i + 1))
+        elif marked and not internal:
+            bad.append('%s:%d:marked-and-outside-an-internal-module' % (p, i + 1))
+    if sections > 1:
+        bad.append('%s:has-%d-internal-sections' % (p, sections))
 print(' '.join(bad))
 PY_END
 )
 if [ -z "$MARKERS" ]; then
-    ok "every declaration below an internal banner is marked, and none above one is"
+    ok "every declaration in an internal module is marked, and none outside one is"
 else
     bad "the internal partition has drifted: $MARKERS"
 fi
 
-# The banner itself, per file, asserted by name. A renamed banner must go red
-# here rather than let the check above quietly find no boundary and pass — the
-# same guard the stack banner and the part banners already get.
+# The banner, per file, asserted by name. It is no longer the truth, so a
+# renamed banner can no longer make the check above grep nothing — but it is
+# still the only section header a maintainer reading the file gets, and it is
+# where the reason those declarations are public is stated once.
 for f in inner queue mailbox pool; do
     if grep -qxF "$INTERNAL_BANNER" "src/$f.c3"; then
         ok "src/$f.c3 carries the internal banner"
     else
-        bad "src/$f.c3 has lost its internal banner — its internal declarations are unbounded"
+        bad "src/$f.c3 has lost its internal banner — its internal section is unheaded"
     fi
 done
 # `mtk.c3` and `helper.c3` have none, because every declaration in them is the
@@ -456,14 +477,14 @@ fi
 # open-coded the condition would be a site that could get the tolerance wrong,
 # and it must go red here.
 echo "== Part 5.2: the identity check at both boundaries =="
-CROSSINGS=$(grep -c 'inner::check_stamped(' src/helper.c3)
+CROSSINGS=$(grep -c 'inner::internal::check_stamped(' src/helper.c3)
 if [ "$CROSSINGS" -eq 6 ]; then
     ok "the four crossings of src/helper.c3 check the identity, on all six arms"
 else
     bad "src/helper.c3 has $CROSSINGS of the 6 identity checks Part 5.2 requires"
 fi
 for f in queue pool; do
-    N=$(grep -c 'inner::check_stamped(' "src/$f.c3")
+    N=$(grep -c 'inner::internal::check_stamped(' "src/$f.c3")
     if [ "$N" -eq 1 ]; then
         ok "src/$f.c3's @guard_insert checks the identity"
     else

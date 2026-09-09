@@ -23,9 +23,9 @@ fn int main()
 
     // A queued outer, so a softened check would also leak it.
     Msg m;
-    inner::stamp(&m);
+    inner::internal::stamp(&m);
     Slot s;
-    s.fill(inner::to_inner(&m));
+    s.fill(inner::internal::to_inner(&m));
     if (catch mb.send(&s)) return 1;
 
     mb.release();                    // <-- the violation: never closed
