@@ -504,21 +504,6 @@ fn void Pool.put(&pool, Slot* slot)
     self._mu.unlock();
 }
 
-// Stores one outer the hook decided to keep. Called under the lock.
-fn void _Pool.take_back(&self, Slot* s)
-{
-    if (s.is_empty()) return;
-    self.take_back_inner(s.take());
-}
-
-fn void _Pool.take_back_inner(&self, Inner* inner)
-{
-    PoolBucket* b = self.bucket_for(inner.link.type);
-    mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
-    // if (!b) return; <- Force failure instead of silent bug
-    b.free.push(inner);
-}
-
 <*
  Closes the pool. Cannot fail.
 
@@ -697,6 +682,21 @@ fn void _Pool._close(&self, InnerQueue* out)
     }
 
     self._cv.broadcast();
+}
+
+// Stores one outer the hook decided to keep. Called under the lock.
+fn void _Pool.take_back(&self, Slot* s)
+{
+    if (s.is_empty()) return;
+    self.take_back_inner(s.take());
+}
+
+fn void _Pool.take_back_inner(&self, Inner* inner)
+{
+    PoolBucket* b = self.bucket_for(inner.link.type);
+    mtk::@check(b != null, "the put hook returned an identity the pool was not created with");
+    // if (!b) return; <- Force failure instead of silent bug
+    b.free.push(inner);
 }
 
 <*

@@ -150,25 +150,6 @@ fn void? Mailbox.send(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, false);
 *>
 fn void? Mailbox.send_oob(&mbox, Slot* slot) => ((_Mbox*)mbox).send_at(slot, true);
 
-fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
-{
-    mtk::@check(slot.is_full(), "Mailbox.send from an empty Slot");
-    if (slot.is_empty()) return;
-
-    if (self.@closed_fast()) return mtk::CLOSED~;
-
-    self._mu.lock();
-    defer self._mu.unlock();
-
-    // [3tk: Part 15.4]
-    if (self._closed) return mtk::CLOSED~;
-
-    self._active++;
-    defer self._active--;
-
-    self.enqueue(slot.take(), oob);
-    self._cv.signal();
-}
 
 <*
  Takes an outer if one is queued. Never waits.
@@ -474,6 +455,27 @@ fn void _Mbox._close(&self, InnerQueue* out)
 
     self._cv.broadcast();
 }
+
+fn void? _Mbox.send_at(&self, Slot* slot, bool oob)
+{
+    mtk::@check(slot.is_full(), "Mailbox.send from an empty Slot");
+    if (slot.is_empty()) return;
+
+    if (self.@closed_fast()) return mtk::CLOSED~;
+
+    self._mu.lock();
+    defer self._mu.unlock();
+
+    // [3tk: Part 15.4]
+    if (self._closed) return mtk::CLOSED~;
+
+    self._active++;
+    defer self._active--;
+
+    self.enqueue(slot.take(), oob);
+    self._cv.signal();
+}
+
 
 <*
  For internal usage.
