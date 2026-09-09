@@ -7,6 +7,130 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-09 — 3TK-72: the example groups
+
+**Plan [3tk-staging-plan-033.md](3tk-staging-plan-033.md), rulings `G-1` … `G-9`.
+Ran on Opus 5, as the charter asked.** `examples/` is eleven groups. An example
+declares `module shc::<group>::<name>;`, each group has a carrier file
+`<group>.c3` describing it and declaring nothing, and **no file was renamed and
+no code moved.** Closed.
+
+**The figures did not move, which is the proof `G-8` asked for.**
+`run-builds.sh` is **107 checks, 0 failures, four builds, 145 tests in each**.
+`check-doc-loop.sh` is **11 labelled blocks, 0 differing, 443 of 443 sentences,
+0 banned words**, `move-module-docs.sh roundtrip` is byte-identical, and
+`run-sanitizers.sh` is **3 of 3**. Identical to `3TK-71`'s in every figure, which
+is what a grouping stage is entitled to and the only thing that proves it moved
+nothing.
+
+**Why the site needed this.** `c3c docgen` groups by module and by nothing else,
+so 52 flat `shc::` modules were 52 sibling pages in alphabetical order —
+`available_only` beside `close_recovery` beside `defer_put_early`. The structure
+existed already, in the `##` sections of the catalog and in the number each file
+carries. This stage put it where docgen can see it.
+
+**The eleven, in reading order:** `a_slot_and_transfer` (001, 003, 004),
+`b_cleanup` (005–010), `c_crossing` (011, 012, 013, 015, 016), `d_dispatch`
+(017–020), `e_infrastructure` (023–026), `f_mailbox` (027–032), `g_topology`
+(033–036), `h_pool` (037–040, 042, 045), `i_shutdown` (046), `j_coordinator`
+(049–053), `k_new_in_3tk` (057–061). **49 example files carry a group**, and
+`outers.c3`, `helpers.c3` and `shc.c3` stay at the top level by `G-6`.
+
+**`b_cleanup` is the owner's, and it is the one place the grouping leaves the
+catalog.** The catalog's first section is two subjects — three files of Slot
+mechanics and six of cleanup — and the reference book already separates them,
+with *Cleanup patterns* a heading of its own in Part 6. **The catalog was not
+rewritten**, and `G-5` says why: it is descriptive, and the grouping is not.
+
+**The letter prefix is not decoration.** A C3 module segment cannot start with a
+digit, so the catalog order the file names carry as `001`, `003`, `005` cannot be
+carried by the module. `a_` … `k_` carries it instead, on the group segment
+only: **the leaf keeps its plain name**, because the number is in the file name
+and that is where `G-2` keeps it.
+
+**The probe of `G-7` answered yes, and the second half of it is why the answer
+is trustworthy.** `import shc;` reaches two levels of submodule, so
+`test/t_examples.c3`'s **52 leaf imports became one line**. The stage then
+deleted that line too, and c3c refused with *"Did you mean the function
+`shc::a_slot_and_transfer::insert_from_slot::insert_from_a_slot` … please add
+`import shc::a_slot_and_transfer::insert_from_slot`"* — so the one import is
+doing the work, not the fully-qualified call site resolving on its own.
+**A later stage does not re-run this probe.** The file now gains no import when
+a group gains a file.
+
+**Two things the plan had wrong, both corrected in the stage under `G-9`.**
+
+- **The sweep was 103 references, not 52.** Every wrapper calls its example
+  fully qualified — `shc::<name>::fn(...)` — so each example needed its group
+  segment at the call site as well as at the import. The plan counted imports
+  and stopped there. A build caught it immediately: *"'insert_from_a_slot' could
+  not be found, try importing the 'shc::insert_from_slot' module."*
+- **The two imports between example files are 018 → 017 and 045 → 018**, not
+  the 019/020 pair the plan named. Both swept correctly, because the sweep
+  matched on the module name rather than on the file the plan guessed.
+  **`045` is a cross-group import** — `h_pool` reaching into `d_dispatch` for
+  `CreateByIdentityHooks` — which is catalog entry 45 reusing entry 18's hooks
+  deliberately. **A group is not a wall**, and `3tk-example-rules-005.md` now
+  says so, so no later stage reads that import as a layering defect.
+
+**A third thing, and it cost a wasted twenty minutes.** `run-builds.sh` exists
+in both repos and **`matryoshka-3tk`'s copy has `ROOT` pointing at its own
+tree**. Run from `matryoshka-tk`'s `3tk/` directory it silently tests the other
+repo's sources — which this stage had not touched — and it reported a `FAIL`
+that was nothing but two overlapping runs sharing one `out/testrun` (*"Text file
+busy"*). **The tree's own `run-builds.sh` is the one to run**; the `scripts/`
+copy is for running inside `matryoshka-3tk`. `run-sanitizers.sh` is the
+exception — it takes the tree as `$1`, and was run that way.
+
+**`3tk-example-rules-005.md` replaces `004`**, `004` to
+`matryoshka-3tk/design/backup/`. Two rules: *The file name* now reads
+`NNN-name.c3`, declaring `module shc::<group>::<name>;`, and its bullet on why
+the file name and the module name differ names both reasons — the digit and the
+group segment. **New section *The groups*** — a group is a submodule with a
+carrier file that declares nothing, the prefix is what orders the groups on the
+generated page, a group is not a wall, adding a group is adding a file, and a
+stage may split a catalog section and says so. The five live references in
+`3tk-patterns-004.md` and the rules file were re-anchored.
+
+**`3tk-rules-004.md` replaces `003`, and it is the owner's ruling of the same
+day.** New **Rule 12 — a document is versioned, not asked about**: when a
+document a stage touches needs more than a sentence changed, the stage writes the
+new version and moves the old to `backup/`, in the stage and **without asking**.
+A new version of an existing document is not a new document, so the standing
+*ask before creating a file in `matryoshka-3tk/design/`* does not reach it.
+**It was ruled because this stage halted to ask exactly that** — whether `004`
+could become `005` — and the round trip bought nothing: the alternative to
+asking is editing in place, which destroys the text `backup/` was supposed to
+hold. Rules 1–11 are unchanged word for word. `003` to `backup/`; the live
+references in `3tk-decisions-007.md` and `3tk-status.md` were re-anchored, and
+the log's older entries were **not** — a log entry records what was true when it
+was written.
+
+**Scripts and CI needed nothing, and Rule 10 says to write that down.**
+`run-builds.sh` names `examples/` by **file name** only — the `ALLOWED=` pair
+and the layering `grep` beside it — and `G-2` kept every file name, so both
+repos' copies are untouched and still differ only in `ROOT`. The doc-loop
+scripts read `src/` alone; `examples/` is outside the doc loop entirely. **The
+three `.yml` files needed no change**: `linux.yml` builds and tests inline and
+names no module, and `docs.yml` names no module either.
+
+**But `docs.yml` was read properly and it holds a finding the stage did not go
+looking for: the published docs site does not include `examples/` at all.**
+Its step runs `c3c docgen --emit-stdlib=no src`, and the line that would add the
+examples is **commented out one line below it** —
+`# run: c3c docgen --emit-stdlib=no src examples` — while the workflow's `paths:`
+filter still triggers on `examples/**`, so a change there rebuilds a site the
+change cannot appear in. **This stage's grouping is therefore correct and
+invisible**: it is what the site would show, the moment that line is
+uncommented. Uncommenting it publishes 63 new modules and is the owner's call,
+not the stage's, so it was left exactly as found and raised instead.
+
+**Not yet copied to `matryoshka-3tk`'s `examples`/`test`, or pushed** — that is
+the owner's step. The design documents were written directly in
+`matryoshka-3tk/design/`.
+
+---
+
 ## 2026-09-09 — 3TK-71: the tests allocate their outers
 
 **Plan [3tk-staging-plan-032.md](3tk-staging-plan-032.md), rulings `T-1` … `T-11`.

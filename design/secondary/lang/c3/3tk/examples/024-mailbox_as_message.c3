@@ -6,7 +6,7 @@
  - Receive it and confirm the pointer matches.
  - Confirm the travelling mailbox is still open.
 *>
-module shc::mailbox_as_message;
+module shc::e_infrastructure::mailbox_as_message;
 import mtk;
 import mtk::mailbox;
 import shc::helpers;

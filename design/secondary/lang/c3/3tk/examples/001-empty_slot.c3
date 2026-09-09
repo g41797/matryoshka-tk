@@ -5,7 +5,7 @@
  - Acquire a `Holder` into it.
  - Release it.
 *>
-module shc::empty_slot;
+module shc::a_slot_and_transfer::empty_slot;
 import mtk;
 import shc::outers;
 import shc::helpers;

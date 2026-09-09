@@ -7,7 +7,7 @@
  - Push a `Holder` onto a queue from a Slot.
  - Each Slot is empty right after its transfer.
 *>
-module shc::transfer_empties_slot;
+module shc::a_slot_and_transfer::transfer_empties_slot;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;

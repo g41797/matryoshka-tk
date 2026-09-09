@@ -4,18 +4,18 @@
  - Reuse entry 18's `CreateByIdentityHooks`, over the same three identities.
  - Get and put each identity; each keeps to its own list.
 *>
-module shc::a_pool_of_several_identities;
+module shc::h_pool::a_pool_of_several_identities;
 import mtk;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
-import shc::dispatch_identity_first;
+import shc::d_dispatch::dispatch_identity_first;
 
 faultdef POOL_OF_SEVERAL_IDENTITIES_FAILED;
 
 fn void? one_policy_three_identities(Allocator a)
 {
-    shc::dispatch_identity_first::CreateByIdentityHooks hooks = { .alloc = a };
+    shc::d_dispatch::dispatch_identity_first::CreateByIdentityHooks hooks = { .alloc = a };
     typeid[3] ids = { Event::typeid, Sensor::typeid, Holder::typeid };
     Pool* p = mtk::pool::create(a, &ids, &hooks)!;
     defer { p.close(); p.release(); }

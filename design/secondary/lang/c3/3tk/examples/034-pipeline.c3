@@ -8,7 +8,7 @@
  - The caller sends three values and the marker, then drains the output
    mailbox.
 *>
-module shc::pipeline;
+module shc::g_topology::pipeline;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

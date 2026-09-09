@@ -6,7 +6,7 @@
  - Send it from the same, still-full Slot.
  - Receive it back and release it.
 *>
-module shc::reach_into_a_full_slot;
+module shc::c_crossing::reach_into_a_full_slot;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

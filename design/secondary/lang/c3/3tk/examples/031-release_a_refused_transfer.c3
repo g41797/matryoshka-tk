@@ -6,7 +6,7 @@
  - Try to send a `Holder` into it and see the send refused.
  - Release the Holder, since the mailbox never took it.
 *>
-module shc::release_a_refused_transfer;
+module shc::f_mailbox::release_a_refused_transfer;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

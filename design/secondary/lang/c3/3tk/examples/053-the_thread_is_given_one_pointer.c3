@@ -8,7 +8,7 @@
    `WorkerCtx` pointer.
  - The caller sends three, closes the mailbox, and joins.
 *>
-module shc::the_thread_is_given_one_pointer;
+module shc::j_coordinator::the_thread_is_given_one_pointer;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

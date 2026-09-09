@@ -5,7 +5,7 @@
  - Move the pooled one onto a queue, so its Slot is empty by the time cleanup runs.
  - Let both deferred cleanups run: one has nothing to do, one does.
 *>
-module shc::null_safe_cleanup;
+module shc::b_cleanup::null_safe_cleanup;
 import mtk;
 import mtk::pool;
 import shc::outers;

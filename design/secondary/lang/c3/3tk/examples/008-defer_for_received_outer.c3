@@ -5,7 +5,7 @@
  - Receive it into a Slot, with the release deferred first.
  - A closed mailbox reaches the same defer through the fault path.
 *>
-module shc::defer_for_received_outer;
+module shc::b_cleanup::defer_for_received_outer;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

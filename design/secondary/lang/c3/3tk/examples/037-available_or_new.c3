@@ -6,7 +6,7 @@
  - Get with `AVAILABLE_OR_NEW`: the kept outer comes back, the hook does not run.
  - Put it back, get again: still the same outer, the hook still has not run.
 *>
-module shc::available_or_new;
+module shc::h_pool::available_or_new;
 import mtk;
 import mtk::pool;
 import shc::outers;

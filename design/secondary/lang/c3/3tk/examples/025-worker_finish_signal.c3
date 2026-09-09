@@ -6,7 +6,7 @@
  - The master receives it and checks the instance, a real pointer compare.
  - The master drains, closes and releases the worker's mailbox.
 *>
-module shc::worker_finish_signal;
+module shc::e_infrastructure::worker_finish_signal;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

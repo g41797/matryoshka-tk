@@ -6,7 +6,7 @@
  - Walk it with an iterator, without consuming it.
  - Walk it again with `pop_front`, releasing each outer.
 *>
-module shc::walk_a_batch;
+module shc::c_crossing::walk_a_batch;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

@@ -6,7 +6,7 @@
  - Set a field.
  - Let the deferred `put` give it back.
 *>
-module shc::defer_put_early;
+module shc::b_cleanup::defer_put_early;
 import mtk;
 import mtk::pool;
 import shc::outers;

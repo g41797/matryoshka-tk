@@ -6,7 +6,7 @@
  - Release it, naming the same allocator at the call.
  - The kept field is the outer's business, and nothing in 3tk reads it.
 *>
-module shc::the_allocator_in_the_outer;
+module shc::k_new_in_3tk::the_allocator_in_the_outer;
 import mtk;
 import shc::outers;
 import shc::helpers;

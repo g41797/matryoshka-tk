@@ -6,7 +6,7 @@
  - Push it onto a queue straight from the Slot.
  - Drain the queue and release what was pushed.
 *>
-module shc::insert_from_slot;
+module shc::a_slot_and_transfer::insert_from_slot;
 import mtk;
 import shc::outers;
 import shc::helpers;

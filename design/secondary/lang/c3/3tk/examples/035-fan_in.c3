@@ -6,7 +6,7 @@
    identities and all.
  - Count each identity that arrived.
 *>
-module shc::fan_in;
+module shc::g_topology::fan_in;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

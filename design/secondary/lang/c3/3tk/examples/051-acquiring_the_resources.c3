@@ -5,7 +5,7 @@
  - Build a `Master` whose fields are plain `Mailbox*` and `Pool*`.
  - Confirm neither is an optional and neither needs unwrapping.
 *>
-module shc::acquiring_the_resources;
+module shc::j_coordinator::acquiring_the_resources;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;

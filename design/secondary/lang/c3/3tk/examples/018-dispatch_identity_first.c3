@@ -5,12 +5,12 @@
  - Get one outer of each identity the pool was created with.
  - Close the pool and let `on_close` release what is left through the outer-first chain.
 *>
-module shc::dispatch_identity_first;
+module shc::d_dispatch::dispatch_identity_first;
 import mtk;
 import mtk::pool;
 import shc::outers;
 import shc::helpers;
-import shc::dispatch_outer_first;
+import shc::d_dispatch::dispatch_outer_first;
 
 alias EVENT  = helper::OF{Event};
 alias SENSOR = helper::OF{Sensor};
@@ -39,7 +39,7 @@ fn void CreateByIdentityHooks.on_close(&self, InnerQueue remaining) @dynamic
     {
         Slot s;
         s.fill(inner);
-        shc::dispatch_outer_first::free_outer(self.alloc, &s);
+        shc::d_dispatch::dispatch_outer_first::free_outer(self.alloc, &s);
     }
 }
 

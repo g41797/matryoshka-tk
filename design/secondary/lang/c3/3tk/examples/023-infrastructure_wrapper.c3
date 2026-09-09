@@ -6,7 +6,7 @@
  - Send the wrapper.
  - Receive it back and confirm both the endpoint and the job id crossed.
 *>
-module shc::infrastructure_wrapper;
+module shc::e_infrastructure::infrastructure_wrapper;
 import mtk;
 import mtk::mailbox;
 import shc::helpers;

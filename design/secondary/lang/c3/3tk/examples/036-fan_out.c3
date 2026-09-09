@@ -7,7 +7,7 @@
  - `close` gives back whatever no worker claimed, and the closer releases it
    — every time.
 *>
-module shc::fan_out;
+module shc::g_topology::fan_out;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

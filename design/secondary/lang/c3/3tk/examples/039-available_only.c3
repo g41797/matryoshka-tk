@@ -6,7 +6,7 @@
  - Drain with `AVAILABLE_ONLY` until `NOT_AVAILABLE`.
  - The hook never ran on this path.
 *>
-module shc::available_only;
+module shc::h_pool::available_only;
 import mtk;
 import mtk::pool;
 import shc::outers;

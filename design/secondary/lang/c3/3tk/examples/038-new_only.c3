@@ -4,7 +4,7 @@
  - Put one `Holder` back into the pool.
  - Get with `NEW_ONLY`: the hook runs, and the pool now holds two.
 *>
-module shc::new_only;
+module shc::h_pool::new_only;
 import mtk;
 import mtk::pool;
 import shc::outers;

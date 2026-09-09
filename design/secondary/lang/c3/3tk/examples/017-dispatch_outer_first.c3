@@ -5,7 +5,7 @@
  - Create one outer of each identity in turn.
  - Release each through the chain and confirm the Slot ends empty.
 *>
-module shc::dispatch_outer_first;
+module shc::d_dispatch::dispatch_outer_first;
 import mtk;
 import shc::outers;
 import shc::helpers;

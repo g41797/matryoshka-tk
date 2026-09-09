@@ -7,7 +7,7 @@
  - `wake_all` on a mailbox with nothing queued reports WOKEN.
  - A closed mailbox reports CLOSED.
 *>
-module shc::reading_the_fault_on_a_receive;
+module shc::i_shutdown::reading_the_fault_on_a_receive;
 import mtk;
 import mtk::mailbox;
 import shc::helpers;

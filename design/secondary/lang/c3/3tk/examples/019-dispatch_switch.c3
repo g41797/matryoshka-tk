@@ -5,7 +5,7 @@
  - Take the inner and switch on its identity, asserting the prong's type.
  - Release the outer once the switch has touched it.
 *>
-module shc::dispatch_switch;
+module shc::d_dispatch::dispatch_switch;
 import mtk;
 import shc::outers;
 import shc::helpers;

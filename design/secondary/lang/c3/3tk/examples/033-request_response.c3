@@ -7,7 +7,7 @@
    timeout.
  - The worker answers on the response mailbox, and the caller reads it.
 *>
-module shc::request_response;
+module shc::g_topology::request_response;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

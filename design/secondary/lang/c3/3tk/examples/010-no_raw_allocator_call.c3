@@ -5,7 +5,7 @@
  - The right shape goes through `HOLDER.create`, which runs your `init` hook
    and writes the identity.
 *>
-module shc::no_raw_allocator_call;
+module shc::b_cleanup::no_raw_allocator_call;
 import mtk;
 import shc::outers;
 import shc::helpers;

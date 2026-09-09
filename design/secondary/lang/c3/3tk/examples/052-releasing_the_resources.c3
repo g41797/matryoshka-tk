@@ -6,7 +6,7 @@
  - Take it down in reverse acquisition order, walking the mailbox's
    remainder itself and leaving the pool's to its hook.
 *>
-module shc::releasing_the_resources;
+module shc::j_coordinator::releasing_the_resources;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;

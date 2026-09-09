@@ -4,7 +4,7 @@
  - Embed exactly one `Inner` in `Sensor`.
  - Confirm the crossing works from a field that is not at offset zero.
 *>
-module shc::embedding_the_inner;
+module shc::c_crossing::embedding_the_inner;
 import mtk;
 import shc::outers;
 import shc::helpers;

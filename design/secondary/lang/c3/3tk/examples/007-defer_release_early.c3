@@ -5,7 +5,7 @@
  - Create a `Holder`.
  - Send it on. The defer finds nothing to do.
 *>
-module shc::defer_release_early;
+module shc::b_cleanup::defer_release_early;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

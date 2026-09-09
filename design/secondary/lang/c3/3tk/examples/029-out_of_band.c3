@@ -5,7 +5,7 @@
  - Send an ordinary `Holder`, then an out-of-band `Sensor`.
  - Receive twice and see the `Sensor` first.
 *>
-module shc::out_of_band;
+module shc::f_mailbox::out_of_band;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

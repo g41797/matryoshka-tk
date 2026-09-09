@@ -6,7 +6,7 @@
  - Take its inner and run a guarded check that only walks the queue when
    the build is checking anything at all.
 *>
-module shc::guarding_an_expensive_check;
+module shc::k_new_in_3tk::guarding_an_expensive_check;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

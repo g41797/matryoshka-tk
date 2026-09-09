@@ -5,7 +5,7 @@
  - Build two tables that disagree about what an `Event` means.
  - Dispatch the same outer through both and confirm each ran its own handler.
 *>
-module shc::dispatch_table;
+module shc::d_dispatch::dispatch_table;
 import mtk;
 import shc::outers;
 import shc::helpers;

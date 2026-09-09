@@ -6,7 +6,7 @@
  - Send a `Holder`, then close and drain what comes back.
  - Close a second time and drain an empty queue the same way.
 *>
-module shc::close_recovery;
+module shc::f_mailbox::close_recovery;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

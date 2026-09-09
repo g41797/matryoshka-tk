@@ -6,7 +6,7 @@
  - Process the work: receive each outer, put it back, and count it.
  - Shut down: close the mailbox, put back what it kept, then close the pool.
 *>
-module shc::the_coordinator;
+module shc::j_coordinator::the_coordinator;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;

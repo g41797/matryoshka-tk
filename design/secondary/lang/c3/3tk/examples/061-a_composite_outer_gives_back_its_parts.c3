@@ -7,7 +7,7 @@
  - Put it back and confirm the hook ran, with `extra` left empty because
    this outer carries no parts of its own.
 *>
-module shc::composite_outer_gives_back;
+module shc::k_new_in_3tk::composite_outer_gives_back;
 import mtk;
 import mtk::pool;
 import shc::outers;

@@ -5,7 +5,7 @@
  - Seed a fixed size.
  - `AVAILABLE_OR_NEW` past the seed reports `NOT_CREATED`.
 *>
-module shc::seeding_a_fixed_size_pool;
+module shc::h_pool::seeding_a_fixed_size_pool;
 import mtk;
 import mtk::pool;
 import shc::outers;

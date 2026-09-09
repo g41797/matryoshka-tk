@@ -12,7 +12,7 @@
  - Peek through the Slot with `look`, leaving it full, and with `to`.
  - Take through the Slot with `take`, leaving it empty, and with `move`.
 *>
-module shc::recovering_the_type;
+module shc::c_crossing::recovering_the_type;
 import mtk;
 import shc::outers;
 import shc::helpers;

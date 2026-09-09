@@ -5,7 +5,7 @@
  - Try to put a `Holder` back into it.
  - The primary defer runs first and does nothing; the fallback releases it.
 *>
-module shc::refused_put_fallback;
+module shc::b_cleanup::refused_put_fallback;
 import mtk;
 import mtk::pool;
 import shc::outers;

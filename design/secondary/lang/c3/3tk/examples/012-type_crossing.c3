@@ -10,7 +10,7 @@
  - Cross back with the free-function form, and get the same answer.
  - Cross back with the method form, and get the same answer again.
 *>
-module shc::type_crossing;
+module shc::c_crossing::type_crossing;
 import mtk;
 import shc::outers;
 import shc::helpers;

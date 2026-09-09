@@ -5,7 +5,7 @@
  - Create an `Event`, set its field, and send it.
  - Receive it back and confirm the field crossed unchanged.
 *>
-module shc::identity_costs_nothing;
+module shc::k_new_in_3tk::identity_costs_nothing;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

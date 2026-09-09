@@ -5,7 +5,7 @@
  - Send a pool's identity through a mailbox.
  - Receive it and confirm the pointer matches, hooks and all.
 *>
-module shc::pool_as_message;
+module shc::e_infrastructure::pool_as_message;
 import mtk;
 import mtk::mailbox;
 import mtk::pool;

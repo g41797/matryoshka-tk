@@ -6,7 +6,7 @@
  - Drain them all in one call.
  - Release each one.
 *>
-module shc::receive_all;
+module shc::f_mailbox::receive_all;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

@@ -6,7 +6,7 @@
  - Send three `Holder` outers into a mailbox and receive them as a batch.
  - Walk the batch with the one loop shape, releasing each as it goes.
 *>
-module shc::the_optional_declaration_walk;
+module shc::k_new_in_3tk::the_optional_declaration_walk;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

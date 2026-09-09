@@ -5,7 +5,7 @@
  - Poll an empty mailbox and see `EMPTY`.
  - Send a `Holder`, then poll again and receive it.
 *>
-module shc::poll;
+module shc::f_mailbox::poll;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

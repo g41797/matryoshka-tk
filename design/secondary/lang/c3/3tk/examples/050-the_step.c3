@@ -6,7 +6,7 @@
  - `process_the_work` is `wake_all` and nothing else.
  - Confirm all four crossed, in order.
 *>
-module shc::the_step;
+module shc::j_coordinator::the_step;
 import mtk;
 import mtk::mailbox;
 import shc::outers;

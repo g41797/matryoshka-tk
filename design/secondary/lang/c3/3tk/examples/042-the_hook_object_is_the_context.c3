@@ -5,7 +5,7 @@
  - `on_get` reads `self.cap` and `self.live` with no cast.
  - `on_close` gives the remainder back to the same object.
 *>
-module shc::the_hook_object_is_the_context;
+module shc::h_pool::the_hook_object_is_the_context;
 import mtk;
 import mtk::pool;
 import shc::outers;

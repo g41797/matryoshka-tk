@@ -7,7 +7,7 @@
  - The main thread flips a flag and calls `wake_all`.
  - The receiver sees `WOKEN`, reads the flag, and returns.
 *>
-module shc::wake_without_a_message;
+module shc::f_mailbox::wake_without_a_message;
 import mtk;
 import mtk::mailbox;
 import shc::helpers;
