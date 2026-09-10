@@ -36,7 +36,7 @@ fn int main()
 {
 	Slot s;
 	if (catch MSG.create(mem, &s)) return 1;
-	Inner* m = inner::internal::to_inner(MSG.must_look(&s));
+	Inner* m = MSG.inner(MSG.must_look(&s));
 
 	InnerQueue q;
 	q.push_back(m);

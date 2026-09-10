@@ -191,11 +191,17 @@ fn void empty_hook_bodies_are_how_a_type_says_nothing_to_do() @test
 }
 
 <*
- The stamp is idempotent, and it is safe on a LINKED inner.
+ The stamp is idempotent, and it is safe on a LINKED inner, SINGLE-THREADED.
 
  Part 5.1: writing the identity rebuilds the whole `any`, preserving
  `link.ptr`. The destructive edit differs by one sub-expression, so the test
  stamps an outer that is on a queue and then checks the queue still holds it.
+
+ One thread throughout, and that is the whole of the claim. `stamp` is a
+ read-modify-write of the one `link` field, so it preserves `link.ptr` only
+ because nobody else changes it in between; on an outer another thread may be
+ relinking it would write a stale pointer back. That is why `stamp`'s three
+ callers are all construction-time and why `inner()` no longer stamps at all.
 *>
 fn void the_stamp_is_idempotent_and_safe_on_a_linked_outer() @test
 {
@@ -252,15 +258,35 @@ fn void the_four_crossings() @test
 }
 
 <*
- `inner()` stamps on the way out, so an outer allocated by hand never has to
- be stamped separately. HR-5.
+ `stamp` gives a hand-made outer its identity, and that is the only door that does.
+
+ The subject was never the crossing: it is that an outer `create` never saw
+ gets its identity from one call and is then an ordinary outer. `inner()` used
+ to stamp too and no longer does — it verifies — so the assertion moved to the
+ door that writes.
 *>
-fn void inner_stamps_on_the_way_out() @test
+fn void stamp_gives_a_hand_made_outer_its_identity() @test
 {
     // Not allocated through the helper, and the sentence above says why: the
     // subject is an outer the user made by hand, which `create` never sees.
     Job j;
-    always_assert(JOB.inner(&j).outer_tid() == Job::typeid, "the crossing out did not stamp");
+    JOB.stamp(&j);
+    always_assert(JOB.inner(&j).outer_tid() == Job::typeid, "the stamp did not write the identity");
+    always_assert(JOB.look(JOB.inner(&j)) == &j, "the stamped outer did not cross back");
+}
+
+<*
+ The reading door passes null through, and it does so in every build.
+
+ `to_inner` answers null for null, and the safe-build check tolerates it for
+ the same reason every other crossing does: an absent outer is an answer. The
+ two ways of getting this wrong — an unstamped outer and one carrying another
+ type — abort, so they are `negative/unstamped_inner` and
+ `negative/wrong_type_inner` rather than tests.
+*>
+fn void the_reading_door_passes_null_through() @test
+{
+    always_assert(JOB.inner(null) == null, "null did not pass through the crossing out");
 }
 
 <*

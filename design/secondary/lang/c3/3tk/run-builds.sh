@@ -58,13 +58,21 @@ MODES=("safe -O0::--safe=yes -O0"
 
 # A runtime negative aborts where the checks are live and exits 0 where they are not.
 RUNTIME_NEGATIVES=(overwrite_slot create_into_full_slot insert_twice_same_queue insert_linked_outer self_move wrong_type_must duplicate_pool_tags pool_unknown_identity
-                   unstamped_insert unstamped_crossing)
+                   unstamped_insert unstamped_crossing
+                   unstamped_inner wrong_type_inner)
 
 # 3TK-65 added the last two. Part 5.2 asserts the identity at BOTH boundaries and
 # the two programs are not variants of one another: `unstamped_insert` reaches
 # `@guard_insert` and never reaches a crossing, `unstamped_crossing` fills the
 # Slot by hand and so never reaches a guard. A suite with one of them would go
 # green with the other boundary unguarded.
+#
+# 3TK-75 added the two after them, and they are the third boundary rather than a
+# third variant. `C-1` stopped `OuterHelper.inner` writing the identity and made
+# it verify one, so the crossing OUT is now guarded too: `unstamped_inner` gives
+# it an outer that was never stamped, `wrong_type_inner` one stamped as another
+# type. The second is the half no stamp could ever have caught — the old
+# `inner()` would have re-stamped it and agreed with itself afterwards.
 
 # A TIER 1 negative aborts in EVERY mode, including --safe=no -O3. Part 11.12 is
 # the one precondition the specification refuses to soften, and this is the only

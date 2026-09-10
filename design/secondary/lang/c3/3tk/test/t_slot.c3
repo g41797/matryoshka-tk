@@ -73,9 +73,9 @@ fn void rule4_a_failed_move_leaves_the_slot_untouched() @test
     if (catch TWIN.create(mem, &s)) { always_assert(false, "create failed"); }
     Twin* t = TWIN.must_look(&s);
 
-    always_assert(inner::internal::move_from_slot(&s, Msg) == null, "a Twin was moved out as a Msg");
+    always_assert(MSG.take(&s) == null, "a Twin was moved out as a Msg");
     always_assert(s.is_full(), "Part 9.2 rule 4: a failed move emptied the Slot");
-    always_assert(s.peek() == inner::internal::to_inner(t), "a failed move changed the Slot's contents");
+    always_assert(s.peek() == TWIN.inner(t), "a failed move changed the Slot's contents");
 }
 
 <*
@@ -89,17 +89,17 @@ fn void a_matching_move_returns_and_clears() @test
     if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
     Msg* m = MSG.must_look(&s);
 
-    always_assert(inner::internal::move_from_slot(&s, Msg) == m, "the move did not return the outer");
+    always_assert(MSG.take(&s) == m, "the move did not return the outer");
     always_assert(s.is_empty(), "the move did not clear the Slot");
 
-    s.fill(inner::internal::to_inner(m));           // back into the Slot the defer releases
+    s.fill(MSG.inner(m));                           // back into the Slot the defer releases
 }
 
 <*
  The looking crossings do not move anything. Part 7.2.
 
- A Slot read with `from_slot` is a look, not a take, and the difference is the
- whole reason `move_from_slot` is a separate member.
+ A Slot read with `look` is a look, not a take, and the difference is the
+ whole reason `take` is a separate member.
 *>
 fn void a_look_is_not_a_take() @test
 {
@@ -108,10 +108,10 @@ fn void a_look_is_not_a_take() @test
     if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
     Msg* m = MSG.must_look(&s);
 
-    always_assert(inner::internal::from_slot(&s, Msg) == m, "from_slot did not find the outer");
-    always_assert(s.is_full(), "from_slot emptied the Slot");
-    always_assert(inner::internal::from_slot(&s, Msg) == m, "from_slot is not repeatable");
-    always_assert(s.is_full(), "from_slot emptied the Slot on the second read");
+    always_assert(MSG.look(&s) == m, "look did not find the outer");
+    always_assert(s.is_full(), "look emptied the Slot");
+    always_assert(MSG.look(&s) == m, "look is not repeatable");
+    always_assert(s.is_full(), "look emptied the Slot on the second read");
 }
 
 <*
@@ -125,13 +125,13 @@ fn void peek_and_take_differ() @test
     if (catch JOB.create(mem, &s)) { always_assert(false, "create failed"); }
     Job* j = JOB.must_look(&s);
 
-    always_assert(s.peek() == inner::internal::to_inner(j), "peek found the wrong inner");
+    always_assert(s.peek() == JOB.inner(j), "peek found the wrong inner");
     always_assert(s.is_full(), "peek emptied the Slot");
-    always_assert(s.take() == inner::internal::to_inner(j), "take returned the wrong inner");
+    always_assert(s.take() == JOB.inner(j), "take returned the wrong inner");
     always_assert(s.is_empty(), "take did not clear the Slot");
     always_assert(s.take() == null, "take on an empty Slot invented an inner");
 
-    s.fill(inner::internal::to_inner(j));           // back into the Slot the defer releases
+    s.fill(JOB.inner(j));                           // back into the Slot the defer releases
 }
 
 <*
@@ -160,10 +160,10 @@ fn void one_place_at_a_time() @test
     b.fill(list.pop_front());
     always_assert(a.is_empty() && b.is_full() && list.is_empty(), "after the receive");
 
-    always_assert(inner::internal::move_from_slot(&b, Msg) == m, "the outer came back changed");
+    always_assert(MSG.take(&b) == m, "the outer came back changed");
     always_assert(b.is_empty(), "the claim did not clear the Slot");
 
-    a.fill(inner::internal::to_inner(m));           // back into the Slot the defer releases
+    a.fill(MSG.inner(m));                           // back into the Slot the defer releases
 }
 
 <*

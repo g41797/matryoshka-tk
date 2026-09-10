@@ -25,8 +25,8 @@ fn int main()
 	Slot sb;
 	if (catch MSG.create(mem, &sa)) return 1;
 	if (catch MSG.create(mem, &sb)) return 1;
-	Inner* a = inner::internal::to_inner(MSG.must_look(&sa));
-	Inner* b = inner::internal::to_inner(MSG.must_look(&sb));
+	Inner* a = MSG.inner(MSG.must_look(&sa));
+	Inner* b = MSG.inner(MSG.must_look(&sb));
 
 	InnerQueue one;
 	InnerQueue two;

@@ -156,13 +156,11 @@ const typeid TYPE = _Pool::typeid;
  From a `Pool*` to its `Inner*`. Cannot fail.
 *>
 // Part 4.6: `_Pool` is an Outer, and the pool is an ordinary client of the
-// helper — one `@private` alias, exactly as an application writes one.
-// `to_inner` keeps the read-only macro for the reason `mailbox.c3` gives at the
-// same site: the helper's `inner()` stamps, and this direction is crossed
-// concurrently.
+// helper — one `@private` alias, exactly as an application writes one, and
+// every crossing below goes through it.
 alias POOL @private = helper::OF{_Pool};
 
-macro Inner* to_inner(Pool* p) => inner::internal::to_inner((_Pool*)p);
+macro Inner* to_inner(Pool* p) => POOL.inner((_Pool*)p);
 
 <*
  The checking crossing back. Null when the inner names another type.

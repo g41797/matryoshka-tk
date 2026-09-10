@@ -159,15 +159,19 @@ macro Outer* OuterHelper.must_take(self, Slot* slot)
 // --- The other five ----------------------------------------------------------
 
 <*
- From your pointer to the `Inner*`, stamping the identity on the way.
+ From your pointer to the `Inner*`. This door only reads.
 
- The stamp may be written any number of times and is safe on a linked outer, so this costs nothing to call twice.
+ The identity is yours to write: `create` stamps what it makes, and `stamp` is the door for an outer you allocated by hand.
+ In a safe build this one verifies that identity, and names your line when it is missing or when it names another type.
+ Under `--safe=no` it verifies nothing and the crossing is the address arithmetic alone.
+ Null passes through and answers null.
 
  @param outer : "a pointer to the outer"
 *>
 macro Inner* OuterHelper.inner(self, Outer* outer)
 {
-    inner::internal::stamp(outer);
+    mtk::@check(outer == null || inner::internal::is_mine(inner::internal::to_inner(outer), Outer),
+        "the outer was never stamped, or carries another type: make it with `create`, or call `stamp` once");
     return inner::internal::to_inner(outer);
 }
 
@@ -186,10 +190,21 @@ macro void OuterHelper.stamp(self, Outer* outer) => inner::internal::stamp(outer
  True when the outer is on some chain.
 
  Exact, and O(1).
+ It accepts an `Outer*` or an `Inner*`, dispatched at compile time on `$Typeof`, the way `look` and `must_look` do: a caller who has just taken one off a queue holds the inner and has nothing to cross back for.
 
- @param outer : "a pointer to the outer"
+ @param from : "an `Outer*` or an `Inner*`"
 *>
-macro bool OuterHelper.linked(self, Outer* outer) => inner::internal::is_linked(inner::internal::to_inner(outer));
+macro bool OuterHelper.linked(self, from)
+{
+    $switch:
+        $case $Typeof(from) == Outer*:
+            return inner::internal::is_linked(inner::internal::to_inner(from));
+        $case $Typeof(from) == Inner*:
+            return inner::internal::is_linked(from);
+        $default:
+            $error "linked takes an Outer* or an Inner*";
+    $endswitch
+}
 
 // --- Allocating and freeing --------------------------------------------------
 

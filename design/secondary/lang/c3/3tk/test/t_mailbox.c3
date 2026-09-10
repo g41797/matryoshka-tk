@@ -55,7 +55,7 @@ fn void a_mailbox_is_an_item() @test
 
     InnerQueue list;
     list.push_back(inner);
-    list.push_back(inner::internal::to_inner(MSG.must_look(&ms)));
+    list.push_back(MSG.inner(MSG.must_look(&ms)));
     always_assert(list.len() == 2, "a mailbox would not go on a list");
     always_assert(mailbox::of(list.pop_front()) == mb, "the mailbox came off wrong");
     list.pop_front();
@@ -80,10 +80,10 @@ fn void send_then_poll() @test
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll found nothing"); }
-    always_assert(inner::internal::move_from_slot(&r, Msg) == m, "the wrong outer came back");
+    always_assert(MSG.take(&r) == m, "the wrong outer came back");
     always_assert(r.is_empty(), "the claim did not clear the Slot");
 
-    s.fill(inner::internal::to_inner(m));       // back into the Slot the defer releases
+    s.fill(MSG.inner(m));                       // back into the Slot the defer releases
 }
 
 <*
@@ -119,7 +119,7 @@ fn void ordinary_items_are_fifo() @test
     for (usz i = 0; i < 6; i++)
     {
         Slot s;
-        s.fill(inner::internal::to_inner(ms.at(i)));
+        s.fill(MSG.inner(ms.at(i)));
         if (catch mb.send(&s)) { always_assert(false, "send failed"); }
     }
 
@@ -127,7 +127,7 @@ fn void ordinary_items_are_fifo() @test
     {
         Slot r;
         if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-        always_assert(inner::internal::move_from_slot(&r, Msg).id == (int)i, "the mailbox is not first-in first-out");
+        always_assert(MSG.take(&r).id == (int)i, "the mailbox is not first-in first-out");
     }
 }
 
@@ -164,14 +164,14 @@ fn void out_of_band_ordering() @test
     {
         Slot r;
         if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-        always_assert(inner::internal::move_from_slot(&r, Msg).id == want[i], "out-of-band ordering is wrong");
+        always_assert(MSG.take(&r).id == want[i], "out-of-band ordering is wrong");
     }
 }
 
 fn void send_one(Mailbox* mb, Msg* m, bool oob)
 {
     Slot s;
-    s.fill(inner::internal::to_inner(m));
+    s.fill(MSG.inner(m));
     if (oob)
     {
         if (catch mb.send_oob(&s)) { always_assert(false, "send_oob failed"); }
@@ -204,12 +204,12 @@ fn void the_anchor_is_cleared() @test
 
     Slot r;
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-    always_assert(inner::internal::move_from_slot(&r, Msg).id == 0, "the out-of-band outer did not come first");
+    always_assert(MSG.take(&r).id == 0, "the out-of-band outer did not come first");
 
     // the out-of-band run is drained; the anchor must be gone
     send_one(mb, ms.at(2), true);
     if (catch mb.poll(&r)) { always_assert(false, "poll failed"); }
-    always_assert(inner::internal::move_from_slot(&r, Msg).id == 2, "the new out-of-band outer did not go to the front");
+    always_assert(MSG.take(&r).id == 2, "the new out-of-band outer did not go to the front");
 }
 
 <*
@@ -233,7 +233,7 @@ fn void receive_the_batch() @test
     always_assert(mb.len() == 0, "the mailbox kept something");
     for (usz i = 0; i < 4; i++)
     {
-        always_assert(inner::internal::from_inner(got.pop_front(), Msg).id == (int)i, "the batch is out of order");
+        always_assert(MSG.look(got.pop_front()).id == (int)i, "the batch is out of order");
     }
 }
 
@@ -261,8 +261,8 @@ fn void close_gives_the_remainder_back() @test
     for (usz i = 0; i < 3; i++)
     {
         Inner* inner = left.pop_front();
-        always_assert(inner::internal::from_inner(inner, Msg).id == (int)i, "the remainder is out of order");
-        always_assert(!inner::internal::is_linked(inner), "a returned outer kept its links");
+        always_assert(MSG.look(inner).id == (int)i, "the remainder is out of order");
+        always_assert(!MSG.linked(inner), "a returned outer kept its links");
     }
     mb.release();
 }
@@ -288,7 +288,7 @@ fn void a_closed_mailbox_refuses_everything() @test
 
     always_assert(@catch_is(mb.send(&s), mtk::CLOSED), "a closed mailbox accepted a send");
     always_assert(s.is_full(), "a refused send did not leave the Slot alone");
-    always_assert(s.peek() == inner::internal::to_inner(m), "a refused send changed the Slot");
+    always_assert(s.peek() == MSG.inner(m), "a refused send changed the Slot");
 
     always_assert(@catch_is(mb.send_oob(&s), mtk::CLOSED), "a closed mailbox accepted an out-of-band send");
     always_assert(s.is_full(), "a refused send_oob did not leave the Slot alone");
@@ -397,7 +397,7 @@ fn void a_closed_mailbox_is_empty() @test
     for (usz i = 0; i < 3; i++)
     {
         Slot s;
-        s.fill(inner::internal::to_inner(m.at(i)));
+        s.fill(MSG.inner(m.at(i)));
         if (catch mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
     }
     always_assert(mb.len() == 3, "the mailbox did not take three");
@@ -544,7 +544,7 @@ fn int sender_fn(void* arg)
         Msg* one = sd.outers.at(k);
         one.id = sd.first + (int)k;
         Slot s;
-        s.fill(inner::internal::to_inner(one));
+        s.fill(MSG.inner(one));
         if (catch sd.mb.send(&s)) { always_assert(false, "an open mailbox refused a send"); }
     }
     return 0;

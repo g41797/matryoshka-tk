@@ -1,14 +1,14 @@
 # 3tk — the doc loop
 
 How a `<* *>` block in `3tk/src` and
-[3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md)
+[3tk-reference-011.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-011.md)
 are kept saying the same thing.
 
 **This is a procedure, not a stage.** It writes no status row and no log entry.
 A named stage that uses it writes those. See *What this document is* below.
 
 **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-[3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md),
+[3tk-reference-011.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-011.md),
 and the one source file named on the command line. Not a transcript.
 
 **Written by 3TK-39**, from what 3TK-37 did by hand over `helper.c3`.
@@ -35,7 +35,7 @@ rules for moving a module description are `004`'s, word for word.
 ## The invariant
 
 > Every descriptor line in `3tk/src` appears in
-> [3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md).
+> [3tk-reference-011.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-011.md).
 
 **The check runs one way only.**
 
@@ -517,7 +517,7 @@ question here and does not answer it.
 - A named stage that uses it writes those. Otherwise the log stops being
   history and becomes a transcript.
 - **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-  [3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md),
+  [3tk-reference-011.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-011.md),
   and the one source file.
 
 ## Where it stood when this was written

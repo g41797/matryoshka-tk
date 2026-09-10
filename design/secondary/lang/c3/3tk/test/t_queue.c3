@@ -31,12 +31,12 @@ fn void the_queue_is_first_in_first_out() @test
     ms.create(8);
     InnerQueue q;
 
-    for (usz i = 0; i < 8; i++) { q.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 8; i++) { q.push_back(MSG.inner(ms.at(i))); }
     always_assert(q.len() == 8, "eight went in and the count disagrees");
 
     for (usz i = 0; i < 8; i++)
     {
-        Msg* m = inner::internal::from_inner(q.pop_front(), Msg);
+        Msg* m = MSG.look(q.pop_front());
         always_assert(m != null, "an outer came off as the wrong type");
         always_assert(m.id == (int)i, "the queue is not first-in first-out");
     }
@@ -73,7 +73,7 @@ fn void the_last_item_points_at_itself() @test
     Slot s;
     defer MSG.release(mem, &s);
     if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
-    Inner* inner = inner::internal::to_inner(MSG.must_look(&s));
+    Inner* inner = MSG.inner(MSG.must_look(&s));
 
     always_assert(inner.points_to() == null, "a fresh outer is not off-chain");
 
@@ -106,10 +106,10 @@ fn void the_link_test_is_exact() @test
     Msg* m = MSG.must_look(&s);
 
     InnerQueue q;
-    q.push_back(inner::internal::to_inner(m));
+    q.push_back(MSG.inner(m));
 
     always_assert(q.len() == 1, "the queue should hold exactly one outer");
-    always_assert(inner::internal::is_linked(inner::internal::to_inner(m)),
+    always_assert(MSG.linked(m),
         "Part 8.7: an outer alone on a queue reports unlinked — the self-link invariant is broken");
 }
 
@@ -127,11 +127,11 @@ fn void the_link_test_sees_another_container() @test
     defer ms.release();
     ms.create(8);
     InnerQueue a;
-    for (usz i = 0; i < 2; i++) { a.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 2; i++) { a.push_back(MSG.inner(ms.at(i))); }
 
-    always_assert(inner::internal::is_linked(inner::internal::to_inner(ms.at(0))), "the link test missed an outer on another queue");
-    always_assert(inner::internal::is_linked(inner::internal::to_inner(ms.at(1))), "the link test missed the tail of another queue");
-    always_assert(!inner::internal::is_linked(inner::internal::to_inner(ms.at(2))), "the link test claimed an outer on no queue");
+    always_assert(MSG.linked(ms.at(0)), "the link test missed an outer on another queue");
+    always_assert(MSG.linked(ms.at(1)), "the link test missed the tail of another queue");
+    always_assert(!MSG.linked(ms.at(2)), "the link test claimed an outer on no queue");
 }
 
 <*
@@ -146,15 +146,15 @@ fn void every_removal_repairs() @test
     defer ms.release();
     ms.create(8);
     InnerQueue q;
-    for (usz i = 0; i < 3; i++) { q.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 3; i++) { q.push_back(MSG.inner(ms.at(i))); }
 
     Inner* a = q.pop_front();
     Inner* b = q.pop_front();
     Inner* c = q.pop_front();
 
-    always_assert(!inner::internal::is_linked(a), "pop_front left the head's link set");
-    always_assert(!inner::internal::is_linked(b), "pop_front left a middle outer's link set");
-    always_assert(!inner::internal::is_linked(c), "pop_front left the last outer's self-link set");
+    always_assert(!MSG.linked(a), "pop_front left the head's link set");
+    always_assert(!MSG.linked(b), "pop_front left a middle outer's link set");
+    always_assert(!MSG.linked(c), "pop_front left the last outer's self-link set");
 
     // and a repaired outer can be inserted again, which is the point of the repair
     q.push_back(a);
@@ -176,13 +176,13 @@ fn void the_walk_yields_every_handle() @test
     defer ms.release();
     ms.create(8);
     InnerQueue q;
-    for (usz i = 0; i < 5; i++) { q.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 5; i++) { q.push_back(MSG.inner(ms.at(i))); }
 
     usz seen = 0;
     InnerQueueIterator it = q.iter();
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
-        always_assert(inner::internal::from_inner(inner, Msg).id == (int)seen, "the walk is out of order");
+        always_assert(MSG.look(inner).id == (int)seen, "the walk is out of order");
         seen++;
         always_assert(seen <= 5, "the walk did not end at the self-linked tail");
     }
@@ -203,10 +203,10 @@ fn void the_walk_of_one_item() @test
     Msg* m = MSG.must_look(&s);
 
     InnerQueue q;
-    q.push_back(inner::internal::to_inner(m));
+    q.push_back(MSG.inner(m));
 
     InnerQueueIterator it = q.iter();
-    always_assert(it.next() == inner::internal::to_inner(m), "the walk missed the only outer");
+    always_assert(it.next() == MSG.inner(m), "the walk missed the only outer");
     always_assert(it.next() == null, "the walk of one outer did not end");
 }
 
@@ -231,8 +231,8 @@ fn void append_queue_empties_the_other() @test
     ms.create(8);
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 3; i++) { a.push_back(inner::internal::to_inner(ms.at(i))); }
-    for (usz i = 3; i < 6; i++) { b.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 3; i++) { a.push_back(MSG.inner(ms.at(i))); }
+    for (usz i = 3; i < 6; i++) { b.push_back(MSG.inner(ms.at(i))); }
 
     a.append_queue(&b);
 
@@ -241,7 +241,7 @@ fn void append_queue_empties_the_other() @test
 
     for (usz i = 0; i < 6; i++)
     {
-        always_assert(inner::internal::from_inner(a.pop_front(), Msg).id == (int)i, "append_queue scrambled the order");
+        always_assert(MSG.look(a.pop_front()).id == (int)i, "append_queue scrambled the order");
     }
 }
 
@@ -258,7 +258,7 @@ fn void take_empties_the_source() @test
     defer ms.release();
     ms.create(8);
     InnerQueue a;
-    for (usz i = 0; i < 3; i++) { a.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 3; i++) { a.push_back(MSG.inner(ms.at(i))); }
 
     InnerQueue b = a.take();
 
@@ -267,7 +267,7 @@ fn void take_empties_the_source() @test
 
     for (usz i = 0; i < 3; i++)
     {
-        always_assert(inner::internal::from_inner(b.pop_front(), Msg).id == (int)i, "take scrambled the order");
+        always_assert(MSG.look(b.pop_front()).id == (int)i, "take scrambled the order");
     }
 }
 
@@ -285,8 +285,8 @@ fn void append_queue_keeps_the_chain_walkable() @test
     ms.create(8);
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 2; i++) { a.push_back(inner::internal::to_inner(ms.at(i))); }
-    for (usz i = 2; i < 4; i++) { b.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 2; i++) { a.push_back(MSG.inner(ms.at(i))); }
+    for (usz i = 2; i < 4; i++) { b.push_back(MSG.inner(ms.at(i))); }
 
     a.append_queue(&b);
 
@@ -294,7 +294,7 @@ fn void append_queue_keeps_the_chain_walkable() @test
     InnerQueueIterator it = a.iter();
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
-        always_assert(inner::internal::from_inner(inner, Msg).id == (int)seen, "the spliced chain is out of order");
+        always_assert(MSG.look(inner).id == (int)seen, "the spliced chain is out of order");
         seen++;
         always_assert(seen <= 4, "the spliced chain does not end");
     }
@@ -312,7 +312,7 @@ fn void append_queue_at_the_edges() @test
     ms.create(8);
     InnerQueue a;
     InnerQueue b;
-    for (usz i = 0; i < 2; i++) { b.push_back(inner::internal::to_inner(ms.at(i))); }
+    for (usz i = 0; i < 2; i++) { b.push_back(MSG.inner(ms.at(i))); }
 
     a.append_queue(&b);                      // onto an empty queue
     always_assert(a.len() == 2, "append onto an empty queue lost outers");
@@ -320,8 +320,8 @@ fn void append_queue_at_the_edges() @test
     a.append_queue(&b);                      // from an empty queue
     always_assert(a.len() == 2, "append from an empty queue changed the count");
 
-    always_assert(inner::internal::from_inner(a.pop_front(), Msg).id == 0, "append onto empty did not set the head");
-    always_assert(inner::internal::from_inner(a.pop_front(), Msg).id == 1, "append onto empty did not set the tail");
+    always_assert(MSG.look(a.pop_front()).id == 0, "append onto empty did not set the head");
+    always_assert(MSG.look(a.pop_front()).id == 1, "append onto empty did not set the tail");
     always_assert(a.is_empty(), "the queue kept more than it was given");
 }
 
@@ -344,14 +344,14 @@ fn void self_move_does_not_destroy_the_queue() @test
     defer ms.release();
     ms.create(8);
         InnerQueue a;
-        for (usz i = 0; i < 3; i++) { a.push_back(inner::internal::to_inner(ms.at(i))); }
+        for (usz i = 0; i < 3; i++) { a.push_back(MSG.inner(ms.at(i))); }
 
         a.append_queue(&a);
 
         always_assert(a.len() == 3, "the self-move changed the count");
         for (usz i = 0; i < 3; i++)
         {
-            always_assert(inner::internal::from_inner(a.pop_front(), Msg).id == (int)i, "the self-move lost or scrambled an outer");
+            always_assert(MSG.look(a.pop_front()).id == (int)i, "the self-move lost or scrambled an outer");
         }
     $endif
 }
@@ -378,14 +378,14 @@ fn void one_queue_three_types() @test
     Twin* t = TWIN.must_look(&st);
 
     InnerQueue q;
-    q.push_back(inner::internal::to_inner(m));
-    q.push_back(inner::internal::to_inner(j));
-    q.push_back(inner::internal::to_inner(t));
+    q.push_back(MSG.inner(m));
+    q.push_back(JOB.inner(j));
+    q.push_back(TWIN.inner(t));
 
     always_assert(q.len() == 3, "three types did not fit on one queue");
-    always_assert(inner::internal::from_inner(q.pop_front(), Msg) == m, "the Msg came back wrong");
-    always_assert(inner::internal::from_inner(q.pop_front(), Job) == j, "the Job came back wrong");
-    always_assert(inner::internal::from_inner(q.pop_front(), Twin) == t, "the Twin came back wrong");
+    always_assert(MSG.look(q.pop_front()) == m, "the Msg came back wrong");
+    always_assert(JOB.look(q.pop_front()) == j, "the Job came back wrong");
+    always_assert(TWIN.look(q.pop_front()) == t, "the Twin came back wrong");
 }
 
 <*
@@ -405,14 +405,14 @@ fn void push_back_from_a_slot() @test
     InnerQueue q;
     Slot s;
 
-    s.fill(inner::internal::to_inner(ms.at(0)));
+    s.fill(MSG.inner(ms.at(0)));
     q.push_back_slot(&s);
     always_assert(s.is_empty(), "push_back_slot did not clear the Slot");
 
-    s.fill(inner::internal::to_inner(ms.at(1)));
+    s.fill(MSG.inner(ms.at(1)));
     q.push_back_slot(&s);
     always_assert(s.is_empty(), "push_back_slot did not clear the Slot");
 
-    always_assert(inner::internal::from_inner(q.pop_front(), Msg).id == 1, "push_back_slot went to the wrong end");
-    always_assert(inner::internal::from_inner(q.pop_front(), Msg).id == 2, "push_back_slot went to the wrong end");
+    always_assert(MSG.look(q.pop_front()).id == 1, "push_back_slot went to the wrong end");
+    always_assert(MSG.look(q.pop_front()).id == 2, "push_back_slot went to the wrong end");
 }

@@ -33,6 +33,11 @@ fn void inner_is_two_parts() @test
  3TK-63 made `inner_offset` `@private`, so the offset is read the only way a
  caller outside `module mtk` can read it: the distance `to_inner` puts between
  the outer and its inner. That is the same number, taken through the surface.
+
+ The crossings below are the raw ones and not `MSG.inner` / `MSG.look`, because
+ the arithmetic IS the subject here: a test of what the wrapper stands on
+ cannot be written on top of the wrapper. The wrapper is exercised everywhere
+ else in this suite.
 *>
 fn void inner_at_any_offset() @test
 {
@@ -95,7 +100,7 @@ fn void identity_is_stored() @test
     defer MSG.release(mem, &s);
     if (catch MSG.create(mem, &s)) { always_assert(false, "create failed"); }
 
-    Inner* inner = inner::internal::to_inner(MSG.must_look(&s));
+    Inner* inner = MSG.inner(MSG.must_look(&s));
     always_assert(inner.link.type == Msg::typeid, "the identity is not in the inner");
 }
 
@@ -123,6 +128,10 @@ fn void uninitialized_inner_is_refused() @test
  nothing. The caller decides what to do.
 
  Invariants 11 and 12.
+
+ Raw crossings again, and for the reason above: the refusal being tested is the
+ one `MSG.look` forwards to, so asking the wrapper would prove the wrapper and
+ not the border. `is_mine` has no wrapper form at all.
 *>
 fn void checking_crossing_refuses() @test
 {
@@ -139,6 +148,10 @@ fn void checking_crossing_refuses() @test
 
 <*
  A null inner is nobody's. Every crossing takes one without dereferencing it.
+
+ The border's own tolerance of null is the subject, so these are the raw
+ crossings. `MSG.look` on a null inner is asserted separately, in
+ `the_identity_check_tolerates_null` below.
 *>
 fn void null_handle_is_nobodys() @test
 {
@@ -170,10 +183,10 @@ fn void heterogeneous_walk_claims_correctly() @test
     // The four Slots keep the outers alive for the release; the queue is what
     // the walk reads.
     InnerQueue list;
-    list.push_back(inner::internal::to_inner(MSG.must_look(&sm1)));
-    list.push_back(inner::internal::to_inner(TWIN.must_look(&st1)));
-    list.push_back(inner::internal::to_inner(JOB.must_look(&sj1)));
-    list.push_back(inner::internal::to_inner(MSG.must_look(&sm2)));
+    list.push_back(MSG.inner(MSG.must_look(&sm1)));
+    list.push_back(TWIN.inner(TWIN.must_look(&st1)));
+    list.push_back(JOB.inner(JOB.must_look(&sj1)));
+    list.push_back(MSG.inner(MSG.must_look(&sm2)));
 
     usz mine = 0;
     usz seen = 0;
@@ -181,6 +194,9 @@ fn void heterogeneous_walk_claims_correctly() @test
     for (Inner* inner = it.next(); inner; inner = it.next())
     {
         seen++;
+        // The claim itself stays the raw crossing: this is the third of the
+        // three places the check runs, and it is what the test is about. The
+        // four pushes above are plumbing and go through the helper.
         if (inner::internal::from_inner(inner, Msg)) mine++;
     }
     always_assert(seen == 4, "the walk lost an outer");
@@ -211,11 +227,14 @@ fn void the_methods_cross_the_same_border() @test
     Msg*  m = MSG.must_look(&sm);
     Twin* t = TWIN.must_look(&st);
 
-    Inner* hm = inner::internal::to_inner(m);
-    Inner* ht = inner::internal::to_inner(t);
+    Inner* hm = MSG.inner(m);
+    Inner* ht = TWIN.inner(t);
 
     always_assert(hm.to(Msg) == m, "h.to lost the outer");
     always_assert(hm.as(Msg) == m, "h.as lost the outer");
+    // The macro is named on purpose: the line asserts that the method and the
+    // free macro are one border, so putting the wrapper on either side would
+    // compare the wrapper with itself.
     always_assert(hm.to(Msg) == inner::internal::from_inner(hm, Msg), "the method and the macro disagree");
 
     // The checking crossing meets another type and says so. Part 6.2: a
@@ -248,7 +267,7 @@ fn void the_slot_methods_cross_the_same_border() @test
     always_assert(s.move(Msg) == m, "s.move lost the outer");
     always_assert(s.is_empty(), "a successful move left the Slot full");
 
-    s.fill(inner::internal::to_inner(m));           // back into the Slot the defer releases
+    s.fill(MSG.inner(m));                           // back into the Slot the defer releases
 }
 
 <*
@@ -287,6 +306,8 @@ fn void the_identity_check_tolerates_null() @test
 *>
 fn void to_inner_takes_null_and_answers_null() @test
 {
+    // `to_inner` by name, not `MSG.inner`: the macro's own null contract is the
+    // subject, and the wrapper is what rests on it.
     Msg* none = null;
     always_assert(inner::internal::to_inner(none) == null, "null in did not give null out");
 }

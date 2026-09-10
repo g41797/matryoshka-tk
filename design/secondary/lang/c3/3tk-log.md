@@ -7,6 +7,288 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-10 — 3TK-76: the sweep, and one name off Rule 8's list
+
+**Ran on Opus 5 and closed. `036` is spent.** The last stage of the plan, and the
+one Rule 11 said had to wait for `3TK-75`: **94 call sites in `test/` and
+`negative/` moved off `inner::internal::*` and onto `OuterHelper`.**
+
+**Every figure is identical to `3TK-75`'s, which is the whole proof.**
+`run-builds.sh` **123 checks**, 0 failures, four builds green, **146 tests** in
+each. `check-doc-loop.sh` **11 labelled blocks, 0 differing, 463 descriptor
+sentences, 463 found, 0 missing, 0 banned words**. `move-module-docs.sh
+roundtrip` byte-identical over eleven blocks. `run-sanitizers.sh` **3 of 3
+clean, 146 tests in each**. **A sweep that changed a test count changed a test**,
+and none of these moved.
+
+**The population was 117, not the plan's 113.** Measured on the built tree
+before the first edit: `test/` **104** and `negative/` **13**, against the plan's
+98 and 15. Rule 13 — the measurement wins and the stage says so. The plan's
+`negative/` figure counted the two programs `3TK-75` was still to write, and
+they turned out to need no bypass at all. `examples/` was 2 and untouched, both
+sanctioned by name at `run-builds.sh:306`.
+
+**The exemplar was `t_slot.c3`, eleven sites, and it decided one thing.** The
+conversions themselves were one-for-one off the plan's table. What the exemplar
+settled is that **the doc block moves with the code**: `a_look_is_not_a_take`
+described its subject in terms of `from_slot` and `move_from_slot`, and a test
+whose prose names the layer beneath the line it runs is worse than one that
+names neither. `look` and `take` in the prose, and the sweep carried that rule.
+
+**The partition, and where it was not the plan's.** `t_queue.c3` (44),
+`t_mailbox.c3` (15), `t_pool.c3` (4), `t_concurrency.c3` (2) and `t_slot.c3`
+(11) are black box entire. **`t_identity.c3` split 8 and 18**: the four pushes
+that feed the heterogeneous walk, the two `Inner*` bindings in
+`the_methods_cross_the_same_border`, the refill in
+`the_slot_methods_cross_the_same_border` and the crossing out in
+`identity_is_stored` are plumbing and swept; the rest is the border on its own
+subject and stayed, **each remaining shape now carrying its sentence** — the
+offset arithmetic, the checking crossing's refusal, the null tolerance, the
+claim inside the walk, the method-against-macro line, and `to_inner`'s own null
+contract.
+
+**`overwrite_slot` came off Rule 8's list, and this is the stage's one ruling.**
+`006` named it among the negatives where *the bypass IS the violation*. Read
+line by line, it is not one: its violation is the second `fill` on a full Slot,
+and the crossing that reaches the inner is plumbing beside it. **`MSG.inner`
+aborts at neither**, so the program proves exactly what it proved before — and
+`run-builds.sh` confirms it still aborts in the safe builds and still runs to
+the end in the fast ones. **The alternative was a sentence at the site that
+would not have been true**, Rule 8 forbidding a reference to a plan in its
+place. The other seven names were each checked the same way and each stayed:
+`unstamped_insert` and `unstamped_crossing` would abort one line early through
+the wrapper, at the crossing rather than at the boundary each exists to prove;
+`wrong_type_must` is the abort under test; the two `nocompile_` programs need
+the refusal to come from the crossing itself.
+
+**So `3tk-rules-007.md` replaces `006`**, Rule 14, in the stage and without
+asking. **One list corrected and nothing else** — Rules 1–7 and 9–14 are `006`'s
+word for word, and the numbering did not shift. `006` is in
+`matryoshka-3tk/design/backup/`, and the five live links in
+`3tk-example-rules-006.md` and `3tk-decisions-007.md` were re-anchored in the
+same stage.
+
+**Step 4 was spent before it began**, as the status said: `3TK-75` wrote `C-7`
+into both files. The stage checked the wording instead of writing it, and
+re-measured the promise it makes — **the ten callers of `Slot.to`, `Slot.must`,
+`Slot.move`, `Inner.to` and `Inner.as` are still ten and still all in
+`t_identity.c3`**, none of them touched by the sweep.
+
+**Nothing was ported and nothing was owed.** No script and no `.yml` changed, so
+Rule 12's carry is empty this stage; the four ported scripts still differ from
+`matryoshka-3tk/scripts/` in the `ROOT` line alone, checked. **`src/` was not
+opened**, which is why the doc loop could not move.
+
+**What `3TK-76` adds to the owner's copy queue**: `test/t_slot.c3`,
+`test/t_queue.c3`, `test/t_mailbox.c3`, `test/t_pool.c3`,
+`test/t_concurrency.c3`, `test/t_identity.c3`, and six under `negative/` —
+`insert_linked_outer.c3`, `insert_twice_same_queue.c3`, `self_move.c3`,
+`release_during_on_put.c3`, `release_with_straggler_put.c3`,
+`overwrite_slot.c3`, plus the five whose doc blocks gained a sentence:
+`unstamped_insert.c3`, `unstamped_crossing.c3`, `wrong_type_must.c3`,
+`nocompile_no_inner.c3`, `nocompile_two_inners.c3`.
+
+---
+
+## 2026-09-10 — 3TK-75: the helper stopped writing
+
+**Ran on Opus 5 and closed. Six steps, all six.** `036`'s first stage, and the
+one that changes what the helper *means*: `OuterHelper.inner` no longer stamps.
+Rulings `C-1` … `C-8` of
+[3tk-staging-plan-036.md](3tk-staging-plan-036.md), applied as written.
+
+**The figures, and they moved because the stage added programs.**
+`run-builds.sh` **115 → 123 checks**, 0 failures, four builds green, **145 → 146
+tests** in each. The eight are two new runtime negatives run once per build; the
+one test is the null pass-through. `check-doc-loop.sh` **458 → 463** descriptor
+sentences, 463 found, 0 missing, 11 labelled blocks, 0 differing, 0 banned words.
+`move-module-docs.sh roundtrip` byte-identical over eleven blocks.
+**`run-sanitizers.sh` 3 of 3 clean, 146 tests in each**, and that is the run that
+mattered: removing a write is a concurrency change, and thread and address both
+went clean at `safe -O0`, `fast -O3` and `safe -O0`.
+
+**What `inner()` is now.** `mtk::@check` plus `is_mine`, tolerating null, then
+`to_inner`. **It is strictly more than the stamp it replaced.** A stamp covered a
+forgotten identity by writing one and then agreed with itself at every later
+crossing; the check catches the forgotten stamp **and** the wrong type, writes
+nothing, and is not compiled at all under `--safe=no`. The doc block was
+rewritten rather than patched, and it says who owns the stamp: `create` stamps
+what it makes, `stamp` stamps what you made, this door only reads.
+
+**One new test in `test/`, and TWO new negatives rather than one — Rule 13.**
+`C-8` asked for "one new test" covering three claims: the abort on an unstamped
+outer, the abort on a wrong-typed one, and null passing through. **A negative
+program provokes exactly one violation and then aborts**, so the two aborts
+cannot share a program and neither can live in `test/` at all. The stage revised
+the definition in passing and kept going, which is what Rule 13 is for. What was
+written: `the_reading_door_passes_null_through` in `t_helper.c3`, and
+`negative/unstamped_inner` and `negative/wrong_type_inner`, both registered in
+`RUNTIME_NEGATIVES`. **`wrong_type_inner` is the half no stamp could ever have
+caught**, and it is the clearest single argument for `C-1`: the old `inner()`
+would have re-stamped a `Msg` as a `Job` and every crossing afterwards would have
+agreed.
+
+**The identity is now asserted at three boundaries, not two**, and the reference
+says so where it used to explain why there were two. The third is the crossing
+**out**: an outer that never reaches a queue and is never crossed back still
+leaves through `inner()`.
+
+**`C-8`'s two corrections.** `inner_stamps_on_the_way_out` became
+`stamp_gives_a_hand_made_outer_its_identity` — its subject was always that a
+hand-made outer gets an identity, and that is `stamp`'s job — and it now also
+checks the outer crosses back. `the_stamp_is_idempotent_and_safe_on_a_linked_outer`
+**stays, with its doc block narrowed to say single-threaded** and to say why:
+leaving the wording is how a later stage talks itself back into a write.
+
+**The two `src/` exceptions went, and their comments with them.**
+`mailbox.c3:51` is `MBOX.inner((_Mbox*)p)` and `pool.c3:163` is
+`POOL.inner((_Pool*)p)`. What replaced a raw crossing at those two sites is a
+read-only check that is gone in a release build — the containers pay nothing for
+it where it would cost.
+
+**`linked` took its `Inner*` overload, and `C-4` was right that it is a lack of
+support rather than a nicety.** Without it, four sites in `t_queue.c3` and
+`t_mailbox.c3` holding an `Inner*` off a `pop_front` would have been exempted
+from Rule 8 on its first use, for a reason that is not a real one.
+
+**Rule 8 is written, in both files, and the stage rules moved again.**
+`3tk-rules-006.md` carries it at the end of Part 1, in Rule 6's voice —
+defeasible by subject, a sentence at the site, the three qualifying shapes named,
+and Rule 6's own refusal of a grep quoted as this rule's. **Stage rules 8-13
+became 9-14, the third such shift**, and the header now says a citation resolves
+by adding one **per shift**. `3tk-example-rules-006.md` carries the other half:
+the promise it makes about `test/` now names the file that keeps it and the count
+that proves it — all ten remaining callers of the five part-1 methods are in
+`t_identity.c3`. **Both superseded versions went to `matryoshka-3tk/design/backup/`
+with a plain `mv`**, Rule 14, without asking.
+
+**`C-7` was written in this stage rather than left to `3TK-76`.** The plan lists
+it under both stages' steps; writing it once, here, is what step 5 says, and
+`3TK-76`'s step 4 is spent by it. **The next stage checks the wording rather than
+writing it.**
+
+**The books were revised, and one is a new version.** `3tk-reference-010.md` →
+**`011`** — Rule 14, more than a sentence: *The other three*, the boundaries
+paragraph and *Usual flow*'s stamp sentence all changed, and the header carries
+why the write went rather than being narrowed. `010` is in that repo's `backup/`.
+**`3tk-api-005.md` and `3tk-decisions-007.md` were revised in place**, which
+their own headers ask for. **Every `helper.c3:` citation in both was re-resolved
+against the built tree**: the file is +5 lines at `inner` and +9 at `linked`, so
+everything past line 160 moved down by fourteen, and the one citation *inside*
+that range — the decisions record's pointer at the `inner` declaration itself —
+was re-resolved by hand to `helper.c3:171` rather than shifted.
+
+**Link re-anchoring, and where the line was drawn.** Every live reference to
+`3tk-reference-010.md`, `3tk-rules-005.md` and `3tk-example-rules-005.md` was
+re-pointed — two scripts, `ref/3tk-doc-loop-005.md`, and the three books in
+`matryoshka-3tk/design/`. **A one-token link re-anchor is not "more than a
+sentence"**, so `3tk-doc-loop-005.md` was edited in place and did not become
+`006`. **`3tk-log.md` and `3tk-staging-plan-036.md` were left alone**: the log is
+append-only, and the plan's citations were correct against the file they were
+written against — which is exactly what the rules header says about live text and
+a shifted number.
+
+**Rule 12, the script and CI port.** `run-builds.sh` is the one script the stage
+changed, and it was carried across; `diff` against `matryoshka-3tk/scripts/` is
+the `ROOT` line alone, as it must be. The other three ported scripts were
+diffed too and needed nothing. **The `.yml` files needed nothing, and this is the
+answer written down**: `linux.yml` is a build-and-test matrix that runs no
+negative, so two new negative programs do not reach it.
+
+**Not done, deliberately.** `stamp` was not narrowed — `C-3`, and its three
+callers are all construction-time. `examples/` was not touched. No guard was
+added for `test/` or `negative/`. The examples line in `docs.yml` is still
+commented, and it is still the owner's.
+
+**The 113 sites are still there.** That is `3TK-76`, and it now has a settled
+surface to be written against.
+
+---
+
+## 2026-09-10 — the sitting that ruled white box from black box, and plan 036
+
+**No stage, no code, and no `run-builds.sh` run.** The first sitting after
+`3TK-74` closed and `035` went spent. It was opened as a tidy-up — examples and
+tests calling `inner::internal::*` where an `OuterHelper` member exists — and it
+came out with a port rule, a `src/` defect and two stages. The rulings are
+`C-1` … `C-9` in
+[3tk-staging-plan-036.md](3tk-staging-plan-036.md).
+
+**What the measurement changed about the question.** The opening framing was
+that `examples/` and `test/` both needed cleaning and that `queue.c3`,
+`mailbox.c3` and `pool.c3` might too. **Three of those four were already
+answered.** `examples/` was cleaned by `3TK-66` and has been guarded at
+`run-builds.sh:305-313` since; `mailbox.c3` and `pool.c3` already route
+everything but one line each through their `@private` aliases; and `queue.c3`'s
+three sites are on a **type-erased `Inner*`** where no `Outer` is in scope, so no
+binding can exist to call. **The real population was `test/` 98 and `negative/`
+15, and nothing in `src/` was convertible.**
+
+**The `src/` defect was found by pulling on the two exceptions rather than
+accepting them.** `mailbox.c3:48-52` and `pool.c3:160-164` each justify a raw
+`to_inner` on the ground that the helper's `inner()` stamps and *"a stamp writes
+the same bytes it finds, but it writes them."* **That sentence is true of the
+typeid half and understates the other one.** `Inner` is a single `any`: the
+pointer half is the chain link. `stamp` rebuilds the whole field —
+`any_make(inner.link.ptr, …)` — so it **reads the link and writes it back**, and
+a concurrent relink is lost. **`HS-10` ruled the stamp writes `.type` only; the
+built code never did.** The two exceptions were the two places that had noticed
+and stepped around it.
+
+**The owner's ruling was to remove the write rather than narrow it, and the
+reason is that the door is redundant.** `OuterHelper.stamp` already exists for
+the one case `inner()`'s stamp covered — an outer allocated by hand — so the
+toolkit's story is complete at two moments: `create` stamps what it makes,
+`stamp` stamps what you made. **The session had proposed probing a `.type`-only
+write first; the owner's route is smaller and needs no probe.** `MS-8` is the
+standing warning about confident `any` spellings. What replaces the stamp is a
+safe-build check — **`mtk::@check` plus `is_mine`, both already in the source,
+both read-only** — which catches a forgotten stamp *and* a wrong-typed one and
+compiles to nothing in a release build.
+
+**Three measurements did most of the deciding.**
+- **`OuterHelper.inner` has seven call sites in the whole tree and all seven are
+  in `test/t_helper.c3`.** The convenience door was used by nothing but its own
+  test, which is what made removing it cheap.
+- **Stamping happens at four sites and three are construction-time.** That is
+  why `C-3` leaves `stamp` itself alone: its remaining callers cannot race.
+- **The five part-1 methods have ten callers left in `test/` and all ten are in
+  `t_identity.c3`.** `3tk-example-rules-005.md` let `examples/` drop those five
+  *"because all five methods keep callers there"*. **A blanket pass over `test/`
+  would have broken that promise silently**, and the file that keeps it is
+  white box on its own subject anyway. The two rules agree; `C-7` writes it
+  down so the agreement is not re-derived.
+
+**The rule the owner gave, and where it goes.** *If the source cannot do its
+functionality without accessing internals — and it is not a lack of support — it
+continues to use internals: white box; otherwise black box, use the wrappers.*
+**The second clause is what makes it usable**: a site that cannot reach the
+helper because the helper is missing a member is a gap, and the stage adds the
+member. `OuterHelper.linked` is the worked example — it takes an `Outer*`, four
+sites hold an `Inner*` after a pop, and `C-4` gives it the same `$Typeof`
+dispatch `look` already has rather than exempting them.
+
+**A guard was proposed and withdrawn on Rule 6's own words.** The session
+suggested extending the `examples/` grep to `test/` and `negative/`. **Rule 6
+already refuses exactly that** — *"A grep cannot tell necessity from history; it
+would need an allow-list, and the allow-list would be the judgment restated in a
+shell script, where a reader of the test never sees it."* The `examples/` guard
+survives only because the examples rule is **absolute**; this one is defeasible,
+so the sentence at the site is the enforcement.
+
+**Why two stages rather than one.** `3TK-75` changes what `inner()` means and
+`3TK-76` rewrites 113 sites onto it. **Rule 10's shape, one level up:** the
+surface must be settled before the sites move, and a single stage would bury a
+concurrency change inside a hundred mechanical edits, which is where a sanitizer
+regression goes unnoticed.
+
+**Not decided, and left to the owner:** whether `035` now moves to `backup/`.
+The status file said it stays *"until a `036` exists"* and one now does, but
+`034` is spent and kept beside it, so the pattern does not settle itself. **No
+file was moved.**
+
+---
+
 ## 2026-09-09 — 3TK-74: the outer's hooks become required
 
 **Plan [3tk-staging-plan-035.md](3tk-staging-plan-035.md), rulings `B-1` …

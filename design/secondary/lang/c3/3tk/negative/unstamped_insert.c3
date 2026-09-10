@@ -2,8 +2,13 @@
  Part 5.2: an UNSTAMPED outer entering a chain.
 
  The outer is hand-allocated — on the stack here — and `stamp` is never called,
- so its `Inner` carries a chain link and no identity. `to_inner` does not stamp;
- only `create`, `stamp` and the helper's `inner` do.
+ so its `Inner` carries a chain link and no identity. `to_inner` does not stamp
+ and does not check; `create` and `stamp` are the only two doors that write an
+ identity, and since 3TK-75 the helper's `inner` verifies one.
+
+ That last sentence is why the crossing below is the raw macro. `MSG.inner(&m)`
+ would abort here — at the crossing out, not at the insertion — and the
+ insertion is the boundary this program exists to prove.
 
  This is the earlier of the two boundaries. The identity is not read until some
  later crossing, and by then the site that omitted the stamp is gone from the

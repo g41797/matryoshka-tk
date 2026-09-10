@@ -21,7 +21,7 @@
 set -u
 
 ROOT=$(cd "$(dirname "$0")" && pwd) || exit 2
-REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-010.md}
+REF=${REF:-$ROOT/../../../../../../matryoshka-3tk/design/3tk-reference-011.md}
 PY=${PYTHON:-python3}
 
 [ $# -ge 1 ] || { sed -n '4,20p' "$0"; exit 2; }

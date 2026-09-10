@@ -9,6 +9,10 @@
 
  Safe build: aborts in `OuterHelper.look`, naming the line below.
  Fast build: `look` returns null, the identity never having been read.
+
+ The Slot is filled through the raw `to_inner` for the same reason
+ `unstamped_insert` inserts through it: `MSG.inner` verifies the stamp, so it
+ would abort one line early and the crossing below would never run.
 *>
 module neg;
 import mtk;

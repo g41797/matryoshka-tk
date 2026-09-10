@@ -6,6 +6,10 @@
 
  Safe build: aborts in must_from_inner.
  Fast build: returns a Msg* that points at a Job. Exits 0 without reading it.
+
+ The raw macro is named on purpose: it is the abort under test, and `MSG.must_look`
+ is a wrapper over it. A negative that reaches the same abort through the wrapper
+ would still pass while proving one layer less.
 *>
 module neg;
 import mtk;

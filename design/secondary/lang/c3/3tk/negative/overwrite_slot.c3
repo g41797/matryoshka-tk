@@ -17,7 +17,7 @@ fn int main()
 	if (catch MSG.create(mem, &s)) return 1;
 	if (catch MSG.create(mem, &other)) return 1;
 
-	s.fill(inner::internal::to_inner(MSG.must_look(&other))); // <-- the violation
+	s.fill(MSG.inner(MSG.must_look(&other))); // <-- the violation
 
 	io::printn("no check: the full Slot was overwritten");
 	return 0;

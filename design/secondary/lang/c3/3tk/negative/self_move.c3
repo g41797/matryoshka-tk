@@ -25,7 +25,7 @@ fn int main()
 		if (catch MSG.create(mem, &ms[i])) return 1;
 		Msg* one = MSG.must_look(&ms[i]);
 		one.id = (int)i;
-		a.push_back(inner::internal::to_inner(one));
+		a.push_back(MSG.inner(one));
 	}
 
 	a.append_queue(&a); // <-- the violation
@@ -33,7 +33,7 @@ fn int main()
 	always_assert(a.len() == 3, "the early return did not save the queue");
 	for (usz i = 0; i < 3; i++)
 	{
-		Msg* m = inner::internal::from_inner(a.pop_front(), Msg);
+		Msg* m = MSG.look(a.pop_front());
 		always_assert(m != null && m.id == (int)i, "the self-move lost an outer");
 	}
 	io::printn("no check: the early return saved the queue");

@@ -7,6 +7,11 @@
 
  The crossing is in the body, not at an alias line: H0 left no declaration to
  put it on, and a type that is never crossed with is never validated.
+
+ And it is `inner::internal::stamp` rather than a helper member because binding
+ `helper::OF{NotAnItem}` is itself the thing under test — the refusal must come
+ from the crossing, so the crossing is written where the compiler's message can
+ name this line.
 *>
 module neg_nc;
 import mtk;

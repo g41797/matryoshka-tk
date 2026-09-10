@@ -74,7 +74,7 @@ fn int main()
 
 	Giving g;
 	g.p = p;
-	g.outer = inner::internal::to_inner(MSG.must_look(&one));
+	g.outer = MSG.inner(MSG.must_look(&one));
 
 	Thread t;
 	t.create(&giver, &g)!!;
