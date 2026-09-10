@@ -20,6 +20,12 @@ struct Holder
 	Inner inner;
 	Allocator alloc;
 }
+
+// Required of every outer the helper creates, 3TK-74. This one keeps the
+// allocator it was made with; it has nothing to wind up.
+fn void? Holder.init(&self, Allocator a) { self.alloc = a; return; }
+fn void  Holder.finish(&self, Allocator a) { }
+
 alias HOLDER = helper::OF{Holder};
 
 alias MSG = helper::OF{Msg};

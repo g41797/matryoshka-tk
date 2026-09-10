@@ -99,9 +99,24 @@ TIER1_NEGATIVES=(release_open_mailbox release_while_receiving
 # `create` and `release` — so both of those outers must now compile AND RUN.
 # The proof moved to `test/t_helper.c3`, where it is a positive test:
 # `an_outer_needs_no_allocator_field` and `two_allocator_fields_are_the_outers_business`.
+#
+# 3TK-74 ADDED TWO, and they are the other direction of the same idea: the first
+# two assert that a type WITHOUT an `Inner` is refused, these two that a type
+# with one but without its hooks is refused. `B-1` made `init` and `finish`
+# required, and the whole point of the change is that a misspelled hook stopped
+# being silent — so `nocompile_no_init` spells it `initialize`, the near miss
+# `helper.c3`'s module block names, rather than omitting it.
+#
+# What is grepped for here is the `$assert` message and not a type name. The
+# message is a constant string, so it cannot carry the offending type; the
+# compiler names the CALL SITE instead, which is the half a user needs. The
+# other direction of the check — that it stays quiet for a type that declares
+# both hooks — is the test suite, green in all four builds.
 declare -A NOCOMPILE_EXPECT=(
   [nocompile_no_inner]="NotAnItem"
   [nocompile_two_inners]="TwoInners"
+  [nocompile_no_init]="Outer.init"
+  [nocompile_no_finish]="Outer.finish"
 )
 
 echo "== c3c =="

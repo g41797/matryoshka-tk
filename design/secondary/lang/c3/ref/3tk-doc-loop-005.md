@@ -1,22 +1,25 @@
 # 3tk — the doc loop
 
 How a `<* *>` block in `3tk/src` and
-[3tk-reference-009.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-009.md)
+[3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md)
 are kept saying the same thing.
 
 **This is a procedure, not a stage.** It writes no status row and no log entry.
 A named stage that uses it writes those. See *What this document is* below.
 
 **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-[3tk-reference-009.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-009.md),
+[3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md),
 and the one source file named on the command line. Not a transcript.
 
 **Written by 3TK-39**, from what 3TK-37 did by hand over `helper.c3`.
 
+**Re-anchored by 3TK-74, 2026-09-09**, when `3tk-reference-009.md` became
+`010`; Rule 12 makes a stale link the defect of the stage that left it.
+
 **This is 005, by 3TK-73, 2026-09-09** — the design-folder audit, `A-5` and
 `A-10` of staging plan 034. It carries all of `004` and fixes what had gone
-stale under it: **every reference that named `3tk-reference-009.md` now names
-`3tk-reference-009.md`**, four versions on and in `matryoshka-3tk/design/`, not
+stale under it: **every reference that named `3tk-reference-005.md` now names
+the current one**, several versions on and in `matryoshka-3tk/design/`, not
 in this repo's `ref/`; and the two links to `3tk-staging-plan-016.md` are gone —
 that plan is spent and is not in this folder, so the rule it ruled is stated
 here rather than pointed at. `004` is in `backup/`, with `003`.
@@ -32,7 +35,7 @@ rules for moving a module description are `004`'s, word for word.
 ## The invariant
 
 > Every descriptor line in `3tk/src` appears in
-> [3tk-reference-009.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-009.md).
+> [3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md).
 
 **The check runs one way only.**
 
@@ -514,7 +517,7 @@ question here and does not answer it.
 - A named stage that uses it writes those. Otherwise the log stops being
   history and becomes a transcript.
 - **Its inputs are fixed**: [../3tk-status.md](../3tk-status.md), this file,
-  [3tk-reference-009.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-009.md),
+  [3tk-reference-010.md](https://github.com/g41797/matryoshka-3tk/blob/main/design/3tk-reference-010.md),
   and the one source file.
 
 ## Where it stood when this was written

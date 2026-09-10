@@ -16,6 +16,7 @@
 module neg;
 import mtk;
 import mtk::pool;
+import std::core::mem::alloc;
 
 struct Msg
 {
@@ -27,6 +28,14 @@ struct Job
 	Inner inner;
 	int pri;
 }
+
+// The two hooks 3TK-74 made required of every outer the helper creates.
+// Neither type sets anything up or winds anything down, so both bodies of both
+// are empty — which is how a type says it needs neither, out loud.
+fn void? Msg.init(&self, Allocator a) { return; }
+fn void  Msg.finish(&self, Allocator a) { }
+fn void? Job.init(&self, Allocator a) { return; }
+fn void  Job.finish(&self, Allocator a) { }
 
 <*
  A minimal hook object for the container negatives. Part 12.1: the implementing

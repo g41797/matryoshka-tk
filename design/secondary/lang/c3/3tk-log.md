@@ -7,6 +7,168 @@ Current state is in [3tk-status.md](3tk-status.md).
 
 ---
 
+## 2026-09-09 — 3TK-74: the outer's hooks become required
+
+**Plan [3tk-staging-plan-035.md](3tk-staging-plan-035.md), rulings `B-1` …
+`B-10`. Ran on Opus 5, as the charter asked.** `OuterHelper.create` and
+`OuterHelper.release` no longer call application code that nothing declares.
+Closed.
+
+**The figures moved, and the two negatives are why.** `run-builds.sh` is **115
+checks, 0 failures, four builds, 145 tests in each** — 107 before, plus the two
+new compile-time negatives run once per build. `check-doc-loop.sh` is **11
+labelled blocks, 0 differing, 458 of 458 sentences, 0 banned words**, up from
+443 because the helper's module block and both member blocks grew;
+`move-module-docs.sh roundtrip` is byte-identical; `run-sanitizers.sh` is
+**3 of 3**. `src/*.c3` is **684 lines** by Rule 5's definition, unchanged as a
+figure and recomputed rather than trusted.
+
+### What the stage did
+
+**Every outer that `OuterHelper.create` makes now declares
+`fn void? Outer.init(&self, Allocator a)` and
+`fn void Outer.finish(&self, Allocator a)`, and an empty body is fine.**
+`B-1`. Before this, both hooks were found structurally by `$defined` and a
+misspelled name was silent: the branch vanished and the outer came back
+allocated, stamped and uninitialized, or gave up nothing on the way out.
+**Absence was the ambiguity** — no `init` meant either *this type needs none* or
+*you spelled it wrong* — and requiring the declaration is what removes it.
+
+**`destroy` is `finish`, and it returns plain `void`.** `B-2`, `B-3`. The old
+name told the user to do the one thing that would double-free: `release` frees
+the outer the moment the hook returns. The narrowing removed a fault no caller
+could act on — `release` used to turn a `destroy` failure into
+`mtk::@check(!f, …)`, an abort in a safe build and dropped in a fast one.
+
+**The mechanism is two `$assert`s in each of `create` and `release`, and
+nothing else.** `B-4`. Compile-time, so it is alive in every build mode,
+including `--safe=no`, which is the build where a silently-uninitialized outer
+does the most damage.
+
+### Rule 9 was followed, and the order is what the entry records
+
+**The asserts and one exemplar type went in first.** `Msg` in
+`test/common.c3` got both hooks with empty bodies; the rest of the tree went
+red and was watched going red before anything else was touched. **The
+diagnostic points at the user's call site** — c3c prints the failing `$assert`
+against `helper.c3`'s line and then excerpts *the caller's* source under
+*Note: Inlined from here* — which is the half a user needs and which the plan's
+2026-09-09 measurement had predicted.
+
+**Both negatives went in before the sweep, so the sweep was measured rather
+than asserted.** `nocompile_no_init` declares `finish` correctly and spells the
+other hook **`initialize`** — the near miss, not an omission, because the
+misspelling is the failure the rule exists for. `nocompile_no_finish` declares
+`init` and no teardown hook at all. Both refuse to compile in all four builds.
+
+**They are compile-time negatives, not tier 1, and `B-9`'s word was loose.**
+Rule 12. The suite's *tier 1* means *aborts at runtime in every mode*; a check
+that cannot compile has no runtime. `NOCOMPILE_EXPECT` is the category that
+already means *never compiles, in any mode, and the message must name what is
+wrong*, and it runs in every build, which is what `B-9` was reaching for.
+
+**What is grepped for is the `$assert` message, not a type name.** A `$assert`
+message is a constant string and cannot carry the offending type. The compiler
+names the call site instead. **The other direction of the check — that it stays
+quiet for a type that declares both hooks — is the test suite**, green in all
+four builds and under all three sanitizer runs.
+
+### The sweep was bigger than the charter's figure, and Rule 12 governs
+
+**Measured: 14 outer types and 28 hooks, of which 21 were newly written and 20
+of the 28 have empty bodies.** The charter said *15 empty bodies over 12
+types*, counting `helper::OF{...}` binding sites. **Three distinct `Holder`
+types exist, in three modules** — `test/common.c3`, `examples/outers.c3` and
+`negative/create_into_full_slot.c3` — and a binding-site count collapses them
+into one. The eight hooks with a body are six `init`s that keep the allocator,
+`Picky.init` returning its fault, and `Noisy.finish` counting its call.
+
+Where they are: `test/common.c3` 7 types, `examples/outers.c3` 3,
+`examples/023-infrastructure_wrapper.c3` 1 (`WorkerInbox`),
+`negative/common.c3` 2 and `negative/create_into_full_slot.c3` 1.
+
+**`B-5`'s container exemption needed no code, and that is worth writing down.**
+`_Mbox` and `_Pool` bind `helper::OF{...}` for `stamp` and `look` and never
+call `create`, so the asserts never instantiate for them. **The exemption falls
+out of where the check sits** rather than out of a list the check has to
+consult, which is the difference between a line and a hole. The module block
+says so in a sentence all the same, because a reader of `mailbox.c3` cannot see
+the absence of a call.
+
+**`t_helper.c3`'s `neither_hook_is_required` is now
+`empty_hook_bodies_are_how_a_type_says_nothing_to_do`.** The test's subject was
+the old ambiguity and could not survive `B-1`; the behaviour it checks —
+`alloc::new_try` zeroes the allocation, and that is the whole initialization —
+is unchanged and is still what it checks. `the_destroy_hook_runs_on_release` is
+`the_finish_hook_runs_on_release`.
+
+### The documents
+
+**`3tk-reference-010.md` replaces `009`**, Rule 13. `009` is in
+`matryoshka-3tk/design/backup/`. It carries `B-7`'s table, which is the answer
+to a question the stage decided a user asks before they ask it — *why is this
+not `PoolHooks`* — and the answer is not *these are different kinds of thing*:
+they are the same kind, an inversion in both cases, differing in **how many
+answers there are and when the answer is fixed**. A pool's hooks are policy,
+one answer per pool, chosen at `pool::create` and **passed**. An outer's are
+the type's own, one answer per type, fixed at compile time and **declared**.
+
+**`3tk-rules-005.md` replaces `004`**, Rule 13, and it is the version that
+carries the new MUST. **New Rule 7 — every outer the helper creates declares
+both hooks** — sits at the end of Part 1, and **Rule 4's last paragraph was
+rewritten** because `B-1` deleted its premise. That paragraph refused an
+`interface OuterHooks` on the ground that both hooks were *optional*, so an
+interface would read as mandatory. **`B-6`: the ruling stands and the argument
+is replaced** — an interface carries a choice across a boundary **at runtime**,
+and these hooks are never passed; there is nothing to implement and nothing to
+hand over, so an interface would add a vtable dispatch to answer a question the
+compiler already knows. A later stage that finds the old sentence in a
+superseded version must not read the ruling as lapsed with its argument.
+
+**The stage rules moved by one and live text was not rewritten for it.** What
+`004` numbered 7–12, `005` numbers 8–13, the way `003` shifted them when it
+added Rule 6. `005`'s header says a citation to an older number resolves by
+adding one, so **`3tk-staging-plan-035.md`'s *Rule 9 governs the order* and
+every Rule-N citation in this log stand as written**. Only `3tk-status.md` was
+re-anchored, because it is state rather than history.
+
+**`3tk-decisions-007.md` and `3tk-api-005.md` were revised in place**, which is
+what both files' own headers ask for and what 3TK-62, 3TK-63, 3TK-64 and
+3TK-70 did before. The decisions record carries the new MUST, `B-2`'s
+narrowing, `B-3`'s rename, `B-5`'s exemption and `B-6` as a replaced argument.
+
+**Every `helper.c3` citation in both was re-resolved against the built tree**,
+because the file moved: **+16 lines above `create`, +18 at `create`, +20 at
+`release`**. Twelve distinct anchors in the decisions record, seventeen in the
+api page, and the api page gained the two `$assert` lines and lost the
+`mtk::@check(!f, …)` that guarded the fault `B-2` removed.
+
+**`ref/3tk-doc-loop-005.md` was re-anchored** to `3tk-reference-010.md`, and a
+sentence of its own history that named the old number was repaired rather than
+mechanically bumped into a tautology.
+
+### Rule 11 — the scripts and the CI
+
+**`run-builds.sh` is the only ported script this stage changed**, and the diff
+against `matryoshka-3tk/scripts/run-builds.sh` is **the `ROOT` line alone**, as
+it must be. `run-sanitizers.sh` is unchanged and its diff is the same one line.
+
+**The `.yml` files needed no change, and that is written down because the rule
+says to write it down.** `linux.yml` is a build-and-test matrix and runs
+neither the negatives nor the doc loop, so two new compile-time negatives reach
+it not at all. `sanitizers.yml` and `docs.yml` are untouched by anything here.
+
+**`check-doc-loop.sh` and `move-module-docs.sh` are still not in
+`matryoshka-3tk/scripts/`**, as they were not before this stage. Both had their
+`REF` line moved from `009` to `010`. Not this stage's to fix, and flagged
+rather than acted on.
+
+**`matryoshka-3tk/src/helper.c3` and `matryoshka-3tk/test/t_helper.c3` still
+carry the old text.** 3tk `.c3` sources are edited only in `matryoshka-tk`'s
+copy and the owner copies them across; the stage did not touch them.
+
+---
+
 ## 2026-09-09 — 3TK-73: the design-folder audit
 
 **Plan [3tk-staging-plan-034.md](3tk-staging-plan-034.md), rulings `A-1` … `A-14`.
@@ -167,13 +329,20 @@ gone, `@check` moved to `mtk.c3`, and the identity write moved from
 `helper::init` to `inner::internal::stamp`. **ztk's citations were not re-read
 and were not touched**, and the document says so.
 
-### Reported under Part 5, not fixed
+### Reported under Part 5, and then fixed
 
 **Banned words in the two documents that crossed**, because they left a folder
-the scan skips for one it does not: `drain` and `idiomatic` once each in the
-findings document, `settle`/`settled` twice there and four times in the
-capability study. Part 5 says report and do not fix without approval, and the
-owner has not been asked for that yet.
+the scan skips for one it does not. Reported first, as Part 5 requires; **the
+owner approved the same day and the pass ran** — nine words across the two, in
+prose only.
+
+**Quoted source was not touched**, and that is the part worth writing down: the
+remaining matches for the scan pattern are all `self._mu.unlock()` and
+`p.*.mutex.unlock(io)` inside `c3` and `zig` blocks. **A word inside quoted
+code is the code, not the document's prose**, and rewriting it would falsify a
+measurement — the same reason this stage left the sanitizer notes' line numbers
+where they were. Both documents carry an amended changelog row saying a pass
+ran, without naming what it removed.
 
 ---
 

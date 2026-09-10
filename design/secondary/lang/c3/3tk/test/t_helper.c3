@@ -153,27 +153,37 @@ fn void a_failing_init_hook_propagates_and_frees() @test
 }
 
 <*
- The `destroy` hook runs on release, and it receives the allocator from the
+ The `finish` hook runs on release, and it receives the allocator from the
  caller rather than reading one off the outer.
+
+ 3TK-74 renamed it from `destroy`: `destroy` is C3's own word for tearing a
+ thing down, which is the one thing the hook must not do — `release` frees the
+ outer after the hook returns.
 *>
-fn void the_destroy_hook_runs_on_release() @test
+fn void the_finish_hook_runs_on_release() @test
 {
     destroyed = 0;
     Slot s;
     if (catch NOISY.create(mem, &s)) { always_assert(false, "create failed"); }
-    always_assert(destroyed == 0, "destroy ran before release");
+    always_assert(destroyed == 0, "finish ran before release");
     NOISY.release(mem, &s);
-    always_assert(destroyed == 1, "destroy did not run exactly once");
+    always_assert(destroyed == 1, "finish did not run exactly once");
 }
 
 <*
- An outer that declares neither hook compiles and behaves exactly as before:
- the allocation is zeroed and that is the whole initialization. Part 2.2.
+ An outer with nothing to set up declares both hooks with empty bodies, and
+ that is how it says so out loud. 3TK-74, `B-1`.
+
+ Before that stage the hooks were optional and `Job` declared neither. Absence
+ was the ambiguity — it meant either this type needs none or you spelled the
+ name wrong, and the toolkit could not tell them apart. The behaviour is
+ unchanged and it is the behaviour this test still checks: the allocation is
+ zeroed and that is the whole initialization. Part 2.2.
 *>
-fn void neither_hook_is_required() @test
+fn void empty_hook_bodies_are_how_a_type_says_nothing_to_do() @test
 {
     Slot s;
-    if (catch JOB.create(mem, &s)) { always_assert(false, "create failed on an outer with no hooks"); }
+    if (catch JOB.create(mem, &s)) { always_assert(false, "create failed on an outer whose hooks are empty"); }
     Job* j = JOB.must_look(&s);
     always_assert(j.pri == 0, "alloc::new_try did not zero the allocation");
     JOB.release(mem, &s);

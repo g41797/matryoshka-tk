@@ -4,10 +4,11 @@
  `Event` puts the inner at offset zero.
  `Sensor` and `Holder` do not, and both cross exactly the same way.
 
- All three declare an `init` hook that keeps the allocator they were made with.
+ Every outer the helper creates declares both hooks — `init` and `finish` — and an empty body is how a type says it has nothing to do.
+ All three keep the allocator they were made with in their `init`.
  That is a choice each outer makes for itself, and not a rule.
  The toolkit reads no field of an outer except the `Inner`, and it never stores the allocator for you.
- An outer that has no use for one declares no hook and carries no such field.
+ An outer that has no use for one still declares the two hooks, and carries no such field.
 
  There is no alias here, and that is a language fact rather than a choice:
  C3 refuses an unprefixed alias from another module, so a shared alias would
@@ -26,3 +27,9 @@ struct Holder { int id; Inner inner; Allocator alloc; }
 fn void? Event.init(&self, Allocator a)  { self.alloc = a; return; }
 fn void? Sensor.init(&self, Allocator a) { self.alloc = a; return; }
 fn void? Holder.init(&self, Allocator a) { self.alloc = a; return; }
+
+// Nothing to wind up: none of the three acquires anything its `init` did not
+// get for free. The bodies are empty and that is the answer, not a gap.
+fn void Event.finish(&self, Allocator a)  { }
+fn void Sensor.finish(&self, Allocator a) { }
+fn void Holder.finish(&self, Allocator a) { }

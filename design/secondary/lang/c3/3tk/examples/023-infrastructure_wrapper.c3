@@ -24,6 +24,12 @@ struct WorkerInbox
     int         job_id;
 }
 
+// The two hooks every outer the helper creates declares. `WorkerInbox` fills
+// its fields at the call site, right after `create`, and owns nothing that
+// outlives it — so both bodies are empty, and that is the answer.
+fn void? WorkerInbox.init(&self, Allocator a) { return; }
+fn void  WorkerInbox.finish(&self, Allocator a) { }
+
 fn void? wrap_and_send(Allocator a, Mailbox* to, Mailbox* inbox, int job_id)
 {
     Slot s;
